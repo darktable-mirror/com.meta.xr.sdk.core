@@ -53,25 +53,25 @@ namespace Meta.XR.BuildingBlocks
                 return marker;
             }
 
-            var dataList = OVRObjectPool.List<string>();
-
-            // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
-            foreach (var variantCheckpoint in checkpoint.InstallationVariants)
+            using (new OVRObjectPool.ListScope<string>(out var dataList))
             {
-                if (variantCheckpoint == null)
+                // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
+                foreach (var variantCheckpoint in checkpoint.InstallationVariants)
                 {
-                    continue;
+                    if (variantCheckpoint == null)
+                    {
+                        continue;
+                    }
+
+                    dataList.Add($"{variantCheckpoint.MemberName}:{variantCheckpoint.Value}");
                 }
 
-                dataList.Add($"{variantCheckpoint.MemberName}:{variantCheckpoint.Value}");
+                if (dataList.Count > 0)
+                {
+                    marker.AddAnnotation(AnnotationType.InstallationRoutineData, string.Join(',', dataList));
+                }
             }
 
-            if (dataList.Count > 0)
-            {
-                marker.AddAnnotation(AnnotationType.InstallationRoutineData, string.Join(',', dataList));
-            }
-
-            OVRObjectPool.Return(dataList);
             return marker;
         }
 

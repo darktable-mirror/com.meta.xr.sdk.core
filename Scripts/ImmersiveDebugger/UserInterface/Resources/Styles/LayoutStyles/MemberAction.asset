@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: MemberAction
   m_EditorClassIdentifier: 
   flexDirection: 1
-  layout: 0
+  layout: 2
   anchor: 5
   pivot: 5
-  size: {x: 220, y: 24}
+  size: {x: 0, y: 24}
   margin: {x: 0, y: 0}
   useBottomRightMargin: 0
   bottomRightMargin: {x: 0, y: 0}

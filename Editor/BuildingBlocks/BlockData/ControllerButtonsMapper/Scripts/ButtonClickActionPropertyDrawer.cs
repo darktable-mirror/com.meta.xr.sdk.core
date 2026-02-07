@@ -43,6 +43,17 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             var callbackProperty = property.FindPropertyRelative(nameof(ControllerButtonsMapper.ButtonClickAction.Callback));
             EditorGUI.PropertyField(position, callbackProperty, true);
+
+#pragma warning disable CS0162 // Unreachable code detected
+            if (ControllerButtonsMapper.UseNewInputSystem)
+            {
+                position.y += EditorGUI.GetPropertyHeight(callbackProperty, true) + EditorGUIUtility.standardVerticalSpacing;
+
+                var callbackWithContextProperty = property.FindPropertyRelative("CallbackWithContext");
+                EditorGUI.PropertyField(position, callbackWithContextProperty, true);
+            }
+#pragma warning restore CS0162 // Unreachable code detected
+
             EditorGUI.EndProperty();
         }
 
@@ -101,6 +112,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             totalHeight += EditorGUI.GetPropertyHeight(property.FindPropertyRelative(nameof(ControllerButtonsMapper.ButtonClickAction.Callback)), true) + EditorGUIUtility.standardVerticalSpacing;
+
+#pragma warning disable CS0162 // Unreachable code detected
+            if (ControllerButtonsMapper.UseNewInputSystem)
+            {
+                totalHeight += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("CallbackWithContext"), true) + EditorGUIUtility.standardVerticalSpacing;
+            }
+#pragma warning restore CS0162 // Unreachable code detected
+
             return totalHeight;
         }
     }

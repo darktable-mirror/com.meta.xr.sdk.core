@@ -4,7 +4,10 @@
     "references": [
         "Meta.XR.Editor.UserInterface",
         "Meta.XR.Editor.Reflection",
-        "Meta.XR.Editor.Settings"
+        "Meta.XR.Editor.Settings",
+        "Meta.XR.Editor.Tags",
+        "Meta.XR.Editor.ToolingSupport",
+        "Meta.XR.Editor.Id"
     ],
     "includePlatforms": [
         "Editor"

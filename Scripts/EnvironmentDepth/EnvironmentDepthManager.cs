@@ -22,13 +22,15 @@ using JetBrains.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Android;
 using UnityEngine.Assertions;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
+#if USING_XR_MANAGEMENT
 using UnityEngine.XR;
+using UnityEngine.XR.Management;
+#endif
 using Debug = UnityEngine.Debug;
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("meta.xr.mrutilitykit")]
 
@@ -88,12 +90,10 @@ namespace Meta.XR.EnvironmentDepth
         /// <summary>
         /// The shader keyword for enabling hard occlusions.
         /// </summary>
-
         public const string HardOcclusionKeyword = "HARD_OCCLUSION";
         /// <summary>
         /// The shader keyword for enabling soft occlusions.
         /// </summary>
-
         public const string SoftOcclusionKeyword = "SOFT_OCCLUSION";
         private const int numViews = 2;
         private static readonly int DepthTextureID = Shader.PropertyToID("_EnvironmentDepthTexture");
@@ -106,7 +106,8 @@ namespace Meta.XR.EnvironmentDepth
         private static readonly int MaskBiasID = Shader.PropertyToID("_MaskBias");
 
         [SerializeField] private OcclusionShadersMode _occlusionShadersMode = OcclusionShadersMode.SoftOcclusion;
-        [SerializeField] private bool _removeHands;
+        [SerializeField, Tooltip("If set to true, hands will be removed from the depth texture.")]
+        private bool _removeHands;
         /// <summary>
         /// This transform allows you to override the default tracking space.
         /// </summary>
@@ -118,31 +119,53 @@ namespace Meta.XR.EnvironmentDepth
 
         private bool _isCameraRigCached;
         [SerializeField, HideInInspector] private OVRCameraRig _cameraRig;
-        internal static readonly IDepthProvider _provider = CreateProvider();
+        private static IDepthProvider _provider;
         private bool _hasPermission;
-        private uint? _prevTextureId;
         private Material _preprocessMaterial;
         [CanBeNull] private RenderTexture _preprocessTexture;
         private RenderTargetSetup _preprocessRenderTargetSetup;
+        internal event Action<RenderTexture> onDepthTextureUpdate;
+        internal readonly DepthFrameDesc[] frameDescriptors = new DepthFrameDesc[numViews];
 
         private float _maskBias = 0.1f;
         private Mask _mask;
 
+        private static IDepthProvider provider => _provider ??= CreateProvider();
+
         [NotNull]
         private static IDepthProvider CreateProvider()
         {
-#if DEPTH_API_SUPPORTED
-            return new DepthProvider();
+#if USING_XR_MANAGEMENT
+            if (XRGeneralSettings.Instance != null && XRGeneralSettings.Instance.Manager != null && XRGeneralSettings.Instance.Manager.activeLoader != null)
+            {
+                var loader = XRGeneralSettings.Instance.Manager.activeLoader;
+                var displaySubsystem = loader.GetLoadedSubsystem<XRDisplaySubsystem>();
+                Assert.IsNotNull(displaySubsystem, nameof(displaySubsystem));
+#if OPEN_XR_META_2_1_OR_NEWER
+                if (loader is UnityEngine.XR.OpenXR.OpenXRLoader openXRLoader)
+                {
+                    return new DepthProviderOpenXR(displaySubsystem, openXRLoader);
+                }
 #endif
-#pragma warning disable CS0162 // Unreachable code detected
+#if XR_OCULUS_4_2_0_OR_NEWER
+                if (loader is Unity.XR.Oculus.OculusLoader)
+                {
+                    return new DepthProvider(displaySubsystem);
+                }
+#endif
+            }
+#else
+            Debug.LogError("EnvironmentDepth is disabled. Please install 'com.unity.xr.management' (XR Plugin Management) package.");
             return new DepthProviderNotSupported();
-#pragma warning restore CS0162
+#endif
+            Debug.LogError("EnvironmentDepth is disabled. Please enable XR provider in 'Project Settings / XR Plug-in Management'.");
+            return new DepthProviderNotSupported();
         }
 
         /// <summary>
         /// Returns true if the current platform supports Environment Depth.
         /// </summary>
-        public static bool IsSupported => _provider.IsSupported;
+        public static bool IsSupported => provider.IsSupported;
 
         /// <summary>
         /// Returns true if depth textures were made available from the system.
@@ -180,8 +203,8 @@ namespace Meta.XR.EnvironmentDepth
                 if (_removeHands == value)
                     return;
                 _removeHands = value;
-                if (enabled)
-                    _provider.RemoveHands = value;
+                if (enabled && IsSupported)
+                    provider.RemoveHands = value;
             }
         }
 
@@ -202,16 +225,12 @@ namespace Meta.XR.EnvironmentDepth
             }
         }
 
-        private readonly Matrix4x4[] _reprojectionMatrices = new Matrix4x4[2];
-        private XRDisplaySubsystem _xrDisplay;
+        private readonly Matrix4x4[] _reprojectionMatrices = new Matrix4x4[numViews];
 
         private void Awake()
         {
             Assert.AreEqual(1, FindObjectsByType<EnvironmentDepthManager>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length,
                 $"Environment Depth: more than one {nameof(EnvironmentDepthManager)} component. Only one instance is allowed at a time. Current instance: {name}");
-#if !UNITY_2022_3_OR_NEWER
-            Debug.LogError("DepthAPI requires at least Unity 2022.3.0f");
-#endif
             if (!IsSupported)
             {
 #if UNITY_EDITOR_WIN
@@ -228,11 +247,6 @@ namespace Meta.XR.EnvironmentDepth
                 return;
             }
 
-            var displays = new List<XRDisplaySubsystem>(1);
-            SubsystemManager.GetInstances(displays);
-            _xrDisplay = displays.Single();
-            Assert.IsNotNull(_xrDisplay, nameof(_xrDisplay));
-
             const string shaderName = "Meta/EnvironmentDepth/Preprocessing";
             var shader = Shader.Find(shaderName);
             Assert.IsNotNull(shader, "Depth preprocessing shader is not present in the Resources folder: " + shaderName);
@@ -241,6 +255,7 @@ namespace Meta.XR.EnvironmentDepth
 
         private void OnEnable()
         {
+            Application.onBeforeRender += OnBeforeRender;
             if (!IsSupported)
             {
                 Debug.LogError($"Environment Depth is not supported. Please check {nameof(EnvironmentDepthManager)}.{nameof(IsSupported)} before enabling {nameof(EnvironmentDepthManager)}.\n" +
@@ -251,7 +266,7 @@ namespace Meta.XR.EnvironmentDepth
 
             _hasPermission = Permission.HasUserAuthorizedPermission(OVRPermissionsRequester.ScenePermission);
             if (_hasPermission)
-                _provider.SetDepthEnabled(true, _removeHands);
+                provider.SetDepthEnabled(true, _removeHands);
             else Log(LogType.Warning, $"Environment Depth requires {OVRPermissionsRequester.ScenePermission} permission. Waiting for permission...");
         }
 
@@ -268,9 +283,10 @@ namespace Meta.XR.EnvironmentDepth
 
         private void OnDisable()
         {
+            Application.onBeforeRender -= OnBeforeRender;
             ResetDepthTextureIfAvailable();
             if (IsSupported && _hasPermission)
-                _provider.SetDepthEnabled(false, false);
+                provider.SetDepthEnabled(false, false);
         }
 
         private void OnDestroy()
@@ -282,30 +298,33 @@ namespace Meta.XR.EnvironmentDepth
             _mask?.Dispose();
         }
 
-        private void Update()
+        private void OnBeforeRender()
         {
             if (!_hasPermission)
             {
                 if (!Permission.HasUserAuthorizedPermission(OVRPermissionsRequester.ScenePermission))
                     return;
                 _hasPermission = true;
-                _provider.SetDepthEnabled(true, _removeHands);
+                provider.SetDepthEnabled(true, _removeHands);
             }
 
             var trackingSpaceWorldToLocal = GetTrackingSpaceWorldToLocalMatrix();
             TryFetchDepthTexture(trackingSpaceWorldToLocal);
             if (!IsDepthAvailable)
+            {
                 return;
+            }
 
             // Calculate Environment Depth Camera parameters
             // Assume NearZ and FarZ are the same for left and right eyes
-            var leftEyeData = _provider.GetFrameDesc(0);
-            var rightEyeData = _provider.GetFrameDesc(1);
+            var leftEyeData = frameDescriptors[0];
             var depthZBufferParams = EnvironmentDepthUtils.ComputeNdcToLinearDepthParameters(leftEyeData.nearZ, leftEyeData.farZ);
             Shader.SetGlobalVector(ZBufferParamsID, depthZBufferParams);
 
-            _reprojectionMatrices[0] = EnvironmentDepthUtils.CalculateReprojection(leftEyeData) * trackingSpaceWorldToLocal;
-            _reprojectionMatrices[1] = EnvironmentDepthUtils.CalculateReprojection(rightEyeData) * trackingSpaceWorldToLocal;
+            for (int i = 0; i < numViews; i++)
+            {
+                _reprojectionMatrices[i] = EnvironmentDepthUtils.CalculateReprojection(frameDescriptors[i]) * trackingSpaceWorldToLocal;
+            }
             Shader.SetGlobalMatrixArray(ReprojectionMatricesID, _reprojectionMatrices);
         }
 
@@ -317,7 +336,9 @@ namespace Meta.XR.EnvironmentDepth
         private void CacheCameraRig()
         {
             if (_cameraRig == null)
+#pragma warning disable CS0618 // Type or member is obsolete
                 _cameraRig = FindObjectOfType<OVRCameraRig>();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         private static void SetOcclusionShaderKeywords(OcclusionShadersMode mode)
@@ -344,30 +365,22 @@ namespace Meta.XR.EnvironmentDepth
 
         private void TryFetchDepthTexture(Matrix4x4 trackingSpaceWorldToLocal)
         {
-            uint textureId = 0;
-            if (!_xrDisplay.running || !_provider.GetDepthTextureId(ref textureId))
+            if (!provider.TryGetUpdatedDepthTexture(out var depthTexture, frameDescriptors))
+            {
                 return;
-
-#if UNITY_2022_3_OR_NEWER
-            var depthTexture = _xrDisplay.GetRenderTexture(textureId);
-#else
-            RenderTexture depthTexture = null;
-#endif
+            }
             if (depthTexture == null) // can be null when the headset is awaking from sleep
             {
                 ResetDepthTextureIfAvailable();
                 return;
             }
 
-            if (_prevTextureId == textureId)
-                return;
-            _prevTextureId = textureId;
-
             Assert.IsTrue(depthTexture.IsCreated(), "depthTexture.IsCreated()");
+            onDepthTextureUpdate?.Invoke(depthTexture);
             if (MaskMeshFilters != null && MaskMeshFilters.Count > 0)
             {
                 _mask ??= new Mask(depthTexture.width, depthTexture.height, _maskBias);
-                depthTexture = _mask.ApplyMask(depthTexture, MaskMeshFilters, trackingSpaceWorldToLocal);
+                depthTexture = _mask.ApplyMask(depthTexture, MaskMeshFilters, trackingSpaceWorldToLocal, frameDescriptors);
             }
             Shader.SetGlobalTexture(DepthTextureID, depthTexture);
             if (!IsDepthAvailable)
@@ -427,11 +440,11 @@ namespace Meta.XR.EnvironmentDepth
                 _maskCommandBuffer = new CommandBuffer();
             }
 
-            internal RenderTexture ApplyMask(RenderTexture depthTexture, List<MeshFilter> meshFilters, Matrix4x4 trackingSpaceWorldToLocal)
+            internal RenderTexture ApplyMask(RenderTexture depthTexture, List<MeshFilter> meshFilters, Matrix4x4 trackingSpaceWorldToLocal, DepthFrameDesc[] frameDescriptors)
             {
                 // update depth camera proj and view matrices
-                EnvironmentDepthUtils.CalculateDepthCameraMatrices(_provider.GetFrameDesc(0), out var proj0, out var view0);
-                EnvironmentDepthUtils.CalculateDepthCameraMatrices(_provider.GetFrameDesc(1), out var proj1, out var view1);
+                EnvironmentDepthUtils.CalculateDepthCameraMatrices(frameDescriptors[0], out var proj0, out var view0);
+                EnvironmentDepthUtils.CalculateDepthCameraMatrices(frameDescriptors[1], out var proj1, out var view1);
 
                 // render mask's depth into _maskDepthRt
                 _maskCommandBuffer.SetRenderTarget(new RenderTargetIdentifier(_maskDepthRt, 0, CubemapFace.Unknown, -1),
@@ -515,30 +528,26 @@ namespace Meta.XR.EnvironmentDepth
         bool IsSupported { get; }
         bool RemoveHands { set; }
         void SetDepthEnabled(bool isEnabled, bool removeHands);
-        DepthFrameDesc GetFrameDesc(int eye);
-        bool GetDepthTextureId(ref uint textureId);
+        bool TryGetUpdatedDepthTexture(out RenderTexture depthTexture, DepthFrameDesc[] frameDescriptors);
     }
 
     internal class DepthProviderNotSupported : IDepthProvider
     {
-        public bool IsSupported => false;
-        public bool RemoveHands
-        {
-            set { }
-        }
-        public void SetDepthEnabled(bool isEnabled, bool removeHands) { }
-        public DepthFrameDesc GetFrameDesc(int eye) => throw new NotSupportedException();
-        public bool GetDepthTextureId(ref uint textureId) => throw new NotSupportedException();
+        bool IDepthProvider.IsSupported => false;
+        bool IDepthProvider.RemoveHands { set { } }
+        void IDepthProvider.SetDepthEnabled(bool isEnabled, bool removeHands) { }
+        bool IDepthProvider.TryGetUpdatedDepthTexture(out RenderTexture depthTexture, DepthFrameDesc[] frameDescriptors) => throw new NotSupportedException();
     }
 
     internal struct DepthFrameDesc
     {
         internal Vector3 createPoseLocation;
-        internal Vector4 createPoseRotation;
-        internal float fovLeftAngle;
-        internal float fovRightAngle;
-        internal float fovTopAngle;
-        internal float fovDownAngle;
+        internal Quaternion createPoseRotation;
+        /// This is an absolute value of angle's tangent. For example, given the 'angle' in radians, <see cref="fovLeftAngleTangent"/> can be calculated as 'tan(abs(angle))'.
+        internal float fovLeftAngleTangent;
+        internal float fovRightAngleTangent;
+        internal float fovTopAngleTangent;
+        internal float fovDownAngleTangent;
         internal float nearZ;
         internal float farZ;
     }

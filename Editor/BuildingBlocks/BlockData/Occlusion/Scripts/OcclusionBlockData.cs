@@ -32,6 +32,8 @@ namespace Meta.XR.BuildingBlocks.Editor
     public class OcclusionBlockData : BlockData
     {
 
+        internal override bool CanBeAddedOverGameObject => true;
+
         internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps
         {
             get
@@ -67,13 +69,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
             renderer.sharedMaterial = Prefab.GetComponentsInChildren<MeshRenderer>(true).First().sharedMaterial;
 
-#if DEPTH_API_SUPPORTED && UNITY_2022_3_OR_NEWER
-            OcclusionBlockSetupInfo.Show();
+#if XR_OCULUS_4_2_0_OR_NEWER && UNITY_2022_3_OR_NEWER
             return gameObjects;
 #else
             Undo.PerformUndo();
             throw new InstallationCancelledException($"Dependencies are not met for {BlockName} block. Requires Oculus XR Plugin 4.2.0, Unity editor version at least 2022.3.1 or 2023.2.");
-#endif // DEPTH_API_SUPPORTED && UNITY_2022_3_OR_NEWER
+#endif // XR_OCULUS_4_2_0_OR_NEWER && UNITY_2022_3_OR_NEWER
         }
 
         protected override Type ComponentType => typeof(OcclusionBuildingBlock);

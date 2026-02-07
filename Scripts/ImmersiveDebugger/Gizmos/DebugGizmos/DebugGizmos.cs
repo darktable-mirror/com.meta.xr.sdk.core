@@ -86,6 +86,11 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
                 {
                     GameObject go = new GameObject("Polyline Gizmos");
                     _root = go.AddComponent<DebugGizmos>();
+
+                    if (Application.isPlaying)
+                    {
+                        DontDestroyOnLoad(go);
+                    }
 #if UNITY_EDITOR
                     if (!Application.isPlaying)
                     {

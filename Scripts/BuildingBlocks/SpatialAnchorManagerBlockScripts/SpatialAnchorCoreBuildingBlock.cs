@@ -152,7 +152,7 @@ namespace Meta.XR.BuildingBlocks
         /// <param name="prefab">Prefab for instantiating the loaded anchors.</param>
         /// <param name="uuids">List of anchor's <see cref="Guid"/> to load.</param>
         /// <exception cref="ArgumentNullException">Throws when <paramref name="uuids"/> is null.</exception>
-        public void LoadAndInstantiateAnchors(GameObject prefab, List<Guid> uuids)
+        public virtual void LoadAndInstantiateAnchors(GameObject prefab, List<Guid> uuids)
         {
             if (uuids == null)
             {
@@ -210,7 +210,7 @@ namespace Meta.XR.BuildingBlocks
         {
             // Load unbounded anchors
             using var unboundAnchorsPoolHandle =
-            new OVRObjectPool.ListScope<OVRSpatialAnchor.UnboundAnchor>(out var unboundAnchors);
+                new OVRObjectPool.ListScope<OVRSpatialAnchor.UnboundAnchor>(out var unboundAnchors);
             var result = await OVRSpatialAnchor.LoadUnboundAnchorsAsync(uuids, unboundAnchors);
             if (!result.Success || unboundAnchors.Count == 0)
             {
@@ -285,18 +285,17 @@ namespace Meta.XR.BuildingBlocks
             OnAnchorEraseCompleted?.Invoke(anchor, OVRSpatialAnchor.OperationResult.Success);
         }
 
-        internal static List<SpatialAnchorCoreBuildingBlock> GetBaseInstances()
+        internal static SpatialAnchorCoreBuildingBlock GetFirstInstance()
         {
-            var baseClassObjects = OVRObjectPool.List<SpatialAnchorCoreBuildingBlock>();
             var objects = FindObjectsByType<SpatialAnchorCoreBuildingBlock>(FindObjectsSortMode.None);
 
             foreach (var obj in objects)
             {
                 if (obj != null && obj.GetType() == typeof(SpatialAnchorCoreBuildingBlock))
-                    baseClassObjects.Add(obj);
+                    return obj;
             }
 
-            return baseClassObjects;
+            return null;
         }
     }
 }

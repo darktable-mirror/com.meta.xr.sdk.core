@@ -51,6 +51,11 @@ public class OVRManifestPreprocessor
     [MenuItem("Meta/Tools/Create store-compatible AndroidManifest.xml", false, 100000)]
     public static void GenerateManifestForSubmission()
     {
+        GenerateManifestForSubmissionInternal(silentMode: false);
+    }
+
+    private static void GenerateManifestForSubmissionInternal(bool silentMode)
+    {
         var so = ScriptableObject.CreateInstance(typeof(OVRPluginInfo));
         var script = MonoScript.FromScriptableObject(so);
         string assetPath = AssetDatabase.GetAssetPath(script);
@@ -59,12 +64,15 @@ public class OVRManifestPreprocessor
 
         if (!File.Exists(srcFile))
         {
-            Debug.LogError("Cannot find Android manifest template for submission." +
-                           " Please delete the OVR folder and reimport the Oculus Utilities.");
+            if (!silentMode)
+            {
+                Debug.LogError("Cannot find Android manifest template for submission." +
+                               " Please delete the OVR folder and reimport the Oculus Utilities.");
+            }
             return;
         }
 
-        if (DoesAndroidManifestExist())
+        if (!silentMode && DoesAndroidManifestExist())
         {
             if (!EditorUtility.DisplayDialog("AndroidManifest.xml Already Exists!",
                     "Would you like to replace the existing manifest with a new one? All modifications will be lost.",
@@ -89,17 +97,37 @@ public class OVRManifestPreprocessor
         return File.Exists(BuildManifestFilePathAbsolute);
     }
 
+    public static void GenerateOrUpdateAndroidManifest(bool silentMode)
+    {
+        if (DoesAndroidManifestExist())
+        {
+            UpdateAndroidManifestInternal(silentMode);
+        }
+        else
+        {
+            GenerateManifestForSubmissionInternal(silentMode);
+        }
+    }
+
     [MenuItem("Meta/Tools/Update AndroidManifest.xml", false, 100000)]
     public static void UpdateAndroidManifest()
     {
+        UpdateAndroidManifestInternal(silentMode: false);
+    }
+
+    private static void UpdateAndroidManifestInternal(bool silentMode)
+    {
         if (!DoesAndroidManifestExist())
         {
-            Debug.LogError(
-                "Unable to update manifest because it does not exist! Run \"Create store-compatible AndroidManifest.xml\" first");
+            if (!silentMode)
+            {
+                Debug.LogError(
+                    "Unable to update manifest because it does not exist! Run \"Create store-compatible AndroidManifest.xml\" first");
+            }
             return;
         }
 
-        if (!EditorUtility.DisplayDialog("Update AndroidManifest.xml",
+        if (!silentMode && !EditorUtility.DisplayDialog("Update AndroidManifest.xml",
                 "This will overwrite all Oculus specific AndroidManifest Settings. Continue?", "Overwrite", "Cancel"))
         {
             return;
@@ -128,13 +156,25 @@ public class OVRManifestPreprocessor
     }
 
     private static void AddOrRemoveTag(XmlDocument doc, string @namespace, string path, string elementName, string name,
-        bool required, bool modifyIfFound, params string[] attrs) // name, value pairs
+        bool required, bool modifyIfFound, string prefix = "", params string[] attrs) // name, value pairs
     {
-        var nodes = doc.SelectNodes(path + "/" + elementName);
         XmlElement element = null;
-        foreach (XmlElement e in nodes)
+        XmlNodeList nodeList = null;
+        string rootXmlPath = path;
+        if (!string.IsNullOrEmpty(elementName))
         {
-            if (name == null || name == e.GetAttribute("name", @namespace))
+            rootXmlPath = path + "/" + elementName;
+            nodeList = doc.SelectNodes(rootXmlPath);
+        }
+        else
+        {
+            var node = doc.SelectSingleNode(rootXmlPath);
+            nodeList = node.ChildNodes;
+        }
+
+        foreach (XmlElement e in nodeList)
+        {
+            if (name == null || name == e.GetAttribute("name", @namespace) || name == e.LocalName)
             {
                 element = e;
                 break;
@@ -146,8 +186,15 @@ public class OVRManifestPreprocessor
             if (element == null)
             {
                 var parent = doc.SelectSingleNode(path);
-                element = doc.CreateElement(elementName);
-                element.SetAttribute("name", @namespace, name);
+                if (string.IsNullOrEmpty(elementName))
+                {
+                    element = doc.CreateElement(prefix, name, @namespace);
+                }
+                else
+                {
+                    element = doc.CreateElement(elementName);
+                    element.SetAttribute("name", @namespace, name);
+                }
                 parent.AppendChild(element);
             }
 
@@ -204,6 +251,44 @@ public class OVRManifestPreprocessor
         element.SetAttribute("replace", toolsNamespace, "android:value");
     }
 
+    private static void ApplyPrefixTag(XmlDocument doc, string @namespace, string path, string name, string prefix)
+    {
+        XmlElement element = (XmlElement)doc.SelectSingleNode("/manifest");
+        if (element == null)
+        {
+            UnityEngine.Debug.LogError("Could not find manifest tag in android manifest.");
+            return;
+        }
+
+        foreach (XmlElement e in element.ChildNodes)
+        {
+            if (name == e.Name)
+            {
+                var newElement = doc.CreateElement(prefix, name, @namespace);
+                foreach (XmlAttribute a in e.Attributes)
+                {
+                    newElement.SetAttribute(a.LocalName, @namespace, a.Value);
+                }
+                element.RemoveChild(e);
+                element.AppendChild(newElement);
+            }
+        }
+    }
+
+    public static XmlDocument GetAndroidManifestXmlDocument()
+    {
+        try
+        {
+            var doc = new XmlDocument();
+            doc.Load(BuildManifestFilePathAbsolute);
+            return doc;
+        }
+        catch (System.Exception)
+        {
+            return null;
+        }
+    }
+
     public static void PatchAndroidManifest(string sourceFile, string destinationFile = null,
         bool skipExistingAttributes = true, bool enableSecurity = false)
     {
@@ -236,6 +321,18 @@ public class OVRManifestPreprocessor
                 return;
             }
 
+            // Add Horizon OS SDK namespace
+            var horizonOsSdkNamespaceURI = "http://schemas.horizonos/sdk";
+            OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
+            if (projectConfig.horizonOsSdkEnabled)
+            {
+                var namespaceAttribute = element.GetAttribute("xmlns:horizonos");
+                if (string.IsNullOrEmpty(namespaceAttribute))
+                {
+                    element.SetAttribute("xmlns:horizonos", horizonOsSdkNamespaceURI);
+                }
+            }
+
 #if UNITY_2023_2_OR_NEWER
             // replace UnityPlayerActivity to UnityPlayerGameActivity
             XmlElement activityNode = doc.SelectSingleNode("/manifest/application/activity") as XmlElement;
@@ -254,7 +351,7 @@ public class OVRManifestPreprocessor
 #endif
 
             ApplyRequiredManifestTags(doc, androidNamespaceURI, modifyIfFound, enableSecurity);
-            ApplyFeatureManifestTags(doc, androidNamespaceURI, modifyIfFound);
+            ApplyFeatureManifestTags(doc, androidNamespaceURI, modifyIfFound, horizonOsSdkNamespaceURI);
 
             // The following manifest entries are all handled through Oculus XR SDK Plugin
 #if !PRIORITIZE_OCULUS_XR_SETTINGS
@@ -318,6 +415,7 @@ public class OVRManifestPreprocessor
             "android.hardware.vr.headtracking",
             OVRDeviceSelector.isTargetDeviceQuestFamily,
             true,
+            prefix: "",
             "version", "1",
             "required", OVRProjectConfig.CachedProjectConfig.allowOptional3DofHeadTracking ? "false" : "true");
 
@@ -329,6 +427,7 @@ public class OVRManifestPreprocessor
             null,
             true,
             modifyIfFound,
+            prefix: "",
             "label", "@string/app_name",
             "icon", "@mipmap/app_icon",
             // Disable allowBackup in manifest and add Android NSC XML file
@@ -337,7 +436,7 @@ public class OVRManifestPreprocessor
         );
     }
 
-    private static void ApplyFeatureManifestTags(XmlDocument doc, string androidNamespaceURI, bool modifyIfFound)
+    private static void ApplyFeatureManifestTags(XmlDocument doc, string androidNamespaceURI, bool modifyIfFound, string horizonOsSdkNamespaceURI = "")
     {
         OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
         OVRRuntimeSettings runtimeSettings = OVRRuntimeSettings.GetRuntimeSettings();
@@ -369,6 +468,7 @@ public class OVRManifestPreprocessor
             "oculus.software.handtracking",
             handTrackingEntryNeeded,
             modifyIfFound,
+            prefix: "",
             "required",
             (targetHandTrackingSupport == OVRProjectConfig.HandTrackingSupport.HandsOnly) ? "true" : "false");
         AddOrRemoveTag(doc,
@@ -386,6 +486,7 @@ public class OVRManifestPreprocessor
             "com.oculus.handtracking.frequency",
             handTrackingEntryNeeded,
             modifyIfFound,
+            prefix: "",
             "value", projectConfig.handTrackingFrequency.ToString());
 
         AddOrRemoveTag(doc,
@@ -395,6 +496,7 @@ public class OVRManifestPreprocessor
             "com.oculus.handtracking.version",
             handTrackingVersionEntryNeeded,
             modifyIfFound,
+            prefix: "",
             "value", handTrackingVersionValue);
 
         //============================================================================
@@ -406,6 +508,7 @@ public class OVRManifestPreprocessor
             "oculus.software.overlay_keyboard",
             projectConfig.requiresSystemKeyboard,
             modifyIfFound,
+            prefix: "",
             "required", "false");
 
         //============================================================================
@@ -417,6 +520,7 @@ public class OVRManifestPreprocessor
             "com.oculus.experimental.enabled",
             projectConfig.experimentalFeaturesEnabled,
             modifyIfFound,
+            prefix: "",
             "required", "true");
 
         //============================================================================
@@ -472,6 +576,7 @@ public class OVRManifestPreprocessor
             "com.oculus.feature.PASSTHROUGH",
             projectConfig.insightPassthroughSupport != OVRProjectConfig.FeatureSupport.None,
             modifyIfFound,
+            prefix: "",
             "required", projectConfig.insightPassthroughSupport.ToRequiredAttributeValue());
 
         //============================================================================
@@ -485,6 +590,7 @@ public class OVRManifestPreprocessor
                 "com.oculus.ossplash",
                 true,
                 true /*modifyIfFound*/,
+                prefix: "",
                 "value",
                 "true");
             AddOrRemoveTag(doc,
@@ -494,6 +600,7 @@ public class OVRManifestPreprocessor
                 "com.oculus.ossplash.type",
                 true,
                 true /*modifyIfFound*/,
+                prefix: "",
                 "value",
                 projectConfig.systemSplashScreenType.ToManifestTag());
             AddOrRemoveTag(doc,
@@ -503,6 +610,7 @@ public class OVRManifestPreprocessor
                 "com.oculus.ossplash.colorspace",
                 true,
                 true /*modifyIfFound*/,
+                prefix: "",
                 "value",
                 ColorSpaceToManifestTag(runtimeSettings.colorSpace));
         }
@@ -515,6 +623,7 @@ public class OVRManifestPreprocessor
             "com.oculus.ossplash.background",
             required: true,
             true /*modifyIfFound*/,
+            prefix: "",
             "value",
             projectConfig.systemLoadingScreenBackground == OVRProjectConfig.SystemLoadingScreenBackground.ContextualPassthrough
                 ? "passthrough-contextual"
@@ -561,6 +670,7 @@ public class OVRManifestPreprocessor
             "oculus.software.trackedkeyboard",
             trackedKeyboardEntryNeeded,
             modifyIfFound,
+            prefix: "",
             "required",
             (targetTrackedKeyboardSupport == OVRProjectConfig.TrackedKeyboardSupport.Required) ? "true" : "false");
         AddOrRemoveTag(doc,
@@ -587,6 +697,7 @@ public class OVRManifestPreprocessor
             (targetBodyTrackingSupport == OVRProjectConfig.FeatureSupport.Required)
                 ? true
                 : modifyIfFound, // If Required, we should override the current entry
+            prefix: "",
             "required", (targetBodyTrackingSupport == OVRProjectConfig.FeatureSupport.Required) ? "true" : "false");
         AddOrRemoveTag(doc,
             androidNamespaceURI,
@@ -611,6 +722,7 @@ public class OVRManifestPreprocessor
             (targetFaceTrackingSupport == OVRProjectConfig.FeatureSupport.Required)
                 ? true
                 : modifyIfFound, // If Required, we should override the current entry
+            prefix: "",
             "required", (targetFaceTrackingSupport == OVRProjectConfig.FeatureSupport.Required) ? "true" : "false");
         AddOrRemoveTag(doc,
             androidNamespaceURI,
@@ -656,6 +768,7 @@ public class OVRManifestPreprocessor
             (targetEyeTrackingSupport == OVRProjectConfig.FeatureSupport.Required)
                 ? true
                 : modifyIfFound, // If Required, we should override the current entry
+            prefix: "",
             "required", (targetEyeTrackingSupport == OVRProjectConfig.FeatureSupport.Required) ? "true" : "false");
         AddOrRemoveTag(doc,
             androidNamespaceURI,
@@ -680,6 +793,7 @@ public class OVRManifestPreprocessor
             (virtualKeyboardSupport == OVRProjectConfig.FeatureSupport.Required)
                 ? true
                 : modifyIfFound, // If Required, we should override the current entry
+            prefix: "",
             "required", (virtualKeyboardSupport == OVRProjectConfig.FeatureSupport.Required) ? "true" : "false");
 
         //============================================================================
@@ -721,6 +835,7 @@ public class OVRManifestPreprocessor
             "com.oculus.trade_cpu_for_gpu_amount",
             required: tradeCpuForGpuAmountNeeded,
             modifyIfFound: true,
+            prefix: "",
             "value", ((int)processorFavor).ToString());
 
         //============================================================================
@@ -732,8 +847,30 @@ public class OVRManifestPreprocessor
             "com.oculus.telemetry.project_guid",
             required: true,
             modifyIfFound: true,
+            prefix: "",
             "value",
             runtimeSettings.TelemetryProjectGuid);
+
+        //============================================================================
+        // Horizon OS SDK
+        // If the store-compatible or any manifest override already has the horizon os sdk tag we need to re-add it with the proper
+        // prefix and namespace because the prefix get stripped out during the Unity build process which then kills the gradle build.
+        ApplyPrefixTag(doc, horizonOsSdkNamespaceURI, "", "uses-horizonos-sdk", "horizonos");
+        if (projectConfig.horizonOsSdkEnabled)
+        {
+            AddOrRemoveTag(doc,
+                horizonOsSdkNamespaceURI,
+                "/manifest",
+                "",
+                "uses-horizonos-sdk",
+                required: true,
+                modifyIfFound: true,
+                prefix: "horizonos",
+                "minSdkVersion",
+                projectConfig.minHorizonOsSdkVersion.ToString(),
+                "targetSdkVersion",
+                projectConfig.targetHorizonOsSdkVersion.ToString());
+        }
     }
 
 
@@ -748,6 +885,7 @@ public class OVRManifestPreprocessor
             "com.oculus.vr.focusaware",
             OVRDeviceSelector.isTargetDeviceQuestFamily,
             modifyIfFound,
+            prefix: "",
             "value", "true");
 
         // Add VR intent filter tag in the manifest
@@ -813,6 +951,7 @@ public class OVRManifestPreprocessor
                 "com.oculus.supportedDevices",
                 true,
                 modifyIfFound,
+                prefix: "",
                 "value", targetDeviceValue);
 
 #if XR_MGMT_4_4_0_OR_NEWER && USING_XR_SDK_OPENXR

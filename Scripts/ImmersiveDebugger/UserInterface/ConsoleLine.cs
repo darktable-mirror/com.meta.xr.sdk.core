@@ -97,6 +97,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _background.LayoutStyle = Style.Load<LayoutStyle>("Fill");
             _backgroundImageStyle = Style.Load<ImageStyle>("ConsoleLineBackground");
             BackgroundStyle = _backgroundImageStyle;
+            _background.RaycastTarget = true;
 
             // Flex
             _flex = Append<Flex>("line");

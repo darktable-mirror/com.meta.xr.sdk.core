@@ -59,7 +59,9 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         {
             networkMessenger.RegisterLocalPlayer(param.myPlayerId);
 
+#pragma warning disable CS0618 // Type or member is obsolete
             var ssaCore = Object.FindObjectOfType<SharedSpatialAnchorCore>();
+#pragma warning restore CS0618 // Type or member is obsolete
             if (ssaCore == null)
             {
                 Debug.LogWarning($"{nameof(SharedSpatialAnchorCore)} component is missing from the scene, add this component to allow anchor sharing.");

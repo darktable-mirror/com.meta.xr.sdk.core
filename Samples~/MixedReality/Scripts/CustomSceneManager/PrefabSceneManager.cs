@@ -22,6 +22,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.XR.Samples;
 using UnityEngine;
 
 /// <summary>
@@ -40,6 +41,7 @@ using UnityEngine;
 /// tracking point and only update that. This will keep the relative positions of
 /// all objects consistent, while also updating the location with new tracking data.
 /// </remarks>
+[MetaCodeSample("CoreSDK-MixedReality")]
 public class PrefabSceneManager : MonoBehaviour
 {
     public GameObject WallPrefab;

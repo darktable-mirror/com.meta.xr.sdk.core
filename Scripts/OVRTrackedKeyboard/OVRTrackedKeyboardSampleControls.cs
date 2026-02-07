@@ -18,12 +18,14 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections;
 using Meta.XR.Util;
 using UnityEngine;
 using UnityEngine.UI;
 
 [Feature(Feature.TrackedKeyboard)]
+[Obsolete("The TrackedKeyboard feature has been removed as of v72. For real-time object tracking such as physical keyboards, we recommend using Trackables in MR Utility Kit.", true)]
 public class OVRTrackedKeyboardSampleControls : MonoBehaviour
 {
     public OVRTrackedKeyboard trackedKeyboard;

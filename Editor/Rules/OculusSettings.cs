@@ -70,7 +70,9 @@ namespace Meta.XR.Editor.Rules
                 group: OVRProjectSetup.TaskGroup.Rendering,
                 isDone: buildTargetGroup =>
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     var useIL2CPP = PlayerSettings.GetScriptingBackend(buildTargetGroup) == ScriptingImplementation.IL2CPP;
+#pragma warning restore CS0618 // Type or member is obsolete
                     var useARM64 = PlayerSettings.Android.targetArchitectures == AndroidArchitecture.ARM64;
                     var useVK = OVRProjectSetupRenderingTasks.GetGraphicsAPIs(buildTargetGroup).Any(item => item == GraphicsDeviceType.Vulkan);
                     return useVK && useARM64 && useIL2CPP;
@@ -80,7 +82,9 @@ namespace Meta.XR.Editor.Rules
                 {
                     var buildTarget = buildTargetGroup.GetBuildTarget();
                     PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+#pragma warning disable CS0618 // Type or member is obsolete
                     PlayerSettings.SetScriptingBackend(buildTargetGroup, ScriptingImplementation.IL2CPP);
+#pragma warning restore CS0618 // Type or member is obsolete
                     PlayerSettings.SetGraphicsAPIs(buildTarget, new[] { GraphicsDeviceType.Vulkan });
                 },
                 fixMessage: "Set target architectures to ARM64, scripting backend to IL2CPP, and Graphics APIs to Vulkan for this build.",

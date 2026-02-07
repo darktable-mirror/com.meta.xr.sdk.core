@@ -46,6 +46,12 @@ namespace Meta.XR.BuildingBlocks
             set => _onSpatialAnchorsShareCompleted = value;
         }
 
+        public UnityEvent<List<OVRSpatialAnchor>, OVRAnchor.ShareResult> OnSpatialAnchorsShareToGroupCompleted
+        {
+            get => _onSpatialAnchorsShareToGroupCompleted;
+            set => _onSpatialAnchorsShareToGroupCompleted = value;
+        }
+
         /// <summary>
         /// This event will be triggered when the loading of a list of shared <see cref="OVRSpatialAnchor"/>(s) is completed.
         /// </summary>
@@ -56,11 +62,18 @@ namespace Meta.XR.BuildingBlocks
         }
 
         [SerializeField] private UnityEvent<List<OVRSpatialAnchor>, OVRSpatialAnchor.OperationResult> _onSpatialAnchorsShareCompleted;
+        [SerializeField] private UnityEvent<List<OVRSpatialAnchor>, OVRAnchor.ShareResult> _onSpatialAnchorsShareToGroupCompleted;
         [SerializeField] private UnityEvent<List<OVRSpatialAnchor>, OVRSpatialAnchor.OperationResult> _onSharedSpatialAnchorsLoadCompleted;
 
-        private Action<OVRSpatialAnchor.OperationResult, IEnumerable<OVRSpatialAnchor>> _onShareCompleted;
 
-        private void Start() => _onShareCompleted += OnShareCompleted;
+        private Action<OVRSpatialAnchor.OperationResult, IEnumerable<OVRSpatialAnchor>> _onShareCompleted;
+        private Action<OVRResult<OVRAnchor.ShareResult>, IEnumerable<OVRSpatialAnchor>> _onShareToGroupCompleted;
+
+        private void Start()
+        {
+            _onShareCompleted += OnShareCompleted;
+            _onShareToGroupCompleted += OnShareToGroupCompleted;
+        }
 
         /// <summary>
         /// Create and instantiate an <see cref="OVRSpatialAnchor"/>.
@@ -109,7 +122,7 @@ namespace Meta.XR.BuildingBlocks
         /// <param name="uuids">A list of <see cref="Guid"/>(s) to load.</param>
         /// <exception cref="ArgumentNullException">Throws when <paramref name="uuids"/> is null.</exception>
         /// <exception cref="ArgumentException">Throws when <paramref name="uuids"/> list is empty.</exception>
-        public new void LoadAndInstantiateAnchors(GameObject prefab, List<Guid> uuids)
+        public override async void LoadAndInstantiateAnchors(GameObject prefab, List<Guid> uuids)
         {
             if (uuids == null)
             {
@@ -121,66 +134,82 @@ namespace Meta.XR.BuildingBlocks
                 throw new ArgumentException($"[{nameof(SpatialAnchorCoreBuildingBlock)}] Uuid list is empty.");
             }
 
-            LoadSharedSpatialAnchorsRoutine(prefab, uuids);
-        }
-
-        private async void LoadSharedSpatialAnchorsRoutine(GameObject prefab, IEnumerable<Guid> uuids)
-        {
-
-            // Load unbounded anchors
             using var unboundAnchorsPoolHandle =
                 new OVRObjectPool.ListScope<OVRSpatialAnchor.UnboundAnchor>(out var unboundAnchors);
-            var result = await OVRSpatialAnchor.LoadUnboundSharedAnchorsAsync(uuids, unboundAnchors);
+            var loadResult = await OVRSpatialAnchor.LoadUnboundSharedAnchorsAsync(uuids, unboundAnchors);
+            LoadSharedSpatialAnchorsRoutine(prefab, loadResult);
+        }
+
+        /// <summary>
+        /// Loads and instantiates <see cref="OVRSpatialAnchor"/>(s) from
+        /// a ColocationSession group represented by <see cref="Guid"/>.
+        /// </summary>
+        /// <remarks>
+        /// Use <see cref="OnSharedSpatialAnchorsLoadCompleted"/> to be notified when the loading is completed.
+        /// </remarks>
+        /// <param name="prefab">A prefab to instantiate as a <see cref="OVRSpatialAnchor"/>.</param>
+        /// <param name="groupUuid">Representing the ColocationSession group used for retrieve the anchors.</param>
+        public async void LoadAndInstantiateAnchorsFromGroup(GameObject prefab, Guid groupUuid)
+        {
+            using var unboundAnchorsPoolHandle =
+                new OVRObjectPool.ListScope<OVRSpatialAnchor.UnboundAnchor>(out var unboundAnchors);
+            var loadResult = await OVRSpatialAnchor.LoadUnboundSharedAnchorsAsync(groupUuid, unboundAnchors);
+            LoadSharedSpatialAnchorsRoutine(prefab, loadResult);
+        }
+
+        private async void LoadSharedSpatialAnchorsRoutine(GameObject prefab, OVRResult<List<OVRSpatialAnchor.UnboundAnchor>, OVRSpatialAnchor.OperationResult> result)
+        {
             if (!result.Success)
             {
                 Debug.LogWarning($"[{nameof(SharedSpatialAnchorCore)}] Failed to load the shared spatial anchors: {result.Status}");
-                OnSpatialAnchorsShareCompleted?.Invoke(null, result.Status);
+                OnSharedSpatialAnchorsLoadCompleted?.Invoke(null, result.Status);
                 return;
             }
+            var unboundAnchors = result.Value;
             if (unboundAnchors.Count == 0)
             {
                 Debug.LogWarning($"[{nameof(SharedSpatialAnchorCore)}] There's no shared spatial anchors being loaded.");
-                OnSpatialAnchorsShareCompleted?.Invoke(null, result.Status);
+                OnSharedSpatialAnchorsLoadCompleted?.Invoke(null, result.Status);
                 return;
             }
 
             // Localize the anchors
-            using var _ = new OVRObjectPool.ListScope<OVRSpatialAnchor>(out var loadedAnchors);
-            foreach (var unboundAnchor in unboundAnchors)
+            using (new OVRObjectPool.ListScope<OVRSpatialAnchor>(out var loadedAnchors))
             {
-                if (!unboundAnchor.Localized)
+                for (int i = 0; i < unboundAnchors.Count; i++)
                 {
-                    if (!await unboundAnchor.LocalizeAsync())
+                    var unboundAnchor = unboundAnchors[i];
+                    if (!unboundAnchor.Localized)
                     {
-                        Debug.LogWarning($"[{nameof(SharedSpatialAnchorCore)}] Failed to localize the anchor. Uuid: {unboundAnchor.Uuid}");
-                        continue;
+                        if (!await unboundAnchor.LocalizeAsync())
+                        {
+                            Debug.LogWarning($"[{nameof(SharedSpatialAnchorCore)}] Failed to localize the anchor. Uuid: {unboundAnchor.Uuid}");
+                            continue;
+                        }
                     }
+
+                    var isPoseValid = unboundAnchor.TryGetPose(out var pose);
+                    if (!isPoseValid)
+                    {
+                        Debug.LogWarning("Unable to acquire initial anchor pose. Instantiating prefab at the origin.");
+                    }
+
+                    var spatialAnchorGo = isPoseValid
+                        ? Instantiate(prefab, pose.position, pose.rotation)
+                        : Instantiate(prefab);
+
+                    var anchor = spatialAnchorGo.AddComponent<OVRSpatialAnchor>();
+                    unboundAnchor.BindTo(anchor);
+                    loadedAnchors.Add(anchor);
                 }
 
-                var isPoseValid = unboundAnchor.TryGetPose(out var pose);
-                if (!isPoseValid)
-                {
-                    Debug.LogWarning("Unable to acquire initial anchor pose. Instantiating prefab at the origin.");
-                }
-
-                var spatialAnchorGo = isPoseValid
-                    ? Instantiate(prefab, pose.position, pose.rotation)
-                    : Instantiate(prefab);
-
-                var anchor = spatialAnchorGo.AddComponent<OVRSpatialAnchor>();
-                unboundAnchor.BindTo(anchor);
-                loadedAnchors.Add(anchor);
+                OnSharedSpatialAnchorsLoadCompleted?.Invoke(new List<OVRSpatialAnchor>(loadedAnchors), result.Status);
             }
-
-            OnSharedSpatialAnchorsLoadCompleted?.Invoke(new List<OVRSpatialAnchor>(loadedAnchors), result.Status);
         }
 
         /// <summary>
         /// Shares a list of <see cref="OVRSpatialAnchor"/>(s) with a list of <see cref="OVRSpaceUser"/>(s).
         /// </summary>
-        /// <remarks>
-        /// Use <see cref="OnSpatialAnchorsShareCompleted"/> to be notified when the sharing is completed.
-        /// </remarks>
         /// <remarks>
         /// Use <see cref="OnSpatialAnchorsShareCompleted"/> to be notified when the sharing is completed.
         /// </remarks>
@@ -203,6 +232,32 @@ namespace Meta.XR.BuildingBlocks
             OVRSpatialAnchor.ShareAsync(anchors, users).ContinueWith(_onShareCompleted, anchors);
         }
 
+        /// <summary>
+        /// Shares a list of <see cref="OVRSpatialAnchor"/>(s) with
+        /// a ColocationSession group represented by a <see cref="Guid"/>.
+        /// </summary>
+        /// <remarks>
+        /// Use <see cref="OnSpatialAnchorsShareToGroupCompleted"/> to be notified when the sharing is completed.
+        /// </remarks>
+        /// <param name="anchors">A list of <see cref="OVRSpatialAnchor"/>(s) to share.</param>
+        /// <param name="groupUuid">A group uuid to share the anchors with.</param>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="anchors"/> is null.</exception>
+        /// <exception cref="ArgumentException">Throws when <paramref name="anchors"/> list is empty.</exception>
+        public void ShareSpatialAnchors(List<OVRSpatialAnchor> anchors, Guid groupUuid)
+        {
+            if (anchors == null)
+            {
+                throw new ArgumentNullException();
+            }
+
+            if (anchors.Count == 0)
+            {
+                throw new ArgumentException($"[{nameof(SharedSpatialAnchorCore)}] Anchors list cannot be zero.");
+            }
+
+            OVRSpatialAnchor.ShareAsync(anchors, groupUuid).ContinueWith(_onShareToGroupCompleted, anchors);
+        }
+
         private void OnShareCompleted(OVRSpatialAnchor.OperationResult result, IEnumerable<OVRSpatialAnchor> anchors)
         {
             if (result != OVRSpatialAnchor.OperationResult.Success)
@@ -217,6 +272,24 @@ namespace Meta.XR.BuildingBlocks
             OnSpatialAnchorsShareCompleted?.Invoke(new List<OVRSpatialAnchor>(sharedAnchors), OVRSpatialAnchor.OperationResult.Success);
         }
 
-        private void OnDestroy() => _onShareCompleted -= OnShareCompleted;
+        private void OnShareToGroupCompleted(OVRResult<OVRAnchor.ShareResult> result, IEnumerable<OVRSpatialAnchor> anchors)
+        {
+            if (!result.Success)
+            {
+                OnSpatialAnchorsShareToGroupCompleted?.Invoke(null, result.Status);
+                return;
+            }
+
+            using var _ = new OVRObjectPool.ListScope<OVRSpatialAnchor>(out var sharedAnchors);
+            sharedAnchors.AddRange(anchors);
+
+            OnSpatialAnchorsShareToGroupCompleted?.Invoke(new List<OVRSpatialAnchor>(sharedAnchors), result.Status);
+        }
+
+        private void OnDestroy()
+        {
+            _onShareCompleted -= OnShareCompleted;
+            _onShareToGroupCompleted -= OnShareToGroupCompleted;
+        }
     }
 }

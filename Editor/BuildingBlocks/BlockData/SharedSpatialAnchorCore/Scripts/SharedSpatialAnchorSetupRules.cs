@@ -42,22 +42,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                     projectConfig.sharedAnchorSupport = OVRProjectConfig.FeatureSupport.Required;
                     OVRProjectConfig.CommitProjectConfig(projectConfig);
                 },
-                fixMessage: "Enable Shared Spatial Anchor Support in the project config"
+                fixMessage: "Enable Anchor And Space Sharing Support in the project config"
             );
-
-            // Platform AppID setup rule
-#if USING_META_XR_PLATFORM_SDK
-            OVRProjectSetup.AddTask(
-                level: OVRProjectSetup.TaskLevel.Required,
-                group: OVRProjectSetup.TaskGroup.Features,
-                isDone: _ => OVRProjectSetupUtils.FindComponentInScene<SharedSpatialAnchorCore>() == null ||
-                             (OVRProjectSetupUtils.FindComponentInScene<SharedSpatialAnchorCore>() != null &&
-                              SharedSpatialAnchorBuildingBlockEditor.HasAppId()),
-                message: "When using Shared Spatial Anchor in your project it's required to set an AppID in Platform Settings.",
-                fix: _ => MetaAccountSetupGuide.ShowWindow(Guides.Editor.Utils.TriggerSource.UPST),
-                fixMessage: "Set Meta Quest AppID."
-            );
-#endif // USING_META_XR_PLATFORM_SDK
         }
     }
 }

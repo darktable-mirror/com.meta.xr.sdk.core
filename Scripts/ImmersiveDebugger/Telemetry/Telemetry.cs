@@ -22,6 +22,7 @@
 using System;
 using System.Collections.Generic;
 using Meta.XR.ImmersiveDebugger.Manager;
+using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using Meta.XR.ImmersiveDebugger.Utils;
 using static OVRTelemetry;
 
@@ -32,11 +33,15 @@ namespace Meta.XR.ImmersiveDebugger
         [Markers]
         internal static class MarkerId
         {
-            public const int SettingsAccessed = 163059815;
-            public const int SettingsChanged = 163065143;
+            // Back-End Managers Events
             public const int ComponentTracked = 163059554;
             public const int Run = 163061656;
             public const int FrameUpdate = 163056655;
+
+            // User Interface Events
+            public const int PanelOpen = 163057243;
+            public const int PanelClose = 163059919;
+            public const int PanelInteraction = 163058794;
         }
 
         internal enum State
@@ -49,14 +54,14 @@ namespace Meta.XR.ImmersiveDebugger
         internal enum Method
         {
             Attributes,
-            DebugInspector
+            DebugInspector,
+            Hierarchy
         }
 
         internal static class AnnotationType
         {
-            public const string Origin = "Origin";
+            // Back-End Managers Events
             public const string Type = "Type";
-            public const string Value = "Value";
             public const string Method = "Method";
             public const string State = "State";
             public const string Instances = "Instances";
@@ -65,6 +70,13 @@ namespace Meta.XR.ImmersiveDebugger
             public const string Tweaks = "Tweaks";
             public const string Actions = "Actions";
             public const string IsCustom = "IsCustom";
+
+            // User Interface Events
+            public const string Action = "action";
+            public const string ActionType = "action_type";
+            public const string Origin = "origin";
+            public const string OriginType = "origin_type";
+            public const string Platform = "platform";
         }
 
         internal class TelemetryTracker
@@ -177,13 +189,48 @@ namespace Meta.XR.ImmersiveDebugger
             var assemblyName = type.Assembly.GetName().Name;
             foreach (var assembly in NonCustomAssemblies)
             {
-                if (assemblyName.StartsWith(assembly, StringComparison.InvariantCultureIgnoreCase))
+                if (assemblyName.StartsWith(assembly, StringComparison.InvariantCultureIgnoreCase)
+                    )
                 {
                     return false;
                 }
             }
 
             return true;
+        }
+
+        public static void OnPanelActiveStateChanged(Panel panel)
+        {
+            // Panel is not initialized yet. We'll hijack this PixelsPerUnit property to test this
+            if (panel.PixelsPerUnit == 0.0f) return;
+
+            var markerId = panel.isActiveAndEnabled ? MarkerId.PanelOpen : MarkerId.PanelClose;
+
+            Start(markerId)
+                .AddAnnotation(AnnotationType.Action, panel.name)
+                .AddAnnotation(AnnotationType.ActionType, panel.GetType().Name)
+                .AddAnnotation(AnnotationType.Platform, GetPlayModeOrigin())
+                .Send();
+        }
+
+        public static void OnButtonClicked(Button button)
+        {
+            var panel = FetchPanel(button);
+            Start(MarkerId.PanelInteraction)
+                .AddAnnotation(AnnotationType.Action, button.name)
+                .AddAnnotation(AnnotationType.ActionType, button.GetType().Name)
+                .AddAnnotation(AnnotationType.Origin, panel?.name)
+                .AddAnnotation(AnnotationType.OriginType, panel?.GetType().Name)
+                .AddAnnotation(AnnotationType.Platform, GetPlayModeOrigin())
+                .Send();
+        }
+
+        private static Panel FetchPanel(Controller controller)
+        {
+            if (controller == null) return null;
+            if (controller is Panel panel) return panel;
+
+            return FetchPanel(controller.Owner);
         }
     }
 }

@@ -21,7 +21,7 @@
 using UnityEditor;
 using UnityEngine;
 using Meta.XR.Guides.Editor;
-using Meta.XR.Guides.Editor.Items;
+using Meta.XR.Editor.UserInterface;
 using Color = UnityEngine.Color;
 
 namespace Meta.XR.BuildingBlocks.Editor
@@ -36,17 +36,17 @@ namespace Meta.XR.BuildingBlocks.Editor
             new Icon(Styles.Contents.ErrorIcon, Color.white, "<b>Unsupported Unity Editor. Requires 2022.3.1 or 2023.2.</b>").Draw();
 #endif // UNITY_2022_3_OR_NEWER
 
-#if !DEPTH_API_SUPPORTED
+#if !XR_OCULUS_4_2_0_OR_NEWER
             new Icon(Styles.Contents.ErrorIcon, Color.white, "<b>DepthAPI package is missing. Requires com.unity.xr.oculus of version 4.2.0.</b>").Draw();
-#endif // DEPTH_API_SUPPORTED
+#endif // XR_OCULUS_4_2_0_OR_NEWER
 
-#if UNITY_2022_3_OR_NEWER && DEPTH_API_SUPPORTED
+#if UNITY_2022_3_OR_NEWER && XR_OCULUS_4_2_0_OR_NEWER
             new Icon(Styles.Contents.InfoIcon, Color.white, "<b>Dynamic Occlusion block made some critical changes in project.</b>").Draw();
             if (GUILayout.Button("See the changes"))
             {
                 OcclusionBlockSetupInfo.Show(true);
             }
-#endif // UNITY_2022_3_OR_NEWER && DEPTH_API_SUPPORTED
+#endif // UNITY_2022_3_OR_NEWER && XR_OCULUS_4_2_0_OR_NEWER
 
             EditorGUILayout.EndVertical();
         }

@@ -20,6 +20,7 @@
 
 
 using System.Reflection;
+using Meta.XR.ImmersiveDebugger.Utils;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -27,9 +28,9 @@ namespace Meta.XR.ImmersiveDebugger.Manager
     {
         internal System.Action Delegate { get; private set; }
 
-        internal ActionHook(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute)
+        internal ActionHook(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute)
         {
-            Delegate = () => (memberInfo as MethodInfo)?.Invoke(instance, null);
+            Delegate = () => (memberInfo as MethodInfo)?.Invoke(_instance, null);
         }
     }
 }

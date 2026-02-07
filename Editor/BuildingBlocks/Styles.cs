@@ -37,6 +37,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         public static class Colors
         {
             public static readonly Color AccentColor = HexToColor("#a29de5");
+            public static readonly Color ComplementaryColor = HexToColor("#E5C79E");
             public static readonly Color DragColor = new Color(1.0f, 1.0f, 1.0f, Constants.DragOpacity);
             public static readonly Color DisabledColor = new Color(Constants.DisabledTint, Constants.DisabledTint, Constants.DisabledTint, 1.0f);
         }
@@ -45,16 +46,24 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             public const float BorderRadius = 4.0f;
 
-            public static Vector4 RoundedBorderVectors =
-                new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
+            public static Vector4 RoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
 
             public static Vector4 UpperRoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, 0, 0);
             public static Vector4 LowerRoundedBorderVectors = new Vector4(0, 0, BorderRadius, BorderRadius);
 
             public const float ThumbnailRatio = 1.8f;
+            public const float CollectionThumbnailRatio = 1024f / 429f;
+            public const float CollectionThumbnailDivRatio = 2.0f;
+            public const float CollectionDivRatio = 1.0f;
             public const float ThumbnailSourceRatio = 2.0f;
             public const int IdealThumbnailWidth = 280;
+            public const int IdealCollectionWidth = 320;
             public const float DisabledTint = 0.6f;
+
+            public const float CollectionThumbnailZoomIn = 1.1f;
+            public const float CollectionThumbnailZoomOut = 1.0f;
+            public const float CollectionThumbnailZoomingSpeed = 7.0f;
+            public const float CollectionThumbnailZoomingEpsilon = 0.01f;
 
 #if OVR_BB_DRAGANDDROP
             public const float DragOpacity = 0.5f;
@@ -90,9 +99,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             public static readonly TextureContent SuccessIcon =
                 TextureContent.CreateContent("ovr_success_greybg.png", Utils.BuildingBlocksIcons);
 
-            public static readonly TextureContent HeaderIcon =
-                TextureContent.CreateContent("ovr_icon_bbw.png", Utils.BuildingBlocksIcons);
-
             public static readonly TextureContent TagBackground =
                 TextureContent.CreateContent("ovr_bg_radius4.png", Utils.BuildingBlocksIcons);
 
@@ -107,8 +113,24 @@ namespace Meta.XR.BuildingBlocks.Editor
             public static readonly TextureContent BreakBuildingBlockConnectionIcon =
                 TextureContent.CreateContent("ovr_icon_break_bb_connection.png", Utils.BuildingBlocksIcons);
 
+            public static readonly TextureContent ModifiablePropertyIcon =
+                TextureContent.CreateContent("ovr_icon_prototype.png", Utils.BuildingBlocksIcons);
+
             public static readonly TextureContent UtilitiesIcon =
                 TextureContent.CreateContent("ovr_icon_utilities.png", Utils.BuildingBlocksIcons);
+
+            public static readonly TextureContent ImmersiveExperienceCollectionThumb =
+                TextureContent.CreateContent("Collections/bb_collection_vr_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
+            public static readonly TextureContent AllBlocksThumb =
+                TextureContent.CreateContent("Collections/bb_collection_all_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
+            public static readonly TextureContent TableTopCollectionThumb =
+                TextureContent.CreateContent("Collections/bb_collection_tabletop_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
+            public static readonly TextureContent MixedRealityCollectionThumb =
+                TextureContent.CreateContent("Collections/bb_collection_mr_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
+            public static readonly TextureContent DefaultCollectionThumb =
+                TextureContent.CreateContent("Collections/default.png", Utils.BuildingBlocksThumbnails);
+
+            public static readonly TextureContent CollectionIcon = TextureContent.CreateContent("bb_icon_collection.png", Utils.BuildingBlocksIcons);
         }
 
         public class GUIStylesContainer
@@ -346,6 +368,16 @@ namespace Meta.XR.BuildingBlocks.Editor
                 }
             };
 
+            public readonly GUIStyle InfoStyleProperty = new GUIStyle(EditorStyles.label)
+            {
+                fontSize = 10,
+                wordWrap = true,
+                normal =
+                {
+                    textColor = Color.gray
+                }
+            };
+
             public readonly GUIStyle FoldoutBoldLabel = new GUIStyle(EditorStyles.foldout)
             {
                 fontStyle = FontStyle.Bold
@@ -392,6 +424,13 @@ namespace Meta.XR.BuildingBlocks.Editor
                 wordWrap = true,
                 richText = true,
                 fontStyle = FontStyle.Bold
+            };
+
+            public readonly GUIStyle BlockLinkStyleProperty = new GUIStyle(EditorStyles.linkLabel)
+            {
+                margin = new RectOffset(MiniPadding, 0, 0, MiniMargin),
+                fontSize = 11,
+                richText = true,
             };
 
             public readonly GUIStyle TagIcon = new GUIStyle(EditorStyles.miniLabel)
@@ -465,7 +504,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             public readonly GUIStyle Toolbar = new GUIStyle()
             {
-                margin = new RectOffset(0, 0, Margin, Margin),
+                margin = new RectOffset(0, 0, 0, Margin),
                 padding = new RectOffset(Margin + Border, Margin + Border, Padding, Padding),
                 stretchWidth = true,
                 stretchHeight = false,
@@ -530,11 +569,25 @@ namespace Meta.XR.BuildingBlocks.Editor
             public readonly GUIStyle SmallLabelStyle = new(EditorStyles.miniLabel)
             {
                 fontSize = 12,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
                 normal =
                 {
                     textColor = LightGray
                 },
                 wordWrap = true,
+                richText = true
+            };
+
+            public readonly GUIStyle SmallInlineLinkLabelStyle = new(EditorStyles.miniLabel)
+            {
+                fontSize = 12,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                normal =
+                {
+                    textColor = LinkColor
+                }
             };
 
             public readonly GUIStyle LeftMargin = new()
@@ -569,7 +622,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             public readonly GUIStyle CollectionTagStyle = new(EditorStyles.miniLabel)
             {
-                margin = new RectOffset(MiniPadding, MiniPadding, 0, MiniPadding),
+                margin = new RectOffset(MiniPadding, MiniPadding, 1, MiniPadding),
                 wordWrap = false,
                 stretchWidth = false,
                 fixedHeight = 20,
@@ -743,6 +796,18 @@ namespace Meta.XR.BuildingBlocks.Editor
                 },
             };
 
+            public readonly GUIStyle LargeLabelStyleFullWhite = new(EditorStyles.boldLabel)
+            {
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                fontSize = 16,
+                wordWrap = true,
+                normal =
+                {
+                    textColor = Color.white
+                },
+            };
+
             public readonly GUIStyle FoldoutSubtitleStyle = new(EditorStyles.foldout)
             {
                 margin = new RectOffset(MiniMargin, Margin, 0, MiniMargin),
@@ -752,6 +817,61 @@ namespace Meta.XR.BuildingBlocks.Editor
                     textColor = OffWhite
                 },
                 fontSize = 14
+            };
+
+            public readonly GUIStyle CollectionsPageStyle = new()
+            {
+                padding = new RectOffset(LargeMargin, 0, Margin, Margin),
+                stretchWidth = false
+            };
+
+            public readonly GUIStyle CollectionsPageTitleStyle = new(EditorStyles.boldLabel)
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                fontSize = EditorStyles.boldLabel.fontSize + 1,
+                normal = { textColor = Color.white }
+            };
+
+            public readonly GUIStyle CollectionCardItemStyleWithHover = new()
+            {
+                margin = new RectOffset(0, 0, Margin, Margin),
+                padding = new RectOffset(Border, Border, Border, Border),
+                stretchWidth = false,
+                stretchHeight = false,
+
+            };
+
+            public readonly GUIStyle CollectionDescriptionAreaStyle = new()
+            {
+                padding = new RectOffset(DoubleMargin, DoubleMargin, DoubleMargin, DoubleMargin),
+                margin = new RectOffset(0, 0, 0, 0),
+            };
+
+            public readonly GUIStyle CollectionDescriptionStyle = new()
+            {
+                // padding = new RectOffset(Padding, Padding, Padding, Padding),
+                margin = new RectOffset(0, 0, 0, 0),
+                fixedHeight = 22,
+                normal =
+                {
+                    textColor = Color.white,
+                },
+                wordWrap = false,
+                fixedWidth = 60
+            };
+
+            public readonly GUIStyle CollectionAreaStatusStyle = new()
+            {
+                stretchHeight = false,
+                margin = new RectOffset(0, 0, 0, 0),
+                fixedHeight = 22,
+                fontSize = 12,
+                normal =
+                {
+                    textColor = LightGray,
+                },
+                wordWrap = false
             };
         }
 

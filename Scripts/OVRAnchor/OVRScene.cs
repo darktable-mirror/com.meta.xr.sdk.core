@@ -63,9 +63,9 @@ public static partial class OVRScene
         }
 #endif
 
-        return RequestSceneCapture(labels, out var requestId)
-            ? OVRTask.FromRequest<bool>(requestId)
-            : OVRTask.FromResult(false);
+        return OVRTask
+            .Build(RequestSceneCapture(labels, out var requestId), requestId)
+            .ToTask(failureValue: false);
     }
 
     /// <summary>
@@ -81,12 +81,9 @@ public static partial class OVRScene
     /// successfully.
     /// </remarks>
     /// <returns>A task that can be used to track the asynchronous operation.</returns>
-    public static OVRTask<bool> RequestSpaceSetup()
-    {
-        return RequestSceneCapture(string.Empty, out var requestId)
-            ? OVRTask.FromRequest<bool>(requestId)
-            : OVRTask.FromResult(false);
-    }
+    public static OVRTask<bool> RequestSpaceSetup() => OVRTask
+        .Build(RequestSceneCapture(string.Empty, out var requestId), requestId)
+        .ToTask(failureValue: false);
 
     /// <summary>
     /// Requests Space Setup using a list of classifications

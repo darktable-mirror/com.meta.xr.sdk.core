@@ -45,7 +45,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                 return;
 
             var attribute = member.attribute;
-            if (TweakUtils.IsMemberTypeValidForTweak(member.MemberInfo))
+            if (TweakUtils.IsMemberValidForTweak(member.MemberInfo))
             {
                 attribute.Tweakable = EditorGUILayout.Toggle(TweakableContent, attribute.Tweakable);
 

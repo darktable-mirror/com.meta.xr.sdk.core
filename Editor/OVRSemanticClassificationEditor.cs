@@ -21,9 +21,10 @@
 using System;
 using UnityEditor;
 
+
 [CustomEditor(typeof(OVRSemanticClassification))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
-public class OVRSemanticClassificationEditor : Editor
+public class OVRSemanticClassificationEditor : UnityEditor.Editor
 {
     OVRSemanticClassification _object;
     MonoScript _script;

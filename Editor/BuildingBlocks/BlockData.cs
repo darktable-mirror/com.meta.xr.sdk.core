@@ -23,6 +23,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.ToolingSupport;
+using Meta.XR.Guides.Editor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -39,8 +43,21 @@ namespace Meta.XR.BuildingBlocks.Editor
         protected virtual bool UsesPrefab => true;
         internal bool GetUsesPrefab => UsesPrefab;
 
+        internal string GuidedSetupName
+        {
+            get => guidedSetupName;
+            set => guidedSetupName = value;
+        }
+
+        // Indicates whether the current block can be added over selected GameObject(s).
+        // Override this value in custom BlockData class to show "Add to Selected" button
+        // in Block's detail page.
+        internal virtual bool CanBeAddedOverGameObject => false;
+
+        [SerializeField] internal int selectedGuidedSetupIndex;
         [SerializeField] internal List<string> externalBlockDependencies;
         [SerializeField] internal List<string> dependencies;
+        [SerializeField] internal string guidedSetupName;
 
         internal virtual IReadOnlyCollection<InstallationStepInfo> InstallationSteps
         {
@@ -90,6 +107,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal override async Task AddToProject(GameObject selectedGameObject = null, Action onInstall = null)
         {
+            UsageSettings.UsesBuildingBlocks.SetValue(true);
+
             using (new OVREditorUtils.UndoScope($"Install {Utils.BlockPublicTag} {BlockName}"))
             {
                 await InstallWithDependenciesAndCommit(selectedGameObject);
@@ -143,7 +162,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 if (e is not InstallationCancelledException)
                 {
-                    Debug.LogError($"Error installing Building Block {BlockName}: {e.Message}");
+                    Debug.LogError($"Error installing Building Block {BlockName}: {e.Message} \n {e.StackTrace}");
                 }
 
                 installException = e;
@@ -160,7 +179,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     })
                     .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.BlockId, Id)
                     .AddAnnotationIfNotNullOrEmpty(OVRTelemetryConstants.BB.AnnotationType.Error,
-                        installException?.Message)
+                        installException?.Message + "\n" + installException?.StackTrace)
                     .Send();
             }
         }
@@ -276,6 +295,9 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                 Undo.RegisterCompleteObjectUndo(block, $"Setup {nameof(ComponentType)}");
 
+                // Show guided setup window if available
+                ShowGuidedSetup();
+
                 OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.AddBlock)
                     .AddBlockInfo(block)
                     .AddSceneInfo(spawnedObject.scene)
@@ -302,7 +324,30 @@ namespace Meta.XR.BuildingBlocks.Editor
             instance.SetActive(true);
             instance.name = $"{Utils.BlockPublicTag} {BlockName}";
             Undo.RegisterCreatedObjectUndo(instance, "Create " + instance.name);
+
+            // Show guided setup window if any.
+            ShowGuidedSetup();
+
             return new List<GameObject> { instance };
+        }
+
+        private void ShowGuidedSetup()
+        {
+            string guidedSetupName = GuidedSetupName;
+            var interfaceBlock = this as InterfaceBlockData;
+            if (interfaceBlock != null && !string.IsNullOrEmpty(interfaceBlock.SelectedRoutine.guidedSetupName))
+            {
+                guidedSetupName = interfaceBlock.SelectedRoutine.guidedSetupName;
+            }
+
+            if (string.IsNullOrEmpty(guidedSetupName)) return;
+
+            var guideType = Type.GetType(guidedSetupName);
+            if (guideType == null || guideType.BaseType != typeof(GuidedSetup))
+                return;
+
+            var instance = Activator.CreateInstance(guideType);
+            (instance as GuidedSetup)?.ShowWindow(Origins.Component);
         }
 
         protected virtual Task<List<GameObject>> InstallRoutineAsync(GameObject selectedGameObject)

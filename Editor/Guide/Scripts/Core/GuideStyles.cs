@@ -19,10 +19,7 @@
  */
 
 using Meta.XR.Editor.UserInterface;
-using UnityEditor;
 using UnityEngine;
-using static Meta.XR.Editor.UserInterface.Styles.Constants;
-using static Meta.XR.Editor.UserInterface.Styles.Colors;
 
 namespace Meta.XR.Guides.Editor
 {
@@ -47,125 +44,30 @@ namespace Meta.XR.Guides.Editor
 
             public static readonly TextureContent BannerImage =
                 TextureContent.CreateContent("ovr_banner.png", Utils.GuidedAccountSetupTextures);
+
+            public static readonly TextureContent MetaCoreSDKHeaderImage =
+                TextureContent.CreateContent("ovr_develop.jpg", Utils.GuidedAccountSetupTextures);
+
+            public static readonly TextureContent DeveloperOculusCom =
+                TextureContent.CreateContent("ovr_develop_01.jpg", Utils.GuidedAccountSetupTextures);
+
+            public static readonly TextureContent BuildingBlocks =
+                TextureContent.CreateContent("ovr_develop_02.jpg", Utils.GuidedAccountSetupTextures);
+
+            public static readonly TextureContent MetaQuestDeveloperHub =
+                TextureContent.CreateContent("ovr_develop_03.jpg", Utils.GuidedAccountSetupTextures);
         }
 
         public static class Constants
         {
             public const int DefaultWidth = 520;
             public const int DefaultHeight = 480;
-        }
-
-        public class GUIStylesContainer
-        {
-            public readonly GUIStyle Header = new(EditorStyles.miniLabel)
-            {
-                fontSize = 12,
-                fixedHeight = 32 + Margin * 2,
-                padding = new RectOffset(Margin, Margin, Margin, Margin),
-                margin = new RectOffset(0, 0, 0, 0),
-                wordWrap = true
-            };
-
-            public readonly GUIStyle HeaderIconStyle = new()
-            {
-                fixedHeight = 32.0f,
-                fixedWidth = 32.0f,
-                stretchWidth = false,
-                alignment = TextAnchor.MiddleCenter,
-                padding = new RectOffset(0, 0, 0, 0)
-            };
-
-            public readonly GUIStyle HeaderBoldLabel = new(EditorStyles.boldLabel)
-            {
-                stretchHeight = true,
-                fixedHeight = 32,
-                fontSize = 16,
-                normal =
-                {
-                    textColor = CharcoalGray
-                },
-                hover =
-                {
-                    textColor = CharcoalGray
-                },
-                alignment = TextAnchor.MiddleLeft,
-                richText = true
-            };
-
-            public readonly GUIStyle SubtitleLabel = new(EditorStyles.label)
-            {
-                fontSize = 12,
-                alignment = TextAnchor.UpperLeft,
-                padding = new RectOffset(18, 0, 12, 0),
-                wordWrap = true,
-                richText = true
-            };
-
-            public readonly GUIStyle IconStyleTopPadding = new(EditorStyles.label)
-            {
-                margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(0, 0, 2, 0),
-                fixedWidth = SmallIconSize,
-                stretchWidth = false
-            };
-
-            public readonly GUIStyle IconStyle = new(EditorStyles.label)
-            {
-                margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(0, 0, 0, 0),
-                fixedWidth = SmallIconSize,
-                stretchWidth = false
-            };
-
-            public readonly GUIStyle ContentMargin = new()
-            {
-                margin = new RectOffset(LargeMargin, LargeMargin, Margin, LargeMargin)
-            };
-
-            public readonly GUIStyle LabelTopPadding = new(EditorStyles.label)
-            {
-                fontSize = 12,
-                alignment = TextAnchor.UpperLeft,
-                wordWrap = false,
-                richText = true,
-                padding = new RectOffset(0, 0, 3, 0)
-            };
-
-            public readonly GUIStyle Label = new(EditorStyles.label)
-            {
-                fontSize = 12,
-                alignment = TextAnchor.UpperLeft,
-                wordWrap = true,
-                richText = true,
-                padding = new RectOffset(0, 0, 0, 0)
-            };
-
-            public readonly GUIStyle TopMargin = new()
-            {
-                margin = new RectOffset(0, 0, 8, 0),
-            };
-
-            public readonly GUIStyle LinkLabelStyle = new(EditorStyles.linkLabel)
-            {
-                margin = new RectOffset(3, 3, 2, 2),
-                fontSize = 12,
-                alignment = TextAnchor.UpperLeft
-            };
-
-            public readonly GUIStyle NoMarginAndPadding = new()
-            {
-                margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(0, 0, 0, 0),
-                alignment = TextAnchor.MiddleLeft,
-            };
-        }
-
-        private static GUIStylesContainer _guiStyles;
-        public static GUIStylesContainer GUIStyles => _guiStyles ??= new GUIStylesContainer();
-
-        public enum ContentStatusType
-        {
-            Normal, Warning, Error, Success
+            public const float ImageWidth = 256f;
+            public const float ImageHeight = 150f;
+            public const int ImageBorderWidth = 1;
+            public const int DefaultHeaderHeight = 84;
+            public const float BorderRadius = 4.0f;
+            public static Vector4 RoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
         }
     }
 }

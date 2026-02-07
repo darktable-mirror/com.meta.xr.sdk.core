@@ -39,6 +39,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         protected virtual bool FollowOverride { get; set; }
         protected virtual bool RotateOverride { get; set; }
 
+        private bool _positionHasBeenInitialized;
+
         internal virtual void Awake()
         {
             Setup(null);
@@ -53,9 +55,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private void UpdateTransform()
         {
-            if (FollowOverride)
+            if (FollowOverride || !_positionHasBeenInitialized)
             {
-                Transform.position = _proxyCameraRig.CameraTransform.position;
+                var expectedPosition = _proxyCameraRig.CameraTransform.position;
+                if (expectedPosition != Vector3.zero)
+                {
+                    // It may takes some frames to get the first valid position
+                    _positionHasBeenInitialized = true;
+                }
+                Transform.position = expectedPosition;
             }
 
             if (RotateOverride)
@@ -66,16 +74,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 euler.z = 0.0f;
                 Transform.rotation = Quaternion.Euler(euler);
             }
-        }
-
-        private void UpdateController()
-        {
-            _proxyInputModule.InputModule.rayTransform = OVRInput.GetActiveController() switch
-            {
-                OVRInput.Controller.LTouch => _proxyCameraRig.LeftControllerTransform,
-                OVRInput.Controller.RTouch => _proxyCameraRig.RightControllerTransform,
-                _ => _proxyCameraRig.RightControllerTransform
-            };
         }
 
         private void UpdateCulling()
@@ -125,12 +123,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             UpdateTransform();
             UpdateCulling();
 
-            if (!_proxyInputModule.Refresh()) return;
-            UpdateController();
+            _proxyInputModule.Refresh();
         }
 
         protected override void RefreshLayoutPreChildren() { }
 
     }
 }
-

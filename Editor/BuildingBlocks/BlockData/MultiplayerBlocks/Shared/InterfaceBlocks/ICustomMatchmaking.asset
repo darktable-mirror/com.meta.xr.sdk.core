@@ -20,7 +20,7 @@ MonoBehaviour:
   tags:
     array:
     - name: Multiplayer
-  thumbnail: {fileID: 2800000, guid: 7cb8b47d1a3124681980f3ca0ae6daec, type: 3}
+  thumbnail: {fileID: 2800000, guid: 57b03d0a194a60e439ec9b413a2148ad, type: 3}
   order: 0
   prefab: {fileID: 0}
   externalBlockDependencies: []

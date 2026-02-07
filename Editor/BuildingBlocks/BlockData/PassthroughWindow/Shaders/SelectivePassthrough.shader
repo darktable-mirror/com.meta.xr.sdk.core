@@ -1,3 +1,7 @@
+/// NOTE: This shader is designed to work with Premultiplied Alpha enabled.
+/// It multiplies the RGB channel by Alpha internally, so ensure that Premultiplied Alpha remains enabled in the project settings.
+/// Premultiplied Alpha can be enabled by setting OVRManager.eyeFovPremultipliedAlphaModeEnabled to true.
+
 Shader "Oculus/SelectivePassthrough"
 {
     Properties
@@ -8,8 +12,6 @@ Shader "Oculus/SelectivePassthrough"
 
         [Header(DepthTest)]
         [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest("ZTest", Float) = 4 //"LessEqual"
-        [Enum(UnityEngine.Rendering.BlendOp)] _BlendOpColor("Blend Color", Float) = 2 //"ReverseSubtract"
-        [Enum(UnityEngine.Rendering.BlendOp)] _BlendOpAlpha("Blend Alpha", Float) = 3 //"Min"
     }
     SubShader
     {
@@ -20,12 +22,12 @@ Shader "Oculus/SelectivePassthrough"
         {
             ZWrite Off
             ZTest[_ZTest]
-            BlendOp[_BlendOpColor], [_BlendOpAlpha]
-            Blend Zero One, One One
+            BlendOp Add
+            Blend Zero SrcAlpha
 
             CGPROGRAM
-// Upgrade NOTE: excluded shader from DX11; has structs without semantics (struct v2f members center)
-//#pragma exclude_renderers d3d11
+            // Upgrade NOTE: excluded shader from DX11; has structs without semantics (struct v2f members center)
+            //#pragma exclude_renderers d3d11
             #pragma vertex vert
             #pragma fragment frag
 

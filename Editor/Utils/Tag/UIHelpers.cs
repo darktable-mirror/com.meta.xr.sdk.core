@@ -30,7 +30,7 @@ namespace Meta.XR.Editor.Tags
         internal static void DrawList(string controlId, IEnumerable<Tag> tagArray, Tag.TagListType listType,
             float availableWidth = 0,
             ICollection<Tag> activeCollection = null,
-            Action<Tag> onTagClicked = null)
+            Action<Tag> onTagClicked = null, Action customTagDraw = null)
         {
             var style = new GUIStyle(Styles.GUIStyles.FilterByTagGroup);
             if (availableWidth > 0)
@@ -40,6 +40,10 @@ namespace Meta.XR.Editor.Tags
 
             EditorGUILayout.BeginVertical(style);
             EditorGUILayout.BeginHorizontal(style);
+
+            // Place for drawing additional custom tags
+            customTagDraw?.Invoke();
+
             var currentWidth = 0.0f;
             foreach (var tag in tagArray)
             {

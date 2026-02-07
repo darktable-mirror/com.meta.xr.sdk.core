@@ -101,7 +101,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
     private List<RaycastHit> m_RaycastResults = new List<RaycastHit>();
 
     private void Raycast(PointerEventData eventData, List<RaycastResult> resultAppendList, Ray ray,
-        bool checkForBlocking)
+        bool checkForBlocking, bool checkOnlyRaycastable)
     {
         //This function is closely based on
         //void GraphicRaycaster.Raycast(PointerEventData eventData, List<RaycastResult> resultAppendList)
@@ -138,7 +138,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
 
         m_RaycastResults.Clear();
 
-        GraphicRaycast(canvas, rayTransformer, ray, m_RaycastResults);
+        GraphicRaycast(canvas, rayTransformer, ray, m_RaycastResults, checkOnlyRaycastable);
 
         for (var index = 0; index < m_RaycastResults.Count; index++)
         {
@@ -192,7 +192,21 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
     {
         if (eventData.IsVRPointer())
         {
-            Raycast(eventData, resultAppendList, eventData.GetRay(), true);
+            Raycast(eventData, resultAppendList, eventData.GetRay(), true, false);
+        }
+    }
+
+    /// <summary>
+    /// Performs a raycast using eventData.worldSpaceRay, ignore blocking layers and intersect only
+    /// with raycastable graphics
+    /// </summary>
+    /// <param name="eventData"></param>
+    /// <param name="resultAppendList"></param>
+    internal void RaycastOnRaycastableGraphics(PointerEventData eventData, List<RaycastResult> resultAppendList)
+    {
+        if (eventData.IsVRPointer())
+        {
+            Raycast(eventData, resultAppendList, eventData.GetRay(), false, true);
         }
     }
 
@@ -207,7 +221,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
         {
             Raycast(eventData, resultAppendList,
                 new Ray(eventCamera.transform.position,
-                    (pointer.transform.position - eventCamera.transform.position).normalized), false);
+                    (pointer.transform.position - eventCamera.transform.position).normalized), false, false);
         }
     }
 
@@ -218,7 +232,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
     [NonSerialized]
     static readonly List<RaycastHit> s_SortedGraphics = new List<RaycastHit>();
 
-    private void GraphicRaycast(Canvas canvas, OVRRayTransformer rayTransformer, Ray ray, List<RaycastHit> results)
+    private void GraphicRaycast(Canvas canvas, OVRRayTransformer rayTransformer, Ray ray, List<RaycastHit> results, bool checkOnlyRaycastableGraphics)
     {
         //This function is based closely on :
         // void GraphicRaycaster.Raycast(Canvas canvas, Camera eventCamera, Vector2 pointerPosition, List<Graphic> results)
@@ -230,7 +244,9 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
         }
 
         // Necessary for the event system
-        var foundGraphics = GraphicRegistry.GetGraphicsForCanvas(canvas);
+        var foundGraphics = checkOnlyRaycastableGraphics
+            ? GraphicRegistry.GetRaycastableGraphicsForCanvas(canvas)
+            : GraphicRegistry.GetGraphicsForCanvas(canvas);
         s_SortedGraphics.Clear();
         for (int i = 0; i < foundGraphics.Count; ++i)
         {
@@ -332,13 +348,13 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
     /// Is this the currently focussed Raycaster according to the InputModule
     /// </summary>
     /// <returns></returns>
-    public bool IsFocussed()
+    public virtual bool IsFocussed()
     {
         OVRInputModule inputModule = EventSystem.current.currentInputModule as OVRInputModule;
         return inputModule && inputModule.activeGraphicRaycaster == this;
     }
 
-    public void OnPointerEnter(PointerEventData e)
+    public virtual void OnPointerEnter(PointerEventData e)
     {
         if (e.IsVRPointer())
         {

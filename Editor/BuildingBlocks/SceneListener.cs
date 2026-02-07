@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using Meta.XR.Editor.Settings;
 using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -56,6 +57,11 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorApplication.delayCall += () =>
             {
                 var sceneBlocks = Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None);
+
+                if (sceneBlocks.Length > 0)
+                {
+                    UsageSettings.UsesBuildingBlocks.SetValue(true);
+                }
 
                 foreach (var block in sceneBlocks)
                 {

@@ -30,13 +30,12 @@ namespace Meta.XR.BuildingBlocks
     public class SpatialAnchorLocalStorageManagerBuildingBlock : MonoBehaviour
     {
         private SpatialAnchorCoreBuildingBlock _spatialAnchorCore;
-        private List<Guid> _uuids = OVRObjectPool.Get<List<Guid>>();
 
         private const string NumUuidsPlayerPref = "numUuids";
 
         private void Start()
         {
-            _spatialAnchorCore = SpatialAnchorCoreBuildingBlock.GetBaseInstances()[0];
+            _spatialAnchorCore = SpatialAnchorCoreBuildingBlock.GetFirstInstance();
             _spatialAnchorCore.OnAnchorCreateCompleted.AddListener(SaveAnchorUuidToLocalStorage);
             _spatialAnchorCore.OnAnchorEraseCompleted.AddListener(RemoveAnchorFromLocalStorage);
         }
@@ -93,18 +92,18 @@ namespace Meta.XR.BuildingBlocks
         /// <returns>
         /// List of loaded <see cref="Guid"/>(s) from local storage.
         /// </returns>
-        internal List<Guid> GetAnchorAnchorUuidFromLocalStorage()
+        internal void GetAnchorAnchorUuidFromLocalStorage(List<Guid> uuids)
         {
             // Get number of saved anchor uuids
             if (!PlayerPrefs.HasKey(NumUuidsPlayerPref))
             {
                 Reset();
                 Debug.Log($"[{nameof(SpatialAnchorLocalStorageManagerBuildingBlock)}] Anchor not found.");
-                return null;
+                return;
             }
 
             // Load unbounded anchors' uuid from local storage
-            _uuids.Clear();
+            uuids.Clear();
             var playerUuidCount = PlayerPrefs.GetInt(NumUuidsPlayerPref);
             for (int i = 0; i < playerUuidCount; ++i)
             {
@@ -113,10 +112,8 @@ namespace Meta.XR.BuildingBlocks
                     continue;
 
                 var currentUuid = PlayerPrefs.GetString(uuidKey);
-                _uuids.Add(new Guid(currentUuid));
+                uuids.Add(new Guid(currentUuid));
             }
-
-            return _uuids;
         }
 
         /// <summary>
@@ -133,7 +130,6 @@ namespace Meta.XR.BuildingBlocks
         private void OnDestroy()
         {
             _spatialAnchorCore.OnAnchorCreateCompleted.RemoveAllListeners();
-            OVRObjectPool.Return(_uuids);
         }
     }
 }

@@ -28,17 +28,28 @@ using BoneId = OVRPlugin.BoneId;
 [Feature(Feature.BodyTracking)]
 
 /// <summary>
-/// A partial class definition of the class responsible for retargeting from
-/// <see cref="OVRSkeleton"/> body tracking bones to a third party
-/// humanoid skeleton. Unlike <see cref="OVRCustomSkeleton"/>, the skeleton
+/// A class responsible for retargeting from <see cref="OVRSkeleton"/> body tracking
+/// bones to a third party  humanoid skeleton. Unlike <see cref="OVRCustomSkeleton"/>, the skeleton
 /// retargeted to does not need to use bones that match body tracking names, or
 /// have a hierarchy that matches what body tracking expects. Instead, you
 /// can use this class to apply [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/)
 /// to characters that have been imported as Unity Humanoids.
 ///
-/// This partial definition is responsible for computing the offsets between
+/// The retargeter is split into several parts, each with its own responsibility.
+///
+/// The main portion is responsible for computing the offsets between
 /// the source (body tracking) and target (Humanoid) skeletons, which will be used
 /// animate the target based on the source's movements.
+///
+/// Another portion, known as <see cref="OVRSkeletonMetadata"/>, is responsible
+/// for meta data applicable for retargeting, such as bone-to-bone pairs in body
+/// tracking and Humanoid skeletons. These bone-to-bone pairs are used to align
+/// the Humanoid (target) skeleton to the body tracking (source) skeleton, so
+/// that a Humanoid can be driven by body tracking movements.
+///
+/// There is also <see cref="OVRHumanBodyBonesMappings"/>, which contains maps
+/// useful for retargeting, such as maps between body tracking and humanoid bones
+/// for upper body and full body tracking.
 /// </summary>
 public partial class OVRUnityHumanoidSkeletonRetargeter : OVRSkeleton
 {

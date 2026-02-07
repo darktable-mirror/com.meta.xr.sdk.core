@@ -31,6 +31,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class HapticsBlockData : Meta.XR.BuildingBlocks.Editor.BlockData
     {
+        internal override bool CanBeAddedOverGameObject => true;
         private const string SAMPLE_HAPTIC = "Packages/com.meta.xr.sdk.haptics/Samples/IntegrationExample/Haptics/TestClip1.haptic";
 
         protected override bool UsesPrefab => false;

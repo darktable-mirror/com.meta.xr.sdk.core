@@ -22,6 +22,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Meta.XR.Samples;
 using UnityEngine;
 
 /// <summary>
@@ -40,6 +41,7 @@ using UnityEngine;
 /// rooms to be compared, as the room anchor is NEW whenever a child element
 /// is added or removed.
 /// </remarks>
+[MetaCodeSample("CoreSDK-MixedReality")]
 public class SnapshotSceneManager : MonoBehaviour
 {
     public float UpdateFrequencySeconds = 5;

@@ -82,6 +82,22 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             size.x = width;
             return true;
         }
+
+        internal bool SetIndent(float value)
+        {
+            if (!_instantiated || margin.x == value) return false;
+
+            if (!useBottomRightMargin)
+            {
+
+                useBottomRightMargin = true;
+                bottomRightMargin.x = margin.x;
+                bottomRightMargin.y = margin.y;
+            }
+            margin.x = value;
+
+            return true;
+        }
     }
 }
 

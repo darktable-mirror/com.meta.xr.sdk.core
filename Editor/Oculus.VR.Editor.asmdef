@@ -15,7 +15,10 @@
         "Meta.XR.Editor.UserInterface",
         "Meta.XR.Editor.StatusMenu",
         "Unity.Addressables.Editor",
-        "Meta.XR.Editor.Reflection"
+        "Meta.XR.Editor.Reflection",
+        "Meta.XR.Editor.ToolingSupport",
+        "Meta.XR.Editor.Settings",
+        "Meta.XR.Editor.Id"
     ],
     "includePlatforms": [
         "Editor"
@@ -79,8 +82,18 @@
         },
         {
             "name": "com.unity.xr.oculus",
+            "expression": "3.2.1",
+            "define": "OCULUS_XR_PLUGIN_3_2_1_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.oculus",
             "expression": "4.0.0",
             "define": "OCULUS_XR_PLUGIN_QUEST_ONE_REMOVED"
+        },
+        {
+            "name": "com.unity.xr.oculus",
+            "expression": "4.3.0",
+            "define": "OCULUS_XR_PLUGIN_4_3_0_OR_NEWER"
         },
         {
             "name": "com.unity.xr.core-utils",
@@ -101,6 +114,31 @@
             "name": "com.unity.render-pipelines.universal",
             "expression": "14.0.0",
             "define": "URP_14_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "14.0.9",
+            "define": "URP_14_0_9_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "16.0.0",
+            "define": "URP_16_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.0.0",
+            "define": "URP_17_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.11.0",
+            "define": "UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER"
+        },
+        {
+            "name": "Unity",
+            "expression": "2022.3.35f1",
+            "define": "UNITY_GRAPHICS_JOB_FIX"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

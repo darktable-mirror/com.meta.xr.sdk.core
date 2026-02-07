@@ -20,10 +20,10 @@
 
 #if USING_META_XR_PLATFORM_SDK
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using Meta.XR.Guides.Editor.Items;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.ToolingSupport;
 using Oculus.Platform;
 using UnityEditor;
 using UnityEngine;
@@ -32,80 +32,66 @@ using static Meta.XR.Editor.UserInterface.Styles;
 namespace Meta.XR.Guides.Editor
 {
     [GuideItems]
-    internal static class MetaAccountSetupGuide
+    internal class MetaAccountSetupGuide : GuidedSetup
     {
         private const string MetaDashboardURL = "https://developer.oculus.com/manage";
         private const string AppIDRetrieveDocURL = "https://developer.oculus.com/documentation/unity/unity-platform-entitlements/#retrieve-the-appid-from-the-developer-portal";
         private const string CreateOrgDocURL = "https://developer.oculus.com/resources/publish-account-management-intro/";
         private const string AddTestUserDocURL = "https://developer.oculus.com/resources/test-users/";
         private const string AddPlatformFeaturesDocURL = "https://developer.oculus.com/documentation/unity/unity-shared-spatial-anchors/#prerequisites";
-        private static GuideStyles.ContentStatusType AppIdStatusType => HasAppId() ? GuideStyles.ContentStatusType.Normal : GuideStyles.ContentStatusType.Warning;
+        private static UIStyles.ContentStatusType AppIdStatusType => Common.HasAppId() ? UIStyles.ContentStatusType.Normal : UIStyles.ContentStatusType.Warning;
 
         private const int SubcontentMargin = 20;
 
-        private const string _defaultAppIdFieldText = "Paste you App Id here";
         private static bool _appIdSet;
         private static TextFieldWithButton _appIdField;
         private static Icon _appIdValidateField;
         private static Icon _appIdStatusLabel;
         private static GuideWindow _window;
 
-        private static bool HasValidAppId => (!String.IsNullOrEmpty(_appIdField.Text) &&
-                                              _appIdField.Text.All(char.IsDigit)) ||
-                                             _appIdField.Text.Equals(_defaultAppIdFieldText);
-
-        private static void Init()
+        protected override GuideWindow CreateWindow()
         {
+            if (_window != null) return _window;
+
             var title = "Meta Account Setup Guide";
             var description = "This will assist you in setting up your Meta developer account and guide you to retrieve the AppID to use it in your project.";
-
             var options = new GuideWindow.GuideOptions(GuideWindow.DefaultOptions)
             {
                 ShowCloseButton = false
             };
 
-            _window = Guide.Create(title, description, GetItems, options);
-
-            _window.OnWindowDraw += () =>
-            {
-                _appIdValidateField.Hide = HasValidAppId;
-            };
-            _window.OnWindowDestroy += () =>
-            {
-                OVRTelemetry.Start(OVRTelemetryConstants.GuidedSetup.MarkerId.CloseSSAWindow)
-                    .AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasAppId, HasAppId().ToString())
-                    .Send();
-            };
+            _window = Guide.Create(title, description, this, options);
+            return _window;
         }
 
-        [MenuItem("Meta/Tools/Meta Account Setup Guide")]
+        [Init]
+        private void InitializeWindow(GuideWindow window)
+        {
+            _window = window;
+
+            window.OnWindowDraw += () =>
+            {
+                _appIdValidateField.Hide = Common.ValidAppId(_appIdField.Text) || _appIdField.Text.Equals(Common.DefaultAppIdFieldText);
+            };
+
+            window.AddAdditionalTelemetryAnnotations += marker =>
+                marker.AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasAppId,
+                    Common.HasAppId());
+        }
+
+        [MenuItem("Meta/Tools/Guides/Meta Account Setup Guide")]
         private static void SetupGuide()
         {
-            ShowWindow(Utils.TriggerSource.Menu);
-        }
-
-        public static void ShowWindow(Utils.TriggerSource source, bool forceShow = false)
-        {
-            Init();
-            _window.Show(forceShow);
-            OVRTelemetry.Start(OVRTelemetryConstants.GuidedSetup.MarkerId.OpenSSAWindow)
-                .AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.ActionTrigger, source.ToString())
-                .AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasAppId, HasAppId().ToString())
-                .Send();
+            new MetaAccountSetupGuide().ShowWindow(Origins.Menu, true);
         }
 
         [GuideItems]
-        private static List<IGuideItem> GetItems()
+        private List<IUserInterfaceItem> GetItems()
         {
-            if(_window == null)
-            {
-                Init();
-            }
-
             _appIdStatusLabel = new Icon(GuideStyles.Contents.SuccessIcon, Colors.OffWhite, "");
             UpdateAppIdStatus();
 
-            return new List<IGuideItem>
+            return new List<IUserInterfaceItem>
             {
                 OpenDashboardUI(),
                 new AddSpace(),
@@ -117,30 +103,30 @@ namespace Meta.XR.Guides.Editor
                 new AddSpace(flexibleSpace: true),
                 _appIdStatusLabel,
                 new AddSpace(),
-                ButtonsGroupUI()
+                Common.PlatformSettingsButtonGroup(this, _window)
             };
         }
 
-        private static IGuideItem OpenDashboardUI()
+        private IUserInterfaceItem OpenDashboardUI()
         {
-            var labelStyle = new GUIStyle(GuideStyles.GUIStyles.Label)
+            var labelStyle = new GUIStyle(UIStyles.GUIStyles.Label)
             {
                 wordWrap = false
             };
             var textContent = new GUIContent("Click here to open");
             var widthText = labelStyle.CalcSize(textContent).x;
 
-            return new GroupedGuideItem(new List<IGuideItem>
+            return new GroupedItem(new List<IUserInterfaceItem>
             {
-                new BulletedLabel(textContent.text, labelStyle, GuideStyles.ContentStatusType.Normal, GUILayout.Width(widthText)),
-                new LinkLabel("Meta Quest Developer Dashboard", () => Utils.OpenURL(MetaDashboardURL, nameof(MetaAccountSetupGuide))),
+                new BulletedLabel(textContent.text, labelStyle, UIStyles.ContentStatusType.Normal, GUILayout.Width(widthText)),
+                new LinkLabel(new GUIContent("Meta Quest Developer Dashboard"), MetaDashboardURL, _window),
                 new AddSpace(flexibleSpace: true)
             });
         }
 
-        private static IGuideItem AppIdSetUI()
+        private IUserInterfaceItem AppIdSetUI()
         {
-            var labelStyle = new GUIStyle(GuideStyles.GUIStyles.Label) { wordWrap = false };
+            var labelStyle = new GUIStyle(UIStyles.GUIStyles.Label) { wordWrap = false };
             var t0 = new GUIContent("Follow the steps to");
             var w0 = labelStyle.CalcSize(t0).x;
 
@@ -150,54 +136,48 @@ namespace Meta.XR.Guides.Editor
             var link0 = new GUIContent("create an Organization.");
             var link1 = new GUIContent("steps to retrieve AppID.");
 
-            var part1 = new GroupedGuideItem(new List<IGuideItem>
+            var part1 = new GroupedItem(new List<IUserInterfaceItem>
             {
-                new BulletedLabel(t0.text, labelStyle, GuideStyles.ContentStatusType.Normal, GUILayout.Width(w0)),
-                new LinkLabel(link0.text, () => Utils.OpenURL(CreateOrgDocURL, nameof(MetaAccountSetupGuide))),
+                new BulletedLabel(t0.text, labelStyle, UIStyles.ContentStatusType.Normal, GUILayout.Width(w0)),
+                new LinkLabel(link0, CreateOrgDocURL, _window),
                 new AddSpace(flexibleSpace: true)
             });
 
             var groupStyle = new GUIStyle() { margin = new RectOffset(SubcontentMargin, 0, 0, 0) };
 
-            var part2 = new GroupedGuideItem(new List<IGuideItem>
+            var part2 = new GroupedItem(new List<IUserInterfaceItem>
             {
                 new Label(t1.text, labelStyle, GUILayout.Width(w1)),
-                new LinkLabel(link1.text, () => Utils.OpenURL(AppIDRetrieveDocURL, nameof(MetaAccountSetupGuide))),
+                new LinkLabel(link1, AppIDRetrieveDocURL, _window),
                 new AddSpace(flexibleSpace: true)
             }, groupStyle);
 
-            _appIdField = new TextFieldWithButton("", _defaultAppIdFieldText, "Set", _ =>
+            _appIdField = new TextFieldWithButton("", Common.DefaultAppIdFieldText, "Set", _ =>
             {
-                if (!HasValidAppId) return;
-
-                PlatformSettings.MobileAppID = _appIdField.Text;
-                PlatformSettings.AppID = _appIdField.Text;
-                Selection.activeObject = PlatformSettings.Instance;
-                _appIdSet = true;
+                _appIdSet = Common.SetAppId(_appIdField.Text);
                 UpdateAppIdStatus();
-
                 OVRTelemetry.Start(OVRTelemetryConstants.GuidedSetup.MarkerId.SetAppIdFromGuidedSetup).Send();
             });
 
             _appIdValidateField = new Icon(GuideStyles.Contents.StatusIcon, Colors.ErrorColor, "Invalid AppID.");
 
-            var part3 = new GroupedGuideItem(new List<IGuideItem>
+            var part3 = new GroupedItem(new List<IUserInterfaceItem>
             {
                 _appIdField,
                 new AddSpace(4),
                 _appIdValidateField
-            }, groupStyle, Utils.GuideItemPlacementType.Vertical);
+            }, groupStyle, XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical);
 
-            return new GroupedGuideItem(new List<IGuideItem> { part1, part2, part3 }, Utils.GuideItemPlacementType.Vertical);
+            return new GroupedItem(new List<IUserInterfaceItem> { part1, part2, part3 }, XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical);
         }
 
-        private static IGuideItem DataUseCheckUI()
+        private IUserInterfaceItem DataUseCheckUI()
         {
-            var dataUseLabel = new BulletedLabel("To use the Shared Spatial Anchor, the <b>UserID</b> " +
+            var dataUseLabel = new BulletedLabel("To use the Anchor And Space Sharing, the <b>UserID</b> " +
                                                  "and <b>UserProfile</b> Platform\n" +
                                                  "features must be enabled in <b>Data Use Checkup</b>.");
 
-            var labelStyle = new GUIStyle(GuideStyles.GUIStyles.Label) { wordWrap = false };
+            var labelStyle = new GUIStyle(UIStyles.GUIStyles.Label) { wordWrap = false };
             var t0 = new GUIContent("Please refer to the");
             var w0 = labelStyle.CalcSize(t0).x - Constants.TextWidthOffset;
 
@@ -206,43 +186,56 @@ namespace Meta.XR.Guides.Editor
 
             var linkText = new GUIContent("App Configuration");
 
-            var appConfigGroup = new GroupedGuideItem(new List<IGuideItem>
+            var appConfigGroup = new GroupedItem(new List<IUserInterfaceItem>
             {
                 new AddSpace(SubcontentMargin),
                 new Label(t0.text, labelStyle, GUILayout.Width(w0)),
-                new LinkLabel(linkText.text, () => Utils.OpenURL(AddPlatformFeaturesDocURL, nameof(MetaAccountSetupGuide))),
+                new LinkLabel(linkText, AddPlatformFeaturesDocURL, _window),
                 new Label(t1.text, labelStyle, GUILayout.Width(w1)),
                 new AddSpace(flexibleSpace: true)
             });
 
-            return new GroupedGuideItem(new List<IGuideItem> { dataUseLabel, appConfigGroup }, Utils.GuideItemPlacementType.Vertical);
+            var wrappedLabelStyle = new GUIStyle(UIStyles.GUIStyles.Label) { wordWrap = true };
+            var t2 = new GUIContent("If you're using the Colocation block with useColocationSession option enabled, you can skip this step.\n");
+
+            var disclaimerGroup = new GroupedItem(new List<IUserInterfaceItem>
+            {
+                new AddSpace(SubcontentMargin),
+                new Label(t2.text, wrappedLabelStyle),
+                new AddSpace(flexibleSpace: true)
+            });
+
+            return new GroupedItem(new List<IUserInterfaceItem> {
+                dataUseLabel,
+                appConfigGroup,
+                disclaimerGroup }, XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical);
         }
 
-        private static IGuideItem TestUserAddUI()
+        private IUserInterfaceItem TestUserAddUI()
         {
-            var labelStyle = new GUIStyle(GuideStyles.GUIStyles.Label) { wordWrap = false };
+            var labelStyle = new GUIStyle(UIStyles.GUIStyles.Label) { wordWrap = false };
             var t0 = new GUIContent("Follow these");
             var w0 = labelStyle.CalcSize(t0).x - Constants.TextWidthOffset;
 
             var linkText = "steps to add test users in Members Management";
 
-            var part1 = new GroupedGuideItem(new List<IGuideItem>
+            var part1 = new GroupedItem(new List<IUserInterfaceItem>
             {
-                new BulletedLabel(t0.text, labelStyle, GuideStyles.ContentStatusType.Normal, GUILayout.Width(w0)),
-                new LinkLabel(linkText, () => Utils.OpenURL(AddTestUserDocURL, nameof(MetaAccountSetupGuide))),
+                new BulletedLabel(t0.text, labelStyle, UIStyles.ContentStatusType.Normal, GUILayout.Width(w0)),
+                new LinkLabel(new GUIContent(linkText), AddTestUserDocURL, _window),
                 new AddSpace(true)
             });
 
-            var part2Style = new GUIStyle(GuideStyles.GUIStyles.Label);
+            var part2Style = new GUIStyle(UIStyles.GUIStyles.Label);
             part2Style.margin.left = SubcontentMargin;
-            var part2 = new Label("to test your Shared Spatial Anchor app before publishing it publicly.", part2Style);
+            var part2 = new Label("to test your Anchor And Space Sharing app before publishing it publicly.", part2Style);
 
-            return new GroupedGuideItem(new List<IGuideItem> { part1, part2 }, Utils.GuideItemPlacementType.Vertical);
+            return new GroupedItem(new List<IUserInterfaceItem> { part1, part2 }, XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical);
         }
 
-        private static void UpdateAppIdStatus()
+        private void UpdateAppIdStatus()
         {
-            _appIdStatusLabel.Hide = !HasAppId();
+            _appIdStatusLabel.Hide = !Common.HasAppId();
 
             var appId = "";
 #if UNITY_ANDROID
@@ -251,7 +244,7 @@ namespace Meta.XR.Guides.Editor
             appId = PlatformSettings.AppID;
 #endif
 
-            if (HasAppId() && !_appIdSet)
+            if (Common.HasAppId() && !_appIdSet)
             {
                 _appIdStatusLabel.LabelText = $"Your project already has an AppID: {appId}";
             }
@@ -259,24 +252,6 @@ namespace Meta.XR.Guides.Editor
             {
                 _appIdStatusLabel.LabelText = $"Plaform settings has been set with AppID: {appId}";
             }
-        }
-
-        private static IGuideItem ButtonsGroupUI()
-        {
-            return new GroupedGuideItem(new List<IGuideItem>
-            {
-                new Button("Open Platform Settings", () => Selection.activeObject = PlatformSettings.Instance),
-                new Button("Close", () => _window.Close())
-            });
-        }
-
-        private static bool HasAppId()
-        {
-#if UNITY_ANDROID
-            return !String.IsNullOrEmpty(PlatformSettings.MobileAppID);
-#else
-            return !String.IsNullOrEmpty(PlatformSettings.AppID);
-#endif
         }
     }
 }

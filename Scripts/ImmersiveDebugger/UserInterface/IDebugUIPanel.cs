@@ -30,9 +30,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
     internal interface IDebugUIPanel
     {
-        public IInspector RegisterInspector(InstanceHandle instance, string category);
-        public void UnregisterInspector(InstanceHandle instance, string category, bool allCategories);
-        public IInspector GetInspector(InstanceHandle instance, string category);
+        public IInspector RegisterInspector(InstanceHandle instance, Category category);
+        public void UnregisterInspector(InstanceHandle instance, Category category, bool allCategories);
+        public IInspector GetInspector(InstanceHandle instance, Category category);
     }
 
     internal interface IInspector

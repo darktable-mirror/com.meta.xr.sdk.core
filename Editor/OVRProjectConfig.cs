@@ -97,6 +97,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         Required = 2
     }
 
+    public static readonly int[] horizonOsSdkVersions = { 68, 69, 71, 72, 74 };
+
     public List<DeviceType> targetDeviceTypes = new()
         { DeviceType.Quest, DeviceType.Quest2, DeviceType.QuestPro, DeviceType.Quest3, DeviceType.Quest3S };
 
@@ -122,6 +124,9 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool disableBackups = true;
     public bool enableNSCConfig = true;
     public string securityXmlPath;
+    public bool horizonOsSdkEnabled = false;
+    public int minHorizonOsSdkVersion = horizonOsSdkVersions[0];
+    public int targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
 
     public bool skipUnneededShaders = false;
 
@@ -294,6 +299,9 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
             projectConfig.requiresSystemKeyboard = false;
             projectConfig.experimentalFeaturesEnabled = false;
             projectConfig.insightPassthroughSupport = FeatureSupport.None;
+            projectConfig.horizonOsSdkEnabled = false;
+            projectConfig.minHorizonOsSdkVersion = horizonOsSdkVersions[0];
+            projectConfig.targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
             AssetDatabase.CreateAsset(projectConfig, oculusProjectConfigAssetPath);
         }
 

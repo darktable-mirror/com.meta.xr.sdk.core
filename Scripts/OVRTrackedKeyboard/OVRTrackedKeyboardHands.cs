@@ -19,11 +19,13 @@
  */
 
 using Meta.XR.Util;
+using System;
 using UnityEngine;
 using UnityEngine.Assertions;
 
 [Feature(Feature.TrackedKeyboard)]
 [HelpURL("https://developer.oculus.com/documentation/unity/tk-overview/")]
+[Obsolete("The TrackedKeyboard feature has been removed as of v72. For real-time object tracking such as physical keyboards, we recommend using Trackables in MR Utility Kit.", true)]
 public class OVRTrackedKeyboardHands : MonoBehaviour
 {
     public GameObject LeftHandPresence;

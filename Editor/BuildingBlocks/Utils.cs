@@ -23,8 +23,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Meta.XR.Editor.Callbacks;
-using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.Tags;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.Utils;
 using UnityEditor;
@@ -48,7 +50,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static readonly TextureContent.Category BuildingBlocksThumbnails = new("BuildingBlocks/Thumbnails");
         internal static readonly TextureContent.Category BuildingBlocksAnimations = new("BuildingBlocks/Animations");
 
-        internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_icon_bbw.png",
+        internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_bb_icon.png",
             Utils.BuildingBlocksIcons, $"Open {BlocksPublicName}");
 
         internal static readonly TextureContent GotoIcon = TextureContent.CreateContent("ovr_icon_link.png",
@@ -81,7 +83,6 @@ namespace Meta.XR.BuildingBlocks.Editor
         };
 
         private const string PrototypingTagName = "Prototyping";
-        private static string UsageFreqUniqueKey => $"BuildingBlocks_UsageFreq_{Application.dataPath}";
 
         internal static readonly TextureContent PrototypingIcon =
             TextureContent.CreateContent("ovr_icon_prototype.png", Utils.BuildingBlocksIcons,
@@ -236,44 +237,59 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         };
 
+        private const string NewVersionTagName = "New Version Available";
+
+        internal static Tag NewVersionTag = new(NewVersionTagName)
+        {
+            Behavior =
+            {
+                Automated = true,
+                Order = 204,
+                Color = NewColor,
+                Icon = TextureContent.CreateContent("ovr_icon_new.png", Utils.BuildingBlocksIcons,
+                    NewVersionTagName),
+                Show = true,
+                CanFilterBy = false,
+                ShowOverlay = true,
+            }
+        };
+
         private const string DocumentationUrl = "https://developer.oculus.com/documentation/unity/unity-buildingblocks-overview";
 
 
-        internal static readonly Item Item = new()
+        internal const string PrintIndentationString = "\t";
+
+        internal static readonly ToolDescriptor ToolDescriptor = new()
         {
             Name = BlocksPublicName,
+            MqdhCategoryId = "509819301803627",
             Color = Styles.Colors.AccentColor,
             Icon = StatusIcon,
             InfoTextDelegate = ComputeInfoText,
             PillIcon = GetPillIcon,
             OnClickDelegate = OnStatusMenuClick,
+            BuildOptionsMenuDelegate = BuildingBlocksWindow.BuildSettingsMenu,
             Order = 1,
-            HeaderIcons = new List<Item.HeaderIcon>()
+            AddToStatusMenu = true,
+            Description = BuildingBlocksWindow.Description.text,
+            OnUserSettingsGUI = BuildingBlocksWindow.OnUserSettingsGUI,
+            Documentation = new List<Documentation>()
             {
-                new()
+                new Documentation()
                 {
-                    TextureContent = ConfigIcon,
-                    Color = LightGray,
-                    Action = BuildingBlocksWindow.ShowSettingsMenu
-                },
-                new()
-                {
-                    TextureContent = DocumentationIcon,
-                    Color = LightGray,
-                    Action = () => Application.OpenURL(DocumentationUrl)
-                },
+                    Title = BlocksPublicName,
+                    Url = DocumentationUrl
+                }
             }
         };
 
         static Utils()
         {
-            StatusMenu.RegisterItem(Item);
-
         }
 
 
         private static int ComputeNumberOfNewBlocks() =>
-            BlockBaseData.Registry.Values.Count(data => !data.Hidden && data.Tags.Contains(NewTag));
+            BlockBaseData.Registry.Values.Count(data => !data.Hidden && (data.Tags.Contains(NewTag) || data.Tags.Contains(NewVersionTag)));
 
         private static (string, Color?) ComputeInfoText()
         {
@@ -301,9 +317,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             return (null, null, false);
         }
 
-        private static void OnStatusMenuClick(Item.Origins origin)
+        private static void OnStatusMenuClick(Origins origin)
         {
-            BuildingBlocksWindow.ShowWindow(origin.ToString(), null);
+            BuildingBlocksWindow.ShowWindow(origin, null);
         }
 
         public static BlockData GetBlockData(this BuildingBlock block) => GetBlockData(block.blockId);
@@ -329,19 +345,21 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static List<BuildingBlock> GetBlocks(this BlockData data)
         {
-            return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None).Where(x => x.BlockId == data.Id)
+            return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None)
+                .Where(x => x.BlockId == data.Id)
                 .ToList();
         }
 
         public static List<BuildingBlock> GetBlocks(string blockId)
         {
-            return GetBlockData(blockId)?.GetBlocks();
+            return GetBlockData(blockId)?.GetBlocks() ?? new List<BuildingBlock>();
         }
 
         public static List<T> GetBlocksWithType<T>() where T : Component
         {
             return Object.FindObjectsByType<T>(FindObjectsSortMode.None)
-                .Where(controller => controller.GetComponent<BuildingBlock>() != null).ToList();
+                .Where(controller => controller.GetComponent<BuildingBlock>() != null)
+                .ToList();
         }
 
         public static List<T> GetBlocksWithBaseClassType<T>() where T : Component
@@ -496,7 +514,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal static void UpdateBlockUsageFrequency(BlockData blockData)
         {
-            var freqTable = BlocksUsageFrequencyTable();
+            var freqTable = LoadBlocksUsageFrequencyTable();
             if (freqTable == null)
             {
                 freqTable = new();
@@ -510,12 +528,22 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 freqTable.Add(blockData.Id, 1);
             }
+
             SaveUsageFreqTable(freqTable);
         }
 
-        internal static SerializableDictionary<string, int> BlocksUsageFrequencyTable()
+        private static Setting<string> _blocksUsageFrequency;
+        private static Setting<string> BlocksUsageFrequency => _blocksUsageFrequency ??= new UserString()
         {
-            var value = EditorPrefs.GetString(UsageFreqUniqueKey);
+            Owner = ToolDescriptor,
+            Uid = $"BuildingBlocks_UsageFreq_{Application.dataPath}",
+            Default = string.Empty,
+            SendTelemetry = false
+        };
+
+        internal static SerializableDictionary<string, int> LoadBlocksUsageFrequencyTable()
+        {
+            var value = BlocksUsageFrequency.Value;
             return string.IsNullOrEmpty(value)
                 ? null
                 : JsonUtility.FromJson<SerializableDictionary<string, int>>(value);
@@ -524,7 +552,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static void SaveUsageFreqTable(SerializableDictionary<string, int> data)
         {
             var json = JsonUtility.ToJson(data);
-            EditorPrefs.SetString(UsageFreqUniqueKey, json);
+            BlocksUsageFrequency.SetValue(json);
         }
 
 
@@ -587,7 +615,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             public static IEnumerable<BlockBaseData> Alphabetical(IEnumerable<BlockBaseData> blocks) => blocks.OrderByDescending(b => b);
 
-            public static IEnumerable<BlockBaseData> MostUsed(IEnumerable<BlockBaseData> blocks) => MostUsed(blocks, BlocksUsageFrequencyTable());
+            public static IEnumerable<BlockBaseData> MostUsed(IEnumerable<BlockBaseData> blocks) => MostUsed(blocks, LoadBlocksUsageFrequencyTable());
 
             internal static IEnumerable<BlockBaseData> MostUsed(IEnumerable<BlockBaseData> blocks, SerializableDictionary<string, int> frequencyTable)
             {
@@ -613,5 +641,29 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal static IEnumerable<OVRConfigurationTask> GetAssociatedRules(this BuildingBlock block)
             => block.GetBlockData()?.GetAssociatedRules(block) ?? Enumerable.Empty<OVRConfigurationTask>();
+
+        internal static MonoScript FindMonoScriptByTypeName(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                return null;
+            }
+
+            var possibleFileName = Type.GetType(typeName)?.Name; // file name most likely the same to class name
+            var guid = AssetDatabase.FindAssets(possibleFileName).FirstOrDefault();
+            if (guid == null) // heavier if file not found by class name - iterate through MonoScript for the type
+            {
+                guid = AssetDatabase.FindAssets("t:MonoScript")
+                    .FirstOrDefault(script => script.GetType().AssemblyQualifiedName == typeName);
+            }
+            return !string.IsNullOrEmpty(guid)
+                ? AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(guid))
+                : null;
+        }
+
+        internal static string[] GetClassNamesFromAssemblyQualifiedNames(string[] assemblyQualifiedNames)
+        {
+            return assemblyQualifiedNames.Select(s => s.Split(",").FirstOrDefault()).ToArray();
+        }
     }
 }

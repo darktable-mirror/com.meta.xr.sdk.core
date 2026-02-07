@@ -457,6 +457,7 @@ public class OVRLint : EditorWindow
         }
 #endif
 
+#pragma warning disable CS0618 // Type or member is obsolete
         if ((!PlayerSettings.MTRendering || !PlayerSettings.GetMobileMTRendering(BuildTargetGroup.Android)))
         {
             AddFix(eRecordType.StaticCommon, "Optimize MT Rendering",
@@ -467,6 +468,7 @@ public class OVRLint : EditorWindow
                     PlayerSettings.SetMobileMTRendering(BuildTargetGroup.Android, true);
                 }, null, false, "Fix");
         }
+#pragma warning restore CS0618 // Type or member is obsolete
 
 #if UNITY_ANDROID
         if (!PlayerSettings.use32BitDisplayBuffer)
@@ -916,6 +918,7 @@ public class OVRLint : EditorWindow
             }
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         ScriptingImplementation backend = PlayerSettings.GetScriptingBackend(UnityEditor.BuildTargetGroup.Android);
         if (backend != UnityEditor.ScriptingImplementation.IL2CPP)
         {
@@ -926,6 +929,7 @@ public class OVRLint : EditorWindow
                         UnityEditor.ScriptingImplementation.IL2CPP);
                 }, null, false, "Fix");
         }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         var monoBehaviours = GameObject.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
         System.Type effectBaseType = System.Type.GetType("UnityStandardAssets.ImageEffects.PostEffectsBase");

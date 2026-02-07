@@ -30,7 +30,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     /// </summary>
     public class ScrollViewport : Controller
     {
-        private Image _image;
+        private RawImage _image;
         private Mask _mask;
         private Flex _flex;
 
@@ -43,7 +43,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             var scrollView = owner as ScrollView;
             if (scrollView == null) return;
 
-            _image = GameObject.AddComponent<Image>();
+            _image = GameObject.AddComponent<RawImage>();
+            _image.raycastTarget = true;
+
             _mask = GameObject.AddComponent<Mask>();
             _mask.showMaskGraphic = false;
 

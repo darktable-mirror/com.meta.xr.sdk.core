@@ -20,7 +20,6 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Meta.XR.BuildingBlocks.Editor;
 using UnityEngine;
 
@@ -44,6 +43,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
         [SerializeField]
         [Variant(Behavior = VariantAttribute.VariantBehavior.Definition,
             Description = "The underlying network Implementation that will be used for all network Blocks.",
+            Condition = nameof(RequireNetworkImplementationChoice),
             Default = NetworkImplementation.UnityNetcodeForGameObjects)]
         internal NetworkImplementation implementation;
 
@@ -54,7 +54,8 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
             Default = MatchmakingType.AutoMatchmaking)]
         internal MatchmakingType installMatchmaking;
 
-        protected bool CanInstallMatchmaking()
+        protected virtual bool RequireNetworkImplementationChoice() => true;
+        protected virtual bool CanInstallMatchmaking()
             => TargetBlockDataId != BlockDataIds.IAutoMatchmaking
                && TargetBlockDataId != BlockDataIds.INetworkManager
                && TargetBlockDataId != BlockDataIds.ICustomMatchmaking
@@ -72,39 +73,9 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
             _ => null
         };
 
-        internal override IEnumerable<string> ComputePackageDependencies(VariantsSelection variantSelection)
-        {
-            if (ShouldInstallMatchmaking)
-            {
-                var matchmakingBlock = Utils.GetBlockData(MatchmakingBlockId);
-                var additionalDependencies = InterfaceBlockData.ComputePackageDependencies(matchmakingBlock as InterfaceBlockData, variantSelection);
-                return base.ComputePackageDependencies(variantSelection).Concat(additionalDependencies);
-            }
-
-            return base.ComputePackageDependencies(variantSelection);
-        }
-
-        internal override IEnumerable<BlockData> ComputeOptionalDependencies(VariantsSelection variantSelection)
+        internal override IEnumerable<BlockData> ComputeOptionalDependencies()
         {
             return ShouldInstallMatchmaking ? new BlockData[] { Utils.GetBlockData(MatchmakingBlockId) } : Enumerable.Empty<BlockData>();
-        }
-
-        public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
-        {
-            // Installing Matchmaking for all networking blocks use cases if not present
-            // As an optional dependency, developers can easily remove and use their own matchmaking.
-            if (ShouldInstallMatchmaking)
-            {
-                await InstallMatchmaking(MatchmakingBlockId);
-            }
-
-            return await base.InstallAsync(blockData, selectedGameObject);
-        }
-
-        private static async Task InstallMatchmaking(string matchmakingBlockId)
-        {
-            var matchmakingBlockData = Utils.GetBlockData(matchmakingBlockId);
-            await matchmakingBlockData.InstallWithDependencies();
         }
     }
 }

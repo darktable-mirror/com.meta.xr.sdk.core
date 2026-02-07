@@ -73,7 +73,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         protected LayoutStyle _layoutStyle;
         protected List<Controller> _children;
 
-        protected Controller Owner { get; set; }
+        internal Controller Owner { get; set; }
         /// <summary>
         /// Transform of the object, if the <see cref="RectTransform"/> is not specified,
         /// it would be the <see cref="GameObject"/>'s transform. Otherwise it's the same with the <see cref="RectTransform"/>.
@@ -178,6 +178,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return childController;
         }
 
+        internal T InsertAfter<T>(string childName, Controller previous)
+            where T : Controller, new()
+        {
+            var childController = SetupChildController<T>(childName);
+            _children ??= new List<Controller>();
+            var index = _children.IndexOf(previous);
+            _children.Insert(index + 1, childController);
+            return childController;
+        }
+
+        internal T InsertBefore<T>(string childName, Controller next)
+            where T : Controller, new()
+        {
+            var childController = SetupChildController<T>(childName);
+            _children ??= new List<Controller>();
+            var index = _children.IndexOf(next);
+            _children.Insert(index, childController);
+            return childController;
+        }
+
         private T SetupChildController<T>(string childName)
             where T : Controller, new()
         {
@@ -189,13 +209,18 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         protected void Append(Controller controller)
         {
-            _children?.Add(controller);
+            if (_children == null) return;
+            if (_children.Contains(controller)) return;
+
+            _children.Add(controller);
             controller.RefreshLayout();
         }
 
         internal void Remove(Controller controller, bool destroy)
         {
-            _children?.Remove(controller);
+            if (_children == null) return;
+
+            _children.Remove(controller);
             if (destroy)
             {
                 if (Application.isPlaying)

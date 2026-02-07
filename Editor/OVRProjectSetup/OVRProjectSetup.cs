@@ -18,16 +18,16 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using UnityEditor;
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
+using UnityEditor;
 using UnityEngine;
-using Styles = Meta.XR.Editor.UserInterface.Styles;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 
 /// <summary>
@@ -63,26 +63,14 @@ public static class OVRProjectSetup
     public enum TaskTags
     {
         None = 0,
-        HeavyProcessing = 1
+        HeavyProcessing = 1,
+        RegenerateAndroidManifest = 2
     }
 
     private static readonly OVRConfigurationTaskRegistry _principalRegistry;
 
     internal static OVRConfigurationTaskRegistry Registry { get; private set; }
     internal static OVRConfigurationTaskProcessorQueue ProcessorQueue { get; }
-
-    internal const string KeyPrefix = "OVRProjectSetup";
-    internal static OVRProjectSetupSettingBool Enabled;
-    internal static OVRProjectSetupSettingBool RequiredThrowErrors;
-
-    internal static readonly OVRProjectSetupSettingBool AllowLogs =
-        new OVRProjectSetupProjectSettingBool("AllowLogs", false, "Log outstanding issues");
-
-    internal static readonly OVRProjectSetupSettingBool ShowStatusIcon =
-        new OVRProjectSetupProjectSettingBool("ShowStatusIcon", true, "Show Status Icon");
-
-    internal static readonly OVRProjectSetupSettingBool ProduceReportOnBuild =
-        new OVRProjectSetupProjectSettingBool("ProduceReportOnBuild", false, "Produce Report on Build");
 
     private static readonly HashSet<BuildTargetGroup> SupportedPlatforms = new HashSet<BuildTargetGroup>
         { BuildTargetGroup.Android, BuildTargetGroup.Standalone };
@@ -96,30 +84,26 @@ public static class OVRProjectSetup
     private const string DocumentationUrl = "https://developer.oculus.com/documentation/unity/unity-upst-overview";
 
 
-    internal static Item Item = new Item()
+    internal static ToolDescriptor ToolDescriptor = new ToolDescriptor
     {
         Name = PublicName,
-        Color = Styles.Colors.BrightGray,
+        MqdhCategoryId = "482296384788650",
+        Color = BrightGray,
         Icon = StatusIcon,
         InfoTextDelegate = ComputeInfoText,
         PillIcon = ComputePillIcon,
         OnClickDelegate = OnStatusMenuClick,
         Order = 0,
-        HeaderIcons = new List<Item.HeaderIcon>()
+        AddToStatusMenu = true,
+        Documentation = new List<Documentation>
         {
-            new Item.HeaderIcon()
+            new Documentation
             {
-                TextureContent = Styles.Contents.ConfigIcon,
-                Color = LightGray,
-                Action = OVRProjectSetupDrawer.ShowSettingsMenu
-            },
-            new Item.HeaderIcon()
-            {
-                TextureContent = Styles.Contents.DocumentationIcon,
-                Color = LightGray,
-                Action = () => Application.OpenURL(DocumentationUrl)
-            },
-        }
+                Title = PublicName,
+                Url = DocumentationUrl
+            }
+        },
+        BuildOptionsMenuDelegate = OVRProjectSetupDrawer.BuildSettingsMenu
     };
 
     static OVRProjectSetup()
@@ -130,18 +114,28 @@ public static class OVRProjectSetup
         RestoreRegistry();
 
         ProcessorQueue.OnProcessorCompleted += RefreshBuildStatusMenuSubText;
-        var statusItem = new Item()
-        {
-            Name = OVRProjectSetupUtils.ProjectSetupToolPublicName,
-            Color = Utils.HexToColor("#c4c4c4"),
-            Icon = TextureContent.CreateContent("ovr_icon_upst.png", OVRProjectSetupUtils.ProjectSetupToolIcons),
-            InfoTextDelegate = ComputeInfoText,
-            PillIcon = ComputePillIcon,
-            OnClickDelegate = OnStatusMenuClick,
-            Order = 0
-        };
-        StatusMenu.RegisterItem(statusItem);
     }
+
+    internal static Setting<bool> Enabled;
+    internal static Setting<bool> RequiredThrowErrors;
+
+    internal static readonly Setting<bool> AllowLogs =
+        new OVRProjectSetupSettings.SettingBool
+        {
+            Owner = ToolDescriptor,
+            Uid = "AllowLogs",
+            Label = "Log outstanding issues",
+            Default = false
+        };
+
+    internal static readonly Setting<bool> ProduceReportOnBuild =
+        new OVRProjectSetupSettings.SettingBool
+        {
+            Owner = ToolDescriptor,
+            Uid = "ProduceReportOnBuild",
+            Label = "Produce Report on Build",
+            Default = false
+        };
 
     private static string _statusMenuSubText;
     private static OVRConfigurationTaskUpdaterSummary _latestSummary;
@@ -160,15 +154,15 @@ public static class OVRProjectSetup
     {
         return _latestSummary?.HighestFixLevel switch
         {
-            OVRProjectSetup.TaskLevel.Optional => (OVRProjectSetupDrawer.Styles.Contents.InfoIcon, InfoColor, true),
-            OVRProjectSetup.TaskLevel.Recommended => (OVRProjectSetupDrawer.Styles.Contents.WarningIcon, WarningColor,
+            TaskLevel.Optional => (OVRProjectSetupDrawer.Styles.Contents.InfoIcon, InfoColor, true),
+            TaskLevel.Recommended => (OVRProjectSetupDrawer.Styles.Contents.WarningIcon, WarningColor,
                 true),
-            OVRProjectSetup.TaskLevel.Required => (OVRProjectSetupDrawer.Styles.Contents.ErrorIcon, ErrorColor, true),
+            TaskLevel.Required => (OVRProjectSetupDrawer.Styles.Contents.ErrorIcon, ErrorColor, true),
             _ => (null, null, false)
         };
     }
 
-    private static void OnStatusMenuClick(Item.Origins origin)
+    private static void OnStatusMenuClick(Origins origin)
     {
         OVRProjectSetupSettingsProvider.OpenSettingsWindow(origin);
     }
@@ -176,19 +170,44 @@ public static class OVRProjectSetup
     internal static void SetupTemporaryRegistry()
     {
         Registry = new OVRConfigurationTaskRegistry();
-        Enabled = new OVRProjectSetupConstSettingBool("Enabled", true, "Enabled");
-        RequiredThrowErrors =
-            new OVRProjectSetupConstSettingBool("RequiredThrowErrors", false, "Required throw errors");
+        Enabled = new ConstSetting<bool>
+        {
+            Owner = ToolDescriptor,
+            Uid = "Enabled",
+            Default = true,
+            Label = "Enabled"
+        };
+        RequiredThrowErrors = new ConstSetting<bool>
+        {
+            Owner = ToolDescriptor,
+            Uid = "RequiredThrowErrors",
+            Default = false,
+            Label = "Required throw errors"
+        };
         OVRProjectSetupUpdater.SetupTemporaryRegistry();
     }
 
     internal static void RestoreRegistry()
     {
         Registry = _principalRegistry;
+
         Enabled =
-        new OVRProjectSetupConstSettingBool("Enabled", true, "Enabled");
-        RequiredThrowErrors =
-            new OVRProjectSetupProjectSettingBool("RequiredThrowErrors", false, "Required throw errors");
+        new ConstSetting<bool>()
+        {
+            Owner = ToolDescriptor,
+            Uid = "Enabled",
+            Default = true,
+            Label = "Enabled"
+        };
+
+        RequiredThrowErrors = new OVRProjectSetupSettings.SettingBool
+        {
+            Owner = ToolDescriptor,
+            Uid = "RequiredThrowErrors",
+            Default = false,
+            Label = "Required throw errors"
+        };
+
         OVRProjectSetupUpdater.RestoreRegistry();
     }
 
@@ -198,7 +217,7 @@ public static class OVRProjectSetup
         {
             if (href == OVRConfigurationTask.ConsoleLinkHref)
             {
-                OVRProjectSetupSettingsProvider.OpenSettingsWindow(Item.Origins.Console);
+                OVRProjectSetupSettingsProvider.OpenSettingsWindow(Origins.Console);
             }
         }
     }
@@ -223,12 +242,12 @@ public static class OVRProjectSetup
         Registry.AddTask(task);
     }
 
-    internal static OVRConfigurationTask RegisterTask(OVRProjectSetup.TaskGroup group,
+    internal static OVRConfigurationTask RegisterTask(TaskGroup group,
         Func<BuildTargetGroup, bool> isDone,
         BuildTargetGroup platform = BuildTargetGroup.Unknown,
         Action<BuildTargetGroup> fix = null,
-        OVRProjectSetup.TaskLevel level = OVRProjectSetup.TaskLevel.Recommended,
-        Func<BuildTargetGroup, OVRProjectSetup.TaskLevel> conditionalLevel = null,
+        TaskLevel level = TaskLevel.Recommended,
+        Func<BuildTargetGroup, TaskLevel> conditionalLevel = null,
         string message = null,
         Func<BuildTargetGroup, string> conditionalMessage = null,
         string fixMessage = null,
@@ -237,12 +256,12 @@ public static class OVRProjectSetup
         Func<BuildTargetGroup, string> conditionalUrl = null,
         bool validity = true,
         Func<BuildTargetGroup, bool> conditionalValidity = null,
-        OVRProjectSetup.TaskTags tags = OVRProjectSetup.TaskTags.None,
+        TaskTags tags = TaskTags.None,
         bool fixAutomatic = true
     )
     {
         var optionalLevel =
-            OptionalLambdaType<BuildTargetGroup, OVRProjectSetup.TaskLevel>.Create(level, conditionalLevel, true);
+            OptionalLambdaType<BuildTargetGroup, TaskLevel>.Create(level, conditionalLevel, true);
         var optionalMessage = OptionalLambdaType<BuildTargetGroup, string>.Create(message, conditionalMessage, true);
         var optionalFixMessage =
             OptionalLambdaType<BuildTargetGroup, string>.Create(fixMessage, conditionalFixMessage, true);
@@ -279,6 +298,7 @@ public static class OVRProjectSetup
     /// <param name="conditionalUrl">Use this delegate for more control or complex behaviours over the url parameter.</param>
     /// <param name="validity">Checks if the task is valid. If not, it will be ignored by the Setup Tool.</param>
     /// <param name="conditionalValidity">Use this delegate for more control or complex behaviours over the validity parameter.</param>
+    /// <param name="fixAutomatic"></param>
     /// <exception cref="ArgumentNullException">Possible causes :
     /// - If either message or conditionalMessage do not provide a valid non null string
     /// - isDone is null
@@ -287,12 +307,12 @@ public static class OVRProjectSetup
     /// - group is set to "All". This category is not meant to be used to describe a task.
     /// - a task with the same unique ID already has been registered (conflict in hash generated from description message).</exception>
     public static void AddTask(
-        OVRProjectSetup.TaskGroup group,
+        TaskGroup group,
         Func<BuildTargetGroup, bool> isDone,
         BuildTargetGroup platform = BuildTargetGroup.Unknown,
         Action<BuildTargetGroup> fix = null,
-        OVRProjectSetup.TaskLevel level = OVRProjectSetup.TaskLevel.Recommended,
-        Func<BuildTargetGroup, OVRProjectSetup.TaskLevel> conditionalLevel = null,
+        TaskLevel level = TaskLevel.Recommended,
+        Func<BuildTargetGroup, TaskLevel> conditionalLevel = null,
         string message = null,
         Func<BuildTargetGroup, string> conditionalMessage = null,
         string fixMessage = null,
@@ -301,7 +321,7 @@ public static class OVRProjectSetup
         Func<BuildTargetGroup, string> conditionalUrl = null,
         bool validity = true,
         Func<BuildTargetGroup, bool> conditionalValidity = null,
-        OVRProjectSetup.TaskTags tags = OVRProjectSetup.TaskTags.None,
+        TaskTags tags = TaskTags.None,
         bool fixAutomatic = true
     )
         => RegisterTask(group, isDone, platform, fix, level, conditionalLevel, message, conditionalMessage,
@@ -346,7 +366,7 @@ public static class OVRProjectSetup
         LogMessages logMessages = LogMessages.Disabled)
     {
         var fixer = new OVRConfigurationTaskFixer(Registry, buildTargetGroup, filter, logMessages, false, null);
-        OVRProjectSetup.ProcessorQueue.Request(fixer);
+        ProcessorQueue.Request(fixer);
         return Task.Run(fixer.WaitForCompletion);
     }
 
@@ -384,7 +404,7 @@ public static class OVRProjectSetup
         LogMessages logMessages = LogMessages.Disabled)
     {
         var updater = new OVRConfigurationTaskUpdater(Registry, buildTargetGroup, filter, logMessages, false, null);
-        OVRProjectSetup.ProcessorQueue.Request(updater);
+        ProcessorQueue.Request(updater);
         return Task.Run(updater.WaitForCompletion);
     }
 }

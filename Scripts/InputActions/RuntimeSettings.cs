@@ -18,13 +18,17 @@
  * limitations under the License.
  */
 
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Serialization;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.IO;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Meta.XR.InputActions
 {
@@ -52,6 +56,25 @@ namespace Meta.XR.InputActions
         }
 
 #if UNITY_EDITOR
+        [InitializeOnLoadMethod]
+        static void RegisterPlaymodeListener()
+        {
+            UpdateBindingsOnDisk(clean: true);
+
+            EditorApplication.playModeStateChanged += state =>
+            {
+                switch (state)
+                {
+                    case PlayModeStateChange.ExitingEditMode:
+                        UpdateBindingsOnDisk(supportPlaymode: true);
+                        break;
+                    case PlayModeStateChange.EnteredEditMode:
+                        UpdateBindingsOnDisk(clean: true);
+                        break;
+                }
+            };
+        }
+
         public static string GetRuntimeActionBindings()
         {
             var instance = Instance;
@@ -97,45 +120,63 @@ namespace Meta.XR.InputActions
             return str;
         }
 
-        public static void SaveToStreamingAssets()
+        public static void UpdateBindingsOnDisk(bool supportPlaymode = false, bool clean = false, string buildPath = null)
         {
-            try
-            {
-                string json = GetRuntimeActionBindings();
-                string destinationPath = Application.streamingAssetsPath;
+            const string kStreamedPath = "Assets/StreamingAssets"; // avoiding Application.streamingAssetsPath since we're 100% certain we want this exact path, always
+            const string kFileName = "RuntimeActionBindings.json";
+            const string kNewline = "\n";
 
-                if (!Directory.Exists(destinationPath))
+            var src = Instance;
+
+            var streamedFile = new FileInfo($"{kStreamedPath}/{kFileName}"); // Application.streamingAssetsPath
+            var streamedMeta = new FileInfo($"{streamedFile}.meta");         // always delete the meta file too
+            var playmodeFile = new FileInfo($"./{kFileName}");               // Editor runtime CWD
+
+            if (!string.IsNullOrEmpty(buildPath) && streamedFile.Exists)
+                streamedFile.CopyTo($"{buildPath}/../{kFileName}");
+
+            foreach (var file in new [] { streamedFile, streamedMeta, playmodeFile })
+            {
+                try
                 {
-                    Directory.CreateDirectory(destinationPath);
+                    if (file.Exists)
+                        file.Delete();
                 }
-                destinationPath = Path.Combine(destinationPath, "RuntimeActionBindings.json");
-                File.WriteAllText(destinationPath, json);
-
-                // Also save to the project directory
-                // to support playing in the editor.
-                destinationPath = Application.dataPath;
-                destinationPath = Path.GetFullPath(Path.Combine(destinationPath, "..", "RuntimeActionBindings.json"));
-                File.WriteAllText(destinationPath, json);
-            } catch (System.Exception e)
-            {
-                UnityEngine.Debug.LogError($"Error saving RuntimeActionBindings: {e.Message}");
+                catch (IOException dismissible)
+                {
+                    // these exceptions shouldn't halt procedure, but we should log the details anyway.
+                    Debug.LogFormat(
+                        LogType.Warning, // don't log as LogType.Exception ~ it might inadvertently halt in certain ctxs
+                        LogOption.None,
+                        context: src,
+                        format: "{0}",
+                        dismissible
+                    );
+                    // (this likely foretells a later failure tho.)
+                }
+                // SecurityException and UnauthorizedAccessException are exotic cases at best and should bubble up.
             }
-        }
 
-        public void OnValidate()
-        {
-            // If we've changed, update our saved json files.
-            SaveToStreamingAssets();
-        }
+            if (clean)
+                return;
 
-        public void InputActionSetChanged(InputActionSet actionSet)
-        {
-            if( InputActionSets.Contains(actionSet) )
+            var encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+            var bindings = GetRuntimeActionBindings();
+
+            streamedFile.Directory?.Create();
+            using (var file = new StreamWriter(streamedFile.Open(FileMode.Create, FileAccess.Write, FileShare.None), encoding))
             {
-                OnValidate();
+                file.NewLine = kNewline;
+                file.Write(bindings);
             }
+
+            if (supportPlaymode)
+                streamedFile.CopyTo($"{playmodeFile}", overwrite: true);
+
+            // (Allow any exceptions above to bubble up so builds fail and buildmasters get a clear signal.)
+            // ((Reason: If an app depends on these input bindings, then it's a broken build without them.))
         }
-#endif
+#endif // UNITY_EDITOR
     }
 
     [System.Serializable]

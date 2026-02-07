@@ -133,7 +133,6 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         /// This is handled by checking that your OculusProjectConfig asset enables "Anchor Support", and by
         /// subsequently running the Unity menu bar item "Meta > Tools > Update AndroidManifest.xml".
         /// </remarks>
-        /// <seealso cref="OVRPermissionsRequester"/>
         FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
 
         /// <summary>
@@ -231,7 +230,6 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         /// This is handled by checking that your OculusProjectConfig asset enables "Anchor Support", and by
         /// subsequently running the Unity menu bar item "Meta > Tools > Update AndroidManifest.xml".
         /// </remarks>
-        /// <seealso cref="OVRPermissionsRequester"/>
         FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
 
         /// <summary>
@@ -322,7 +320,6 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         /// "Anchor and Space Sharing Support", and by subsequently running the Unity menu bar item
         /// "Meta > Tools > Update AndroidManifest.xml".
         /// </remarks>
-        /// <seealso cref="OVRPermissionsRequester"/>
         FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
 
         /// <summary>
@@ -459,7 +456,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureSharableComponentNotEnabled = Result.Failure_SpaceComponentNotEnabled,
 
         /// <summary>
-        /// Sharing failed because device has not enabled the "Share Point Cloud Data" setting.
+        /// Sharing failed because the user has not enabled the "Share Point Cloud Data" setting.
         /// </summary>
         /// <remarks>
         /// Users can enable this setting in OS Settings &gt; Privacy and Safety &gt; Device Permissions
@@ -483,7 +480,6 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         /// This is handled by checking that your OculusProjectConfig asset enables "Anchor and Space Sharing Support",
         /// and by subsequently running the Unity menu bar item "Meta > Tools > Update AndroidManifest.xml".
         /// </remarks>
-        /// <seealso cref="OVRPermissionsRequester"/>
         FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
 
         /// <summary>
@@ -634,20 +630,14 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
         anchors.Clear();
 
-        var result = options.DiscoverSpaces(out var requestId);
-        if (!result.IsSuccess())
-        {
-            return OVRTask.FromResult(OVRResult.From(anchors, (FetchResult)result));
-        }
-
-        var task = OVRTask.FromRequest<TaskResult>(requestId);
-        task.SetInternalData(new FetchTaskData
-        {
-            Anchors = anchors,
-            IncrementalResultsCallback = incrementalResultsCallback,
-        });
-
-        return task;
+        return OVRTask.Build(
+            options.DiscoverSpaces(out var requestId), requestId)
+            .ToTask<List<OVRAnchor>, FetchResult>()
+            .WithInternalData(new FetchTaskData
+            {
+                Anchors = anchors,
+                IncrementalResultsCallback = incrementalResultsCallback,
+            });
     }
 
     /// <summary>
@@ -764,19 +754,19 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// </remarks>
     /// <param name="trackingSpacePose">The pose, in tracking space, at which you wish to create the spatial anchor.</param>
     /// <returns>A task which can be used to track completion of the request.</returns>
-    public static OVRTask<OVRAnchor> CreateSpatialAnchorAsync(Pose trackingSpacePose)
-        => CreateSpatialAnchor(new SpatialAnchorCreateInfo
-        {
-            BaseTracking = GetTrackingOriginType(),
-            PoseInSpace = new Posef
+    public static OVRTask<OVRAnchor> CreateSpatialAnchorAsync(Pose trackingSpacePose) => OVRTask
+        .Build(
+            CreateSpatialAnchor(new SpatialAnchorCreateInfo
             {
-                Orientation = trackingSpacePose.rotation.ToFlippedZQuatf(),
-                Position = trackingSpacePose.position.ToFlippedZVector3f(),
-            },
-            Time = GetTimeInSeconds(),
-        }, out var requestId)
-            ? OVRTask.FromRequest<OVRAnchor>(requestId)
-            : OVRTask.FromResult(Null);
+                BaseTracking = GetTrackingOriginType(),
+                PoseInSpace = new Posef
+                {
+                    Orientation = trackingSpacePose.rotation.ToFlippedZQuatf(),
+                    Position = trackingSpacePose.position.ToFlippedZVector3f(),
+                },
+                Time = GetTimeInSeconds(),
+            }, out var requestId), requestId)
+        .ToTask(Null);
 
     /// <summary>
     /// Creates a new spatial anchor.
@@ -878,9 +868,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
             var result = SaveSpaces(ptr, spaces.Length, out var requestId);
             Telemetry.SetSyncResult(telemetryMarker, requestId, result);
 
-            return result.IsSuccess()
-                ? OVRTask.FromRequest<OVRResult<SaveResult>>(requestId)
-                : OVRTask.FromResult(OVRResult.From((SaveResult)result));
+            return OVRTask.Build(result, requestId).ToResultTask<SaveResult>();
         }
     }
 
@@ -960,9 +948,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
             var result = EraseSpaces((uint)spaces.Length, spacesPtr, (uint)uuids.Length, uuidsPtr, out var requestId);
             Telemetry.SetSyncResult(telemetryMarker, requestId, result);
 
-            return result.IsSuccess()
-                ? OVRTask.FromRequest<OVRResult<EraseResult>>(requestId)
-                : OVRTask.FromResult(OVRResult.From((EraseResult)result));
+            return OVRTask.Build(result, requestId).ToResultTask<EraseResult>();
         }
     }
 
@@ -1064,9 +1050,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
                 numUsers: (uint)users.Length,
                 out var requestId);
 
-            return result.IsSuccess()
-                ? OVRTask.FromRequest<OVRResult<ShareResult>>(requestId)
-                : OVRTask.FromResult(OVRResult.From((ShareResult)result));
+            return OVRTask.Build(result, requestId).ToResultTask<ShareResult>();
         }
     }
 
@@ -1164,10 +1148,9 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
             };
 
             info.RecipientInfo = (ShareSpacesRecipientInfoBase*)(&shareSpacesGroupRecipientInfo);
-            var result = OVRPlugin.ShareSpaces(in info, out var requestId);
-            return result.IsSuccess()
-                ? OVRTask.FromRequest<OVRResult<ShareResult>>(requestId)
-                : OVRTask.FromResult(OVRResult.From((ShareResult)result));
+            return OVRTask
+                .Build(ShareSpaces(in info, out var requestId), requestId)
+                .ToResultTask<ShareResult>();
         }
     }
 
@@ -1378,14 +1361,10 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         var result = QuerySpaces2(queryInfo, out var requestId);
         Telemetry.SetSyncResult(telemetryMarker, requestId, result);
 
-        if (!result.IsSuccess())
-        {
-            return OVRTask.FromResult(result);
-        }
-
-        var task = OVRTask.FromRequest<Result>(requestId);
-        task.SetInternalData(anchors);
-        return task;
+        return OVRTask
+            .Build(result, requestId)
+            .ToTask()
+            .WithInternalData(anchors);
     }
 
 }

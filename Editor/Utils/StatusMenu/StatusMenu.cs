@@ -19,29 +19,35 @@
  */
 
 using System.Collections.Generic;
+using System.Linq;
+using Meta.XR.Editor.Id;
 using UnityEditor;
 using UnityEngine;
+using Meta.XR.Editor.ToolingSupport;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 
 namespace Meta.XR.Editor.StatusMenu
 {
     internal class StatusMenu : EditorWindow
     {
-
-        private static readonly List<Item> Items = new List<Item>();
         private static StatusMenu _instance;
+        private static IReadOnlyList<ToolDescriptor> _registeredItems;
 
-        public static List<Item> RegisteredItems => Items;
-
-        public static void RegisterItem(Item item)
+        private static void PrepareItems()
         {
-            Items.Add(item);
-            Items.Sort((x, y) => x.Order.CompareTo(y.Order));
+            var registeredItems = ToolRegistry.Registry.Where(item => item.AddToStatusMenu).ToList();
+            registeredItems.Sort((x, y) => x.Order.CompareTo(y.Order));
+            _registeredItems = registeredItems;
         }
 
-        public static Item GetHighestItem()
+        public static ToolDescriptor GetHighestItem()
         {
-            foreach (var item in Items)
+            if (_registeredItems == null)
+            {
+                PrepareItems();
+            }
+
+            foreach (var item in _registeredItems)
             {
                 var (_, color, showNotification) = item.PillIcon?.Invoke() ?? default;
 
@@ -66,7 +72,9 @@ namespace Meta.XR.Editor.StatusMenu
                 _instance.Close();
             }
 
-            if (Items.Count == 0)
+            PrepareItems();
+
+            if (_registeredItems.Count == 0)
             {
                 return;
             }
@@ -80,9 +88,10 @@ namespace Meta.XR.Editor.StatusMenu
 
         private float ComputeHeight()
         {
-            return ItemHeight * Items.Count // Item Heights
+            var count = _registeredItems.Count;
+            return ItemHeight * count // Item Heights
                    + (Styles.GUIStyles.DescriptionAreaStyle.margin.top
-                      + Styles.GUIStyles.DescriptionAreaStyle.margin.bottom) * Items.Count // Margins
+                      + Styles.GUIStyles.DescriptionAreaStyle.margin.bottom) * count // Margins
                    + (Styles.GUIStyles.BackgroundAreaStyle.padding.bottom
                       + Styles.GUIStyles.BackgroundAreaStyle.padding.top); // Main Area Padding
         }
@@ -91,9 +100,11 @@ namespace Meta.XR.Editor.StatusMenu
         {
             EditorGUILayout.BeginVertical(Styles.GUIStyles.BackgroundAreaStyle);
             {
-                foreach (var item in Items)
+                foreach (var item in _registeredItems)
                 {
-                    item.Show(Close, false, Item.Origins.StatusMenu);
+                    if (!item.AddToStatusMenu) continue;
+
+                    item.DrawButton(Close, false, false, Origins.StatusMenu);
                 }
             }
             EditorGUILayout.EndVertical();

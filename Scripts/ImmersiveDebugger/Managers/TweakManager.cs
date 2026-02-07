@@ -24,6 +24,7 @@ using Meta.XR.ImmersiveDebugger.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Meta.XR.ImmersiveDebugger.Hierarchy;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -47,7 +48,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             var members = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.SetField | BindingFlags.SetProperty);
             foreach (MemberInfo member in members)
             {
-                if (TweakUtils.IsMemberTypeValidForTweak(member))
+                if (TweakUtils.IsMemberValidForTweak(member))
                 {
                     var attribute = member.GetCustomAttribute<DebugMember>();
                     if (attribute != null && attribute.Tweakable)
@@ -58,7 +59,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             }
 
             membersList.AddRange(InspectedDataRegistry.GetMembersForType<MemberInfo>(type,
-                (info, attribute) => TweakUtils.IsMemberTypeValidForTweak(info) && attribute.Tweakable));
+                (info, attribute) => TweakUtils.IsMemberValidForTweak(info) && attribute.Tweakable));
 
             TweaksDict[type] = membersList;
 
@@ -81,6 +82,11 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
 
         public void ProcessTypeFromInspector(Type type, InstanceHandle handle, MemberInfo memberInfo, DebugMember memberAttribute)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ProcessTypeFromHierarchy(Item item, MemberInfo memberInfo)
         {
             throw new NotImplementedException();
         }

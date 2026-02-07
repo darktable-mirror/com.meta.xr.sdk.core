@@ -93,18 +93,16 @@ namespace Oculus.VR.Editor
         {
             string win64Path = GetOVRPluginPath(PluginPlatform.Win64OpenXR);
             string androidPath = GetOVRPluginPath(PluginPlatform.AndroidOpenXR);
-            string win64FullPath = Path.GetFullPath(win64Path);
-            string androidFullPath = Path.GetFullPath(androidPath);
 
             string md5Win64Actual = "";
             string md5AndroidActual = "";
-            if (File.Exists(win64FullPath))
+            if (File.Exists(win64Path))
             {
-                md5Win64Actual = GetFileChecksum(win64FullPath);
+                md5Win64Actual = GetFileChecksum(win64Path);
             }
-            if (File.Exists(androidFullPath))
+            if (File.Exists(androidPath))
             {
-                md5AndroidActual = GetFileChecksum(androidFullPath);
+                md5AndroidActual = GetFileChecksum(androidPath);
             }
 
             if (!forceUpdate && OVRLocalProjectSettings.Instance.OVRPluginMd5Win64 == md5Win64Actual &&
@@ -115,12 +113,12 @@ namespace Oculus.VR.Editor
 
             if (OVRPluginInfo.IsCoreSDKModifiable())
             {
-                if (File.Exists(win64FullPath))
+                if (File.Exists(win64Path))
                 {
                     PluginImporter win64Plugin = AssetImporter.GetAtPath(win64Path) as PluginImporter;
                     ConfigurePlugin(win64Plugin, PluginPlatform.Win64OpenXR);
                 }
-                if (File.Exists(androidFullPath))
+                if (File.Exists(androidPath))
                 {
                     PluginImporter androidPlugin = AssetImporter.GetAtPath(androidPath) as PluginImporter;
                     ConfigurePlugin(androidPlugin, PluginPlatform.AndroidOpenXR);
@@ -142,7 +140,7 @@ namespace Oculus.VR.Editor
             }
             else
             {
-                Debug.LogWarning("OVRPlugin not updated. Restart the editor to update.");
+                UnityEngine.Debug.LogWarning("OVRPlugin not updated. Restart the editor to update.");
             }
         }
 
@@ -170,7 +168,7 @@ namespace Oculus.VR.Editor
         private static string GetFileChecksum(string filePath)
         {
             using var md5 = new MD5CryptoServiceProvider();
-            byte[] buffer = md5.ComputeHash(File.ReadAllBytes(filePath));
+            byte[] buffer = md5.ComputeHash(File.ReadAllBytes(Path.GetFullPath(filePath)));
             byte[] pathBuffer = md5.ComputeHash(Encoding.UTF8.GetBytes(filePath));
             return string.Join(null, buffer.Select(b => b.ToString("x2"))) + string.Join(null, pathBuffer.Select(b => b.ToString("x2")));
         }
@@ -179,7 +177,7 @@ namespace Oculus.VR.Editor
         {
             if (_unityRunningInBatchMode)
             {
-                Debug.LogWarning("Restarting editor is not supported in batch mode");
+                UnityEngine.Debug.LogWarning("Restarting editor is not supported in batch mode");
                 return;
             }
 

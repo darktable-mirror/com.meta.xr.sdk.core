@@ -23,16 +23,22 @@
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using System.Collections.Generic;
 using System.Reflection;
+using Meta.XR.ImmersiveDebugger.Utils;
+using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
     internal class Inspector : Controller, IInspector
     {
-        private Label _title;
+        private InstanceHandle _instanceHandle;
+        private ToggleWithLabel _title;
         private Flex _flex;
         private Background _background;
-        private readonly Dictionary<MemberInfo, Member> _registry = new Dictionary<MemberInfo, Member>();
+        private readonly Dictionary<MemberInfo, Member> _registry = new();
         private ImageStyle _backgroundImageStyle;
+        private Toggle _foldout;
+
+        private bool _previousEnabledState;
 
         public ImageStyle BackgroundStyle
         {
@@ -46,9 +52,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public string Title
         {
-            get => _title.Content;
-            set => _title.Content = value;
+            get => _title.Label;
+            set => _title.Label = value;
         }
+
+        public InstanceHandle InstanceHandle
+        {
+            get => _instanceHandle;
+            set
+            {
+                _instanceHandle = value;
+
+                var instance = _instanceHandle.Instance;
+                var inspectorTitle = instance != null ? $"{instance.name} - {_instanceHandle.Type.Name}" : $"{_instanceHandle.Type.Name}";
+                Title = inspectorTitle;
+
+                UpdateInstanceState();
+            }
+        }
+
+        public Toggle Foldout => _foldout;
 
         protected override void Setup(Controller owner)
         {
@@ -60,14 +83,27 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _backgroundImageStyle = Style.Load<ImageStyle>("InspectorBackground");
             BackgroundStyle = _backgroundImageStyle;
 
+            // Label
+            _title = Append<ToggleWithLabel>("title");
+            _title.LayoutStyle = Style.Load<LayoutStyle>("InspectorTitle");
+            _title.Background.LayoutStyle = Style.Load<LayoutStyle>("InspectorTitleBackground");
+            _title.BackgroundStyle = Style.Load<ImageStyle>("InspectorTitleBackground");
+
+            // Foldout
+            _foldout = Append<Toggle>("foldout");
+            _foldout.LayoutStyle = Style.Load<LayoutStyle>("InspectorFoldout");
+            _foldout.Icon = Resources.Load<Texture2D>("Textures/caret_right_icon");
+            _foldout.IconStyle = Style.Load<ImageStyle>("InspectorFoldoutIcon");
+
             // Flex
             _flex = Append<Flex>("list");
             _flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorFlex");
 
-            // Label
-            _title = _flex.Append<Label>("title");
-            _title.LayoutStyle = Style.Load<LayoutStyle>("InspectorTitle");
-            _title.TextStyle = Style.Load<TextStyle>("InspectorTitle");
+            // Toggling callbacks
+            _foldout.StateChanged = OnStateChanged;
+            _foldout.Callback = _foldout.ToggleState;
+            _title.Callback = _foldout.ToggleState;
+            _foldout.State = true;
         }
 
         protected override void OnTransparencyChanged()
@@ -98,6 +134,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
                 member.PillColor = attribute.Color;
                 _registry.Add(memberInfo, member);
+
+                if (!_foldout.State)
+                {
+                    _flex.Forget(member);
+                }
             }
 
             return member;
@@ -107,6 +148,50 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             _registry.TryGetValue(memberInfo, out var member);
             return member;
+        }
+
+        private void OnStateChanged(bool state)
+        {
+            _foldout.Icon = Resources.Load<Texture2D>(state ? "Textures/caret_down_icon" : "Textures/caret_right_icon");
+            if (state)
+            {
+                foreach (var member in _registry)
+                {
+                    _flex.Remember(member.Value);
+                }
+                _flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorFlex");
+            }
+            else
+            {
+                _flex.ForgetAll();
+                _flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorFlexFold");
+            }
+        }
+
+        private void Update()
+        {
+            UpdateInstanceState();
+        }
+
+        private void UpdateInstanceState(bool force = false)
+        {
+            if (InstanceHandle.Instance is Behaviour component)
+            {
+                UpdateInstanceState(component != null && component.isActiveAndEnabled, force);
+            }
+            else
+            {
+                UpdateInstanceState(true, force);
+            }
+        }
+
+        private void UpdateInstanceState(bool state, bool force = false)
+        {
+            if (_previousEnabledState == state && !force) return;
+
+            _title.TextStyle = Style.Load<TextStyle>(state ? "InspectorTitle" : "InspectorTitleDeactivated");
+
+            _previousEnabledState = state;
         }
     }
 }

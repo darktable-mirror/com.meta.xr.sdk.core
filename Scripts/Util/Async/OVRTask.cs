@@ -123,9 +123,22 @@ public static partial class OVRTask
 
     /// \cond
     internal static OVRTask<TResult> FromGuid<TResult>(Guid id) => Create<TResult>(id);
+
+    [Obsolete("Consider OVRTask.Build instead.")]
     internal static OVRTask<TResult> FromRequest<TResult>(ulong id) => Create<TResult>(GetId(id));
+
+    [Obsolete("Consider OVRTask.Build instead.")]
     internal static OVRTask<TResult> FromRequest<TResult>(ulong id, OVRPlugin.EventType eventType)
         => Create<TResult>(GetId(id, eventType));
+
+    internal static Builder Build(bool success, ulong requestId)
+        => new(success ? OVRPlugin.Result.Success : OVRPlugin.Result.Failure, GetId(requestId));
+
+    internal static Builder Build(OVRPlugin.Result result, ulong requestId)
+        => new(result, GetId(requestId));
+
+    internal static Builder Build(OVRPlugin.Result result, ulong requestId, OVRPlugin.EventType eventType)
+        => new(result, GetId(requestId, eventType));
     /// \endcond
 
     /// <summary>
@@ -410,6 +423,16 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     internal bool AddToPending() => Pending.Add(_id);
     internal bool IsPending => Pending.Contains(_id);
     internal void SetInternalData<T>(T data) => InternalData<T>.Set(_id, data);
+
+    internal OVRTask<TResult> WithInternalData<T>(T data)
+    {
+        if (!HasResult)
+        {
+            InternalData<T>.Set(_id, data);
+        }
+        return this;
+    }
+
     internal bool TryGetInternalData<T>(out T data) => InternalData<T>.TryGet(_id, out data);
 
     /// <summary>
@@ -1442,24 +1465,21 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
 public struct OVRTaskBuilder<T>
 {
     /// \cond
-    private interface IPooledStateMachine : IDisposable
+    private abstract class PooledStateMachine : IDisposable
     {
-        OVRTask<T>? Task { get; set; }
-        Action MoveNext { get; }
+        public OVRTask<T>? Task;
+        public Action MoveNext;
+        public abstract void Dispose();
     }
 
-    private class PooledStateMachine<TStateMachine> : IPooledStateMachine, OVRObjectPool.IPoolObject
+    private class PooledStateMachine<TStateMachine> : PooledStateMachine, OVRObjectPool.IPoolObject
         where TStateMachine : IAsyncStateMachine
     {
         public TStateMachine StateMachine;
 
-        public OVRTask<T>? Task { get; set; }
-
-        public Action MoveNext { get; }
-
         public static PooledStateMachine<TStateMachine> Get() => OVRObjectPool.Get<PooledStateMachine<TStateMachine>>();
 
-        public void Dispose() => OVRObjectPool.Return(this);
+        public override void Dispose() => OVRObjectPool.Return(this);
 
         public PooledStateMachine() => MoveNext = ExecuteMoveNext;
 
@@ -1478,7 +1498,7 @@ public struct OVRTaskBuilder<T>
         }
     }
 
-    private IPooledStateMachine _pooledStateMachine;
+    private PooledStateMachine _pooledStateMachine;
 
     private OVRTask<T>? _task;
 
@@ -1532,7 +1552,7 @@ public struct OVRTaskBuilder<T>
     /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public static OVRTaskBuilder<T> Create() => default;
 
-    private IPooledStateMachine GetPooledStateMachine<TStateMachine>() where TStateMachine : IAsyncStateMachine
+    private PooledStateMachine GetPooledStateMachine<TStateMachine>() where TStateMachine : IAsyncStateMachine
     {
         if (_pooledStateMachine == null)
         {

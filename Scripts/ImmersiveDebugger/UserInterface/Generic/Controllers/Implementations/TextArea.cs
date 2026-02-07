@@ -19,6 +19,7 @@
  */
 
 
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -47,7 +48,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             get => Text.text;
             set
             {
-                Text.text = value;
+                var newlineFormatted = value.Replace("\\n", Environment.NewLine);
+                Text.text = newlineFormatted;
                 UpdateLayoutSize();
             }
         }

@@ -24,6 +24,7 @@ using Meta.XR.ImmersiveDebugger.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Meta.XR.ImmersiveDebugger.Hierarchy;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -35,6 +36,8 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public void ProcessTypeFromInspector(Type type, InstanceHandle handle, MemberInfo memberInfo,
             DebugMember memberAttribute);
 
+        public void ProcessTypeFromHierarchy(Item item, MemberInfo memberInfo);
+
         // Telemetry
         public string TelemetryAnnotation { get; }
         public int GetCountPerType(Type type);
@@ -42,18 +45,19 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
     internal static class ManagerUtils
     {
-        public delegate void RegisterMember<in T>(IMember memberController, T member, DebugMember attribute, UnityEngine.Object instance);
+        public delegate void RegisterMember<in T>(IMember memberController, T member, DebugMember attribute, InstanceHandle instanceHandle);
         public static void RebuildInspectorForType<T>(IDebugUIPanel panel, InstanceCache cache, Type type, List<(T, DebugMember)> memberPairs, RegisterMember<T> memberRegistration) where T : MemberInfo
         {
             foreach (var (member, attribute) in memberPairs)
             {
                 if (member.IsStatic())
                 {
-                    var inspector = panel.RegisterInspector(InstanceHandle.Static(type), attribute.Category);
+                    var instanceHandle = InstanceHandle.Static(type);
+                    var inspector = panel.RegisterInspector(instanceHandle, new Category { Id = attribute.Category });
                     var memberController = inspector?.RegisterMember(member, attribute);
                     if (memberController != null)
                     {
-                        memberRegistration.Invoke(memberController, member, attribute, null);
+                        memberRegistration.Invoke(memberController, member, attribute, instanceHandle);
                     }
                 }
                 else
@@ -61,11 +65,11 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                     var instances = cache.GetCacheDataForClass(type);
                     foreach (var instance in instances)
                     {
-                        var inspector = panel.RegisterInspector(instance, attribute.Category);
+                        var inspector = panel.RegisterInspector(instance, new Category { Id = attribute.Category });
                         var memberController = inspector?.RegisterMember(member, attribute);
                         if (memberController != null)
                         {
-                            memberRegistration.Invoke(memberController, member, attribute, instance.Instance);
+                            memberRegistration.Invoke(memberController, member, attribute, instance);
                         }
                     }
                 }

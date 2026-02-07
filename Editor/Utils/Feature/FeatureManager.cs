@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Meta.XR.Editor.Settings;
 using Meta.XR.Util;
 using UnityEditor;
 using UnityEngine;
@@ -32,13 +33,13 @@ namespace Meta.XR.Editor.Features
 {
     internal static class FeatureManager
     {
-        private const string FeaturesKey = "features-key";
-
-        private static string Features
+        private static readonly UserString Features = new()
         {
-            get => EditorPrefs.GetString(FeaturesKey, "");
-            set => EditorPrefs.SetString(FeaturesKey, value);
-        }
+            Default = "",
+            SendTelemetry = false,
+            Owner = null,
+            Uid = "features-key"
+        };
 
         public static async Task<string> GetFeaturesInScene(Scene scene)
         {
@@ -55,11 +56,11 @@ namespace Meta.XR.Editor.Features
             }
             catch (Exception)
             {
-                return Features;
+                return Features.Value;
             }
 
-            Features = string.Join(", ", features);
-            return Features;
+            Features.SetValue(string.Join(", ", features));
+            return Features.Value;
         }
 
         private static async Task GetFeaturesGameObject(GameObject gameObject, HashSet<Feature> features)

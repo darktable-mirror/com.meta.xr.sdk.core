@@ -33,21 +33,35 @@ internal static class OVRProjectSetupUtils
 
     public static T FindComponentInScene<T>() where T : Component
     {
-        var scene = SceneManager.GetActiveScene();
-        var rootGameObjects = scene.GetRootGameObjects();
-        return rootGameObjects.FirstOrDefault(go => go.GetComponentInChildren<T>())?.GetComponentInChildren<T>();
+        for (int i = 0; i < SceneManager.sceneCount; ++i)
+        {
+            var scene = SceneManager.GetSceneAt(i);
+            var rootGameObjects = scene.GetRootGameObjects();
+            foreach (var rootObject in rootGameObjects)
+            {
+                T obj = rootObject.GetComponentInChildren<T>(true);
+                if (obj != null)
+                {
+                    return obj;
+                }
+            }
+        }
+        return null;
     }
 
     public static List<T> FindComponentsInScene<T>() where T : Component
     {
-        var activeScene = SceneManager.GetActiveScene();
         var foundComponents = new List<T>();
 
-        var rootObjects = activeScene.GetRootGameObjects();
-        foreach (var rootObject in rootObjects)
+        for (int i = 0; i < SceneManager.sceneCount; ++i)
         {
-            var components = rootObject.GetComponentsInChildren<T>(true);
-            foundComponents.AddRange(components);
+            var scene = SceneManager.GetSceneAt(i);
+            var rootObjects = scene.GetRootGameObjects();
+            foreach (var rootObject in rootObjects)
+            {
+                var components = rootObject.GetComponentsInChildren<T>(true);
+                foundComponents.AddRange(components);
+            }
         }
 
         return foundComponents;

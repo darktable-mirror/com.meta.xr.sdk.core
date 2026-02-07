@@ -34,7 +34,9 @@ namespace Meta.XR.BuildingBlocks
         private void Awake()
         {
             _roomMeshAnchor = GetComponent<RoomMeshAnchor>();
+#pragma warning disable CS0618 // Type or member is obsolete
             _roomMeshEvent = FindObjectOfType<RoomMeshEvent>();
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         private IEnumerator Start()

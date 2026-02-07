@@ -48,7 +48,7 @@ public class OVRRuntimeAssetsBase : ScriptableObject
         return relativeUri.ToString();
     }
 
-    public void AddToPreloadedAssets()
+    public bool AddToPreloadedAssets()
     {
         var preloadedAssets = PlayerSettings.GetPreloadedAssets().ToList();
 
@@ -56,7 +56,22 @@ public class OVRRuntimeAssetsBase : ScriptableObject
         {
             preloadedAssets.Add(this);
             PlayerSettings.SetPreloadedAssets(preloadedAssets.ToArray());
+            return true;
         }
+
+        return false;
+    }
+
+    public bool RemoveFromPreloadedAssets()
+    {
+        var preloaded = PlayerSettings.GetPreloadedAssets().ToList();
+        if (preloaded.RemoveAll(a => a == this) > 0)
+        {
+            PlayerSettings.SetPreloadedAssets(preloaded.ToArray());
+            return true;
+        }
+
+        return false;
     }
 #endif
 
@@ -90,4 +105,3 @@ public class OVRRuntimeAssetsBase : ScriptableObject
 #endif
     }
 }
-

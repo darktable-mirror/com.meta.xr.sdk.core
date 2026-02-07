@@ -19,14 +19,16 @@
  */
 
 using System.Linq;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Reflection;
 using Meta.XR.Editor.Settings;
-using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.ToolingSupport;
 using UnityEditor;
 using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
+using Utils = Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.StatusMenu
 {
@@ -45,11 +47,19 @@ namespace Meta.XR.Editor.StatusMenu
         private const string Title = "Meta XR Tools";
 
         private static bool Enabled { get; set; }
-        private static readonly Bool StatusIconEnabled = new UserBool("StatusIcon.Enabled", true);
+
+        private static readonly CustomBool StatusIconEnabled =
+            new UserBool()
+            {
+                Owner = null,
+                Uid = "StatusIcon.Enabled",
+                Default = true
+            };
 
         private static Object _toolbar;
         private static readonly EditorToolbarButton MetaIcon;
         private static readonly VisualElement Pill;
+        private static Vector2 _rawPosition = Vector2.zero;
 
         static StatusIcon()
         {
@@ -57,7 +67,6 @@ namespace Meta.XR.Editor.StatusMenu
 
             MetaIcon = new EditorToolbarButton()
             {
-                icon = Styles.Contents.MetaIcon.Image as Texture2D,
                 text = Title,
                 style =
                 {
@@ -65,8 +74,14 @@ namespace Meta.XR.Editor.StatusMenu
                     paddingRight = Padding
                 }
             };
+            Styles.Contents.MetaIcon.RegisterToImageLoaded(loadedImage => MetaIcon.icon = loadedImage as Texture2D);
             MetaIcon.AddToClassList(ElementClass);
-            MetaIcon.clicked += () => StatusMenu.ShowDropdown(ComputeCurrentRect());
+            MetaIcon.RegisterCallback<GeometryChangedEvent>(evt => RefreshRawPosition());
+            MetaIcon.clicked += () =>
+            {
+                RefreshRawPosition();
+                ShowDropdown();
+            };
 
             var arrowIcon = new VisualElement();
             arrowIcon.AddToClassList("unity-icon-arrow");
@@ -101,12 +116,10 @@ namespace Meta.XR.Editor.StatusMenu
 
         private static Rect ComputeCurrentRect()
         {
-            var rawPosition = GUIUtility.GUIToScreenPoint(Vector2.zero);
-
-            var rect = StatusIcon.MetaIcon.layout;
-            var parentRect = StatusIcon.MetaIcon.parent.layout;
-            var position = rawPosition + parentRect.position + rect.position;
-            return new Rect(position, StatusIcon.MetaIcon.layout.size);
+            var rect = MetaIcon.layout;
+            var parentRect = MetaIcon.parent.layout;
+            var position = _rawPosition + parentRect.position + rect.position;
+            return new Rect(position, MetaIcon.layout.size);
         }
 
         private static void Update()
@@ -187,12 +200,17 @@ namespace Meta.XR.Editor.StatusMenu
 
         public static void OnSettingsGUI()
         {
-            EditorGUI.BeginChangeCheck();
-            var value = EditorGUILayout.Toggle("Enable Toolbar Menu", StatusIconEnabled.Value);
-            if (EditorGUI.EndChangeCheck())
-            {
-                StatusIconEnabled.Value = value;
-            }
+            StatusIconEnabled.DrawForGUI(Origins.UserSettings, null);
+        }
+
+        private static void RefreshRawPosition()
+        {
+            _rawPosition = GUIUtility.GUIToScreenPoint(Vector2.zero);
+        }
+
+        internal static void ShowDropdown()
+        {
+            StatusMenu.ShowDropdown(ComputeCurrentRect());
         }
     }
 }

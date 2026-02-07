@@ -22,4 +22,3 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Oculus.VR.Scripts.Editor")]
-

@@ -34,6 +34,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Label _title;
         private ButtonWithIcon _closeIcon;
 
+        private const float DynamicPixelsPerUnit =
+#if !UNITY_EDITOR
+            10.0f
+#else
+            2.0f
+#endif
+            ;
+
         /// <summary>
         /// The Icon of the panel, used for displaying on the <see cref="DebugBar"/> and toggling visibility of the panel itself.
         /// </summary>
@@ -63,7 +71,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _closeIcon.IconStyle = Style.Load<ImageStyle>("CloseButtonIcon");
             _closeIcon.Callback = Hide;
 
-            SetExpectedPixelsPerUnit(1000.0f, 10.0f, 2.24f);
+            SetExpectedPixelsPerUnit(1000.0f, DynamicPixelsPerUnit, 2.24f);
 
             Hide();
         }

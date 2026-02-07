@@ -89,7 +89,7 @@ namespace Meta.XR.BuildingBlocks
 
         private void Awake()
         {
-            _spatialAnchorCore = SpatialAnchorCoreBuildingBlock.GetBaseInstances()[0];
+            _spatialAnchorCore = SpatialAnchorCoreBuildingBlock.GetFirstInstance();
             _cameraRig = FindAnyObjectByType<OVRCameraRig>();
             AnchorPrefab = _anchorPrefab;
             FollowHand = _followHand;

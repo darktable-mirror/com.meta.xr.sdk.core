@@ -98,7 +98,7 @@ namespace UnityEngine.EventSystems
 
         // track which objects we already clicked this frame
         // to avoid reclicking the same object over and over.
-        private HashSet<GameObject> _objectsHitThisFrame = new HashSet<GameObject>();
+        protected HashSet<GameObject> _objectsHitThisFrame = new HashSet<GameObject>();
 
         protected OVRInputModule()
         {
@@ -486,7 +486,7 @@ namespace UnityEngine.EventSystems
         /// it takes MouseState as a parameter, allowing it to be used for both Gaze and Mouse
         /// pointerss.
         /// </summary>
-        private void ProcessMouseEvent(MouseState mouseData)
+        protected void ProcessMouseEvent(MouseState mouseData)
         {
             var pressed = mouseData.AnyPressesThisFrame();
             var released = mouseData.AnyReleasesThisFrame();
@@ -655,7 +655,7 @@ namespace UnityEngine.EventSystems
         /// <summary>
         /// For RectTransform, calculate it's normal in world space
         /// </summary>
-        static Vector3 GetRectTransformNormal(RectTransform rectTransform)
+        protected static Vector3 GetRectTransformNormal(RectTransform rectTransform)
         {
             Vector3[] corners = new Vector3[4];
             rectTransform.GetWorldCorners(corners);
@@ -665,7 +665,7 @@ namespace UnityEngine.EventSystems
             return Vector3.Cross(BottomEdge, LeftEdge).normalized;
         }
 
-        private readonly MouseState m_MouseState = new MouseState();
+        protected readonly MouseState m_MouseState = new MouseState();
 
         // The following 2 functions are equivalent to PointerInputModule.GetMousePointerEventData but are customized to
         // get data for ray pointers and canvas mouse pointers.
@@ -709,7 +709,8 @@ namespace UnityEngine.EventSystems
                     rayData.WorldNormal = raycast.worldNormal;
                 }
 
-                m_Cursor.SetCursorRay(handRay);
+                if (m_Cursor)
+                    m_Cursor.SetCursorRay(handRay);
 
                 OVRRaycaster ovrRaycaster = raycast.module as OVRRaycaster;
                 // We're only interested in intersections from OVRRaycasters
@@ -721,8 +722,7 @@ namespace UnityEngine.EventSystems
                     leftData.position = ovrRaycaster.GetScreenPosition(raycast);
 
                     // Find the world position and normal the Graphic the ray intersected
-                    RectTransform graphicRect = raycast.gameObject.GetComponent<RectTransform>();
-                    if (graphicRect != null)
+                    if (m_Cursor && raycast.gameObject.TryGetComponent(out RectTransform graphicRect))
                     {
                         Vector3 worldPos = raycast.worldPosition;
                         Vector3 normal = GetRectTransformNormal(graphicRect);
@@ -752,7 +752,7 @@ namespace UnityEngine.EventSystems
                         }
                     }
 
-                    leftData.position = physicsRaycaster.GetScreenPos(raycast.worldPosition);
+                    leftData.position = physicsRaycaster.GetScreenPos(position);
                 }
             }
 
@@ -828,7 +828,8 @@ namespace UnityEngine.EventSystems
             leftData.pointerCurrentRaycast = raycast;
             m_RaycastResultCache.Clear();
 
-            m_Cursor.SetCursorRay(rayOrigin);
+            if (m_Cursor)
+                m_Cursor.SetCursorRay(rayOrigin);
 
             OVRRaycaster ovrRaycaster = raycast.module as OVRRaycaster;
             // We're only interested in intersections from OVRRaycasters
@@ -840,8 +841,7 @@ namespace UnityEngine.EventSystems
                 leftData.position = ovrRaycaster.GetScreenPosition(raycast);
 
                 // Find the world position and normal the Graphic the ray intersected
-                RectTransform graphicRect = raycast.gameObject.GetComponent<RectTransform>();
-                if (graphicRect != null)
+                if (m_Cursor && raycast.gameObject.TryGetComponent(out RectTransform graphicRect))
                 {
                     // Set are gaze indicator with this world position and normal
                     Vector3 worldPos = raycast.worldPosition;
@@ -868,9 +868,10 @@ namespace UnityEngine.EventSystems
                     }
                 }
 
-                leftData.position = physicsRaycaster.GetScreenPos(raycast.worldPosition);
+                leftData.position = physicsRaycaster.GetScreenPos(position);
 
-                m_Cursor.SetCursorStartDest(rayOrigin.position, position, raycast.worldNormal);
+                if (m_Cursor)
+                    m_Cursor.SetCursorStartDest(rayOrigin.position, position, raycast.worldNormal);
             }
 
             // Stick default data values in right and middle slots for compatability

@@ -28,6 +28,7 @@ namespace Meta.XR.BuildingBlocks.Editor
     public class SpatialAudioBlockData : BlockData
     {
         protected override bool UsesPrefab => false;
+        internal override bool CanBeAddedOverGameObject => true;
 
         internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps =>
             new List<InstallationStepInfo>

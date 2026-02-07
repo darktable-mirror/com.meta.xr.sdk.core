@@ -22,13 +22,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.ImmersiveDebugger.Utils;
 using UnityEditor;
 using UnityEngine;
-using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using static Meta.XR.Editor.UserInterface.Styles.Contents;
+using static Meta.XR.Editor.UserInterface.Styles.Colors;
+using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.ImmersiveDebugger.Editor
 {
@@ -38,15 +40,24 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         internal const string PublicName = "Immersive Debugger";
         internal const string PublicTag = "[ID]";
 
+        public static readonly string Description =
+            "Displays the console and track Game Objects, MonoBehaviors and their members in real time within your headset." +
+            "\n\nYou can track your components' members by using either of the following methods: " +
+            $"\n• <i>In code:</i> Add the <b>{nameof(DebugMember)}</b> attribute to any member you want to track" +
+            $"\n• <i>In scene:</i> Add and configure the <b>{nameof(DebugInspector)}</b> component to any GameObject you want to track" +
+            $"\n<color={ColorToHex(NewColor)}>• [New]</color><i> Using the hierarchy view:</i> Directly within the Immersive Debugger, track any GameObject and its Components without any preconfiguration";
+
         internal static readonly TextureContent.Category ImmersiveDebuggerIcons = new("ImmersiveDebugger/Icons");
         internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_icon_idf.png", ImmersiveDebuggerIcons, $"Open {PublicName}");
 
         private const string DocumentationUrl = "https://developer.oculus.com/documentation/unity/immersivedebugger-overview";
 
 
-        internal static Item Item = new Item()
+        internal static readonly ToolDescriptor ToolDescriptor = new ToolDescriptor()
         {
             Name = PublicName,
+            MqdhCategoryId = "1062327272563816",
+            Description = Description,
             Color = Styles.Colors.AccentColor,
             Icon = StatusIcon,
             InfoTextDelegate = ComputeInfoText,
@@ -56,27 +67,19 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                     : (null, null, false),
             OnClickDelegate = OnStatusMenuClick,
             Order = 2,
-            HeaderIcons = new List<Item.HeaderIcon>()
+            Experimental = false,
+            CanBeNew = true,
+            AddToStatusMenu = true,
+            OnProjectSettingsGUI = Settings.OnGUI,
+            Documentation = new List<Documentation>()
             {
-                new Item.HeaderIcon()
+                new Documentation()
                 {
-                    TextureContent = ConfigIcon,
-                    Color = LightGray,
-                    Action = null
-                },
-                new Item.HeaderIcon()
-                {
-                    TextureContent = DocumentationIcon,
-                    Color = LightGray,
-                    Action = () => Application.OpenURL(DocumentationUrl)
-                },
+                    Title = PublicName,
+                    Url = DocumentationUrl
+                }
             }
         };
-
-        static Utils()
-        {
-            StatusMenu.RegisterItem(Item);
-        }
 
         public static (string, Color?) ComputeInfoText()
         {
@@ -84,9 +87,9 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             return (enabled ? "Enabled" : "Disabled", null);
         }
 
-        private static void OnStatusMenuClick(Item.Origins origin)
+        private static void OnStatusMenuClick(Origins origin)
         {
-            Settings.OpenSettingsWindow(origin);
+            ToolDescriptor.OpenProjectSettings(origin);
         }
 
         internal static IEnumerable<InspectedMember> Filter(IEnumerable<InspectedMember> members, string queryString) => members.Where(member => member.Valid && Match(member.MemberInfo.BuildSignatureForDebugInspector(), queryString));

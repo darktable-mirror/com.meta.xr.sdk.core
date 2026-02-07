@@ -68,7 +68,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         /// The interval range, in seconds, from which a random value will be chosen and awaited before attempting a new
         /// connection after the previous attempt failed.
         /// </summary>
-        public Vector2 retryInterval = new(0.1f, 0.5f);
+        public Vector2 retryInterval = new(1f, 3f);
         private const string JoinCodeKey = "joinCode";
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously

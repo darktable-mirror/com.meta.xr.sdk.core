@@ -211,6 +211,23 @@ public struct OVRResult<TStatus> : IEquatable<OVRResult<TStatus>>
     /// <param name="value">The <see cref="OVRResult"/> to cast.</param>
     /// <returns>Returns the value of <see cref="Success"/>.</returns>
     public static implicit operator bool(OVRResult<TStatus> value) => value.Success;
+
+    /// <summary>
+    /// (Internal) Implicitly converts an <see cref="OVRPlugin.Result"/> to an <see cref="OVRResult{TStatus}"/>.
+    /// </summary>
+    /// <remarks>
+    /// This implicit conversion is provided mostly for internal Meta use (C# requires user-defined conversion operators
+    /// to be public). It simplifies early returns in methods that return an <see cref="OVRResult{TStatus}"/> and need
+    /// to early out when a call fails.
+    ///
+    /// Such methods can simply return the result rather than constructing an <see cref="OVRResult{TStatus}"/>
+    /// with a cast.
+    /// </remarks>
+    /// <param name="result">The result.</param>
+    /// <returns>Returns an <see cref="OVRResult{TStatus}"/> whose <see cref="Status"/> is <paramref name="result"/>
+    /// cast to a <typeparamref name="TStatus"/>.</returns>
+    public static implicit operator OVRResult<TStatus>(OVRPlugin.Result result)
+        => From(UnsafeUtility.As<OVRPlugin.Result, TStatus>(ref result));
 }
 
 /// <summary>
@@ -473,4 +490,21 @@ public struct OVRResult<TValue, TStatus> : IEquatable<OVRResult<TValue, TStatus>
     /// <param name="value">The <see cref="OVRResult"/> to cast.</param>
     /// <returns>Returns the value of <see cref="Success"/>.</returns>
     public static implicit operator bool(OVRResult<TValue, TStatus> value) => value.Success;
+
+    /// <summary>
+    /// (Internal) Implicitly converts an <see cref="OVRPlugin.Result"/> to a failed <see cref="OVRResult{TValue,TStatus}"/>.
+    /// </summary>
+    /// <remarks>
+    /// This implicit conversion is provided mostly for internal Meta use (C# requires user-defined conversion operators
+    /// to be public). It simplifies early returns in methods that return an <see cref="OVRResult{TValue,TStatus}"/> and
+    /// need to early out when a call fails.
+    ///
+    /// Such methods can simply return the result rather than constructing an <see cref="OVRResult{TValue,TStatus}"/>
+    /// with potentially complex type parameters.
+    /// </remarks>
+    /// <param name="result">The result, which must represent failure (be less than zero).</param>
+    /// <returns>Returns an <see cref="OVRResult{TValue,TStatus}"/> whose <see cref="Success"/> is false.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="result"/> does not represent a failure case.</exception>
+    public static implicit operator OVRResult<TValue, TStatus>(OVRPlugin.Result result)
+        => FromFailure(UnsafeUtility.As<OVRPlugin.Result, TStatus>(ref result));
 }

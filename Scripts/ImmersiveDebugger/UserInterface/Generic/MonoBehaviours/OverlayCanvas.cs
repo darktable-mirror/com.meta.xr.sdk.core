@@ -85,7 +85,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             var insetRectWidth = innerWidth / (float)width;
             var insetRectHeight = innerHeight / (float)height;
 
-            _renderTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            _renderTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default)
             {
                 // if we can't scale the viewport, generate mipmaps instead
                 useMipMap = !_scaleViewport

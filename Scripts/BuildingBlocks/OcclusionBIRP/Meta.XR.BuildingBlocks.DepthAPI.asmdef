@@ -22,7 +22,7 @@
         {
             "name": "com.unity.xr.oculus",
             "expression": "4.2.0",
-            "define": "DEPTH_API_SUPPORTED"
+            "define": "XR_OCULUS_4_2_0_OR_NEWER"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

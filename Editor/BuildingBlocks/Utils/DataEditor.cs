@@ -20,7 +20,9 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Tags;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
@@ -145,7 +147,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             GUILayout.BeginArea(new Rect(0, 0, currentWidth, expectedHeight));
             EditorGUILayout.BeginHorizontal(GUIStyles.HeaderIcons);
             EditorGUILayout.Space(0, true);
-            Utils.Item.ShowHeaderIcons();
+            Utils.ToolDescriptor.ShowHeaderIcons(Origins.Self);
             EditorGUILayout.EndHorizontal();
             GUILayout.EndArea();
         }

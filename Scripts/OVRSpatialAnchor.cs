@@ -399,9 +399,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
                 $"Sharing {spaces.Count} spatial anchors with {userHandles.Count} users.",
                 $"xrShareSpacesFB failed with error {result}.");
 
-            return result.IsSuccess()
-                ? OVRTask.FromRequest<OperationResult>(requestId)
-                : OVRTask.FromResult((OperationResult)result);
+            return OVRTask.Build(result, requestId).ToTask<OperationResult>();
         }
     }
 
@@ -1142,7 +1140,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// This method requires access to Meta servers to query for shared anchors. This method can fail in a few ways:
     /// - The device cannot reach Meta servers, e.g., because there is no internet access (see <see cref="OperationResult.Failure_SpaceNetworkRequestFailed"/>)
     /// - The user has denied the "Share Point Cloud Data" device permission (see <see cref="OperationResult.Failure_SpaceCloudStorageDisabled"/>)
-    /// - The application has not declared "Shared Spatial Anchor Support" (OVRManager > Quest Features > General > Shared Spatial Anchor Support)
+    /// - The application has not declared "Anchor And Space Sharing Support" (OVRManager > Quest Features > General > Anchor And Space Sharing Support)
     ///
     /// To load other types of anchors, use
     /// <see cref="LoadUnboundAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor},Action{List{UnboundAnchor},int})"/>.

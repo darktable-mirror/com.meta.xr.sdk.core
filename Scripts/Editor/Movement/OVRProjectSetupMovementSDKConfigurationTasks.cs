@@ -31,93 +31,83 @@ internal static class OVRProjectSetupMovementSDKConfigurationTasks
 
     static OVRProjectSetupMovementSDKConfigurationTasks()
     {
-        CheckBodyTrackingTasks();
-        CheckFaceTrackingTasks();
+        AddBodyTrackingTasks();
+        AddFaceTrackingTasks();
     }
 
-    private static void CheckBodyTrackingTasks()
+    private static void AddBodyTrackingTasks()
     {
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Required,
             group: Group,
-            isDone: buildTargetGroup => FindMisconfiguredOVRSkeletonInstances().Count == 0,
+            isDone: _ => !FindMisconfiguredOVRSkeletonInstances().Any(),
             message: "When using OVRSkeleton components it's required to have OVRBody data provider next to it",
-            fix: buildTargetGroup =>
+            fix: _ =>
             {
-                var skeletons = FindMisconfiguredOVRSkeletonInstances();
-                foreach (var skeleton in skeletons)
+                foreach (var skeleton in FindMisconfiguredOVRSkeletonInstances())
                 {
                     OVRSkeletonEditor.FixOVRBodyConfiguration(skeleton, skeleton.GetRequiredBodyJointSet());
                 }
             },
-            fixMessage: $"Create OVRBody components where they are required"
+            fixMessage: "Create OVRBody components where they are required"
         );
+
 
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Required,
             group: Group,
-            isDone: buildTargetGroup => GameObject.FindObjectOfType<OVRManager>() == null ||
-                GameObject.FindObjectOfType<OVRManager>().SimultaneousHandsAndControllersEnabled == false ||
-                (GameObject.FindObjectOfType<OVRManager>().wideMotionModeHandPosesEnabled == false && GameObject.FindObjectOfType<OVRBody>() == null),
-            message: "Body API is not compatible with simultaneous hands and controllers",
-            fix: buildTargetGroup =>
+            isDone: _ =>
             {
-                var manager = GameObject.FindObjectOfType<OVRManager>();
+                var manager = Object.FindFirstObjectByType<OVRManager>();
+
+                return manager == null ||
+                       manager.SimultaneousHandsAndControllersEnabled == false ||
+                       (manager.wideMotionModeHandPosesEnabled == false &&
+                        Object.FindFirstObjectByType<OVRBody>() == null);
+            },
+            message: "Body API is not compatible with simultaneous hands and controllers",
+            fix: _ =>
+            {
+                var manager = Object.FindFirstObjectByType<OVRManager>();
                 if (manager != null && manager.SimultaneousHandsAndControllersEnabled)
                 {
                     manager.SimultaneousHandsAndControllersEnabled = false;
                 }
             },
-            fixMessage: $"Turn off simultaneous hands and controllers"
+            fixMessage: "Turn off simultaneous hands and controllers"
         );
     }
 
-    private static void CheckFaceTrackingTasks()
+    private static void AddFaceTrackingTasks()
     {
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Required,
             group: Group,
-            isDone: buildTargetGroup => FindMisconfiguredOVRCustomFaceInstances().Count == 0,
+            isDone: _ => !FindMisconfiguredOVRCustomFaceInstances().Any(),
             message:
             "When using OVRCustomFace components it's required to have OVRFaceExpressions data provider next to it",
-            fix: buildTargetGroup =>
+            fix: _ =>
             {
-                var faces = FindMisconfiguredOVRCustomFaceInstances();
-                foreach (var face in faces)
+                foreach (var face in FindMisconfiguredOVRCustomFaceInstances())
                 {
                     OVRCustomFaceEditor.FixFaceExpressions(face);
                 }
             },
-            fixMessage: $"Create OVRFaceExpressions components where they are required"
-        );
-
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Required,
-            group: Group,
-            isDone: buildTargetGroup => GameObject.FindObjectOfType<OVRManager>() == null ||
-                GameObject.FindObjectOfType<OVRManager>().SimultaneousHandsAndControllersEnabled == false ||
-                GameObject.FindObjectOfType<OVRManager>().requestFaceTrackingPermissionOnStartup == false,
-            message: "Warning: Face tracking is not compatible with simultaneous hands and controllers on Quest 2 devices",
-            fix: buildTargetGroup =>
-            {
-                // Take no action; developers should take heed of the warning message and account for the compatibility issue if necessary
-            },
-            fixMessage: $"Ensure Quest 2 app design accounts for this if enabling both features concurrently"
+            fixMessage: "Create OVRFaceExpressions components where they are required"
         );
     }
 
-    private static List<OVRSkeleton> FindMisconfiguredOVRSkeletonInstances() => FindComponentsInScene<OVRSkeleton>()
-        .FindAll(s => !OVRSkeletonEditor.IsSkeletonProperlyConfigured(s))
-        .ToList();
+    private static IEnumerable<OVRSkeleton> FindMisconfiguredOVRSkeletonInstances() =>
+        FindComponentsInScene<OVRSkeleton>()
+            .Where(s => !OVRSkeletonEditor.IsSkeletonProperlyConfigured(s));
 
-    private static List<OVRCustomFace> FindMisconfiguredOVRCustomFaceInstances() =>
+    private static IEnumerable<OVRCustomFace> FindMisconfiguredOVRCustomFaceInstances() =>
         FindComponentsInScene<OVRCustomFace>()
-            .FindAll(s => !OVRCustomFaceEditor.IsFaceExpressionsConfigured(s))
-            .ToList();
+            .Where(s => !OVRCustomFaceEditor.IsFaceExpressionsConfigured(s));
 
-    private static List<T> FindComponentsInScene<T>() where T : MonoBehaviour
+    private static IEnumerable<T> FindComponentsInScene<T>() where T : MonoBehaviour
     {
-        List<T> results = new List<T>();
+        var results = new List<T>();
         var scene = SceneManager.GetActiveScene();
         var rootGameObjects = scene.GetRootGameObjects();
 

@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Reflection;
 using Meta.XR.ImmersiveDebugger.Manager;
 using UnityEngine;
@@ -30,7 +31,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         private Flex _flex;
         private TweakEnum _tweak;
         private ButtonWithLabel _baseLabel;
+        private Background _background;
+        private bool _requestBackgroundUpdate;
+        private LayoutStyle _rootLayoutStyle;
         private bool IsMenuVisible => _flex.Visibility;
+
+        private float DefaultHeight => _baseLabel.RectTransform.rect.size.y;
+        private InspectorPanel _inspectorPanel;
+        private float _previousScrollPosition;
+        private ImageStyle _backgroundImageStyle;
 
         public string Label
         {
@@ -39,6 +48,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 _baseLabel.Label = value;
                 _tweak.Value = value;
+            }
+        }
+
+        private ImageStyle BackgroundStyle
+        {
+            set
+            {
+                _backgroundImageStyle = value;
+                _background.Sprite = value.sprite;
+                _background.Color = value.color;
+                _background.PixelDensityMultiplier = value.pixelDensityMultiplier;
             }
         }
 
@@ -55,7 +75,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _baseLabel = Append<ButtonWithLabel>("label");
             _baseLabel.LayoutStyle = Style.Instantiate<LayoutStyle>("DropdownValueItem");
             _baseLabel.TextStyle = Style.Load<TextStyle>("MemberValue");
-            _baseLabel.BackgroundStyle = Style.Instantiate<ImageStyle>("DropdownValueBackground");
+            _baseLabel.BackgroundStyle = Style.Instantiate<ImageStyle>("DropdownValueBackgroundRoot");
             _baseLabel.Callback += OnDropdownClick;
 
             var icon = _baseLabel.Append<Icon>("icon");
@@ -63,6 +83,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             var style = Style.Load<ImageStyle>("DownArrowIcon");
             icon.Texture = style.icon;
             icon.Color = style.color;
+
+            _rootLayoutStyle = Owner.LayoutStyle;
+            _inspectorPanel = gameObject.GetComponentInParent<InspectorPanel>();
         }
 
         private void OnDropdownClick() => SetDropdownMenuVisibility(!IsMenuVisible);
@@ -75,8 +98,50 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private void SetDropdownMenuVisibility(bool visible)
         {
-            if (visible) _flex.Show();
-            else _flex.Hide();
+            if (visible)
+            {
+                // Need to set canvas sort order if canvas is not active. This gets reset on deactivation.
+                _flex.Show();
+            }
+            else
+            {
+                _flex.Hide();
+            }
+            _requestBackgroundUpdate = true;
+        }
+
+        private void Update()
+        {
+            if (!_requestBackgroundUpdate) return;
+            _requestBackgroundUpdate = false;
+            var dropdownHeight = DefaultHeight + _flex.RectTransform.rect.size.y;
+            _rootLayoutStyle.size.y = _flex.Visibility ? dropdownHeight : DefaultHeight;
+
+            var rowHeight = DefaultHeight - 2; // single row height + extra spacing
+            _background.RectTransform.sizeDelta = new Vector2(_background.RectTransform.sizeDelta.x, _rootLayoutStyle.size.y - rowHeight);
+            RefreshLayout();
+            StartCoroutine(UpdateScrollPosition(_flex.Visibility));
+        }
+
+        private IEnumerator UpdateScrollPosition(bool dropdownIsShowing)
+        {
+            if (!dropdownIsShowing)
+            {
+                yield return new WaitForEndOfFrame();
+                _inspectorPanel.ScrollView.Progress = _previousScrollPosition;
+                yield break;
+            }
+
+            _previousScrollPosition = _inspectorPanel.ScrollView.Progress;
+
+            var scrollRect = _inspectorPanel.ScrollView.ScrollRect;
+            var menuHeight = _flex.RectTransform.rect.size.y;
+
+            yield return new WaitForEndOfFrame();
+
+            var scrollableArea = Mathf.Abs(scrollRect.content.rect.size.y - _inspectorPanel.ScrollView.RectTransform.rect.size.y);
+            var normalizedScrollAmount = menuHeight / scrollableArea;
+            _inspectorPanel.ScrollView.Progress = Mathf.Clamp01(_inspectorPanel.ScrollView.Progress + normalizedScrollAmount);
         }
 
         private void HideDropdownItems() => _flex.Hide();
@@ -85,14 +150,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             _flex = Append<Flex>("list");
             _flex.LayoutStyle = Style.Load<LayoutStyle>("DropdownValuesFlex");
-            var canvas = _flex.gameObject.AddComponent<Canvas>();
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = Utils.DropDownMenuSortOrder;
 
-            _flex.gameObject.AddComponent<CanvasGroup>();
-
-            var raycaster = _flex.gameObject.AddComponent<OVRRaycaster>();
-            raycaster.sortOrder = Utils.DropDownMenuSortOrder;
+            _background = _flex.Append<Background>("background");
+            _background.LayoutStyle = Style.Instantiate<LayoutStyle>("DropdownBackground");
+            BackgroundStyle = Style.Load<ImageStyle>("DropdownBackground");
 
             Array values = null;
             var fieldType = (_tweak.Member as FieldInfo)?.FieldType;
@@ -119,6 +180,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             var value = _flex.Append<DropdownMenuItem>($"menu_item_{data}");
             value.Label = data;
             value.RegisterDropdownSourceMenu(this);
+        }
+
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            _backgroundImageStyle.colorHover.a = Transparent ? 0.6f : 1f;
+            _background.Color = Transparent ? _backgroundImageStyle.colorOff : _backgroundImageStyle.color;
         }
     }
 }

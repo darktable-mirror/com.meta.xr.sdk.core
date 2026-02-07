@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-using System;
 using UnityEngine;
 /// <summary>
 /// An enum representing the different formats of hands / skeletons which are supported.
@@ -39,14 +38,6 @@ public enum OVRHandSkeletonVersion
     /// Differs from the <see cref="OVR"/> skeleton in both
     /// joint set and joint orientation.
     /// </summary>
-    [InspectorName("OpenXR Hand Skeleton (Experimental)")]
+    [InspectorName("OpenXR Hand Skeleton")]
     OpenXR = 1,
-
-    [Obsolete("Use " + nameof(OVR) + "instead.")]
-    [InspectorName("")]
-    V1 = OVR,
-
-    [Obsolete("Use " + nameof(OpenXR) + "instead.")]
-    [InspectorName("")]
-    V2 = OpenXR,
 }

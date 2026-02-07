@@ -111,7 +111,7 @@ public class OVRBody : MonoBehaviour,
     {
         _dataChangedSinceLastQuery = false;
         _hasData = false;
-        var manager = FindObjectOfType<OVRManager>();
+        var manager = FindAnyObjectByType<OVRManager>();
         if (manager != null && manager.SimultaneousHandsAndControllersEnabled)
         {
             Debug.LogWarning("Currently, Body API and simultaneous hands and controllers cannot be enabled at the same time", this);

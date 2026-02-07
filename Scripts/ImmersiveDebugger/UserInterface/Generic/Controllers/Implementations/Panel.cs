@@ -53,7 +53,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         protected Canvas _canvas;
         private CanvasScaler _canvasScaler;
-        private OVRRaycaster _ovrRaycaster;
+        private PanelRaycaster _ovrRaycaster;
         internal float PixelsPerUnit { get; private set; }
 
         protected Background Background;
@@ -101,6 +101,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             // Background
             Background = Append<Background>("background");
             Background.LayoutStyle = Style.Load<LayoutStyle>("Fill");
+            Background.RaycastTarget = true;
         }
 
         protected void SetExpectedPixelsPerUnit(float pixelsPerUnit, float dynamicPixelsPerUnit, float referencePixelsPerUnit)
@@ -161,15 +162,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             if (_ovrRaycaster) return;
             if (!_canvas.worldCamera) return;
 
-            _ovrRaycaster = GameObject.AddComponent<OVRRaycaster>();
+            _ovrRaycaster = GameObject.AddComponent<PanelRaycaster>();
             _ovrRaycaster.pointer = Interface.Cursor.GameObject;
-            _ovrRaycaster.blockingMask = 1 << 5; // TODO : setting
         }
 
         private void LateUpdate()
         {
             RefreshCanvas();
             RefreshRaycaster();
+        }
+
+        protected virtual void OnEnable()
+        {
+            Telemetry.OnPanelActiveStateChanged(this);
+        }
+
+        protected override void OnDisable()
+        {
+            Telemetry.OnPanelActiveStateChanged(this);
+
+            base.OnDisable();
         }
     }
 }

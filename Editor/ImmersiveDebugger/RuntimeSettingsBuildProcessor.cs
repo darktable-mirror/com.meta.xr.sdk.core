@@ -23,22 +23,29 @@ using UnityEditor.Build.Reporting;
 
 namespace Meta.XR.ImmersiveDebugger.Editor
 {
-    internal class RuntimeSettingsBuildProcessor : IPreprocessBuildWithReport
+    internal class RuntimeSettingsBuildProcessor : IPreprocessBuildWithReport, IPostprocessBuildWithReport
     {
         public int callbackOrder => 0;
 
+        bool m_AssetWasAutoAdded;
+
         public void OnPreprocessBuild(BuildReport report)
         {
-            if (!RuntimeSettings.Instance.ImmersiveDebuggerEnabled)
-            {
-                return;
-            }
-
             var runtimeSettingInstance = RuntimeSettings.Instance;
-            if (runtimeSettingInstance != null)
-            {
-                runtimeSettingInstance.AddToPreloadedAssets();
-            }
+            if (!runtimeSettingInstance)
+                return;
+
+            if (runtimeSettingInstance.ImmersiveDebuggerEnabled)
+                m_AssetWasAutoAdded = runtimeSettingInstance.AddToPreloadedAssets();
+            else
+                _ = runtimeSettingInstance.RemoveFromPreloadedAssets();
+        }
+
+        public void OnPostprocessBuild(BuildReport report)
+        {
+            // remove it after building so project states don't get auto-dirtied
+            if (m_AssetWasAutoAdded && RuntimeSettings.Instance)
+                RuntimeSettings.Instance.RemoveFromPreloadedAssets();
         }
     }
 }

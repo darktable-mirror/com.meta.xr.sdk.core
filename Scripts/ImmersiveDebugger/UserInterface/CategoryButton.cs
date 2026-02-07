@@ -18,28 +18,33 @@
  * limitations under the License.
  */
 
-
 using System;
+using Meta.XR.ImmersiveDebugger.Manager;
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
-    public class CategoryButton : Toggle
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the Immersive Debugger UIs.
+    /// It represents a Category in the Inspector Panel and handles its bespoke behaviour.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
+    internal class CategoryButton : Toggle
     {
-        private string _category;
+        private Category _category;
         private int _counter;
 
         private Label _label;
         private Label _subLabel;
         private Flex _flex;
 
-        internal string CategoryName
+        internal Category Category
         {
             get => _category;
             set
             {
                 _category = value;
-                _label.Content = _category;
+                _label.Content = _category.Label;
             }
         }
 

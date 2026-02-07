@@ -181,10 +181,11 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
 
         private async void CreateNewColocatedSpace()
         {
-            _myAlignmentAnchor = await CreateAlignmentAnchor();
+            _myAlignmentAnchor = await _sharedAnchorManager.CreateAlignmentAnchor();
             if (_myAlignmentAnchor == null)
             {
                 Logger.Log($"{nameof(AutomaticColocationLauncher)}: Could not create the anchor", LogLevel.Error);
+                ColocationFailed?.Invoke(ColocationFailedReason.AutomaticFailedToCreateAnchor);
                 return;
             }
 
@@ -286,41 +287,6 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
 
             var sharedAnchorId = new Guid(shareAndLocalizeParams.anchorUUID.ToString());
             LocalizeAnchor(sharedAnchorId);
-        }
-
-        private async Task<OVRSpatialAnchor> CreateAlignmentAnchor()
-        {
-            var (anchor, result) = await _sharedAnchorManager.CreateAnchor(Vector3.zero, Quaternion.identity);
-            if (anchor == null)
-            {
-                Logger.Log($"{nameof(AutomaticColocationLauncher)}: _sharedAnchorManager.CreateAnchor returned null",
-                    LogLevel.Error);
-                ColocationFailed?.Invoke(ColocationFailedReason.AutomaticFailedToCreateAnchor);
-                return null;
-            }
-
-            bool isAnchorSavedToCloud = result is not
-                (OVRSpatialAnchor.OperationResult.Failure_SpaceNetworkTimeout
-                or OVRSpatialAnchor.OperationResult.Failure_SpaceCloudStorageDisabled
-                or OVRSpatialAnchor.OperationResult.Failure_SpaceNetworkRequestFailed);
-
-            if (!isAnchorSavedToCloud)
-            {
-                Logger.Log($"{nameof(AutomaticColocationLauncher)}: We did not save the local anchor to the cloud", LogLevel.SharedSpatialAnchorsError);
-                ColocationFailed?.Invoke(ColocationFailedReason.AutomaticFailedToSaveAnchorToCloud);
-                return null;
-            }
-
-            if (result != OVRSpatialAnchor.OperationResult.Success)
-            {
-                Logger.Log($"{nameof(AutomaticColocationLauncher)}: Anchor creation failed with result: {result}.", LogLevel.SharedSpatialAnchorsError);
-                ColocationFailed?.Invoke(ColocationFailedReason.AutomaticFailedToCreateAnchor);
-                return null;
-            }
-
-            Logger.Log($"ColocationLauncher: Anchor created: {anchor.Uuid}", LogLevel.Verbose);
-
-            return anchor;
         }
 
         private async void LocalizeAnchor(Guid anchorToLocalize)

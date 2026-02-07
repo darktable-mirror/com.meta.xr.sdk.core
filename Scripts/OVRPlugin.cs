@@ -59,7 +59,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_104_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_106_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -177,6 +177,13 @@ public static partial class OVRPlugin
         True
     }
 
+    public enum OptionalBool
+    {
+        False = 0,
+        True = 1,
+        Unknown = 2
+    }
+
     [OVRResultStatus]
     public enum Result
     {
@@ -241,6 +248,7 @@ public static partial class OVRPlugin
         // XR_EXT_future
         Failure_FuturePending = -10000,
         Failure_FutureInvalid = -10001,
+
     }
 
     public static bool IsSuccess(this Result result) => result >= 0;
@@ -693,6 +701,8 @@ public static partial class OVRPlugin
         Hidden = unchecked((int)0x000000200),
 
         AutoFiltering = unchecked((int)0x00000400),
+
+        PremultipliedAlpha = unchecked((int)0x00100000),
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -948,7 +958,7 @@ public static partial class OVRPlugin
             RThumbstick = cs.RThumbstick;
             LTouchpad = cs.LTouchpad;
             RTouchpad = cs.RTouchpad;
-#pragma warning disable CS0618 // disable the deprecation warning message            
+#pragma warning disable CS0618 // disable the deprecation warning message
             LBatteryPercentRemaining = cs.LBatteryPercentRemaining;
             RBatteryPercentRemaining = cs.RBatteryPercentRemaining;
 #pragma warning restore CS0618
@@ -1029,10 +1039,10 @@ public static partial class OVRPlugin
             RThumbstick = cs.RThumbstick;
             LTouchpad = cs.LTouchpad;
             RTouchpad = cs.RTouchpad;
-#pragma warning disable CS0618 // disable the deprecation warning message            
+#pragma warning disable CS0618 // disable the deprecation warning message
             LBatteryPercentRemaining = 0;
             RBatteryPercentRemaining = 0;
-#pragma warning restore CS0618            
+#pragma warning restore CS0618
             LRecenterCount = 0;
             RRecenterCount = 0;
             Reserved_27 = 0;
@@ -1806,6 +1816,16 @@ public static partial class OVRPlugin
         Max = 5,
     }
 
+    public enum MicrogestureType
+    {
+        NoGesture = 0,
+        SwipeLeft = 1,
+        SwipeRight = 2,
+        SwipeForward = 3,
+        SwipeBackward = 4,
+        ThumbTap = 5,
+        Invalid = -1,
+    }
 
 
     [Flags]
@@ -1835,6 +1855,17 @@ public static partial class OVRPlugin
         public double SampleTimeStamp;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct HandTrackingState
+    {
+        public MicrogestureType Microgesture;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct HandTrackingStateInternal
+    {
+        public MicrogestureType Microgesture;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct HandStateInternal
@@ -4285,6 +4316,30 @@ public static partial class OVRPlugin
         }
     }
 
+    public static bool premultipliedAlphaLayersSupported
+    {
+        get
+        {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+            return false;
+#else
+            return !Application.isMobilePlatform && version >= OVRP_1_3_0.version;
+#endif
+        }
+    }
+
+    public static bool unpremultipliedAlphaLayersSupported
+    {
+        get
+        {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+            return false;
+#else
+            return Application.isMobilePlatform;
+#endif
+        }
+    }
+
     [System.Obsolete("Deprecated. Please use SystemInfo.batteryStatus", false)]
     public static BatteryStatus batteryStatus
     {
@@ -4351,7 +4406,8 @@ public static partial class OVRPlugin
         bool overridePerLayerColorScaleAndOffset = false, Vector4 colorScale = default(Vector4),
         Vector4 colorOffset = default(Vector4), bool expensiveSuperSample = false, bool bicubic = false,
         bool efficientSuperSample = false, bool efficientSharpen = false, bool expensiveSharpen = false,
-        bool hidden = false, bool secureContent = false, bool automaticFiltering = false
+        bool hidden = false, bool secureContent = false, bool automaticFiltering = false,
+        bool premultipledAlpha = false
     )
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -4385,6 +4441,8 @@ public static partial class OVRPlugin
                 flags |= (uint)OverlayFlag.SecureContent;
             if (automaticFiltering)
                 flags |= (uint)OverlayFlag.AutoFiltering;
+            if (premultipledAlpha)
+                flags |= (uint)OverlayFlag.PremultipliedAlpha;
             if (shape == OverlayShape.Cylinder || shape == OverlayShape.Cubemap)
             {
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -8778,6 +8836,37 @@ public static partial class OVRPlugin
 #endif
     }
 
+    // TODO: This will also need to be updated to support Hand Skeletons V2
+    private static HandTrackingStateInternal cachedHandTrackingState = new HandTrackingStateInternal();
+    public static bool GetHandTrackingState(Step stepId, Hand hand, ref HandTrackingState handTrackingState)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return false;
+#else
+        if (nativeXrApi == XrApi.OpenXR && stepId == Step.Physics)
+        {
+            Debug.LogWarning("Step.Physics is deprecated when using OpenXR");
+            stepId = Step.Render;
+        }
+
+        if (version < OVRP_1_81_0.version)
+        {
+            return false;
+        }
+
+        Result res = OVRP_1_106_0.ovrp_GetHandTrackingState(stepId, -1, hand, out cachedHandTrackingState);
+        if (res != Result.Success)
+        {
+            return false;
+        }
+
+        if (version >= OVRP_1_106_0.version)
+        {
+            handTrackingState.Microgesture = cachedHandTrackingState.Microgesture;
+        }
+        return true;
+#endif
+    }
 
     public static bool IsValidBone(BoneId bone, SkeletonType skeletonType)
     {
@@ -11969,11 +12058,10 @@ public static partial class OVRPlugin
 
     public static OVRTask<OVRResult<ulong, Result>> CreateDynamicObjectTrackerAsync()
     {
-        var result = CreateDynamicObjectTracker(out var tracker);
         // The task id and type must match OVRManager's case OVRPlugin.EventType.CreateDynamicObjectTrackerResult
-        return result.IsSuccess()
-            ? OVRTask.FromRequest<OVRResult<ulong, Result>>(tracker, EventType.CreateDynamicObjectTrackerResult)
-            : OVRTask.FromResult(OVRResult<ulong, Result>.FromFailure(result));
+        return OVRTask
+            .Build(CreateDynamicObjectTracker(out var tracker), tracker, EventType.CreateDynamicObjectTrackerResult)
+            .ToTask<ulong, Result>();
     }
 
     public static Result DestroyDynamicObjectTracker(ulong tracker)
@@ -12008,11 +12096,10 @@ public static partial class OVRPlugin
     public static OVRTask<OVRResult<Result>> SetDynamicObjectTrackedClassesAsync(ulong tracker,
         ReadOnlySpan<DynamicObjectClass> classes)
     {
-        var result = SetDynamicObjectTrackedClasses(tracker, classes);
         // The task id and type must match OVRManager's case OVRPlugin.EventType.SetDynamicObjectTrackedClassesResult
-        return result.IsSuccess()
-            ? OVRTask.FromRequest<OVRResult<Result>>(tracker, EventType.SetDynamicObjectTrackedClassesResult)
-            : OVRTask.FromResult(OVRResult<Result>.FromFailure(result));
+        return OVRTask
+            .Build(SetDynamicObjectTrackedClasses(tracker, classes), tracker, EventType.SetDynamicObjectTrackedClassesResult)
+            .ToResultTask<Result>();
     }
 
     public static Result GetSpaceDynamicObjectData(UInt64 space, out DynamicObjectData data)
@@ -12298,6 +12385,23 @@ public static partial class OVRPlugin
 
 
 
+
+
+    public static Result SendMicrogestureHint()
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_106_0.version)
+        {
+            return Result.Failure_Unsupported;
+        }
+
+        OVRP_1_106_0.ovrp_SendMicrogestureHint();
+        return Result.Success;
+#endif
+    }
+
     public static class Qpl
     {
         public const int DefaultInstanceKey = 0;
@@ -12510,6 +12614,17 @@ public static partial class OVRPlugin
 #endif
         }
 
+        public static void MarkerStartForJoin(int markerId, string joinId, Bool cancelMarkerIfAppBackgrounded, int instanceKey = DefaultInstanceKey,
+            long timestampMs = AutoSetTimestampMs)
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return;
+#else
+            if (version < OVRP_1_105_0.version) return;
+            OVRP_1_105_0.ovrp_QplMarkerStartForJoin(markerId, joinId, cancelMarkerIfAppBackgrounded, instanceKey, timestampMs);
+#endif
+        }
+
         public static void MarkerEnd(int markerId, Qpl.ResultType resultTypeId = Qpl.ResultType.Success,
             int instanceKey = Qpl.DefaultInstanceKey, long timestampMs = Qpl.AutoSetTimestampMs)
         {
@@ -12602,6 +12717,185 @@ public static partial class OVRPlugin
 #else
             if (version < OVRP_1_84_0.version) return false;
             return OVRP_1_84_0.ovrp_QplDestroyMarkerHandle(nameHandle) == Result.Success;
+#endif
+        }
+    }
+
+    public static class UnifiedConsent
+    {
+        private const int ToolId = 1;
+
+        public static Result SaveUnifiedConsent(bool consentValue)
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_106_0.version) return Result.Failure_Unsupported;
+
+            return OVRP_1_106_0.ovrp_SaveUnifiedConsent(ToolId, consentValue ? Bool.True : Bool.False);
+#endif
+        }
+
+        public static Result SaveUnifiedConsentWithOlderVersion(bool consentValue, int consentVersion)
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_106_0.version) return Result.Failure_Unsupported;
+
+            return OVRP_1_106_0.ovrp_SaveUnifiedConsentWithOlderVersion(ToolId, consentValue ? Bool.True : Bool.False, consentVersion);
+#endif
+        }
+
+        public static bool? GetUnifiedConsent()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return false;
+#else
+            if (version < OVRP_1_106_0.version) return false;
+
+            return OVRP_1_106_0.ovrp_GetUnifiedConsent(ToolId) switch {
+                OptionalBool.True => true,
+                OptionalBool.False => false,
+                _ => null
+            };
+#endif
+        }
+
+        public static string GetConsentTitle()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return "";
+#else
+            if (version < OVRP_1_106_0.version) return "";
+
+            IntPtr textPtr = Marshal.AllocHGlobal(sizeof(byte) * OVRP_1_106_0.OVRP_CONSENT_TITLE_MAX_LENGTH);
+            Result result = OVRP_1_106_0.ovrp_GetConsentTitle(textPtr);
+
+            if (result != Result.Success)
+            {
+                Marshal.FreeHGlobal(textPtr);
+                return "";
+            }
+
+            string title = Marshal.PtrToStringAnsi(textPtr);
+            Marshal.FreeHGlobal(textPtr);
+            return title;
+#endif
+        }
+
+        public static string GetConsentMarkdownText()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return "";
+#else
+            if (version < OVRP_1_106_0.version) return "";
+
+            IntPtr textPtr = Marshal.AllocHGlobal(sizeof(byte) * OVRP_1_106_0.OVRP_CONSENT_TEXT_MAX_LENGTH);
+            Result result = OVRP_1_106_0.ovrp_GetConsentMarkdownText(textPtr);
+
+            if (result != Result.Success)
+            {
+                Marshal.FreeHGlobal(textPtr);
+                return "";
+            }
+
+            string consentText = Marshal.PtrToStringAnsi(textPtr);
+            Marshal.FreeHGlobal(textPtr);
+            return consentText;
+#endif
+        }
+
+        public static string GetConsentNotificationMarkdownText()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return "";
+#else
+
+            if (version < OVRP_1_106_0.version) return "";
+
+            IntPtr textPtr = Marshal.AllocHGlobal(sizeof(byte) * OVRP_1_106_0.OVRP_CONSENT_NOTIFICATION_MAX_LENGTH);
+            string settingsPath = "Edit > Preferences > Meta XR";
+            IntPtr settingsPathPtr = Marshal.StringToHGlobalAnsi(settingsPath);
+            Result result = OVRP_1_106_0.ovrp_GetConsentNotificationMarkdownText(settingsPathPtr, textPtr);
+
+            if (result != Result.Success)
+            {
+                Marshal.FreeHGlobal(textPtr);
+                return "";
+            }
+
+            string consentNotification = Marshal.PtrToStringAnsi(textPtr);
+            Marshal.FreeHGlobal(textPtr);
+            Marshal.FreeHGlobal(settingsPathPtr);
+            return consentNotification;
+#endif
+        }
+
+        public static string GetConsentSettingsChangeText()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return "";
+#else
+
+            if (version < OVRP_1_106_0.version) return "";
+
+            IntPtr textPtr = Marshal.AllocHGlobal(sizeof(byte) * OVRP_1_106_0.OVRP_CONSENT_SETTINGS_CHANGE_MAX_LENGTH);
+            Result result = OVRP_1_106_0.ovrp_GetConsentSettingsChangeText(textPtr);
+
+            if (result != Result.Success)
+            {
+                Marshal.FreeHGlobal(textPtr);
+                return "";
+            }
+
+            string consentSettingsChange = Marshal.PtrToStringAnsi(textPtr);
+            Marshal.FreeHGlobal(textPtr);
+            return consentSettingsChange;
+#endif
+        }
+
+        public static bool ShouldShowTelemetryConsentWindow()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return false;
+#else
+            if (version < OVRP_1_106_0.version) return false;
+
+            return OVRP_1_106_0.ovrp_ShouldShowTelemetryConsentWindow(ToolId) == Bool.True;
+#endif
+        }
+
+        public static bool IsConsentSettingsChangeEnabled()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return true;
+#else
+            if (version < OVRP_1_106_0.version) return true;
+
+            return OVRP_1_106_0.ovrp_IsConsentSettingsChangeEnabled(ToolId) == Bool.True;
+#endif
+        }
+
+        public static bool ShouldShowTelemetryNotification()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return false;
+#else
+            if (version < OVRP_1_106_0.version) return false;
+
+            return OVRP_1_106_0.ovrp_ShouldShowTelemetryNotification(ToolId) == Bool.True;
+#endif
+        }
+
+        public static Result SetNotificationShown()
+        {
+#if OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_106_0.version) return Result.Failure_Unsupported;
+
+            return OVRP_1_106_0.ovrp_SetNotificationShown(ToolId);
 #endif
         }
     }
@@ -14490,7 +14784,6 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_QuerySpaces2(ref SpaceQueryInfo2 queryInfo, out UInt64 requestId);
 
-
     }
 
     private static class OVRP_1_104_0
@@ -14503,7 +14796,6 @@ public static partial class OVRPlugin
         public static extern Result ovrp_GetFaceTrackingVisemesSupported(out Bool faceTrackingVisemesSupported);
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetFaceTrackingVisemesEnabled(Bool enabled);
-
 
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
@@ -14532,11 +14824,63 @@ public static partial class OVRPlugin
     private static class OVRP_1_105_0
     {
         public static readonly System.Version version = new System.Version(1, 105, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_QplMarkerStartForJoin(int markerId, string joinId, Bool cancelMarkerIfAppBackgrounded, int instanceKey,
+            long timestampMs);
     }
 
     private static class OVRP_1_106_0
     {
+        public const int OVRP_CONSENT_TITLE_MAX_LENGTH = 256;
+        public const int OVRP_CONSENT_TEXT_MAX_LENGTH = 2048;
+        public const int OVRP_CONSENT_NOTIFICATION_MAX_LENGTH = 1024;
+
+        public const int OVRP_CONSENT_SETTINGS_CHANGE_MAX_LENGTH = 1024;
         public static readonly System.Version version = new System.Version(1, 106, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetHandTrackingState(Step stepId, int frameIndex, Hand hand,
+            out HandTrackingStateInternal handState);
+
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SaveUnifiedConsent(int toolId, Bool consentValue);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SaveUnifiedConsentWithOlderVersion(int toolId, Bool consentValue, int consentVersion);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern OptionalBool ovrp_GetUnifiedConsent(int toolId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetConsentTitle(IntPtr title);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetConsentMarkdownText(IntPtr markdownText);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetConsentNotificationMarkdownText(IntPtr consentChangeLocationMarkdown, IntPtr markDownText);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_ShouldShowTelemetryConsentWindow(int toolId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_IsConsentSettingsChangeEnabled(int toolId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_ShouldShowTelemetryNotification(int toolId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SendMicrogestureHint();
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SetNotificationShown(int tool);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetConsentSettingsChangeText(IntPtr consentSettingsChangeText);
+
+
     }
 
     private static class OVRP_1_107_0

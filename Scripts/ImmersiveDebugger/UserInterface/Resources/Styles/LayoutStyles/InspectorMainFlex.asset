@@ -16,7 +16,7 @@ MonoBehaviour:
   layout: 2
   anchor: 0
   pivot: 0
-  size: {x: 0, y: 3000}
+  size: {x: 0, y: 300000}
   margin: {x: 0, y: 0}
   useBottomRightMargin: 0
   bottomRightMargin: {x: 0, y: 0}

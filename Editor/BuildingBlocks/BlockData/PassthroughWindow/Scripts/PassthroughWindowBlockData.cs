@@ -26,6 +26,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class PassthroughWindowBlockData : BlockData
     {
+        internal override bool CanBeAddedOverGameObject => true;
+
         internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps
         {
             get
@@ -60,11 +62,6 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             Undo.RegisterFullObjectHierarchyUndo(selectedGameObject, "Apply selective passthrough.");
             renderer.sharedMaterial = Prefab.GetComponentInChildren<MeshRenderer>().sharedMaterial;
-
-            if (!Utils.FindComponentInScene<EnableUnpremultipliedAlpha>())
-            {
-                selectedGameObject.AddComponent<EnableUnpremultipliedAlpha>();
-            }
 
             return new List<GameObject>();
         }

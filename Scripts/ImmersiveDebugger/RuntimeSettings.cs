@@ -125,13 +125,6 @@ namespace Meta.XR.ImmersiveDebugger
             set => immersiveDebuggerDisplayAtStartup = value;
         }
 
-        [SerializeField] private OVRInput.Button immersiveDebuggerToggleDisplayButton = OVRInput.Button.Two;
-        internal OVRInput.Button ImmersiveDebuggerToggleDisplayButton
-        {
-            get => immersiveDebuggerToggleDisplayButton;
-            set => immersiveDebuggerToggleDisplayButton = value;
-        }
-
         [SerializeField] private bool showInspectors = false;
         internal bool ShowInspectors
         {
@@ -266,6 +259,41 @@ namespace Meta.XR.ImmersiveDebugger
             set => customIntegrationConfigClassName = value;
         }
 
+        [SerializeField] private bool hierarchyViewShowsPrivateMembers = false;
+        internal bool HierarchyViewShowsPrivateMembers
+        {
+            get => hierarchyViewShowsPrivateMembers;
+            set => hierarchyViewShowsPrivateMembers = value;
+        }
+
+        [SerializeField] private OVRInput.Button clickButton = OVRInput.Button.PrimaryIndexTrigger | OVRInput.Button.One;
+        internal OVRInput.Button ClickButton
+        {
+            get => clickButton;
+            set => clickButton = value;
+        }
+
+        [SerializeField] private OVRInput.Button toggleFollowTranslationButton = OVRInput.Button.None;
+        internal OVRInput.Button ToggleFollowTranslationButton
+        {
+            get => toggleFollowTranslationButton;
+            set => toggleFollowTranslationButton = value;
+        }
+
+        [SerializeField] private OVRInput.Button toggleFollowRotationButton = OVRInput.Button.None;
+        internal OVRInput.Button ToggleFollowRotationButton
+        {
+            get => toggleFollowRotationButton;
+            set => toggleFollowRotationButton = value;
+        }
+
+        [SerializeField] private OVRInput.Button immersiveDebuggerToggleDisplayButton = OVRInput.Button.Two;
+        internal OVRInput.Button ImmersiveDebuggerToggleDisplayButton
+        {
+            get => immersiveDebuggerToggleDisplayButton;
+            set => immersiveDebuggerToggleDisplayButton = value;
+        }
+
 #if UNITY_EDITOR
         internal static void UpdateAllDebugTypesForInstance(List<Type> types)
         {
@@ -285,6 +313,7 @@ namespace Meta.XR.ImmersiveDebugger
                 }
                 targetInstance.debugTypesDict[assemblyName].Add(type.FullName);
             }
+            CommitDebugTypes(targetInstance);
         }
 
         internal static void UpdateTypes(string assemblyName, List<string> types, RuntimeSettings instance = null)

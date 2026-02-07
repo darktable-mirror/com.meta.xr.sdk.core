@@ -17,9 +17,9 @@ MonoBehaviour:
   anchor: 0
   pivot: 0
   size: {x: 0, y: 0}
-  margin: {x: 8, y: 8}
-  useBottomRightMargin: 0
-  bottomRightMargin: {x: 0, y: 0}
+  margin: {x: 8, y: 46}
+  useBottomRightMargin: 1
+  bottomRightMargin: {x: 8, y: 2}
   spacing: 6
   masks: 0
   adaptHeight: 1

@@ -27,7 +27,6 @@ internal static class OVRTelemetryConsent
 {
     public static Action<bool> OnTelemetrySet;
     private const string HasSentConsentEventKey = "OVRTelemetry.HasSentConsentEvent";
-    private const string TelemetryEnabledKey = "OVRTelemetry.TelemetryEnabled";
 
     private static bool HasSentConsentEvent
     {
@@ -35,27 +34,39 @@ internal static class OVRTelemetryConsent
         set => EditorPrefs.SetBool(HasSentConsentEventKey, value);
     }
 
-    public static bool TelemetryEnabled
+    private static bool? _shareAdditionalData;
+    public static bool ShareAdditionalData
     {
         get
         {
-            const bool defaultTelemetryStatus = false;
+            if (_shareAdditionalData.HasValue)
+            {
+                return _shareAdditionalData.Value;
+            }
 
-            return EditorPrefs.GetBool(TelemetryEnabledKey, defaultTelemetryStatus);
+            var consent = UnifiedConsent.GetUnifiedConsent();
+            _shareAdditionalData = consent is true;
+            return _shareAdditionalData.Value;
         }
-
-        private set => EditorPrefs.SetBool(TelemetryEnabledKey, value);
+        private set
+        {
+            _shareAdditionalData = value;
+            UnifiedConsent.SaveUnifiedConsent(value);
+        }
     }
 
-    public static bool HasSetTelemetryEnabled => EditorPrefs.HasKey(TelemetryEnabledKey);
-
-    public static bool SetTelemetryEnabled(bool enabled, OVRTelemetryConstants.OVRManager.ConsentOrigins origin)
+    public static void SetTelemetryEnabled(bool enabled, OVRTelemetryConstants.OVRManager.ConsentOrigins origin)
     {
-        Result result = SetDeveloperTelemetryConsent(enabled ? Bool.True : Bool.False);
-        TelemetryEnabled = enabled;
+        SetLibrariesConsent(enabled);
+        ShareAdditionalData = enabled;
         SendConsentEvent(origin);
         OnTelemetrySet?.Invoke(enabled);
-        return result == Result.Success;
+    }
+
+    public static void SetLibrariesConsent(bool enabled)
+    {
+        SetDeveloperTelemetryConsent(enabled ? Bool.True : Bool.False);
+        Qpl.SetConsent(enabled ? Bool.True : Bool.False);
     }
 
     public static void SendConsentEvent(OVRTelemetryConstants.OVRManager.ConsentOrigins origin)
@@ -65,16 +76,12 @@ internal static class OVRTelemetryConsent
             return;
         }
 
-        if (!HasSetTelemetryEnabled)
-        {
-            return;
-        }
-
 
         OVRTelemetry.Start(OVRTelemetryConstants.OVRManager.MarkerId.Consent)
             .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, origin.ToString())
-            .SetResult(TelemetryEnabled ? Qpl.ResultType.Success : Qpl.ResultType.Fail)
+            .SetResult(ShareAdditionalData ? Qpl.ResultType.Success : Qpl.ResultType.Fail)
             .Send();
+        SendEvent("editor_consent", ShareAdditionalData ? "granted" : "withheld");
 
         HasSentConsentEvent = true;
     }

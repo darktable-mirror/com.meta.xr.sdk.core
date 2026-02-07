@@ -27,8 +27,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
     {
         public Camera Camera { get; private set; }
         public Transform CameraTransform { get; private set; }
-        public Transform LeftControllerTransform { get; private set; }
-        public Transform RightControllerTransform { get; private set; }
+        private OVRCameraRig _cameraRig;
 
         public bool Refresh()
         {
@@ -39,28 +38,30 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             return Camera;
         }
 
-        public void SearchForCamera()
+        private void SearchForCamera()
         {
             if (RuntimeSettings.Instance.UseCustomIntegrationConfig)
             {
                 Camera = CustomIntegrationConfig.GetCamera();
                 CameraTransform = Camera?.gameObject.transform;
-                LeftControllerTransform = CustomIntegrationConfig.GetLeftControllerTransform();
-                RightControllerTransform = CustomIntegrationConfig.GetRightControllerTransform();
             }
             else
             {
-                var cameraRig = GameObject.FindAnyObjectByType<OVRCameraRig>();
-                if (cameraRig)
+                if (_cameraRig == null)
+                {
+                    // We cannot simplify this if statement by using the ??= operator,
+                    // because for gameObjects the == operator is overriden to handle
+                    // missing and destroyed references.
+                    _cameraRig = GameObject.FindAnyObjectByType<OVRCameraRig>();
+                }
+
+                if (_cameraRig != null)
                 {
                     // OVR Path
-                    Camera = cameraRig.leftEyeCamera;
-                    CameraTransform = cameraRig.leftEyeAnchor;
-                    LeftControllerTransform = cameraRig.leftControllerAnchor;
-                    RightControllerTransform = cameraRig.rightControllerAnchor;
+                    Camera = _cameraRig.leftEyeCamera;
+                    CameraTransform = _cameraRig.leftEyeAnchor;
                 }
             }
         }
     }
 }
-

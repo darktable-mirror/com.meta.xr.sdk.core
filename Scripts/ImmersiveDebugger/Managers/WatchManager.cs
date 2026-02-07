@@ -24,6 +24,7 @@ using Meta.XR.ImmersiveDebugger.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Meta.XR.ImmersiveDebugger.Hierarchy;
 using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
@@ -51,7 +52,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var watchAttribute = member.GetCustomAttribute<DebugMember>();
                 if (watchAttribute != null)
                 {
-                    if (IsWatchTypeSupported(member))
+                    if (IsMemberValidForWatch(member))
                     {
                         membersList.Add((member, watchAttribute));
                     }
@@ -59,7 +60,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             }
 
             membersList.AddRange(InspectedDataRegistry.GetMembersForType<MemberInfo>(type,
-                (info, _) => IsWatchTypeSupported(info)));
+                (info, _) => IsMemberValidForWatch(info)));
 
             WatchesDict[type] = membersList;
             ManagerUtils.RebuildInspectorForType(_uiPanel, _instanceCache, type, membersList, (memberController, member, attribute, instance) =>
@@ -80,15 +81,21 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
 
 
-        internal static bool IsWatchTypeSupported(MemberInfo member)
+        internal static bool IsMemberValidForWatch(MemberInfo member)
         {
             var supported = member.MemberType is MemberTypes.Property or MemberTypes.Field;
             supported &= !member.IsBaseTypeEqual(typeof(Enum));
             supported |= member.IsTypeEqual(typeof(Texture2D));
+            supported &= member is not PropertyInfo { CanRead: false };
             return supported;
         }
 
         public void ProcessTypeFromInspector(Type type, InstanceHandle handle, MemberInfo memberInfo, DebugMember memberAttribute)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ProcessTypeFromHierarchy(Item item, MemberInfo memberInfo)
         {
             throw new NotImplementedException();
         }

@@ -71,7 +71,9 @@ public class AlertViewHUD : MonoBehaviour
     {
         Instance = this;
 
+#pragma warning disable CS0618 // Type or member is obsolete
         _centerEyeTransform = FindObjectOfType<OVRCameraRig>()?.centerEyeAnchor;
+#pragma warning restore CS0618 // Type or member is obsolete
         _initialTime = Time.time;
         _initialPosition = transform.position;
         _initialRotation = transform.rotation;

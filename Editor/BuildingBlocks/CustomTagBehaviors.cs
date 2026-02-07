@@ -18,24 +18,23 @@
  * limitations under the License.
  */
 
+using System.Collections.Generic;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
-using static Meta.XR.Editor.UserInterface.Styles.Colors;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
     [InitializeOnLoad]
     internal static class CustomTagBehaviors
     {
+        internal static HashSet<Tag> CollectionTags { get; } = new();
+
         // Collection tags
-        private static Tag ImmersiveExperienceTag { get; }
-        private static Tag MixedRealityTag { get; }
-        private static Tag ColocationTag { get; }
-        private static Tag CopresenceTag { get; }
-        private static Tag TabletopTag { get; }
-        private static Tag CompanionAppTag { get; }
-        private static Tag InteractionsTag { get; }
+        private static Tag ImmersiveExperienceCollection { get; } = new Tag("Immersive Experience");
+        private static Tag MixedRealityCollection { get; } = new Tag("Mixed Reality");
+        private static Tag MultiplayerTabletop { get; } = new Tag("Tabletop Games");
+        internal static Tag AllBuildingBlocksCollection { get; } = new Tag("All Building Blocks");
 
         // Feature tags
         private static Tag AudioTag { get; }
@@ -48,7 +47,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static Tag SceneTag { get; }
         private static Tag SpatialAnchorTag { get; }
         private static Tag HapticsTag { get; }
-        private static Tag MultiplayerTag { get; }
+        private static Tag MultiplayerFeatureTag { get; }
 
         // Usage tags
         private static Tag UtilityTag { get; }
@@ -58,26 +57,25 @@ namespace Meta.XR.BuildingBlocks.Editor
         static CustomTagBehaviors()
         {
             // Collection tags
-            ImmersiveExperienceTag = new Tag("Immersive Experience");
-            SetDefaultCollectionTagBehavior(ImmersiveExperienceTag);
+            SetDefaultCollectionTagBehavior(ImmersiveExperienceCollection,
+                "Our list of fundational blocks designed to empower you to create engaging and dynamic VR applications. " +
+                "Serving as the ideal starting point for building fully immersive environments and virtual interactions with both hands and controllers.",
+                Styles.Contents.ImmersiveExperienceCollectionThumb);
 
-            MixedRealityTag = new Tag("Mixed Reality");
-            SetDefaultCollectionTagBehavior(MixedRealityTag);
+            SetDefaultCollectionTagBehavior(MixedRealityCollection,
+                "Seamlessly merge digital and physical worlds with features such as passthrough, " +
+                "occlusion, and object placement. Explore this collection to create experiences where virtual and real elements coexist and interact.",
+                Styles.Contents.MixedRealityCollectionThumb);
 
-            ColocationTag = new Tag("Colocation");
-            SetDefaultCollectionTagBehavior(ColocationTag);
+            SetDefaultCollectionTagBehavior(MultiplayerTabletop,
+                "For engaging and shared experiences centered around a virtual tabletop, this collection " +
+                "provides the necessary tools to enable social interactions and recreate the fun and camaraderie" +
+                " of traditional tabletop gaming in a digital space.",
+                Styles.Contents.TableTopCollectionThumb);
 
-            CopresenceTag = new Tag("Copresence");
-            SetDefaultCollectionTagBehavior(CopresenceTag);
-
-            TabletopTag = new Tag("Tabletop");
-            SetDefaultCollectionTagBehavior(TabletopTag);
-
-            CompanionAppTag = new Tag("Companion App");
-            SetDefaultCollectionTagBehavior(CompanionAppTag);
-
-            InteractionsTag = new Tag("Interactions");
-            SetDefaultCollectionTagBehavior(InteractionsTag);
+            SetDefaultCollectionTagBehavior(AllBuildingBlocksCollection,
+                "Browse the entire catalog of Building Blocks and drag and drop any Meta Quest functionalities directly to your scene.",
+                Styles.Contents.AllBlocksThumb);
 
             // Feature tags
             AudioTag = MakeFeatureTag("Audio", "sdk_icons/mono/audio_icon.png");
@@ -91,14 +89,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             PassthroughTag = MakeFeatureTag("Passthrough", "sdk_icons/mono/passthrough_icon.png");
             SceneTag = MakeFeatureTag("Scene", "sdk_icons/mono/scene_icon.png");
             SpatialAnchorTag = MakeFeatureTag("Spatial Anchor", "sdk_icons/mono/anchor_icon.png");
-            MultiplayerTag = MakeFeatureTag("Multiplayer", "sdk_icons/mono/multiplayer_icon.png");
+            MultiplayerFeatureTag = MakeFeatureTag("Multiplayer", "sdk_icons/mono/multiplayer_icon.png");
 
             // Usage tags
             UtilityTag = new Tag("Utility")
             {
                 Behavior =
                 {
-                    Color = XR.Editor.UserInterface.Utils.HexToColor("#4ed998"),
+                    Color = XR.Editor.UserInterface.Styles.Colors.UtilityColor,
                     Icon = TextureContent.CreateContent("ovr_icon_utilities.png", Utils.BuildingBlocksIcons),
                     Order = 100,
                     CanFilterBy = false,
@@ -121,15 +119,18 @@ namespace Meta.XR.BuildingBlocks.Editor
             };
         }
 
-        private static void SetDefaultCollectionTagBehavior(Tag tag)
+        private static void SetDefaultCollectionTagBehavior(Tag tag, string description, TextureContent thumbnail)
         {
+            CollectionTags.Add(tag);
             _ = new CollectionTagBehavior(tag)
             {
-                Order = -10,
-                Color = CollectionTagsColor,
-                Show = false,
-                CanFilterBy = true,
-                ShowOverlay = false,
+                Order = CollectionTagBehavior.DefaultSettings.Order,
+                Color = CollectionTagBehavior.DefaultSettings.Color,
+                Show = CollectionTagBehavior.DefaultSettings.Show,
+                CanFilterBy = CollectionTagBehavior.DefaultSettings.CanFilterBy,
+                ShowOverlay = CollectionTagBehavior.DefaultSettings.ShowOverlay,
+                Description = description,
+                Thumbnail = thumbnail
             };
         }
     }

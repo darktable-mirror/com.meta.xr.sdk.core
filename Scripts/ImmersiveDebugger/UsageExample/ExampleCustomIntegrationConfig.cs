@@ -41,24 +41,6 @@ namespace Meta.XR.ImmersiveDebugger
         {
             return GameObject.Find("MainCamera").GetComponent<Camera>();
         }
-
-        /// <summary>
-        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
-        /// </summary>
-        /// <returns>The left controller component Immersive Debugger is using to detect ray casting for panels</returns>
-        public override Transform GetLeftControllerTransform()
-        {
-            return GameObject.Find("LeftController").transform;
-        }
-
-        /// <summary>
-        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
-        /// </summary>
-        /// <returns>The right controller component Immersive Debugger is using to detect ray casting for panels</returns>
-        public override Transform GetRightControllerTransform()
-        {
-            return GameObject.Find("RightController").transform;
-        }
     }
 }
 

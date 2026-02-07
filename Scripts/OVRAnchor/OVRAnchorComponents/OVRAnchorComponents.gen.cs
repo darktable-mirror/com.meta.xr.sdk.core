@@ -19,7 +19,9 @@
  */
 
 
+
 using System;
+using System.Collections.Generic;
 using static OVRPlugin;
 
 public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>, IEquatable<OVRLocatable>
@@ -84,9 +86,9 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
 
         return isEnabled == enabled
             ? OVRTask.FromResult(true)
-            : SetSpaceComponentStatus(Handle, Type, enabled, timeout, out var requestId)
-                ? OVRTask.FromRequest<bool>(requestId)
-                : OVRTask.FromResult(false);
+            : OVRTask
+                .Build(SetSpaceComponentStatus(Handle, Type, enabled, timeout, out var requestId), requestId)
+                .ToTask(failureValue: false);
     }
 
     /// <summary>
@@ -212,9 +214,9 @@ public readonly partial struct OVRStorable : IOVRAnchorComponent<OVRStorable>, I
 
         return isEnabled == enabled
             ? OVRTask.FromResult(true)
-            : SetSpaceComponentStatus(Handle, Type, enabled, timeout, out var requestId)
-                ? OVRTask.FromRequest<bool>(requestId)
-                : OVRTask.FromResult(false);
+            : OVRTask
+                .Build(SetSpaceComponentStatus(Handle, Type, enabled, timeout, out var requestId), requestId)
+                .ToTask(failureValue: false);
     }
 
     /// <summary>
@@ -340,9 +342,9 @@ public readonly partial struct OVRSharable : IOVRAnchorComponent<OVRSharable>, I
 
         return isEnabled == enabled
             ? OVRTask.FromResult(true)
-            : SetSpaceComponentStatus(Handle, Type, enabled, timeout, out var requestId)
-                ? OVRTask.FromRequest<bool>(requestId)
-                : OVRTask.FromResult(false);
+            : OVRTask
+                .Build(SetSpaceComponentStatus(Handle, Type, enabled, timeout, out var requestId), requestId)
+                .ToTask(failureValue: false);
     }
 
     /// <summary>
@@ -1025,3 +1027,20 @@ public readonly partial struct OVRDynamicObject : IOVRAnchorComponent<OVRDynamic
 }
 
 
+
+partial struct OVRAnchor
+{
+    internal static readonly Dictionary<Type, SpaceComponentType> _typeMap = new()
+    {
+        { typeof(OVRLocatable), SpaceComponentType.Locatable },
+        { typeof(OVRStorable), SpaceComponentType.Storable },
+        { typeof(OVRSharable), SpaceComponentType.Sharable },
+        { typeof(OVRBounded2D), SpaceComponentType.Bounded2D },
+        { typeof(OVRBounded3D), SpaceComponentType.Bounded3D },
+        { typeof(OVRSemanticLabels), SpaceComponentType.SemanticLabels },
+        { typeof(OVRRoomLayout), SpaceComponentType.RoomLayout },
+        { typeof(OVRAnchorContainer), SpaceComponentType.SpaceContainer },
+        { typeof(OVRTriangleMesh), SpaceComponentType.TriangleMesh },
+        { typeof(OVRDynamicObject), SpaceComponentType.DynamicObject },
+    };
+}

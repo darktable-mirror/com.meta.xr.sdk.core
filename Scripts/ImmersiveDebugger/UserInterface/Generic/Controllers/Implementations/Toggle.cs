@@ -50,6 +50,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        public void ToggleState() => State = !State;
+
         /// <summary>
         /// The event that would be invoked when the state is changed by setting the <see cref="State"/> property.
         /// </summary>
@@ -67,6 +69,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 _background.Show();
                 _background.Color = Hover ? _backgroundStyle.colorHover : State ? _backgroundStyle.colorHover : _backgroundStyle.color;
+                _background.RaycastTarget = true;
             }
             else
             {
@@ -80,6 +83,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 _icon.Show();
                 _icon.Color = Hover ? _iconStyle.colorHover : State ? _iconStyle.color : _iconStyle.colorOff;
+                _icon.RaycastTarget = _backgroundStyle == null || !_backgroundStyle.enabled;
             }
             else
             {

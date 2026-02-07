@@ -138,17 +138,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 _action.LayoutStyle = Style.Load<LayoutStyle>("MemberAction");
                 _action.TextStyle = Style.Load<TextStyle>("MemberValue");
                 _action.BackgroundStyle = Style.Load<ImageStyle>("MemberActionBackground");
-                _action.Label = Title;
+
+                var title = string.IsNullOrEmpty(action.Attribute.DisplayName) ? $"{action.MemberInfo.Name}" : action.Attribute.DisplayName;
+                _action.Label = title.ToDisplayText(Utils.MaxLetterCountForMethod);
 
                 _flex.Hide();
             }
 
-            if (_description != null)
-            {
-                _description.LayoutStyle.size.x = _action.LayoutStyle.size.x - _description.LayoutStyle.margin.x;
-                _description.LayoutStyle.margin.x = _verticalFlex.LayoutStyle.size.x - _action.LayoutStyle.size.x + _description.LayoutStyle.margin.x;
-                _description.UpdateLayoutSize();
-            }
             _action.Action = action;
         }
 
@@ -188,7 +184,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         public void RegisterEnum(TweakEnum tweak)
         {
             var dropdown = _valueFlex.Append<Dropdown>("dropdown");
-            dropdown.LayoutStyle = Style.Instantiate<LayoutStyle>("MemberValueDynamic");
+            dropdown.LayoutStyle = Style.Instantiate<LayoutStyle>("DropdownMemberValue");
             dropdown.SetupMenu(tweak);
         }
 

@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "Meta.XR.Editor.UserInterface",
-        "Meta.XR.Editor.Settings"
+        "Meta.XR.Editor.Settings",
+        "Meta.XR.Editor.Id"
     ],
     "includePlatforms": [
         "Editor"

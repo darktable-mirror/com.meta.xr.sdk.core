@@ -42,7 +42,7 @@ public class OVRSceneChangeListener
 
     private static void OnEditorReady()
     {
-        if (OVRTelemetryConsent.TelemetryEnabled)
+        if (OVRTelemetryConsent.ShareAdditionalData)
         {
             RegisterCallback();
         }

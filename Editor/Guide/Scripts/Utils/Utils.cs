@@ -19,8 +19,6 @@
  */
 
 using Meta.XR.Editor.UserInterface;
-using UnityEngine;
-using static Meta.XR.Editor.UserInterface.Styles.Colors;
 
 namespace Meta.XR.Guides.Editor
 {
@@ -31,41 +29,5 @@ namespace Meta.XR.Guides.Editor
 
         internal static readonly TextureContent.Category GuidedAccountSetupTextures =
             new("Guide/Textures");
-
-        public enum TriggerSource
-        {
-            Menu,
-            Inspector,
-            UPST
-        }
-
-        public enum GuideItemPlacementType
-        {
-            Horizontal,
-            Vertical
-        }
-
-        internal static Color GetColorByStatus(GuideStyles.ContentStatusType type)
-        {
-            Color color = type switch
-            {
-                GuideStyles.ContentStatusType.Success => SuccessColor,
-                GuideStyles.ContentStatusType.Warning => WarningColor,
-                GuideStyles.ContentStatusType.Error => ErrorColor,
-                _ => LightGray
-            };
-
-            return color;
-        }
-
-        internal static void OpenURL(string url, string sourceWindow = "")
-        {
-            Application.OpenURL(url);
-
-            OVRTelemetry.Start(OVRTelemetryConstants.GuidedSetup.MarkerId.URLOpen)
-                .AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.GSTSource, sourceWindow)
-                .AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.URL, url)
-                .Send();
-        }
     }
 }

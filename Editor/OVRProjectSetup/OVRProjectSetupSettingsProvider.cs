@@ -19,7 +19,9 @@
  */
 
 using System.Globalization;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.ToolingSupport;
 using UnityEditor;
 using UnityEngine.UIElements;
 
@@ -34,18 +36,12 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
         Ignored
     }
 
-    [MenuItem("Meta/Tools/Project Setup Tool", false, 1)]
-    static void OpenProjectSetupTool()
-    {
-        OpenSettingsWindow(Item.Origins.Menu);
-    }
-
     public const string SettingsName = OVREditorUtils.MetaXRPublicName;
     public static readonly string SettingsPath = $"Project/{SettingsName}";
 
     private OVRProjectSetupDrawer _ovrProjectSetupDrawer;
     private OVRProjectSetupDrawer OvrProjectSetupDrawer => _ovrProjectSetupDrawer ??= new OVRProjectSetupDrawer();
-    private static Item.Origins? _lastOrigin = null;
+    private static Origins? _lastOrigin = null;
     private static Interaction _lastInteraction = Interaction.None;
     private static bool _activated = false;
 
@@ -89,7 +85,7 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
         {
             OpenTimestamp = EditorApplication.timeSinceStartup;
             _activated = true;
-            _lastOrigin = _lastOrigin ?? Item.Origins.Settings;
+            _lastOrigin = _lastOrigin ?? Origins.ProjectSettings;
 
             OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Open)
                 .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
@@ -131,7 +127,7 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
 
     public override void OnTitleBarGUI()
     {
-        OVRProjectSetup.Item.DrawHeaderFromSettingProvider();
+        OVRProjectSetup.ToolDescriptor.DrawHeaderFromSettingProvider(Origins.Self);
     }
 
     public override void OnGUI(string searchContext)
@@ -139,7 +135,7 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
         OvrProjectSetupDrawer.OnGUI();
     }
 
-    public static void OpenSettingsWindow(Item.Origins origin)
+    public static void OpenSettingsWindow(Origins origin)
     {
         _lastOrigin = origin;
         var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);

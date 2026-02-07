@@ -19,6 +19,7 @@
  */
 
 
+using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -30,7 +31,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private readonly OVRCursor _cursor;
         private EventSystem _eventSystem;
 
-        public OVRInputModule InputModule { get; private set; }
+        public PanelInputModule InputModule { get; private set; }
 
         public ProxyInputModule(GameObject owner, OVRCursor cursor)
         {
@@ -63,23 +64,23 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             if (!_eventSystem) return;
 
-            if (!_eventSystem.TryGetComponent<OVRInputModule>(out var inputModule))
-            {
-                inputModule = _eventSystem.gameObject.AddComponent<PanelInputModule>();
-                _eventSystem.UpdateModules();
-            }
-            SetupInputModule(inputModule);
+            // Once an event system has been found, we will instantiate our simplified PanelInputModule
+            // This PanelInputModule should never activate and therefore should not interfere with
+            // existing input modules, nor derail the current event system.
+            var panelInputModule = _eventSystem.gameObject.AddComponent<PanelInputModule>();
+            _eventSystem.UpdateModules();
+
+            SetupInputModule(panelInputModule);
         }
 
-        private void SetupInputModule(OVRInputModule inputModule)
+        private void SetupInputModule(PanelInputModule inputModule)
         {
             InputModule = inputModule;
 
             if (!InputModule) return;
 
+            InputModule.SetDebugInterface(_owner.GetComponent<Interface>());
             InputModule.m_Cursor ??= _cursor;
-            InputModule.allowActivationOnMobileDevice = true;
-            InputModule.joyPadClickButton = OVRInput.Button.Any;
         }
     }
 }

@@ -99,6 +99,16 @@ namespace Meta.XR.BuildingBlocks
 
 #if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
             public InputActionReference InputActionReference;
+
+            /// <summary>
+            /// Dispatches when <see cref="InputActionReference"/> is performed with additional context as a parameter.
+            /// </summary>
+            public UnityEvent<InputAction.CallbackContext> CallbackWithContext;
+
+            public void OnCallbackWithContext(InputAction.CallbackContext callbackContext)
+            {
+                CallbackWithContext?.Invoke(callbackContext);
+            }
 #endif
 
             /// <summary>
@@ -125,7 +135,13 @@ namespace Meta.XR.BuildingBlocks
         {
             foreach (var buttonClickAction in ButtonClickActions)
             {
-                buttonClickAction.InputActionReference?.action.Enable();
+                if (buttonClickAction.InputActionReference == null)
+                {
+                    continue;
+                }
+
+                buttonClickAction.InputActionReference.action.Enable();
+                buttonClickAction.InputActionReference.action.performed += buttonClickAction.OnCallbackWithContext;
             }
         }
 
@@ -133,7 +149,13 @@ namespace Meta.XR.BuildingBlocks
         {
             foreach (var buttonClickAction in ButtonClickActions)
             {
-                buttonClickAction.InputActionReference?.action.Disable();
+                if (buttonClickAction.InputActionReference == null)
+                {
+                    continue;
+                }
+
+                buttonClickAction.InputActionReference.action.Disable();
+                buttonClickAction.InputActionReference.action.performed -= buttonClickAction.OnCallbackWithContext;
             }
         }
 #else

@@ -45,12 +45,12 @@ namespace Oculus.VR.Editor.Utils
         {
             get
             {
-                if (OVRPlugin.version == null || OVRPlugin.version == VersionZero)
+                if (OVRPlugin.wrapperVersion == null || OVRPlugin.wrapperVersion == VersionZero)
                 {
                     return null;
                 }
 
-                return OVRPlugin.version.Minor - 32;
+                return OVRPlugin.wrapperVersion.Minor - 32;
             }
         }
 

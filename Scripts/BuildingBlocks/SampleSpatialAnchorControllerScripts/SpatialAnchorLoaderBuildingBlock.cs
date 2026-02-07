@@ -37,7 +37,7 @@ namespace Meta.XR.BuildingBlocks
         private void Awake()
         {
             _spatialAnchorSpawner = GetComponent<SpatialAnchorSpawnerBuildingBlock>();
-            _spatialAnchorCore = SpatialAnchorCoreBuildingBlock.GetBaseInstances()[0];
+            _spatialAnchorCore = SpatialAnchorCoreBuildingBlock.GetFirstInstance();
         }
 
         /// <summary>
@@ -63,9 +63,14 @@ namespace Meta.XR.BuildingBlocks
                 return;
             }
 
-            var uuids = spatialAnchorLocalStorageManagerBuildingBlock.GetAnchorAnchorUuidFromLocalStorage();
-            if (uuids == null) return;
-            _spatialAnchorCore.LoadAndInstantiateAnchors(_spatialAnchorSpawner.AnchorPrefab, uuids);
+            using (new OVRObjectPool.ListScope<Guid>(out var uuids))
+            {
+                spatialAnchorLocalStorageManagerBuildingBlock.GetAnchorAnchorUuidFromLocalStorage(uuids);
+                if (uuids.Count > 0)
+                {
+                    _spatialAnchorCore.LoadAndInstantiateAnchors(_spatialAnchorSpawner.AnchorPrefab, uuids);
+                }
+            }
         }
     }
 }

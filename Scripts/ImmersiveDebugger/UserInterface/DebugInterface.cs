@@ -115,10 +115,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             _opacityButton = _bar.RegisterControl("opacity", Resources.Load<Texture2D>("Textures/opacity_icon"),
                 (() => OpacityOverride = !OpacityOverride));
-            _followButton = _bar.RegisterControl("followMove", Resources.Load<Texture2D>("Textures/move_icon"),
-                            (() => FollowOverride = !FollowOverride));
-            _rotateButton = _bar.RegisterControl("followRotation", Resources.Load<Texture2D>("Textures/rotate_icon"),
-                (() => RotateOverride = !RotateOverride));
+            _followButton = _bar.RegisterControl("followMove", Resources.Load<Texture2D>("Textures/move_icon"), ToggleFollowTranslation);
+            _rotateButton = _bar.RegisterControl("followRotation", Resources.Load<Texture2D>("Textures/rotate_icon"), ToggleFollowRotation);
             _distanceButton = _bar.RegisterControl("setDistance", Resources.Load<Texture2D>("Textures/shift_icon"), ToggleDistances);
             _distanceButton.State = true;
 
@@ -151,6 +149,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (debugManager != null)
             {
                 debugManager.OnUpdateAction += UpdateVisibility;
+                debugManager.CustomShouldRetrieveInstanceCondition += IsInspectorPanelVisible;
             }
         }
 
@@ -161,12 +160,41 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _console.SetPanelPosition((RuntimeSettings.DistanceOption)_distanceToggleIndex);
         }
 
+        private void ToggleFollowTranslation()
+        {
+            FollowOverride = !FollowOverride;
+        }
+
+        private void ToggleFollowRotation()
+        {
+            RotateOverride = !RotateOverride;
+        }
+
         private void UpdateVisibility()
         {
             if (OVRInput.GetDown(RuntimeSettings.Instance.ImmersiveDebuggerToggleDisplayButton))
             {
                 ToggleVisibility();
             }
+        }
+
+        private void Update()
+        {
+            var settings = RuntimeSettings.Instance;
+            if (OVRInput.GetDown(settings.ToggleFollowTranslationButton))
+            {
+                ToggleFollowTranslation();
+            }
+
+            if (OVRInput.GetDown(settings.ToggleFollowRotationButton))
+            {
+                ToggleFollowRotation();
+            }
+        }
+
+        private bool IsInspectorPanelVisible()
+        {
+            return Visibility && _inspectorPanel is { Visibility: true };
         }
     }
 }

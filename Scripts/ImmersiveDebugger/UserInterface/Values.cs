@@ -80,7 +80,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private void Update()
         {
-            if (Watch == null) return;
+            if (Watch is not { Valid: true }) return;
 
             var watchValues = Watch.Values;
 

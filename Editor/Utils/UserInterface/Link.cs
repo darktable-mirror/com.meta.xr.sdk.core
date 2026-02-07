@@ -26,19 +26,43 @@ using Object = UnityEngine.Object;
 
 namespace Meta.XR.Editor.UserInterface
 {
-    internal abstract class LinkDescription
+    internal class Documentation
     {
-        public GUIStyle Style;
-        public GUIContent Content;
-        public string Label => !string.IsNullOrEmpty(Content.text) ? Content.text : Content.image.name;
-        public string Origin;
-        public IIdentified OriginData;
+        public string Title;
+        public string Url;
+        public string Id;
 
-        public void Draw()
+        private UrlLinkDescription _link;
+
+        public UrlLinkDescription Link => _link ??= new UrlLinkDescription()
+        {
+            Content = new GUIContent(Title),
+            Id = Id,
+            Style = Styles.GUIStyles.DocumentationLinkStyle,
+            URL = Url,
+            Origin = Origins.Unknown
+        };
+    }
+
+    internal abstract class LinkDescription : IIdentified
+    {
+        public string Id { get; set; }
+
+        public GUIStyle Style = Styles.GUIStyles.LinkLabelStyle;
+        public GUIContent Content;
+        public Color BackgroundColor = UnityEngine.Color.white;
+        public Color Color = Color.white;
+        public string Label => !string.IsNullOrEmpty(Content.text) ? Content.text : Content.image.name;
+        public Origins Origin;
+        public IIdentified OriginData;
+        public int Order = 10;
+        public bool Underline;
+
+        public void Draw(params GUILayoutOption[] options)
         {
             if (!Valid) return;
 
-            if (DrawInternal())
+            if (DrawInternal(options))
             {
                 Click();
             }
@@ -56,10 +80,20 @@ namespace Meta.XR.Editor.UserInterface
 
         protected abstract void OnClicked();
 
-        protected virtual bool DrawInternal()
+        protected virtual bool DrawInternal(params GUILayoutOption[] options)
         {
-            using var color = new Utils.ColorScope(Utils.ColorScope.Scope.All, Color.white);
-            var position = GUILayoutUtility.GetRect(Content, Style);
+            using var allColor = new Utils.ColorScope(Utils.ColorScope.Scope.All, BackgroundColor);
+            using var contentColor = new Utils.ColorScope(Utils.ColorScope.Scope.Content, Color);
+
+            var position = GUILayoutUtility.GetRect(Content, Style, options);
+
+            if (Underline)
+            {
+                Handles.color = Style.normal.textColor;
+                Handles.DrawLine(new Vector3(position.xMin + (float)Style.padding.left, position.yMax), new Vector3(position.xMax - (float)Style.padding.right, position.yMax));
+                Handles.color = Color.white;
+            }
+
             EditorGUIUtility.AddCursorRect(position, MouseCursor.Link);
             return GUI.Button(position, Content, Style);
         }
@@ -74,13 +108,10 @@ namespace Meta.XR.Editor.UserInterface
         protected virtual OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
         {
             var newMarker = marker.AddAnnotation(Telemetry.AnnotationType.Label, Label)
-                .AddAnnotation(Telemetry.AnnotationType.Type, this.GetType().Name)
-                .AddAnnotation(Telemetry.AnnotationType.Origin, Origin);
-
-            if (OriginData != null)
-            {
-                newMarker = newMarker.AddAnnotation(Telemetry.AnnotationType.OriginData, OriginData.Id);
-            }
+                .AddAnnotation(Telemetry.AnnotationType.Action, Id ?? Label)
+                .AddAnnotation(Telemetry.AnnotationType.ActionType, GetType().Name)
+                .AddAnnotation(Telemetry.AnnotationType.Origin, Origin.ToString())
+                .AddAnnotation(Telemetry.AnnotationType.OriginData, OriginData?.Id);
 
             return newMarker;
         }
@@ -100,7 +131,7 @@ namespace Meta.XR.Editor.UserInterface
         protected override OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
         {
             return base.AddAnnotations(marker)
-                .AddAnnotation(Telemetry.AnnotationType.Url, URL);
+                .AddAnnotation(Telemetry.AnnotationType.ActionData, URL);
         }
     }
 
@@ -119,7 +150,7 @@ namespace Meta.XR.Editor.UserInterface
         protected override OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
         {
             return base.AddAnnotations(marker)
-                .AddAnnotation(Telemetry.AnnotationType.Url, Asset.name);
+                .AddAnnotation(Telemetry.AnnotationType.ActionData, (Asset as IIdentified)?.Id ?? Asset.name);
         }
     }
 
@@ -137,14 +168,8 @@ namespace Meta.XR.Editor.UserInterface
 
         protected override OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
         {
-            var newMarker = base.AddAnnotations(marker);
-
-            if (ActionData != null)
-            {
-                newMarker = newMarker.AddAnnotation(Telemetry.AnnotationType.ActionData, ActionData.Id);
-            }
-
-            return newMarker;
+            return base.AddAnnotations(marker)
+                .AddAnnotation(Telemetry.AnnotationType.ActionData, ActionData?.Id);
         }
     }
 }

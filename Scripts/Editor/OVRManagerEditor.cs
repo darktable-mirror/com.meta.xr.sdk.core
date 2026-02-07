@@ -311,7 +311,9 @@ public class OVRManagerEditor : Editor
 
         // Also warn about Body API when simultaneous hands and controllers is enabled
         bool bodyEnabled =
+#pragma warning disable CS0618 // Type or member is obsolete
             (GameObject.FindObjectOfType<OVRBody>() != null || manager.wideMotionModeHandPosesEnabled == true);
+#pragma warning restore CS0618 // Type or member is obsolete
         if (bodyEnabled && manager.SimultaneousHandsAndControllersEnabled)
         {
             EditorGUILayout.HelpBox("Simultaneous hands and controllers are not supported together with Body API. Please select only one of these features", MessageType.Warning, true);

@@ -219,11 +219,11 @@ public class OVRProjectConfigEditor : Editor
 
                 // Anchor Support - linked to Shared Spatial Anchors and Scene
                 var anchorSupportRequired = projectConfig.sharedAnchorSupport != OVRProjectConfig.FeatureSupport.None;
-                var anchorSupportTooltip = "Anchor Support is required for Shared Spatial Anchor Support.";
+                var anchorSupportTooltip = "Anchor Support is required for Anchor And Space Sharing Support.";
                 anchorSupportRequired = anchorSupportRequired ||
                                         projectConfig.sceneSupport != OVRProjectConfig.FeatureSupport.None;
                 anchorSupportTooltip =
-                    "Anchor Support is required for Shared Spatial Anchor Support and/or Scene Support.";
+                    "Anchor Support is required for Anchor And Sharing Support and/or Scene Support.";
                 using (new EditorGUI.DisabledScope(anchorSupportRequired))
                 {
                     var tooltip = anchorSupportRequired ? anchorSupportTooltip : "";
@@ -435,9 +435,26 @@ public class OVRProjectConfigEditor : Editor
                     ref projectConfig.enableIL2CPPLTO, ref hasModified,
                     "https://clang.llvm.org/docs/ThinLTO.html");
 
+                EditorGUILayout.LabelField("Android Manifest Settings", EditorStyles.boldLabel);
                 OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Remove Existing Gradle AndroidManifest per Build",
                     "If checked, this will always delete the AndroidManifest file in the gradle project before a build which is known to prevent the AndroidManfiest from updating properly."),
                     ref projectConfig.removeGradleManifest, ref hasModified);
+                OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Horizon OS SDK Tag", "If checked, the application can specify the minimum required Horizon OS SDK version needed to run and the target version the application was created for."),
+                    ref projectConfig.horizonOsSdkEnabled, ref hasModified);
+                if (projectConfig.horizonOsSdkEnabled)
+                {
+                    var sdkLabels = new GUIContent[OVRProjectConfig.horizonOsSdkVersions.Length];
+                    for (var i = 0; i < OVRProjectConfig.horizonOsSdkVersions.Length; i++)
+                        sdkLabels[i] = new GUIContent(OVRProjectConfig.horizonOsSdkVersions[i].ToString());
+                    var minSdkIndex = Array.IndexOf(OVRProjectConfig.horizonOsSdkVersions, projectConfig.minHorizonOsSdkVersion);
+                    var targetSdkIndex = Array.IndexOf(OVRProjectConfig.horizonOsSdkVersions, projectConfig.targetHorizonOsSdkVersion);
+
+                    OVREditorUtil.SetupPopupField(projectConfig, "Minimum SDK Version", ref minSdkIndex, sdkLabels, ref hasModified);
+                    OVREditorUtil.SetupPopupField(projectConfig, "Target SDK Version", ref targetSdkIndex, sdkLabels, ref hasModified);
+
+                    projectConfig.minHorizonOsSdkVersion = OVRProjectConfig.horizonOsSdkVersions[minSdkIndex];
+                    projectConfig.targetHorizonOsSdkVersion = OVRProjectConfig.horizonOsSdkVersions[targetSdkIndex];
+                }
                 break;
 
             case eProjectConfigTab.Security:

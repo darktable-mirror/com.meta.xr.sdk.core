@@ -326,4 +326,12 @@ public static class OVREditorUtil
 
         EditorGUILayout.EndHorizontal();
     }
+
+    /// <summary>
+    /// Auto-props safe version of SerializedObject.FindProperty
+    /// </summary>
+    public static SerializedProperty FindProperty(SerializedObject serializedObject, string name)
+    {
+        return serializedObject.FindProperty(name) ?? serializedObject.FindProperty($"<{name}>k__BackingField");
+    }
 }

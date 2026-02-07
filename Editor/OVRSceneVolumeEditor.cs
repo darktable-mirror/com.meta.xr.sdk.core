@@ -21,9 +21,10 @@
 using System;
 using UnityEditor;
 
+
 [CustomEditor(typeof(OVRSceneVolume))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
-public class OVRSceneVolumeEditor : Editor
+public class OVRSceneVolumeEditor : UnityEditor.Editor
 {
     OVRSceneVolume _object;
     MonoScript _script;

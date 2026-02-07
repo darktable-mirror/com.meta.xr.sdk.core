@@ -21,6 +21,7 @@
 using System;
 using System.Threading.Tasks;
 using Meta.XR.BuildingBlocks;
+using Meta.XR.ImmersiveDebugger;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -224,6 +225,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
         // ReSharper disable once MemberCanBePrivate.Global
         protected ICustomMatchmakingBehaviour MatchmakingBehaviour;
+        private const string DebugCategory = "Custom Matchmaking";
 
         private void OnEnable()
         {
@@ -239,6 +241,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         /// Creates a new room with the selected options in the component public fields.
         /// </summary>
         /// <returns>A task you should await for and receive a result with the information on the newly created room.</returns>
+        [DebugMember(Category = DebugCategory)]
         public async Task<RoomOperationResult> CreateRoom()
         {
             return await CreateRoom(new RoomCreationOptions
@@ -321,12 +324,14 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         /// <summary>
         /// Indicates whether you're currently connected to a game room.
         /// </summary>
+        [DebugMember(Category = DebugCategory, Tweakable = false)]
         public bool IsConnected => MatchmakingBehaviour is { IsConnected: true };
 
         /// <summary>
         /// Indicates the token of the game room you're currently connected to. If not connected this is null.
         /// </summary>
-        public string ConnectedRoomToken => MatchmakingBehaviour.ConnectedRoomToken;
+        [DebugMember(Category = DebugCategory, Tweakable = false)]
+        public string ConnectedRoomToken => MatchmakingBehaviour?.ConnectedRoomToken ?? string.Empty;
 
         /// <summary>
         /// Generates a random room password to be used in the created room when it's requested in a

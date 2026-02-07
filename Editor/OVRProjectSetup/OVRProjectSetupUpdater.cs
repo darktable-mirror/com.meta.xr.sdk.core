@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using Meta.XR.Editor.Settings;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
@@ -27,24 +28,39 @@ internal static class OVRProjectSetupUpdater
 {
     private static readonly string EnabledSettingItemName = "BackgroundChecks";
     private static readonly string EnabledSettingItemLabel = "Background Checks";
-    internal static OVRProjectSetupSettingBool Enabled;
+    internal static Setting<bool> Enabled;
 
-    public static readonly OVRProjectSetupSettingBool ShowLogsOnlyOnce =
-        new OVRProjectSetupOnlyOncePerSessionSettingBool("ShowLogsOnlyOnce");
+    private static readonly CustomBool ShowLogsOnlyOnce =
+        new OnlyOncePerSessionBool()
+        {
+            Owner = null,
+            Uid = "ShowLogsOnlyOnce",
+            SendTelemetry = false
+        };
 
     private static readonly double StatusUpdateWatchdogTimer = 5.0;
     private static double _lastStatusUpdate;
 
     internal static void SetupTemporaryRegistry()
     {
-        Enabled = new OVRProjectSetupConstSettingBool(OVRProjectSetupUpdater.EnabledSettingItemName, false,
-            OVRProjectSetupUpdater.EnabledSettingItemLabel);
+        Enabled = new ConstSetting<bool>()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = EnabledSettingItemName,
+            Label = EnabledSettingItemLabel,
+            Default = false
+        };
     }
 
     internal static void RestoreRegistry()
     {
-        Enabled = new OVRProjectSetupProjectSettingBool(OVRProjectSetupUpdater.EnabledSettingItemName, true,
-            OVRProjectSetupUpdater.EnabledSettingItemLabel);
+        Enabled = new OVRProjectSetupSettings.SettingBool()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = EnabledSettingItemName,
+            Label = EnabledSettingItemLabel,
+            Default = true
+        };
     }
 
     static OVRProjectSetupUpdater()

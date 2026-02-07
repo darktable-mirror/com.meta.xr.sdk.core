@@ -216,20 +216,6 @@ public partial struct OVRAnchor
         }
     }
 
-    internal static readonly Dictionary<Type, SpaceComponentType> _typeMap = new()
-    {
-        { typeof(OVRLocatable), SpaceComponentType.Locatable },
-        { typeof(OVRStorable), SpaceComponentType.Storable },
-        { typeof(OVRSharable), SpaceComponentType.Sharable },
-        { typeof(OVRBounded2D), SpaceComponentType.Bounded2D },
-        { typeof(OVRBounded3D), SpaceComponentType.Bounded3D },
-        { typeof(OVRSemanticLabels), SpaceComponentType.SemanticLabels },
-        { typeof(OVRRoomLayout), SpaceComponentType.RoomLayout },
-        { typeof(OVRAnchorContainer), SpaceComponentType.SpaceContainer },
-        { typeof(OVRTriangleMesh), SpaceComponentType.TriangleMesh },
-        { typeof(OVRDynamicObject), SpaceComponentType.DynamicObject },
-    };
-
     [StructLayout(LayoutKind.Explicit)]
     internal struct FilterUnion
     {

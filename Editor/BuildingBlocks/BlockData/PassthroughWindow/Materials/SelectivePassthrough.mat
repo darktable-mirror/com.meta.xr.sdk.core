@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: SelectivePassthrough
-  m_Shader: {fileID: 4800000, guid: d83cf346d52c15b4abac9c631a96e7c5, type: 3}
+  m_Shader: {fileID: 4800000, guid: 1930b7b9ed5bddd4ab959652723a377c, type: 3}
   m_ValidKeywords: []
   m_InvalidKeywords:
   - _ALPHAPREMULTIPLY_ON

@@ -23,7 +23,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Meta.XR.Guides.Editor.Items;
+using Meta.XR.Editor.UserInterface;
 using UnityEngine;
 
 namespace Meta.XR.Guides.Editor
@@ -31,48 +31,111 @@ namespace Meta.XR.Guides.Editor
     internal static class GuideProcessor
     {
         internal static Dictionary<string, MethodInfo> _guideItemsMap = new();
+        internal static Dictionary<string, MethodInfo> _initMap = new();
         private static bool _initialized;
+
+        private static string[] _guidedSetupClasses;
+
+        internal static string[] GuidedSetupClasses
+        {
+            get
+            {
+                if (_guidedSetupClasses != null) return _guidedSetupClasses;
+                var types = Assemblies.SelectMany(t => t.GetTypes())
+                    .Where(t => t.IsSubclassOf(typeof(GuidedSetup)))
+                    .Select(t => t.AssemblyQualifiedName).ToArray();
+                _guidedSetupClasses = new string[types.Length + 1];
+                _guidedSetupClasses[0] = "None"; // Default selection in BlockData
+                for (var i = 0; i < types.Length; i++)
+                {
+                    _guidedSetupClasses[i + 1] = types[i];
+                }
+
+                return _guidedSetupClasses;
+            }
+        }
+
+
+        private static List<Assembly> _assemblies;
+        private static List<Assembly> Assemblies => _assemblies ??= AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => Regex.IsMatch(a.FullName, RegexMatchPattern, RegexOptions.IgnoreCase)).ToList();
 
         private const string RegexMatchPattern = @"\b(Oculus|Meta)\b";
 
-        private static void Initialize()
+        internal static void Initialize()
         {
             if (_initialized) return;
 
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => Regex.IsMatch(a.FullName, RegexMatchPattern, RegexOptions.IgnoreCase));
-
-            var types = assemblies.SelectMany(a => a.GetTypes())
+            // Search for Types
+            var types = Assemblies.SelectMany(a => a.GetTypes())
                 .Where(t => t.GetCustomAttribute<GuideItemsAttribute>() != null);
 
+            // Scan GetItems methods
             var methods = types
                 .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
                 .Where(m => m.GetCustomAttribute<GuideItemsAttribute>(false) != null);
 
             foreach (var methodInfo in methods)
             {
-                var id = $"{methodInfo.DeclaringType}.{methodInfo.Name}";
+                var id = $"{methodInfo.DeclaringType}";
                 _guideItemsMap[id] = methodInfo;
+            }
+
+            // Search Init methods
+            methods = types
+                .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
+                .Where(m => m.GetCustomAttribute<InitAttribute>(false) != null);
+
+            foreach (var methodInfo in methods)
+            {
+                var id = $"{methodInfo.DeclaringType}";
+                _initMap[id] = methodInfo;
             }
 
             _initialized = true;
         }
 
-        public static List<IGuideItem> GetItems(string methodId)
+        public static List<IUserInterfaceItem> GetItems(string populatorId)
         {
             Initialize();
 
-            if (_guideItemsMap.TryGetValue(methodId, out var methodInfo))
+            if (populatorId == null)
+            {
+                return null;
+            }
+
+            if (_guideItemsMap.TryGetValue(populatorId, out var methodInfo))
             {
                 var obj = methodInfo.IsStatic ? null : Activator.CreateInstance(methodInfo.DeclaringType);
-                return (List<IGuideItem>)methodInfo.Invoke(obj, null);
+                return (List<IUserInterfaceItem>)methodInfo.Invoke(obj, null);
             }
             return null;
+        }
+
+        public static void InitializeWindow(string populatorId, GuideWindow guideWindow)
+        {
+            Initialize();
+
+            if (populatorId == null)
+            {
+                return;
+            }
+
+            if (_initMap.TryGetValue(populatorId, out var methodInfo))
+            {
+                var obj = methodInfo.IsStatic ? null : Activator.CreateInstance(methodInfo.DeclaringType);
+                methodInfo.Invoke(obj, new object[] { guideWindow });
+            }
         }
     }
 
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
     sealed class GuideItemsAttribute : Attribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
+    sealed class InitAttribute : Attribute
     {
     }
 }

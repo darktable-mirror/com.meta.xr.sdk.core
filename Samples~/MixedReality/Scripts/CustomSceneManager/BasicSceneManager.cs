@@ -21,6 +21,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.XR.Samples;
 using UnityEngine;
 
 /// <summary>
@@ -32,6 +33,7 @@ using UnityEngine;
 ///
 /// There is a fallback for running scene capture if no rooms were found.
 /// </summary>
+[MetaCodeSample("CoreSDK-MixedReality")]
 public class BasicSceneManager : MonoBehaviour
 {
     [SerializeField] private Transform _trackingSpace;

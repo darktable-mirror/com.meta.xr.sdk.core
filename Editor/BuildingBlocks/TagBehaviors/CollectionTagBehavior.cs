@@ -34,9 +34,19 @@ namespace Meta.XR.BuildingBlocks.Editor
         private GUIStyle TagButtonStyle => XR.Editor.Tags.Styles.GUIStyles.TagIcon;
         private GUIContent TagCloseIcon => Utils.CollectionTagCloseIcon;
         protected override ColorStates BackgroundColorState => Styles.GUIStyles.TagBackgroundCollectionColors;
+        internal Tag Tag => _tag;
 
         public string Description { get; set; }
         public TextureContent Thumbnail { get; set; }
+
+        internal struct DefaultSettings
+        {
+            public static int Order = -10;
+            public static Color Color = CollectionTagsColor;
+            public static bool Show = false;
+            public static bool CanFilterBy = true;
+            public static bool ShowOverlay = false;
+        }
 
         protected internal CollectionTagBehavior(Tag tag) : base(tag)
         {
@@ -48,12 +58,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             return HoverHelper.Button(id, rect, TagCloseIcon, TagButtonStyle, out hover);
         }
 
-        public override bool Draw(string controlId, Tag.TagListType listType, bool active, out bool hover,
-            out bool clicked)
+        public override bool Draw(string controlId, Tag.TagListType listType, bool active, out bool hover, out bool clicked)
         {
             hover = false;
             clicked = false;
-            if (!ShouldDraw(listType)) return false;
 
             var id = controlId + _tag.Name;
             var color = BackgroundColorState.GetColor(active, HoverHelper.IsHover(id));

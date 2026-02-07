@@ -31,6 +31,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         // Stateful singleton of the current VariantsSelection
         internal static VariantsSelection Selection = new();
 
+        internal InstallationRoutine SelectedRoutine => _selectedRoutine;
         private InstallationRoutine _selectedRoutine;
 
         protected override bool UsesPrefab => false;
@@ -70,20 +71,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             && !IsSingletonAndAlreadyPresent
             && !Utils.IsApplicationPlaying();
 
-        internal IReadOnlyList<string> ComputeMissingPackageDependencies(VariantsSelection selection)
-        {
-            return ComputePackageDependencies(this, selection, new HashSet<string>())
-                .Where(packageId => !Utils.IsPackageInstalled(packageId)).ToList();
-        }
-
         internal static IEnumerable<BlockData> ComputeOptionalDependencies(InterfaceBlockData blockData, VariantsSelection selection)
         {
             var possibleRoutines = selection.ComputePossibleInstallationRoutines(blockData);
             var idealRoutine = selection.ComputeIdealInstallationRoutine(possibleRoutines);
-            return idealRoutine != null ? idealRoutine.ComputeOptionalDependencies(selection) : Enumerable.Empty<BlockData>();
+            return idealRoutine != null ? idealRoutine.ComputeOptionalDependencies() : Enumerable.Empty<BlockData>();
         }
 
-        internal static IEnumerable<string> ComputePackageDependencies(InterfaceBlockData blockData, VariantsSelection selection)
+        private static HashSet<string> ComputePackageDependencies(InterfaceBlockData blockData, VariantsSelection selection)
         {
             var possibleRoutines = selection.ComputePossibleInstallationRoutines(blockData);
             var idealRoutine = selection.ComputeIdealInstallationRoutine(possibleRoutines);
@@ -92,10 +87,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 dependencies = dependencies.Concat(idealRoutine.ComputePackageDependencies(selection) ?? Enumerable.Empty<string>());
             }
-            return dependencies;
+            return dependencies.ToHashSet();
         }
 
-        private static HashSet<string> ComputePackageDependencies(InterfaceBlockData blockData, VariantsSelection selection, HashSet<string> set)
+        internal static HashSet<string> ComputePackageDependencies(InterfaceBlockData blockData, VariantsSelection selection, HashSet<string> set)
         {
             foreach (var packageDependency in ComputePackageDependencies(blockData, selection))
             {

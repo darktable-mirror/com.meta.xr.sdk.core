@@ -766,7 +766,7 @@ public class OVRSkeleton : MonoBehaviour
 
     private void InitializeCapsules()
     {
-        bool flipX = IsHandSkeleton(_skeletonType);
+        bool flipX = _skeletonType.IsOVRHandSkeleton();
 
         if (_enablePhysicsCapsules)
         {
@@ -1590,11 +1590,10 @@ public class OVRSkeleton : MonoBehaviour
 public class OVRBone : System.IDisposable
 {
     /// <summary>
-    /// The identifier associated with the bone being tracked. For instance,
-    /// the Id can correspond to body tracking spine bones and you may use them
-    /// to deduce curvature. Query the <see cref="OVRSkeleton">'s
-    /// <see cref="OVRSkeleton.Bones"/> and <see cref="OVRSkeleton.BindPoses"/>
-    /// fields to look up bones by this identifier.
+    /// The identifier associated with the <see cref="OVRSkeleton"/> bone being tracked.
+    /// For instance, the Id can correspond to body tracking spine bones and you may use them
+    /// to deduce curvature. Query the <see cref="OVRSkeleton.Bones"/> and
+    /// <see cref="OVRSkeleton.BindPoses"/> fields to look up bones by this identifier.
     /// </summary>
     public OVRSkeleton.BoneId Id { get; set; }
     /// <summary>

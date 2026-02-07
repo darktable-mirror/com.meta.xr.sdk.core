@@ -76,6 +76,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             Icon = State ? _toggleIconOn : _toggleIconOff;
             _icon.Color = Hover ? _iconStyle.colorHover : State ? _iconStyle.color : _iconStyle.colorOff;
+            _icon.RaycastTarget = _backgroundStyle == null || !_backgroundStyle.enabled;
         }
     }
 }

@@ -115,6 +115,7 @@ namespace Meta.XR
             "XR_EXT_debug_utils " +
             "XR_META_dynamic_object_tracker " +
             "XR_META_dynamic_object_keyboard " +
+            "XR_META_hand_tracking_microgestures " +
             "XR_META_spatial_entity_persistence " +
             "XR_META_spatial_entity_discovery " +
             "XR_META_boundary_visibility " +

@@ -24,6 +24,7 @@ using Meta.XR.ImmersiveDebugger.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Meta.XR.ImmersiveDebugger.Hierarchy;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -68,6 +69,11 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
 
         public void ProcessTypeFromInspector(Type type, InstanceHandle handle, MemberInfo memberInfo, DebugMember memberAttribute)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ProcessTypeFromHierarchy(Item item, MemberInfo memberInfo)
         {
             throw new NotImplementedException();
         }

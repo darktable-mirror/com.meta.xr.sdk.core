@@ -20,7 +20,7 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("EditModeTests")]
+[assembly: InternalsVisibleTo("Oculus.VR.EditModeTests")]
 [assembly: InternalsVisibleTo("Oculus.VR.Scripts.Editor")]
 [assembly: InternalsVisibleTo("Oculus.Interaction.OVR.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.Editor")]
@@ -30,4 +30,8 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("MetaXrSimulator.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.DepthAPI.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.ImmersiveDebugger.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.TelemetryUI")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.About")]
+
 

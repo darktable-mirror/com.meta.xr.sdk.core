@@ -189,13 +189,9 @@ public class OVRColocationSession
             {
                 info.GroupMetadata = colocationSessionDataPtr;
                 info.PeerMetadataCount = (uint)colocationSessionData.Length;
-                var result = OVRPlugin.StartColocationSessionAdvertisement(info, out ulong requestId);
-                if (result.IsSuccess())
-                {
-                    return OVRTask.FromRequest<OVRResult<Guid, Result>>(requestId);
-                }
-
-                return OVRTask.FromResult(OVRResult<Guid, Result>.FromFailure((Result)result));
+                return OVRTask.Build(
+                    OVRPlugin.StartColocationSessionAdvertisement(info, out var requestId), requestId)
+                    .ToTask<Guid, Result>();
             }
         }
     }
@@ -210,16 +206,9 @@ public class OVRColocationSession
     /// <remarks>
     /// This method is asynchronous; use the returned <see cref="OVRTask{T}"/> wrapper to be notified of completion.
     /// </remarks>
-    public static OVRTask<OVRResult<Result>> StopAdvertisementAsync()
-    {
-        var result = OVRPlugin.StopColocationSessionAdvertisement(out ulong requestId);
-        if (result.IsSuccess())
-        {
-            return OVRTask.FromRequest<OVRResult<Result>>(requestId);
-        }
-
-        return OVRTask.FromResult(OVRResult<Result>.From((Result)result));
-    }
+    public static OVRTask<OVRResult<Result>> StopAdvertisementAsync() => OVRTask.Build(
+        OVRPlugin.StopColocationSessionAdvertisement(out var requestId), requestId)
+        .ToResultTask<Result>();
 
     /// <summary>
     /// Starts discovering nearby advertised colocated sessions.
@@ -267,17 +256,9 @@ public class OVRColocationSession
     /// which is a special "success" status indicating no-op.
     /// </remarks>
     /// <seealso cref="StopDiscoveryAsync"/>
-    public static OVRTask<OVRResult<Result>> StartDiscoveryAsync()
-    {
-        var result = OVRPlugin.StartColocationSessionDiscovery(out var requestId);
-        if (result.IsSuccess())
-        {
-            var task = OVRTask.FromRequest<OVRResult<Result>>(requestId);
-            return task;
-        }
-
-        return OVRTask.FromResult(OVRResult<Result>.From((Result)result));
-    }
+    public static OVRTask<OVRResult<Result>> StartDiscoveryAsync() => OVRTask.Build(
+        OVRPlugin.StartColocationSessionDiscovery(out var requestId), requestId)
+        .ToResultTask<Result>();
 
     /// <summary>
     /// Stops the discovery of nearby colocation session advertisements.
@@ -294,17 +275,9 @@ public class OVRColocationSession
     /// dangling reference (GC memory leak), and/or may introduce undefined behaviors (including unhandled exceptions).
     /// </remarks>
     /// <seealso cref="StartDiscoveryAsync"/>
-    public static OVRTask<OVRResult<Result>> StopDiscoveryAsync()
-    {
-        var result = OVRPlugin.StopColocationSessionDiscovery(out ulong requestId);
-        if (result.IsSuccess())
-        {
-            return OVRTask.FromRequest<OVRResult<Result>>(requestId);
-        }
-
-        return OVRTask.FromResult(OVRResult<Result>.From((Result)result));
-    }
-
+    public static OVRTask<OVRResult<Result>> StopDiscoveryAsync() => OVRTask.Build(
+        OVRPlugin.StopColocationSessionDiscovery(out var requestId), requestId)
+        .ToResultTask<Result>();
 
     #region Internal Impl.
 

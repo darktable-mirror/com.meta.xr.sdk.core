@@ -81,6 +81,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
             _background = Append<Background>("background");
             _background.LayoutStyle = Style.Load<LayoutStyle>("Fill");
+
             _icon = Append<Icon>("icon");
             _icon.LayoutStyle = Style.Load<LayoutStyle>("Fill");
         }
@@ -103,6 +104,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 _background.Show();
                 _background.Color = Hover ? _backgroundStyle.colorHover : _backgroundStyle.color;
+                _background.RaycastTarget = true;
             }
             else
             {
@@ -116,6 +118,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 _icon.Show();
                 _icon.Color = Hover ? _iconStyle.colorHover : _iconStyle.color;
+                _icon.RaycastTarget = _backgroundStyle == null || !_backgroundStyle.enabled;
             }
             else
             {

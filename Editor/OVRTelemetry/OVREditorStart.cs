@@ -18,13 +18,19 @@
  * limitations under the License.
  */
 
+using Meta.XR.Editor.Settings;
 using UnityEditor;
 
 [InitializeOnLoad]
 internal class OVREditorStart
 {
-    private static readonly OVRProjectSetupSettingBool InitSession =
-        new OVRProjectSetupOnlyOncePerSessionSettingBool("InitSession");
+    private static readonly CustomBool InitSession =
+        new OnlyOncePerSessionBool()
+        {
+            Owner = null,
+            Uid = "InitSession",
+            SendTelemetry = false
+        };
 
     static OVREditorStart()
     {
@@ -33,15 +39,19 @@ internal class OVREditorStart
 
     private static void OnEditorReady()
     {
-        if (!OVREditorUtils.IsMainEditor()) return;
+        if (!OVREditorUtils.IsMainEditor())
+        {
+            return;
+        }
 
-        OVRPlugin.Qpl.SetConsent(OVRTelemetryConsent.TelemetryEnabled ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
-        OVRPlugin.SetDeveloperTelemetryConsent(OVRTelemetryConsent.TelemetryEnabled ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+        OVRTelemetryConsent.SetLibrariesConsent(OVRTelemetryConsent.ShareAdditionalData);
+
         if (InitSession.Value)
         {
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.Start)
                 .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.UsesProSkin, EditorGUIUtility.isProSkin, OVRTelemetryConstants.Editor.AnnotationVariant.Optional)
                 .Send();
+            OVRPlugin.SendEvent("editor_start");
         }
     }
 }

@@ -24,7 +24,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -55,14 +54,18 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             _types?.Add(typeof(Enum), typeof(TweakEnum));
         }
 
-        public static bool IsTypeSupported(Type t)
+        public static bool IsTypeSupported(Type type)
         {
-            return t != null && _types.ContainsKey(t);
+            if (type == null) return false;
+            if (_types.ContainsKey(type)) return true;
+
+            // Test base type otherwise
+            return IsTypeSupported(type.BaseType);
         }
 
         public static bool IsTypeSupportsValueRange(Type t) => t != null && _supportsValueRange.Contains(t);
 
-        public static Tweak Create(MemberInfo memberInfo, DebugMember attribute, object instance)
+        public static Tweak Create(MemberInfo memberInfo, DebugMember attribute, InstanceHandle instanceHandle)
         {
             var type = memberInfo.GetDataType();
             if (!_types.TryGetValue(type, out var createdType))
@@ -70,10 +73,10 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 return null;
             }
 
-            return Activator.CreateInstance(createdType, memberInfo, instance, attribute) as Tweak;
+            return Activator.CreateInstance(createdType, memberInfo, instanceHandle, attribute) as Tweak;
         }
 
-        public static TweakEnum Create(MemberInfo memberInfo, DebugMember attribute, object instance, Type enumType)
+        public static TweakEnum Create(MemberInfo memberInfo, DebugMember attribute, InstanceHandle instanceHandle, Type enumType)
         {
             var type = memberInfo.GetDataType().BaseType;
             if (type == null) return null;
@@ -81,7 +84,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             {
                 return null;
             }
-            return Activator.CreateInstance(createdType, memberInfo, instance, attribute, enumType) as TweakEnum;
+            return Activator.CreateInstance(createdType, memberInfo, instanceHandle, attribute, enumType) as TweakEnum;
         }
 
         private static void Register<T>(Func<T, T, T, float> inverseLerp, Func<T, T, float, T> lerp, Func<float, T> fromFloat)
@@ -92,20 +95,32 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             Tweak<T>.FromFloat = fromFloat;
         }
 
-        public static bool IsMemberTypeValidForTweak(MemberInfo member) =>
-            (member.MemberType == MemberTypes.Field && IsTypeSupported((member as FieldInfo)?.FieldType)) ||
-            (member.MemberType == MemberTypes.Property && IsTypeSupported((member as PropertyInfo)?.PropertyType)) ||
-            member.IsBaseTypeEqual(typeof(Enum));
+        public static bool IsMemberValidForTweak(MemberInfo member)
+        {
+            switch (member.MemberType)
+            {
+                case MemberTypes.Field:
+                    return IsTypeSupported((member as FieldInfo)?.FieldType);
 
-        public static void ProcessMinMaxRange(MemberInfo member, DebugMember attribute, Object instance)
+                case MemberTypes.Property:
+                    var propertyInfo = member as PropertyInfo;
+                    return propertyInfo.CanRead && propertyInfo.CanWrite && IsTypeSupported(propertyInfo.PropertyType);
+
+                default:
+                    return false;
+            }
+        }
+
+        public static void ProcessMinMaxRange(MemberInfo member, DebugMember attribute, InstanceHandle instance)
         {
             var memberType = member.GetDataType();
+
             double value = 0;
 
             // This is to avoid InvalidCastException
-            if (memberType == typeof(float)) value = (float)member.GetValue(instance);
-            else if (memberType == typeof(int)) value = (int)member.GetValue(instance);
-            else if (memberType == typeof(double)) value = (double)member.GetValue(instance);
+            if (memberType == typeof(float)) value = (float)member.GetValue(instance.Instance);
+            else if (memberType == typeof(int)) value = (int)member.GetValue(instance.Instance);
+            else if (memberType == typeof(double)) value = (double)member.GetValue(instance.Instance);
 
             if (attribute.Min <= value && value <= attribute.Max)
             {
@@ -153,7 +168,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
     {
         public abstract float Tween { get; set; }
 
-        protected Tweak(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute) { }
+        protected Tweak(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute) { }
     }
 
     internal class Tweak<T> : Tweak
@@ -173,12 +188,12 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             set => _setter.Invoke(Lerp(_min, _max, value));
         }
 
-        public Tweak(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute)
+        public Tweak(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute)
         {
             _min = FromFloat(attribute.Min);
             _max = FromFloat(attribute.Max);
-            _getter = () => (T)memberInfo.GetValue(instance);
-            _setter = (value => memberInfo.SetValue(instance, value));
+            _getter = () => (T)memberInfo.GetValue(_instance);
+            _setter = (value => memberInfo.SetValue(_instance, value));
         }
     }
 
@@ -198,7 +213,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             }
         }
 
-        public TweakEnum(MemberInfo memberInfo, object instance, DebugMember attribute, Type enumType) : base(memberInfo, instance, attribute)
+        public TweakEnum(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute, Type enumType) : base(memberInfo, instanceHandle, attribute)
         {
             _enumType = enumType;
         }

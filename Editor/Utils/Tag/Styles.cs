@@ -101,6 +101,52 @@ namespace Meta.XR.Editor.Tags
 
             };
 
+            public readonly GUIStyle TagStyleInline = new GUIStyle(EditorStyles.miniLabel)
+            {
+                margin = new RectOffset(MiniPadding, MiniPadding, Padding, MiniPadding),
+                padding = new RectOffset(Margin, Margin, MiniPadding, MiniPadding),
+
+                wordWrap = false,
+                stretchWidth = false,
+                fixedHeight = 18,
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = OffWhite,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                hover =
+                {
+                    textColor = Color.white,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                border = new RectOffset(6, 6, 6, 6)
+            };
+
+            public readonly GUIStyle TagStyleInlinedWithIcon = new GUIStyle(EditorStyles.miniLabel)
+            {
+                margin = new RectOffset(MiniPadding, MiniPadding, Padding, MiniPadding),
+                wordWrap = false,
+                stretchWidth = false,
+                fixedHeight = 18,
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = OffWhite,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                hover =
+                {
+                    textColor = Color.white,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                border = new RectOffset(6, 6, 6, 6),
+                padding = new RectOffset(18 + Padding, Padding, MiniPadding, MiniPadding)
+
+            };
+
             public readonly ColorStates TagOverlayBackgroundColors = new ColorStates()
             {
                 Normal = CharcoalGraySemiTransparent,

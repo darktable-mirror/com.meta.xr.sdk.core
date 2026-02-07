@@ -21,9 +21,10 @@
 using System;
 using UnityEditor;
 
+
 [CustomEditor(typeof(OVRSceneAnchor))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
-public class OVRSceneAnchorEditor : Editor
+public class OVRSceneAnchorEditor : UnityEditor.Editor
 {
     OVRSceneAnchor _object;
     MonoScript _script;

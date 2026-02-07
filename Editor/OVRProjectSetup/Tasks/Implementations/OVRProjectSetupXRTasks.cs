@@ -47,7 +47,7 @@ internal static class OVRProjectSetupXRTasks
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
             isDone: _ => PackageList.IsPackageInstalled(UnityXRPackage),
-            message: $"It is recommended to use the OpenXR Plugin ({UnityXRPackage}) package installed through the {UPMTitle}. Please note that not all Meta XR SDK features are currently supported when using the OpenXR plugin."
+            message: $"It is recommended to use the OpenXR Plugin ({UnityXRPackage}) package installed through the {UPMTitle}."
         );
 #else
         OVRProjectSetup.AddTask(
@@ -55,16 +55,18 @@ internal static class OVRProjectSetupXRTasks
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
             isDone: _ => PackageList.IsPackageInstalled(OculusXRPackageName) || PackageList.IsPackageInstalled(UnityXRPackage),
-            message: $"Either the Oculus XR ({OculusXRPackageName}) or OpenXR Plugin ({UnityXRPackage}) package must be installed through the {UPMTitle}. Please note that not all Meta XR SDK features are currently supported when using the OpenXR plugin."
+            message: $"Either the Oculus XR ({OculusXRPackageName}) or OpenXR Plugin ({UnityXRPackage}) package must be installed through the {UPMTitle}. It is recommended to use the OpenXR Plugin ({UnityXRPackage}) package."
         );
 #endif
 
         OVRProjectSetup.AddTask(
             conditionalValidity: _ => PackageList.PackageManagerListAvailable,
-            level: OVRProjectSetup.TaskLevel.Optional,
+            level: OVRProjectSetup.TaskLevel.Recommended,
             group: XRTaskGroup,
-            isDone: _ => !PackageList.IsPackageInstalled(UnityXRPackage),
-            message: $"Please note that some features in the Meta XR SDK are not yet supported when using the OpenXR plugin ({UnityXRPackage})."
+            isDone: _ => !PackageList.IsPackageInstalled(OculusXRPackageName),
+            message: $"Beginning with v74, it is recommended to use the OpenXR plugin ({UnityXRPackage}) instead of the OculusXR plugin ({OculusXRPackageName}).",
+            fixMessage: $"Open Package Manager",
+            fix: _ => { UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName); }
         );
 
         OVRProjectSetup.AddTask(

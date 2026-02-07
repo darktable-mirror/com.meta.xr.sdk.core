@@ -28,18 +28,19 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
     internal static class Utils
     {
         private const int MaxLetterCountForTitle = 22;
+        internal const int MaxLetterCountForMethod = 64;
         public const int DropDownMenuSortOrder = 5;
         public const int CursorSortOrder = 31000;
 
-        internal static string ToDisplayText(this string input)
+        internal static string ToDisplayText(this string input, int characterLimit = MaxLetterCountForTitle)
         {
             string output = Regex.Replace(input, @"([a-z])([A-Z])", "$1 $2");
             output = Regex.Replace(output, @"([A-Z]+)([A-Z][a-z])", "$1 $2");
             output = output.Replace("_", " ");
             output = char.ToUpper(output[0]) + output.Substring(1);
 
-            if (output.Length > MaxLetterCountForTitle)
-                output = output.Substring(0, MaxLetterCountForTitle);
+            if (output.Length > characterLimit)
+                output = output.Substring(0, characterLimit);
 
             return output;
         }

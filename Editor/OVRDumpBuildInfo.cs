@@ -40,32 +40,25 @@ public class OVRDumpBuildInfo : IPreprocessBuildWithReport, IPostprocessBuildWit
 
     public static void PrepareRuntimeActionBindings()
     {
-#if UNITY_EDITOR
         // Save to streaming assets dir.
-        Meta.XR.InputActions.RuntimeSettings.SaveToStreamingAssets();
-#endif
+        Meta.XR.InputActions.RuntimeSettings.UpdateBindingsOnDisk();
     }
 
     public void OnPostprocessBuild(BuildReport report)
     {
-#if UNITY_EDITOR
         // Copy path from streaming assets folder to root directory.
         // We don't do this on android since on android we can get the apk path & access them that way,
         // but on windows there's no central owner to provide access to the data path.
 
-        try
-        {
-            if (report.summary.platformGroup == BuildTargetGroup.Standalone)
-            {
-                string targetPath = Path.GetFullPath(Path.Combine(report.summary.outputPath, "..", "RuntimeActionBindings.json"));
-                string runtimeActionBindings = Meta.XR.InputActions.RuntimeSettings.GetRuntimeActionBindings();
-                File.WriteAllText(targetPath, runtimeActionBindings);
-            }
-        }
-        catch (System.Exception e)
-        {
-            UnityEngine.Debug.LogError($"Error saving RuntimeActionBindings (standalone): {e.Message}");
-        }
-#endif
+        var pcPath = report.summary.platformGroup == BuildTargetGroup.Standalone ? report.summary.outputPath
+                                                                                 : null;
+
+        // Clean up jsons since we generated them in OnPreprocessBuild,
+        // and they have no reason to be persisted in the project.
+
+        Meta.XR.InputActions.RuntimeSettings.UpdateBindingsOnDisk(clean: true, buildPath: pcPath);
+
+        // (Allow any exceptions above to bubble up so builds fail and buildmasters get a clear signal.)
+        // ((Reason: If an app depends on these input bindings, then it's a broken build without them.))
     }
 }

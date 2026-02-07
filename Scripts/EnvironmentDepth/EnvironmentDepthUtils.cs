@@ -54,10 +54,10 @@ namespace Meta.XR.EnvironmentDepth
 
         internal static void CalculateDepthCameraMatrices(DepthFrameDesc frameDesc, out Matrix4x4 projMatrix, out Matrix4x4 viewMatrix)
         {
-            float left = frameDesc.fovLeftAngle;
-            float right = frameDesc.fovRightAngle;
-            float bottom = frameDesc.fovDownAngle;
-            float top = frameDesc.fovTopAngle;
+            float left = frameDesc.fovLeftAngleTangent;
+            float right = frameDesc.fovRightAngleTangent;
+            float bottom = frameDesc.fovDownAngleTangent;
+            float top = frameDesc.fovTopAngleTangent;
             float near = frameDesc.nearZ;
             float far = frameDesc.farZ;
 
@@ -99,16 +99,7 @@ namespace Meta.XR.EnvironmentDepth
 
             };
 
-            var createRotation = frameDesc.createPoseRotation;
-            var depthOrientation = new Quaternion(
-                createRotation.x,
-                createRotation.y,
-                createRotation.z,
-                createRotation.w
-            );
-
-            viewMatrix = Matrix4x4.TRS(frameDesc.createPoseLocation, depthOrientation,
-                _scalingVector3).inverse;
+            viewMatrix = Matrix4x4.TRS(frameDesc.createPoseLocation, frameDesc.createPoseRotation, _scalingVector3).inverse;
         }
     }
 }

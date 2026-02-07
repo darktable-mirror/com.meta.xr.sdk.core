@@ -81,6 +81,7 @@ public class OVRBundleManager
 
     public static void PrebuildProjectSettingUpdate()
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         // Save existing settings as some modifications can change other settings
         projectDefaultAppIdentifier = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android);
         projectDefaultVersion = PlayerSettings.bundleVersion;
@@ -126,6 +127,7 @@ public class OVRBundleManager
             OVRBundleTool.PrintLog("Build will set Strip Engine Code to Disabled.");
             PlayerSettings.stripEngineCode = false;
         }
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public static BuildPlayerOptions? CalculateBundleBuildPlayerOptions()
@@ -188,6 +190,7 @@ public class OVRBundleManager
 
     public static void PostbuildProjectSettingUpdate()
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         // Restore application identifier
         PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android,
             projectDefaultAppIdentifier);
@@ -220,6 +223,7 @@ public class OVRBundleManager
         {
             PlayerSettings.Android.targetArchitectures = projectAndroidArchitecture;
         }
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     // Build and deploy a list of scenes. It's suggested to only build and deploy one active scene that's being modified and
@@ -227,7 +231,9 @@ public class OVRBundleManager
     public static void BuildDeployScenes(List<OVRBundleTool.EditorSceneInfo> sceneList, bool forceRestart)
     {
         externalSceneCache =
+#pragma warning disable CS0618 // Type or member is obsolete
             EXTERNAL_STORAGE_PATH + "/" + PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android)
+#pragma warning restore CS0618 // Type or member is obsolete
             + GetTransitionApkOptionalIdentifier() + "/cache/scenes";
 
         for (int i = 0; i < sceneList.Count; i++)
@@ -621,7 +627,9 @@ public class OVRBundleManager
         if (adbTool.isReady)
         {
             string output, error;
+#pragma warning disable CS0618 // Type or member is obsolete
             string appPackagename = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android)
+#pragma warning restore CS0618 // Type or member is obsolete
                                     + GetTransitionApkOptionalIdentifier();
 #if UNITY_2023_2_OR_NEWER
             string playerActivityName = "\"" + appPackagename + "/com.unity3d.player.UnityPlayerGameActivity\"";
@@ -662,7 +670,9 @@ public class OVRBundleManager
         if (adbTool.isReady)
         {
             string output, error;
+#pragma warning disable CS0618 // Type or member is obsolete
             string appPackagename = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android)
+#pragma warning restore CS0618 // Type or member is obsolete
                                     + GetTransitionApkOptionalIdentifier();
             string[] appStartCommand = { "-d shell", "pm uninstall", appPackagename };
             if (adbTool.RunCommand(appStartCommand, null, out output, out error) == 0)
@@ -688,7 +698,9 @@ public class OVRBundleManager
         if (adbTool.isReady)
         {
             externalSceneCache =
+#pragma warning disable CS0618 // Type or member is obsolete
                 EXTERNAL_STORAGE_PATH + "/" + PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android)
+#pragma warning restore CS0618 // Type or member is obsolete
                 + GetTransitionApkOptionalIdentifier() + "/cache/scenes";
 
             bool failure = false;
@@ -726,7 +738,9 @@ public class OVRBundleManager
         if (adbTool.isReady)
         {
             externalSceneCache =
+#pragma warning disable CS0618 // Type or member is obsolete
                 EXTERNAL_STORAGE_PATH + "/" + PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android)
+#pragma warning restore CS0618 // Type or member is obsolete
                 + GetTransitionApkOptionalIdentifier() + "/cache/scenes";
 
             string output, error;

@@ -19,9 +19,9 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
@@ -34,10 +34,36 @@ namespace Meta.XR.Editor.Utils
     internal static class PackageList
     {
         private static ListRequest _packageManagerListRequest;
+        private static Dictionary<string, PackageInfo> _packagesDictionary;
 
         static PackageList()
         {
-            RefreshPackageList(false);
+            _packageManagerListRequest = Client.List(offlineMode: false, includeIndirectDependencies: true);
+            Events.registeringPackages += RegisteringPackagesEventHandler;
+        }
+
+        private static void RegisteringPackagesEventHandler(PackageRegistrationEventArgs args)
+        {
+            if (!PackageManagerListAvailable || _packageManagerListRequest.Result == null)
+            {
+                return;
+            }
+            _packagesDictionary ??= _packageManagerListRequest.Result.ToDictionary(package => package.name);
+
+            foreach (PackageInfo addedPackage in args.added)
+            {
+                _packagesDictionary.Add(addedPackage.name, addedPackage);
+            }
+
+            foreach (PackageInfo removedPackage in args.removed)
+            {
+                _packagesDictionary.Remove(removedPackage.name);
+            }
+
+            foreach (PackageInfo changedTo in args.changedTo)
+            {
+                _packagesDictionary[changedTo.name] = changedTo;
+            }
         }
 
         public static bool PackageManagerListAvailable => _packageManagerListRequest is { Status: StatusCode.Success };
@@ -49,8 +75,10 @@ namespace Meta.XR.Editor.Utils
                 return null;
             }
 
+            _packagesDictionary ??= _packageManagerListRequest.Result.ToDictionary(package => package.name);
+
             var (name, _, _) = ParsePackageId(packageId);
-            return _packageManagerListRequest.Result.FirstOrDefault(p => p.name == name);
+            return _packagesDictionary.GetValueOrDefault(name);
         }
 
         internal static (string name, string version, string sampleName) ParsePackageId(string packageId)
@@ -220,21 +248,6 @@ namespace Meta.XR.Editor.Utils
             }
 
             return version;
-        }
-
-        private static void RefreshPackageList(bool blocking)
-        {
-            _packageManagerListRequest = Client.List(offlineMode: false, includeIndirectDependencies: true);
-
-            if (!blocking)
-            {
-                return;
-            }
-
-            while (!PackageManagerListAvailable)
-            {
-                Thread.Sleep(100);
-            }
         }
 
         private static string NormalizeInternalPackageVersion(string version)

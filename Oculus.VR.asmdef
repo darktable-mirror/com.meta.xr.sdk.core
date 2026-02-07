@@ -7,7 +7,9 @@
         "Unity.XR.OpenXR.Editor",
         "Unity.XR.Management",
         "Meta.XR.Editor.Callbacks",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.XR.OpenXR.Features.MetaQuestSupport",
+        "Unity.XR.Oculus"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -91,6 +93,16 @@
             "name": "Unity",
             "expression": "6000.0.25f1",
             "define": "UNITY_Y_FLIP_FIX_6"
+        },
+        {
+            "name": "com.unity.xr.oculus",
+            "expression": "4.3.0",
+            "define": "OCULUS_XR_PLUGIN_4_3_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.11.0",
+            "define": "UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

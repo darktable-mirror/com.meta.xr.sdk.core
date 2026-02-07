@@ -25,7 +25,9 @@ using Meta.XR.ImmersiveDebugger.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Meta.XR.ImmersiveDebugger.Hierarchy;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -58,7 +60,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var gizmoAttribute = member.GetCustomAttribute<DebugMember>();
                 if (gizmoAttribute != null && gizmoAttribute.GizmoType != DebugGizmoType.None)
                 {
-                    if (AddGizmo(type, member, gizmoAttribute, out var gizmoRendererManager))
+                    if (AddGizmo(type, member, gizmoAttribute, _instanceCache, out var gizmoRendererManager))
                     {
                         gizmosList.Add((member, gizmoRendererManager));
                         membersList.Add((member, gizmoAttribute));
@@ -71,7 +73,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             {
                 // process and add the lists instead of directly returning the list, always return false
                 if (attribute.GizmoType == DebugGizmoType.None) return false;
-                if (!AddGizmo(type, info, attribute, out var gizmoRendererManager)) return false;
+                if (!AddGizmo(type, info, attribute, _instanceCache, out var gizmoRendererManager)) return false;
                 gizmosList.Add((info, gizmoRendererManager));
                 membersList.Add((info, attribute));
                 memberToGizmoRendererManagerDict[info] = gizmoRendererManager;
@@ -84,8 +86,8 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var gizmo = memberController.GetGizmo();
                 if (!gizmo?.Matches(member, instance) ?? true)
                 {
-                    void OnStateChanged(bool state) => memberToGizmoRendererManagerDict[member].SetState(instance, state);
-                    bool GetState() => memberToGizmoRendererManagerDict[member].GetState(instance);
+                    void OnStateChanged(bool state) => memberToGizmoRendererManagerDict[member].SetState(instance.Instance, state);
+                    bool GetState() => memberToGizmoRendererManagerDict[member].GetState(instance.Instance);
                     memberController.RegisterGizmo(new GizmoHook(member, instance, attribute, OnStateChanged, GetState));
                 }
             });
@@ -96,9 +98,13 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             throw new NotImplementedException();
         }
 
-        private bool AddGizmo(Type type, MemberInfo member, DebugMember gizmoAttribute, out GizmoRendererManager gizmoRendererManager)
+        public void ProcessTypeFromHierarchy(Item item, MemberInfo memberInfo)
         {
+            throw new NotImplementedException();
+        }
 
+        internal static bool AddGizmo(Type type, MemberInfo member, DebugMember gizmoAttribute, InstanceCache instanceCache, out GizmoRendererManager gizmoRendererManager)
+        {
             if (!GizmoTypesRegistry.IsValidDataTypeForGizmoType(member.GetDataType(), gizmoAttribute.GizmoType))
             {
                 Debug.LogWarning($"Invalid registration of gizmo {member.Name}: type not matching gizmo type");
@@ -108,7 +114,16 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
             var gizmo = new GameObject($"{member.Name}Gizmo");
             gizmoRendererManager = gizmo.AddComponent<GizmoRendererManager>();
-            gizmoRendererManager.Setup(type, member, gizmoAttribute.GizmoType, gizmoAttribute.Color, _instanceCache);
+            gizmoRendererManager.Setup(type, member, gizmoAttribute.GizmoType, gizmoAttribute.Color, instanceCache);
+
+            if (Application.isPlaying)
+            {
+                // This method can only be called in play mode.
+                // Overall, the Immersive Debugger should only be called during play mode
+                // But it may be triggered during Unit Tests at some point,
+                // so to avoid errors while calling this method, we guard it against isPlaying
+                Object.DontDestroyOnLoad(gizmo);
+            }
 
             return true;
         }

@@ -59,16 +59,30 @@ namespace Meta.XR.BuildingBlocks.Editor
         [SerializeField] internal GameObject prefab;
         protected GameObject Prefab => prefab;
 
-        [SerializeField] private List<string> packageDependencies;
+        [SerializeField] internal List<string> packageDependencies;
         public IEnumerable<string> PackageDependencies => packageDependencies;
+        [SerializeField] internal int selectedGuidedSetupIndex;
+        [SerializeField] internal string guidedSetupName;
 
         internal virtual IEnumerable<OVRConfigurationTask> GetAssociatedRules(BuildingBlock block)
             => Enumerable.Empty<OVRConfigurationTask>();
 
-        internal virtual IEnumerable<string> ComputePackageDependencies(VariantsSelection variantSelection) =>
-            PackageDependencies;
+        internal HashSet<string> ComputePackageDependencies(VariantsSelection variantSelection)
+        {
+            var dependencies = packageDependencies == null || packageDependencies.Count == 0 ? new HashSet<string>() :
+                packageDependencies.ToHashSet();
+            foreach (var dependentBlock in ComputeOptionalDependencies())
+            {
+                if (dependentBlock is InterfaceBlockData data)
+                {
+                    InterfaceBlockData.ComputePackageDependencies(data, variantSelection, dependencies);
+                }
+            }
+            return dependencies;
+        }
 
-        internal virtual IEnumerable<BlockData> ComputeOptionalDependencies(VariantsSelection variantSelection)
+
+        internal virtual IEnumerable<BlockData> ComputeOptionalDependencies()
             => Enumerable.Empty<BlockData>();
 
         private IReadOnlyList<VariantHandle> _definitionVariants;
@@ -84,12 +98,15 @@ namespace Meta.XR.BuildingBlocks.Editor
             _constants ??= VariantHandle.FetchVariants(this, VariantBehavior.Constant);
 
         /// <summary>
-        /// Whether of not this Installation Routine has the same values for all variants passed as parameter
+        /// Whether or not this Installation Routine has the same values for all variants passed
         /// </summary>
-        internal bool Fits(IReadOnlyList<VariantHandle> variants)
-            => variants.Where(variant => variant.Attribute.Behavior == VariantBehavior.Definition)
-                .Where(variant => DefinitionVariants.Any(variant.Matches)).All(variant => DefinitionVariants.Any(variant.Fits))
-               && DefinitionVariants.All(definitionVariant => variants.Any(definitionVariant.Fits));
+        internal bool Fits(IReadOnlyList<VariantHandle> variants) =>
+            variants.Where(variant => variant.Attribute.Behavior == VariantBehavior.Definition) // take all definition variants
+                .Where(variant => DefinitionVariants.Any(variant.Matches)) // variants that matches the definition variant of this routine
+                .All(variant => DefinitionVariants.Any(variant.Fits)) // check if all definition variants fits each other
+            && DefinitionVariants
+                .Where(definitionVariant => variants.Any(definitionVariant.Matches)) // relevant definition variant from this installation routine
+                .All(definitionVariant => variants.Any(definitionVariant.Fits)); // all relevant Fits
 
         internal bool FitsParameters(IReadOnlyList<VariantHandle> variants) => ParameterVariants.All(parameterVariant => !parameterVariant.Condition() || variants.Any(parameterVariant.Fits));
 
@@ -124,9 +141,13 @@ namespace Meta.XR.BuildingBlocks.Editor
             return new List<GameObject> { instance };
         }
 
-        public virtual Task<List<GameObject>> InstallAsync(BlockData block, GameObject selectedGameObject)
+        public async virtual Task<List<GameObject>> InstallAsync(BlockData block, GameObject selectedGameObject)
         {
-            return Task.FromResult(Install(block, selectedGameObject));
+            foreach (var blockData in ComputeOptionalDependencies())
+            {
+                await blockData.InstallWithDependencies();
+            }
+            return await Task.FromResult(Install(block, selectedGameObject));
         }
 
     }

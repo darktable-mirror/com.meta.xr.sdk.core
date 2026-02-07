@@ -16,7 +16,7 @@ MonoBehaviour:
   layout: 0
   anchor: 5
   pivot: 5
-  size: {x: 24, y: 24}
+  size: {x: 36, y: 36}
   margin: {x: 0, y: 0}
   useBottomRightMargin: 1
   bottomRightMargin: {x: 4, y: 0}
@@ -24,3 +24,4 @@ MonoBehaviour:
   masks: 0
   adaptHeight: 0
   autoFitChildren: 0
+  isOverlayCanvas: 0

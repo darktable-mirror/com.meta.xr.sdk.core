@@ -780,15 +780,17 @@ public class OVROverlay : MonoBehaviour
             ret = true;
 
             // PC requries premultiplied Alpha, premultiply it unless its already premultiplied
-            bool premultiplyAlpha = !Application.isMobilePlatform && !isAlphaPremultiplied;
+            bool premultiplyAlpha = !isAlphaPremultiplied && !OVRPlugin.unpremultipliedAlphaLayersSupported;
 
             // Mobile requires unpremultiplied alpha, so if it is premultiplied, divide it out if possible.
-            bool unmultiplyAlpha = Application.isMobilePlatform && isAlphaPremultiplied;
+            bool unmultiplyAlpha = isAlphaPremultiplied && !OVRPlugin.premultipliedAlphaLayersSupported;
 
 
             // OpenGL does not support copy texture between different format
+#pragma warning disable CS0618 // Type or member is obsolete
             bool isOpenGL = SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.OpenGLES3 ||
                             SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.OpenGLES2;
+#pragma warning restore CS0618 // Type or member is obsolete
             // Graphics.CopyTexture only works when textures are same size and same mipmap count
             bool isSameSize = et.width == textures[eyeId].width && et.height == textures[eyeId].height;
             bool sameMipMap = textures[eyeId].mipmapCount == et.mipmapCount;
@@ -888,6 +890,7 @@ public class OVROverlay : MonoBehaviour
 
         bool internalUseEfficientSharpen = useEfficientSharpen;
         bool internalUseEfficientSupersample = useEfficientSupersample;
+        bool internalIsAlphaPremultiplied = isAlphaPremultiplied && OVRPlugin.premultipliedAlphaLayersSupported;
 
         // No sharpening or supersampling method was selected, defaulting to efficient supersampling and efficient sharpening.
         if (useAutomaticFiltering && !(useEfficientSharpen || useEfficientSupersample || useExpensiveSharpen || useExpensiveSuperSample))
@@ -913,7 +916,8 @@ public class OVROverlay : MonoBehaviour
             pose.flipZ().ToPosef_Legacy(), scale.ToVector3f(), layerIndex, (OVRPlugin.OverlayShape)currentOverlayShape,
             overrideTextureRectMatrix, textureRectMatrix, overridePerLayerColorScaleAndOffset, colorScale, colorOffset,
             useExpensiveSuperSample, useBicubicFiltering, internalUseEfficientSupersample,
-            internalUseEfficientSharpen, useExpensiveSharpen, hidden, isProtectedContent, useAutomaticFiltering
+            internalUseEfficientSharpen, useExpensiveSharpen, hidden, isProtectedContent, useAutomaticFiltering,
+            internalIsAlphaPremultiplied
         );
         prevOverlayShape = currentOverlayShape;
 

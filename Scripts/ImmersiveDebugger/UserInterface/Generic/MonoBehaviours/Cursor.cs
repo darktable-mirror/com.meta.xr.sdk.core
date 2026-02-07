@@ -20,6 +20,7 @@
 
 
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
@@ -31,11 +32,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     /// </summary>
     public class Cursor : OVRCursor
     {
-        private Vector3 _startPoint;
+        private const float _pressedScale = 0.8f;
+        private const float _releasedScale = 1f;
+
         private Vector3 _forward;
         private Vector3 _endPoint;
         private Vector3 _normal;
         private bool _hit;
+        private PointerEventData.FramePressState _pressState = PointerEventData.FramePressState.Released;
         private Canvas _canvas;
 
         internal GameObject GameObject { get; private set; }
@@ -69,7 +73,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// <param name="normal"><see cref="Vector3"/> representing the normal of the cursor</param>
         public override void SetCursorStartDest(Vector3 start, Vector3 dest, Vector3 normal)
         {
-            _startPoint = start;
             _endPoint = dest;
             _normal = normal;
             _hit = true;
@@ -81,10 +84,25 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// <param name="t"><see cref="Transform"/> that's used to set the cursor's starting point and forward direction</param>
         public override void SetCursorRay(Transform t)
         {
-            _startPoint = t.position;
             _forward = t.forward;
             _normal = _forward;
             _hit = false;
+        }
+
+        public void SetClickState(PointerEventData.FramePressState state)
+        {
+            // This method handles the stateful memory of whether or not it was pressed before
+            if (state == PointerEventData.FramePressState.NotChanged)
+            {
+                if (_pressState == PointerEventData.FramePressState.PressedAndReleased)
+                {
+                    _pressState = PointerEventData.FramePressState.Released;
+                }
+
+                return;
+            }
+
+            _pressState = state;
         }
 
         private void LateUpdate()
@@ -93,6 +111,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 Transform.position = _endPoint;
                 Transform.rotation = Quaternion.LookRotation(_normal, Vector3.up);
+                var clicked = _pressState is PointerEventData.FramePressState.Pressed
+                    or PointerEventData.FramePressState.PressedAndReleased;
+
+                Transform.localScale = Vector3.one * (clicked ? _pressedScale : _releasedScale);
             }
             else
             {

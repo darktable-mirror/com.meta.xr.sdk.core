@@ -26,7 +26,9 @@ using UnityEngine.Assertions;
 using UnityEngine.Serialization;
 using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
+
 [Feature(Feature.TrackedKeyboard)]
+[Obsolete("The TrackedKeyboard feature has been removed as of v72. For real-time object tracking such as physical keyboards, we recommend using Trackables in MR Utility Kit.", true)]
 public class OVRTrackedKeyboard : MonoBehaviour
 {
     private static readonly float underlayScaleMultX_ = 1.475f;

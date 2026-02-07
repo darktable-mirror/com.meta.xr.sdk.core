@@ -20,8 +20,10 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("EditModeTests")]
+[assembly: InternalsVisibleTo("Oculus.VR.EditModeTests")]
 [assembly: InternalsVisibleTo("Oculus.VR.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.StatusMenu")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.PlayCompanion")]
 [assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.ToolingSupport")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]

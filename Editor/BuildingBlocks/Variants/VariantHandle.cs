@@ -42,7 +42,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private Func<bool> _condition;
         public static readonly Func<bool> DefaultCondition = () => true;
-        public Func<bool> Condition => _condition ??= FetchConditionDelegate();
+        public Func<bool> OverrideCondition = null;
+        public Func<bool> Condition => OverrideCondition ?? (_condition ??= FetchConditionDelegate());
 
         protected VariantHandle(MemberInfo memberInfo, VariantAttribute attribute, InstallationRoutine owner)
         {
@@ -97,7 +98,9 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public bool Fits(VariantHandle variant)
             => Matches(variant)
-               && (variant.Attribute.Behavior == VariantBehavior.Parameter || Equals(variant.RawValue, RawValue));
+               && (!Condition() || !variant.Condition() || // if the condition doesn't meet, we don't evaluate they match or not.
+                   variant.Attribute.Behavior == VariantBehavior.Parameter ||
+                   Equals(variant.RawValue, RawValue));
 
         public bool Matches(IEnumerable<VariantHandle> variants) => variants.Any(Matches);
 

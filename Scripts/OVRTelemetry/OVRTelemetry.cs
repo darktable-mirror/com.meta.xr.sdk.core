@@ -65,7 +65,7 @@ internal static partial class OVRTelemetry
     public abstract class TelemetryClient
     {
         public abstract void MarkerStart(int markerId, int instanceKey = OVRPlugin.Qpl.DefaultInstanceKey,
-            long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs);
+            long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs, string joinId = null);
 
         public abstract void MarkerPointCached(int markerId, int nameHandle,
             int instanceKey = OVRPlugin.Qpl.DefaultInstanceKey, long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs);
@@ -122,7 +122,7 @@ internal static partial class OVRTelemetry
     private class NullTelemetryClient : TelemetryClient
     {
         public override void MarkerStart(int markerId, int instanceKey = OVRPlugin.Qpl.DefaultInstanceKey,
-            long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs)
+            long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs, string joinId = null)
         {
         }
 
@@ -170,9 +170,16 @@ internal static partial class OVRTelemetry
     private class QPLTelemetryClient : TelemetryClient
     {
         public override void MarkerStart(int markerId, int instanceKey = OVRPlugin.Qpl.DefaultInstanceKey,
-            long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs)
+            long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs, string joinId = null)
         {
-            OVRPlugin.Qpl.MarkerStart(markerId, instanceKey, timestampMs);
+            if (string.IsNullOrEmpty(joinId))
+            {
+                OVRPlugin.Qpl.MarkerStart(markerId, instanceKey, timestampMs);
+            }
+            else
+            {
+                OVRPlugin.Qpl.MarkerStartForJoin(markerId, joinId, OVRPlugin.Bool.False, instanceKey, timestampMs);
+            }
         }
 
         public override void MarkerPointCached(int markerId, int nameHandle,

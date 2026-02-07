@@ -75,11 +75,15 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                 {
                     continue;
                 }
+#pragma warning disable CS0618 // Type or member is obsolete
                 var defineSymbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(group).Split(';').Select(d => d.Trim()).ToList();
+#pragma warning restore CS0618 // Type or member is obsolete
                 if (!func(defineSymbols)) continue;
                 try
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     PlayerSettings.SetScriptingDefineSymbolsForGroup(group, string.Join(";", defineSymbols.ToArray()));
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
                 catch (Exception e)
                 {

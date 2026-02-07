@@ -192,6 +192,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         internal void ForgetAll()
         {
+            if (_children == null) return;
+
             foreach (var child in _children)
             {
                 child.Hide();

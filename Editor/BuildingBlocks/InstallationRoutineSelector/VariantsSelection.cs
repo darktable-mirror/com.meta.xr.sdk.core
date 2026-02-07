@@ -47,6 +47,9 @@ namespace Meta.XR.BuildingBlocks.Editor
         private readonly Dictionary<BlockData, IReadOnlyList<InstallationRoutine>> _possibleRoutines = new();
         public IReadOnlyDictionary<BlockData, IReadOnlyList<InstallationRoutine>> PossibleRoutines => _possibleRoutines;
 
+        private readonly Dictionary<string, bool> _variantConditionStatus = new();
+        public IReadOnlyDictionary<string, bool> VariantConditionStatus => _variantConditionStatus;
+
         private bool RequiresChoiceFor(IReadOnlyList<InstallationRoutine> routines)
         {
             if (Completed)
@@ -79,14 +82,16 @@ namespace Meta.XR.BuildingBlocks.Editor
         private void InitializeVariants()
         {
             _variants = GetVariantsRecursive(BlockData)
-                .Select(variant => variant.ToSelection(false)).ToList();
+                .Select(variant => variant.ToSelection()).ToList();
+            // initialization doesn't have selected variants to be matched with, hence clearing here
+            _variantConditionStatus.Clear();
         }
 
         public void UpdateVariants()
         {
             // Get expected Variants, recursively
             var expectedVariants = GetVariantsRecursive(BlockData)
-                .Select(variant => variant.ToSelection(false));
+                .Select(variant => variant.ToSelection());
 
             // Extract those that were previously already present (and keep their previous value)
             var sharedVariants = _variants.Where(variant => expectedVariants.Any(variant.Matches));
@@ -104,6 +109,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             UpdatePossibleRoutines();
             UpdateDependencies();
             UpdateMissingDependencies();
+            ApplyConditionToVariants();
         }
 
         private void UpdateDependencies()
@@ -111,7 +117,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             _dependencies.Clear();
             if (BlockData is InterfaceBlockData interfaceBlockData)
             {
-                _dependencies.AddRange(InterfaceBlockData.ComputePackageDependencies(interfaceBlockData, this));
+                var packageDepsSet = new HashSet<string>();
+                InterfaceBlockData.ComputePackageDependencies(interfaceBlockData, this, packageDepsSet);
+                _dependencies.AddRange(packageDepsSet);
             }
         }
 
@@ -134,6 +142,19 @@ namespace Meta.XR.BuildingBlocks.Editor
             _possibleRoutines.Clear();
 
             AppendPossibleRoutines(BlockData);
+        }
+
+        private void ApplyConditionToVariants()
+        {
+            foreach (VariantHandle variant in _variants)
+            {
+                if (_variantConditionStatus.ContainsKey(variant.MemberInfo.Name))
+                {
+                    _variantConditionStatus.TryGetValue(variant.MemberInfo.Name, out var result);
+                    variant.OverrideCondition = () => result;
+                }
+            }
+            _variantConditionStatus.Clear();
         }
 
         private static readonly IReadOnlyList<InstallationRoutine> EmptyList = new List<InstallationRoutine>();
@@ -218,6 +239,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             Completed = false;
             Canceled = false;
             _variants.Clear();
+            _variantConditionStatus.Clear();
         }
 
         private IEnumerable<VariantHandle> GetVariantsRecursive(BlockData blockData)
@@ -243,7 +265,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 .Select(variants => variants.First());
         }
 
-        private static IEnumerable<VariantHandle> GetVariants(BlockData blockData, bool testCondition = true)
+        private IEnumerable<VariantHandle> GetVariants(BlockData blockData, bool testCondition = true)
         {
             if (blockData is InterfaceBlockData interfaceBlockData)
             {
@@ -253,13 +275,42 @@ namespace Meta.XR.BuildingBlocks.Editor
             return Enumerable.Empty<VariantHandle>();
         }
 
-        private static IEnumerable<VariantHandle> GetVariants(IEnumerable<InstallationRoutine> routinesFilter, bool testCondition = true)
+        private IEnumerable<VariantHandle> GetVariants(IEnumerable<InstallationRoutine> routinesFilter, bool testCondition = true)
         {
-            return routinesFilter.SelectMany(routine =>
-                    routine.DefinitionVariants.Union(
-                        routine.ParameterVariants.Where(variant => !testCondition || variant.Condition())))
+            var allVariants = routinesFilter.SelectMany(routine =>
+                routine.DefinitionVariants.Union(routine.ParameterVariants));
+            foreach (var variant in allVariants.Where(variant => variant.Owner.Fits(this))) // variants relevant to current selection
+            {
+                var variantName = variant.MemberInfo.Name;
+                _variantConditionStatus[variantName] = _variantConditionStatus.TryGetValue(variantName, out bool originalValue)
+                    ? originalValue || variant.Condition() // If any condition for this same variant is true, should keep true (enabled the choice)
+                    : variant.Condition();
+            }
+            return allVariants
+                .Where(variant => variant.Attribute.Behavior == VariantAttribute.VariantBehavior.Definition
+                                  || !testCondition || variant.Condition())
                 .GroupBy(variant => variant.MemberInfo.Name)
-                .Select(variants => variants.First());
+                .Select(variants =>
+                {
+                    var firstVariant = variants.First();
+                    if (firstVariant.Attribute.Default != null)
+                    {
+                        foreach (var variant in variants)
+                        {
+                            if (variant.RawValue.Equals(variant.Attribute.Default))
+                            {
+                                return variant; // try best to use the one matching default value for this variant
+                            }
+                        }
+                        if (firstVariant.Attribute.Behavior == VariantAttribute.VariantBehavior.Parameter)
+                        {
+                            // If parameter, overriding to default parameter value
+                            firstVariant.RawValue = firstVariant.Attribute.Default;
+                            // Cannot do so for definition variant because there would be no matching installationRoutine available
+                        }
+                    }
+                    return firstVariant;
+                });
         }
 
         public InstallationRoutine ComputeIdealInstallationRoutine(
@@ -277,6 +328,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             return selectedRoutine;
         }
 
+        // eliminate installation routine that's not compatible with current scene's existing routines
         public IReadOnlyList<InstallationRoutine> ComputePossibleInstallationRoutines(InterfaceBlockData blockData)
         {
             var routines = blockData.GetAvailableInstallationRoutines().ToArray();

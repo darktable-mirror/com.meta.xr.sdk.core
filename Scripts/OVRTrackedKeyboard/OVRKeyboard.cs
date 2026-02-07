@@ -26,6 +26,7 @@ using Meta.XR.Util;
 using UnityEngine;
 
 [Feature(Feature.TrackedKeyboard)]
+[Obsolete("The TrackedKeyboard feature has been removed as of v72. For real-time object tracking such as physical keyboards, we recommend using Trackables in MR Utility Kit.", true)]
 public static class OVRKeyboard
 {
     public struct TrackedKeyboardState

@@ -25,6 +25,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using DynamicSceneManagerHelper;
+using Meta.XR.Samples;
 
 /// <summary>
 /// This sample expands on the snapshot scene manager and adds the ability
@@ -43,6 +44,7 @@ using DynamicSceneManagerHelper;
 /// This sample should serve as a guide only, as it relies on many heap
 /// allocations and inefficient search queries to help readability.
 /// </remarks>
+[MetaCodeSample("CoreSDK-MixedReality")]
 public class DynamicSceneManager : MonoBehaviour
 {
     public float UpdateFrequencySeconds = 5;

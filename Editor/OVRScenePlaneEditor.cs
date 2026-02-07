@@ -22,9 +22,10 @@ using System;
 using UnityEngine;
 using UnityEditor;
 
+
 [CustomEditor(typeof(OVRScenePlane))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
-public class OVRScenePlaneEditor : Editor
+public class OVRScenePlaneEditor : UnityEditor.Editor
 {
     OVRScenePlane _object;
     MonoScript _script;

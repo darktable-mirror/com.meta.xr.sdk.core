@@ -19,8 +19,9 @@
  */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,7 +29,7 @@ namespace Meta.XR.Editor.UserInterface
 {
     internal static class Utils
     {
-        private static readonly Dictionary<object, bool> Foldouts = new Dictionary<object, bool>();
+        private static readonly Dictionary<object, bool> Foldouts = new();
 
         public static bool ShouldRenderEditorUI()
             => !Application.isBatchMode && IsMainEditorProcess();
@@ -114,6 +115,22 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
+        public readonly struct LabelWidthScope : System.IDisposable
+        {
+            private readonly float _previousLabelWidth;
+
+            public LabelWidthScope(float labelWidth)
+            {
+                _previousLabelWidth = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = labelWidth;
+            }
+
+            public void Dispose()
+            {
+                EditorGUIUtility.labelWidth = _previousLabelWidth;
+            }
+        }
+
         public readonly struct ColorScope : System.IDisposable
         {
             public enum Scope
@@ -164,7 +181,8 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
-        public static bool Foldout(object handle, string label, float offset = 0.0f, GUIStyle style = null, bool openByDefault = false)
+        public static bool Foldout(object handle, string label, float offset = 0.0f, GUIStyle style = null,
+            bool openByDefault = false)
         {
             var rect = GUILayoutUtility.GetRect(256, EditorGUIUtility.singleLineHeight + 4);
 
@@ -174,7 +192,8 @@ namespace Meta.XR.Editor.UserInterface
             var oldFoldoutState = false;
             var newFoldoutState = false;
             var contains = Foldouts.TryGetValue(handle, out oldFoldoutState);
-            newFoldoutState = EditorGUI.Foldout(rect, contains ? oldFoldoutState : openByDefault, label, true, style ?? Styles.GUIStyles.FoldoutLeft);
+            newFoldoutState = EditorGUI.Foldout(rect, contains ? oldFoldoutState : openByDefault, label, true,
+                style ?? Styles.GUIStyles.FoldoutLeft);
 
             if (!contains || newFoldoutState != oldFoldoutState)
             {
@@ -182,6 +201,25 @@ namespace Meta.XR.Editor.UserInterface
             }
 
             return newFoldoutState;
+        }
+
+        public enum UIItemPlacementType
+        {
+            Horizontal,
+            Vertical
+        }
+
+        internal static Color GetColorByStatus(UIStyles.ContentStatusType type)
+        {
+            Color color = type switch
+            {
+                UIStyles.ContentStatusType.Success => Styles.Colors.SuccessColor,
+                UIStyles.ContentStatusType.Warning => Styles.Colors.WarningColor,
+                UIStyles.ContentStatusType.Error => Styles.Colors.ErrorColor,
+                _ => Styles.Colors.LightGray
+            };
+
+            return color;
         }
     }
 }

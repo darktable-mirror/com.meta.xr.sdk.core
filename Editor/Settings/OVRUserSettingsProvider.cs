@@ -20,7 +20,9 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.ToolingSupport;
 using UnityEditor;
 
 internal class OVRUserSettingsProvider : SettingsProvider
@@ -63,10 +65,10 @@ internal class OVRUserSettingsProvider : SettingsProvider
 
     public override void OnTitleBarGUI()
     {
-        OVREditorUtils.SettingsItem.DrawHeaderFromSettingProvider();
+        OVREditorUtils.SettingsToolDescriptor.DrawHeaderFromSettingProvider(Origins.Self);
     }
 
-    public static void OpenSettingsWindow(Item.Origins origin)
+    public static void OpenSettingsWindow(Origins origin)
     {
         SettingsService.OpenUserPreferences(SettingsPath);
     }

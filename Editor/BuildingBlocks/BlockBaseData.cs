@@ -21,6 +21,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Tags;
@@ -28,6 +29,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEditor;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.Settings;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -94,31 +96,83 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Tags.Remove(Utils.NewTag);
             }
 
+            if (NewVersionAvailable())
+            {
+                Tags.Add(Utils.NewVersionTag);
+            }
+            else
+            {
+                Tags.Remove(Utils.NewVersionTag);
+            }
+
             Tags.OnValidate();
         }
 
-        private OVRProjectSetupSettingBool _hasSeenBefore;
+        private CustomBool _hasSeenBefore;
+        private CustomInt _hasSeenVersionBefore;
 
         private bool IsNew()
         {
-            _hasSeenBefore ??= new OVRProjectSetupUserSettingBool($"HasSeenBeforeKey_{Id}", false);
+            _hasSeenBefore ??= new UserBool()
+            {
+                Owner = this,
+                Uid = "HasSeenBefore",
+                OldKey = $"OVRProjectSetup.HasSeenBeforeKey_{Id}",
+                Default = false,
+                SendTelemetry = false
+            };
             return !_hasSeenBefore.Value;
+        }
+
+        private bool NewVersionAvailable()
+        {
+            if (_hasSeenBefore is not { Value: true })
+            {
+                // haven't seen, not showing as new version, just new.
+                return false;
+            }
+            _hasSeenVersionBefore ??= new UserInt()
+            {
+                Owner = this,
+                Uid = "HasSeenVersionBefore",
+                Default = 1,
+                SendTelemetry = false
+            };
+            return version > _hasSeenVersionBefore.Value;
         }
 
         internal void MarkAsSeen()
         {
             if (_hasSeenBefore == null || _hasSeenBefore.Value)
             {
+                _hasSeenVersionBefore ??= new UserInt()
+                {
+                    Owner = this,
+                    Uid = "HasSeenVersionBefore",
+                    Default = 1,
+                    SendTelemetry = false
+                };
+                if (_hasSeenVersionBefore.Value != version)
+                {
+                    _hasSeenVersionBefore.SetValue(version);
+                    ValidateTags();
+                }
                 return;
             }
-
-            _hasSeenBefore.Value = true;
+            _hasSeenBefore.SetValue(true);
+            _hasSeenVersionBefore?.SetValue(version);
             ValidateTags();
         }
 
         internal void ResetSeen()
         {
-            _hasSeenBefore.Value = false;
+            _hasSeenBefore.SetValue(false);
+            ValidateTags();
+        }
+
+        internal void ResetVersionSeen()
+        {
+            _hasSeenVersionBefore?.SetValue(1);
             ValidateTags();
         }
         #endregion
@@ -185,5 +239,6 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             return other == null ? 0 : string.Compare(other.BlockName.Value, BlockName.Value, StringComparison.CurrentCultureIgnoreCase);
         }
+
     }
 }

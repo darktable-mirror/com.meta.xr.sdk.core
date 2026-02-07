@@ -45,16 +45,5 @@ namespace Meta.XR.InputActions
         {
             return JsonUtility.ToJson(this);
         }
-
-#if UNITY_EDITOR
-        /// <summary>
-        /// This method is used to propogate changes to the input actions menu, which will save them to the RuntimeActionBindings.json file used to deliver the actions to OVRPlugin.
-        /// If this particular input action set hasn't been selected in the Input Actions Menu, the InputActionSetChanged method will do nothing.
-        /// </summary>
-        public void OnValidate()
-        {
-            RuntimeSettings.Instance?.InputActionSetChanged(this);
-        }
-#endif
     }
 }

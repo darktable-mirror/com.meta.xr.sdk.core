@@ -21,9 +21,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using Assets.Oculus.VR.Editor;
-using Meta.XR.Editor;
 using Meta.XR.Editor.Tags;
 using Oculus.VR.Editor.Utils;
 using UnityEditor;
@@ -36,11 +35,19 @@ namespace Meta.XR.BuildingBlocks.Editor
     {
         private const double CacheDurationInHours = 6;
         private const string CommonTag = "Common";
+
         private const string DownloadPath = "https://www.facebook.com/building-blocks-content";
+
         private static readonly RemoteContentDownloader Downloader;
 
         private static BlockData[] _contentFilter;
+
+        private static Dictionary<string, BlockModifiableProperty[]> _blockModifiableProperties;
+
         private static Dictionary<Tag, BlockUrl[]> _documentationsData;
+
+        internal static readonly HashSet<Tag> RemoteCollectionTags = new();
+        private static readonly Dictionary<Tag, List<Editor.BlockData>> RemoteCollections = new();
 
         static BlocksContentManager()
         {
@@ -50,7 +57,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 #pragma warning restore CS4014
         }
 
-        public static async Task InitializeAsync()
+        private static async Task InitializeAsync()
         {
             var successfulLoad = await Reload(false);
             if (!successfulLoad)
@@ -65,15 +72,15 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 Downloader.ClearCache();
             }
-            var result = await Downloader.RefreshAndLoad();
-            if (result.Item1)
-            {
-                return LoadContentJsonData(result.Item2);
-            }
-            else
-            {
-                return false;
-            }
+            var (success, jsonData) = await Downloader.RefreshAndLoad();
+            return success && LoadContentJsonData(jsonData);
+        }
+
+        public static BlockModifiableProperty[] GetBlockModifiablePropertyById(string blockId)
+        {
+            return _blockModifiableProperties == null
+                ? Array.Empty<BlockModifiableProperty>()
+                : _blockModifiableProperties.GetValueOrDefault(blockId, Array.Empty<BlockModifiableProperty>());
         }
 
         internal static BlockUrl[] GetBlockUrls(Tag tag)
@@ -98,8 +105,17 @@ namespace Meta.XR.BuildingBlocks.Editor
             public string blockName;
             public string description;
             public string[] tags;
+            public BlockModifiableProperty[] modifiableProperties;
         }
 
+        [Serializable]
+        internal struct BlockModifiableProperty
+        {
+            public string highlightIdentifier;
+            public string name;
+            public string description;
+
+        }
         [Serializable]
         internal struct BlockDocumentation
         {
@@ -119,6 +135,28 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             public BlockData[] content;
             public BlockDocumentation[] docs;
+            public TagsData tags;
+        }
+
+        [Serializable]
+        internal struct TagsData
+        {
+            public CollectionTag[] collections;
+            public FeatureTag[] features;
+        }
+
+        [Serializable]
+        internal struct CollectionTag
+        {
+            public string tag;
+            public string description;
+            public BlockData[] blocks;
+        }
+
+        [Serializable]
+        internal struct FeatureTag
+        {
+            public string tag;
         }
         // ReSharper restore InconsistentNaming
 
@@ -136,35 +174,84 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             response.content ??= Array.Empty<BlockData>();
             response.docs ??= Array.Empty<BlockDocumentation>();
+            response.tags.collections ??= Array.Empty<CollectionTag>();
+            response.tags.features ??= Array.Empty<FeatureTag>();
 
             return response;
         }
 
         #endregion
 
-        #region Blocks TextureContent
+        #region Blocks Content
 
         internal static bool LoadContentJsonData(string jsonData)
         {
             var response = ParseJsonData(jsonData);
 
             _contentFilter = response.content;
+
+            ParseModifiableProperties(response);
+
+            ParseDocumentations(response);
+
+            ParseTagsData(response);
+
+            return _contentFilter is { Length: > 0 };
+        }
+
+        private static void ParseModifiableProperties(BlockDataResponse response)
+        {
+            if (response.content is { Length: > 0 })
+            {
+                _blockModifiableProperties = response.content
+                    .ToDictionary(item => item.id, item => item.modifiableProperties);
+            }
+        }
+
+        private static void ParseDocumentations(BlockDataResponse response)
+        {
             _documentationsData = new Dictionary<Tag, BlockUrl[]>();
             foreach (var doc in response.docs)
             {
                 _documentationsData[doc.tag] = doc.urls;
             }
 
-            return _contentFilter is { Length: > 0 };
         }
+        private static void ParseTagsData(BlockDataResponse response)
+        {
+            RemoteCollections.Clear();
+            RemoteCollectionTags.Clear();
 
+            foreach (var collection in response.tags.collections)
+            {
+                var tag = new Tag(collection.tag);
+
+                // Currently we don't support any new Collection tag coming from remote
+                if (!CustomTagBehaviors.CollectionTags.Contains(tag))
+                    continue;
+
+                RemoteCollectionTags.Add(tag);
+                RemoteCollections.TryAdd(tag, new());
+
+                foreach (var block in collection.blocks ?? Array.Empty<BlockData>())
+                {
+                    var blockData = Utils.GetBlockData(block.id);
+                    if (blockData != null &&
+                        !RemoteCollections[tag].Contains(blockData) &&
+                        _contentFilter.Any(b => b.id == block.id))
+                    {
+                        RemoteCollections[tag].Add(blockData);
+                    }
+                }
+            }
+        }
 
         public static IReadOnlyList<BlockBaseData> FilterBlockWindowContent(IReadOnlyList<BlockBaseData> content)
         {
             return FilterBlockWindowContent(content, _contentFilter);
         }
 
-        private static void ClearOverrides(IEnumerable<BlockBaseData> content)
+        private static void ClearBlocksOverrides(IEnumerable<BlockBaseData> content)
         {
             foreach (var block in content)
             {
@@ -179,7 +266,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             if (contentFilter == null || contentFilter.Length == 0)
             {
-                ClearOverrides(content);
+                ClearBlocksOverrides(content);
                 return content;
             }
 
@@ -196,8 +283,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 blockBaseData.BlockName.SetOverride(contentFilterDictionary[blockBaseData.Id].value.blockName);
                 blockBaseData.Description.SetOverride(contentFilterDictionary[blockBaseData.Id].value.description);
-                blockBaseData.OverridableTags.SetOverride(
-                    GenerateTagArrayFromTags(contentFilterDictionary[blockBaseData.Id].value.tags));
+                blockBaseData.OverridableTags.SetOverride(GenerateTagArrayFromTags(contentFilterDictionary[blockBaseData.Id].value.tags));
             }
 
             return filteredContent;
@@ -213,6 +299,13 @@ namespace Meta.XR.BuildingBlocks.Editor
             var tagArray = new TagArray();
             tagArray.Add(tags.Select(tag => new Tag(tag)));
             return tagArray;
+        }
+
+
+        public static IReadOnlyCollection<BlockBaseData> GetCollection(CollectionTagBehavior collection)
+        {
+            if (collection == null) return null;
+            return RemoteCollections.GetValueOrDefault(collection.Tag, null);
         }
 
         #endregion

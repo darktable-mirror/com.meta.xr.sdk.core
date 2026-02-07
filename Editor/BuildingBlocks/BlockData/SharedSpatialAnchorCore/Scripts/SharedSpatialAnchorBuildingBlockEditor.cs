@@ -18,77 +18,34 @@
  * limitations under the License.
  */
 
-using System;
-using Meta.XR.Editor.Tags;
-using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.Id;
 using UnityEditor;
-using UnityEngine;
 using Meta.XR.Guides.Editor;
-using Meta.XR.Guides.Editor.Items;
-
-#if USING_META_XR_PLATFORM_SDK
-using Oculus.Platform;
-#endif // USING_META_XR_PLATFORM_SDK
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
     [CustomEditor(typeof(SharedSpatialAnchorCoreBuildingBlock))]
     public class SharedSpatialAnchorBuildingBlockEditor : BuildingBlockEditor
     {
+#if USING_META_XR_PLATFORM_SDK
+        private MetaAccountSetupGuide _metaAccountSetupGuide;
+        private MetaAccountSetupGuide MetaAccountSetupGuide => _metaAccountSetupGuide ??= new MetaAccountSetupGuide();
+#endif // USING_META_XR_PLATFORM_SDK
+
         protected override void ShowAdditionals()
         {
-            EditorGUILayout.BeginVertical(Styles.GUIStyles.ErrorHelpBox);
-            new Icon(Styles.Contents.InfoIcon, Color.white, "<b>A Meta Quest AppID is required to use Shared Spatial Anchor.</b>").Draw();
+            base.ShowAdditionals();
+
+            var block = target as BuildingBlock;
+            if (block != null && !block.BlockId.Equals(BlockDataIds.SharedSpatialAnchorCore))
+                return;
+
+            DrawAppIdRequirementInfo("Shared Spatial Anchor", () =>
+            {
 #if USING_META_XR_PLATFORM_SDK
-            if (HasAppId())
-            {
-                var appId = "";
-#if UNITY_ANDROID
-                appId = PlatformSettings.MobileAppID;
-#else // UNITY_ANDROID
-                appId = PlatformSettings.AppID;
-#endif // UNITY_ANDROID
-                new Icon(Styles.Contents.SuccessIcon, Color.white, $"<b>AppID found in Platform Settings: {appId}</b>").Draw();
-            }
-            else
-            {
-                new Icon(Styles.Contents.ErrorIcon, Color.white, "<b>AppID is missing. Use <color=#66aaff>Meta Account Setup Guide</color> to configure your project.</b>").Draw();
-            }
-
-            EditorGUILayout.Space();
-            DrawButtons();
-#else // USING_META_XR_PLATFORM_SDK
-            new Icon(Styles.Contents.ErrorIcon, Color.white, "<b>Meta Platform SDK is missing.</b>").Draw();
-            EditorGUILayout.Space();
-
+                MetaAccountSetupGuide.ShowWindow(Origins.Component, true);
 #endif // USING_META_XR_PLATFORM_SDK
-            EditorGUILayout.EndVertical();
+            });
         }
-
-#if USING_META_XR_PLATFORM_SDK
-        private void DrawButtons()
-        {
-            EditorGUILayout.BeginVertical();
-            if (GUILayout.Button("Open Meta Account Setup Guide"))
-            {
-                MetaAccountSetupGuide.ShowWindow(Guides.Editor.Utils.TriggerSource.Inspector, true);
-            }
-
-            if (GUILayout.Button("Open Platform Settings"))
-            {
-                Selection.activeObject = PlatformSettings.Instance;
-            }
-            EditorGUILayout.EndVertical();
-        }
-
-        internal static bool HasAppId()
-        {
-#if UNITY_ANDROID
-            return !String.IsNullOrEmpty(PlatformSettings.MobileAppID);
-#else
-            return !String.IsNullOrEmpty(PlatformSettings.AppID);
-#endif
-        }
-#endif // USING_META_XR_PLATFORM_SDK
     }
 }

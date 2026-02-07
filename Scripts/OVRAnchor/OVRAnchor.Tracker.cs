@@ -277,7 +277,7 @@ partial struct OVRAnchor
                 var createResult = await CreateDynamicObjectTrackerAsync();
                 if (!createResult.Success)
                 {
-                    return OVRResult<ulong, Result>.FromFailure(createResult.Status);
+                    return createResult.Status;
                 }
 
                 tracker = createResult.Value;
@@ -364,6 +364,17 @@ partial struct OVRAnchor
         /// <returns>Returns an async task representing the state and eventual result of the operation.</returns>
         public async OVRTask<OVRResult<ConfigureTrackerResult>> ConfigureAsync(TrackerConfiguration configuration)
         {
+#if UNITY_EDITOR
+            unsafe
+            {
+                using (var classes = configuration.ToDynamicObjectClasses(Allocator.Temp))
+                {
+                    OVRTelemetry.Start((int)Telemetry.MarkerId.ConfigureTracker)
+                        .AddAnnotation(Telemetry.Annotation.DynamicObjectClasses, classes.AsReadOnlySpan())
+                        .Send();
+                }
+            }
+#endif
             using (await AsyncLock.AcquireAsync(this))
             using (new OVRObjectPool.TaskScope<Result>(out var tasks, out var results))
             {

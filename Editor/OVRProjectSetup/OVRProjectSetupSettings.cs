@@ -18,13 +18,35 @@
  * limitations under the License.
  */
 
-using UnityEngine;
-using UnityEditor;
 using System;
+using Meta.XR.Editor.Settings;
+using UnityEditor;
+using UnityEngine;
 
-[System.Serializable]
-public class OVRProjectSetupSettings : ScriptableObject
+[Serializable]
+internal class OVRProjectSetupSettings : ScriptableObject
 {
+    internal class SettingBool : CustomBool
+    {
+        public SettingBool()
+        {
+            Get = () => GetProjectConfig(create: false)?.GetProjectSetupBool(Key, Default) ??
+                        Default;
+            Set = value =>
+            {
+                if (value == Default)
+                {
+                    // If back to Default, we remove it from the dictionary to avoid clutter
+                    GetProjectConfig()?.RemoveProjectSetupBool(Key);
+                }
+                else
+                {
+                    GetProjectConfig()?.SetProjectSetupBool(Key, value);
+                }
+            };
+        }
+    }
+
     [Serializable]
     public class BoolProperties : SerializableDictionary<string, bool>
     {
@@ -40,8 +62,8 @@ public class OVRProjectSetupSettings : ScriptableObject
     [SerializeField] private BoolProperties boolProperties = new BoolProperties();
     [SerializeField] private IntProperties intProperties = new IntProperties();
 
-    private static OVRProjectSetupSettings _config = null;
-    private static string _configPath = null;
+    private static OVRProjectSetupSettings _config;
+    private static string _configPath;
 
     public bool HasBool(string key)
     {
@@ -118,7 +140,7 @@ public class OVRProjectSetupSettings : ScriptableObject
             _config = AssetDatabase.LoadAssetAtPath(oculusProjectConfigAssetPath,
                 typeof(OVRProjectSetupSettings)) as OVRProjectSetupSettings;
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
             Debug.LogWarningFormat("Unable to load ProjectSetupConfig from {0}, error {1}",
                 oculusProjectConfigAssetPath, e.Message);
@@ -127,7 +149,7 @@ public class OVRProjectSetupSettings : ScriptableObject
         if (_config == null && create && !BuildPipeline.isBuildingPlayer)
         {
             Debug.LogFormat("Creating ProjectSetupConfig at path {0}", oculusProjectConfigAssetPath);
-            _config = ScriptableObject.CreateInstance<OVRProjectSetupSettings>();
+            _config = CreateInstance<OVRProjectSetupSettings>();
             AssetDatabase.CreateAsset(_config, oculusProjectConfigAssetPath);
         }
 

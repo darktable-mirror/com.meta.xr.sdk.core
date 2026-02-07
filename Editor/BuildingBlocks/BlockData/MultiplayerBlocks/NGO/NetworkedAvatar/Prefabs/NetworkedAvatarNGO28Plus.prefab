@@ -244,7 +244,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5558648421194535000}
-  - component: {fileID: 3675125395654381548}
   - component: {fileID: 1116449312329087452}
   - component: {fileID: 5329109795635735458}
   m_Layer: 0
@@ -271,26 +270,6 @@ Transform:
   - {fileID: 4736108460995377815}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3675125395654381548
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6779533855362422273}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b023183069df224080314a560e6e1ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  blockId: b627f6cd-e738-4827-bfb1-7332719112b3
-  instanceId: 2b621343-2cb6-411c-b40d-e6c640686d3d
-  version: 1
-  installationRoutineCheckpoint:
-    _installationRoutineId: e7255571-f7d7-46a3-a005-558934863c26
-    _installationVariants:
-    - _memberName: installMatchmaking
-      _value: '{"value__":0}'
 --- !u!114 &1116449312329087452
 MonoBehaviour:
   m_ObjectHideFlags: 0

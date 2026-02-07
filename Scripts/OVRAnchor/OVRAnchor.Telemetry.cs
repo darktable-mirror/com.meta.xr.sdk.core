@@ -116,6 +116,8 @@ partial struct OVRAnchor
             SaveSpaceList = 163065048,
             // XR_FB_spatial_entity_storage
             EraseSingleSpace = 163062284,
+            // XR_META_dynamic_object_tracker
+            ConfigureTracker = 163068237,
         }
 
         internal static class Annotation
@@ -131,6 +133,7 @@ partial struct OVRAnchor
             public const string Timeout = "timeout";
             public const string MaxResults = "max_results";
             public const string GroupCount = "group_count";
+            public const string DynamicObjectClasses = "dynamic_object_classes";
         }
     }
 }

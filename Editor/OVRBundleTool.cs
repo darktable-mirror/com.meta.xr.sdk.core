@@ -538,7 +538,9 @@ public class OVRBundleTool : EditorWindow
         if (adbTool.isReady)
         {
             string matchedPackageList, error;
+#pragma warning disable CS0618 // Type or member is obsolete
             var transitionPackageName = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android);
+#pragma warning restore CS0618 // Type or member is obsolete
             if (useOptionalTransitionApkPackage)
             {
                 transitionPackageName += ".transition";

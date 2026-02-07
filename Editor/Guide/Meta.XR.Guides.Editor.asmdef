@@ -5,7 +5,10 @@
         "Oculus.VR",
         "Oculus.VR.Editor",
         "Oculus.Platform",
-        "Meta.XR.Editor.UserInterface"
+        "Meta.XR.Editor.UserInterface",
+        "Meta.XR.Editor.Settings",
+        "Meta.XR.Editor.Id",
+        "Meta.XR.Editor.ToolingSupport"
     ],
     "includePlatforms": [
         "Editor"

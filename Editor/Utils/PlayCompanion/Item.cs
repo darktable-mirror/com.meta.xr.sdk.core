@@ -42,6 +42,7 @@ namespace Meta.XR.Editor.PlayCompanion
         public Func<bool> ShouldBeSelected { get; set; }
         public Func<bool> ShouldBeUnselected { get; set; }
         public bool Show { get; set; }
+        public bool IsButton { get; set; } = false;
 
         public bool IsSelected => Manager.SelectedItem == this;
         public bool IsRegistered => Manager.RegisteredItems.Contains(this);

@@ -216,8 +216,10 @@ namespace Assets.Oculus.VR.Editor
                             if (string.IsNullOrEmpty(OVRPlatformToolSettings.DebugSymbolsDirectory))
                             {
                                 ScriptingImplementation scriptingBackend =
+#pragma warning disable CS0618 // Type or member is obsolete
                                     PlayerSettings.GetScriptingBackend(EditorUserBuildSettings
                                         .selectedBuildTargetGroup);
+#pragma warning restore CS0618 // Type or member is obsolete
                                 if (scriptingBackend == ScriptingImplementation.IL2CPP)
                                 {
                                     OVRPlatformToolSettings.DebugSymbolsDirectory = Path.Combine(Application.dataPath,

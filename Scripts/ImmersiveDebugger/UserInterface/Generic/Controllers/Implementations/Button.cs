@@ -64,6 +64,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         public override void OnPointerClick()
         {
             Callback?.Invoke();
+
+            Telemetry.OnButtonClicked(this);
         }
 
         protected override void OnHoverChanged()

@@ -190,6 +190,13 @@ namespace Meta.XR.ImmersiveDebugger.Utils
                 }
             }
 
+            if (memberInfo is PropertyInfo { CanRead: false })
+            {
+                // There is no way to use any of our managers (Actions, Gizmos, Watch, Tweak)
+                // if we cannot even read the property
+                return false;
+            }
+
             return true;
         }
 

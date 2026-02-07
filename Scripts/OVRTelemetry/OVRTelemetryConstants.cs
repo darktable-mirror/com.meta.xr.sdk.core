@@ -60,6 +60,7 @@ internal static class OVRTelemetryConstants
         public static class MarkerId
         {
             public const int Start = 163067235;
+            public const int Build = 163066733;
             public const int ComponentAdd = 163060094;
             public const int FeaturesInScene = 163069415;
         }
@@ -112,9 +113,6 @@ internal static class OVRTelemetryConstants
 
         public static class Origins
         {
-            public const string BlockGrid = "BlockGrid";
-            public const string BlockDetails = "BlockDetails";
-            public const string BlockInspector = "BlockInspector";
         }
     }
 
@@ -123,18 +121,13 @@ internal static class OVRTelemetryConstants
         [Markers]
         public static class MarkerId
         {
-            public const int OpenSSAWindow = 163069502;
-            public const int CloseSSAWindow = 163064312;
             public const int SetAppIdFromGuidedSetup = 163061548;
-            public const int URLOpen = 163066819;
         }
 
         public static class AnnotationType
         {
-            public const string ActionTrigger = "action_trigger";
             public const string HasAppId = "app_id_exist";
-            public const string GSTSource = "gst_source";
-            public const string URL = "url";
+            public const string HasNewVersionAvailable = "new_version_available";
         }
     }
 
@@ -153,6 +146,7 @@ internal static class OVRTelemetryConstants
             public const string IsActive = "active";
             public const string Action = "action";
             public const string XRSimEnabled = "xrsimenabled";
+            public const string EngineXRSimSession = "engine_xrsim_session";
         }
     }
 
@@ -177,6 +171,20 @@ internal static class OVRTelemetryConstants
             public const string RuntimePlatform = "RuntimePlatform";
             public const string Features = "Features";
             public const string EnabledSettings = "FeaturesSupportInSettings";
+        }
+    }
+
+    public static class Feedback
+    {
+        [Markers]
+        public static class MarkerId
+        {
+            public const int SubmitFeedback = 163059978;
+        }
+
+        public static class AnnotationType
+        {
+            public const string ToolName = "ToolName";
         }
     }
 
@@ -211,6 +219,28 @@ internal static class OVRTelemetryConstants
             public const string RenderThreadingMode = "render_threading_mode";
             public const string RenderingPath = "rendering_path";
             public const string XrPluginType = "xr_plugin_type";
+        }
+
+        public enum FoveatedRenderingMode
+        {
+            Unknown,
+            FixedFoveatedRendering,
+            EyeTrackedFoveatedRendering,
+        }
+
+        public enum FoveatedRenderingAPI
+        {
+            Unknown,
+            Legacy,
+            SRP
+        }
+
+        public enum DepthSubmissionMode
+        {
+            Unknown,
+            None,
+            Depth16Bit,
+            Depth24Bit,
         }
 
         public enum RenderThreadingMode

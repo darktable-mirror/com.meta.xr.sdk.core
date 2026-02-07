@@ -72,7 +72,9 @@ public class OVRBuildSettingsBuildProcessor : IPreprocessBuildWithReport
         string envIL2CPPArgs = Environment.GetEnvironmentVariable("IL2CPP_ADDITIONAL_ARGS");
 
         // Only add the flag when the enableIL2CPPLTo is checked and the build is Android, release and il2cpp
+#pragma warning disable CS0618 // Type or member is obsolete
         if (!projectConfig.enableIL2CPPLTO || EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android || EditorUserBuildSettings.androidBuildType != AndroidBuildType.Release || PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android) != UnityEditor.ScriptingImplementation.IL2CPP)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             string IL2CPPArgsRemoveLTO = RemoveLTOFlag(IL2CPPArgs);
             if (IL2CPPArgs != IL2CPPArgsRemoveLTO)

@@ -59,13 +59,13 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             }, 2);
             Register<string>((string value, ref string[] valuesContainer) =>
             {
-                valuesContainer[0] = (value.Length > MaxLetterCount) ? $"{value.Substring(0, MaxLetterCount)}..." : value;
+                valuesContainer[0] = value is { Length: > MaxLetterCount } ? $"{value[..MaxLetterCount]}..." : value;
             }, 1);
 
             RegisterTexture(typeof(Texture2D));
         }
 
-        public static Watch Create(MemberInfo memberInfo, object instance, DebugMember attribute)
+        public static Watch Create(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute)
         {
             var type = memberInfo.GetDataType();
             if (!Types.TryGetValue(type, out var createdType))
@@ -77,7 +77,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 #endif
             }
 
-            return Activator.CreateInstance(createdType, memberInfo, instance, attribute) as Watch;
+            return Activator.CreateInstance(createdType, memberInfo, instanceHandle, attribute) as Watch;
         }
 
         internal static string FormatFloat(float value)
@@ -116,7 +116,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public abstract string[] Values { get; }
         public abstract int NumberOfValues { get; }
 
-        protected Watch(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute) { }
+        protected Watch(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute) { }
     }
 
 #if !UNITY_2022_1_OR_NEWER
@@ -137,7 +137,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public override string[] Values => ToDisplayStrings();
         public override string Value => Values[0];
 
-        public WatchShared(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute) { }
+        public WatchShared(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute) { }
     }
 #endif
 
@@ -179,17 +179,17 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public override string[] Values => ToDisplayStrings(_getter.Invoke());
         public override string Value => Values[0];
 
-        public Watch(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute)
+        public Watch(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute)
         {
-            _getter = () => (T)memberInfo.GetValue(instance);
+            _getter = () => (T)memberInfo.GetValue(_instance);
         }
     }
 
     internal class WatchTexture : Watch
     {
-        public WatchTexture(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute)
+        public WatchTexture(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute)
         {
-            _getter = () => (Texture2D)memberInfo.GetValue(instance);
+            _getter = () => (Texture2D)memberInfo.GetValue(_instance);
         }
 
         private readonly Func<Texture2D> _getter;

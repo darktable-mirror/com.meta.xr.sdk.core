@@ -26,6 +26,7 @@ using Meta.XR.Editor.Callbacks;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Meta.XR.Editor.Settings;
 using UnityEditor.Callbacks;
 using UnityEngine;
 using Assembly = System.Reflection.Assembly;
@@ -66,6 +67,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
 
         internal static void OnCompilationEnded()
         {
+            ClearCompiledAssemblies();
             SaveCompiledAssemblies(CompiledAssemblies);
             CompiledAssemblies.Clear();
         }
@@ -95,15 +97,21 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                         m => m.GetCustomAttribute<DebugMember>() != null));
                 RuntimeSettings.UpdateTypes(assembly.GetName().Name, types.ToList().ConvertAll(type => type.FullName));
             }
-            ClearCompiledAssemblies();
         }
 
-        #region EditorPref persistence for Compiled Assemblies
+        #region Persistence for Compiled Assemblies
         // persist compiled assemblies across compilation and scripting reload
-        private const string CompiledAssembliesKey = "CompiledAssemblies";
+        private static readonly Setting<string> CompiledAssembliesStorage = new UserString()
+        {
+            Owner = Utils.ToolDescriptor,
+            Uid = "CompiledAssemblies",
+            SendTelemetry = false,
+            Default = string.Empty
+        };
+
         private static List<string> LoadCompiledAssemblies()
         {
-            var serializedList = EditorPrefs.GetString(CompiledAssembliesKey, string.Empty);
+            var serializedList = CompiledAssembliesStorage.Value;
             return string.IsNullOrEmpty(serializedList)
                 ? new List<string>()
                 : serializedList.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -112,14 +120,13 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         private static void SaveCompiledAssemblies(List<string> compiledAssemblies)
         {
             var serializedList = string.Join(";", compiledAssemblies);
-            EditorPrefs.SetString(CompiledAssembliesKey, serializedList);
+            CompiledAssembliesStorage.SetValue(serializedList);
         }
 
         private static void ClearCompiledAssemblies()
         {
-            EditorPrefs.DeleteKey(CompiledAssembliesKey);
+            CompiledAssembliesStorage.Reset();
         }
         #endregion
     }
 }
-

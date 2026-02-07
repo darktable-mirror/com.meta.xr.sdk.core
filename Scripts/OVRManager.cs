@@ -77,6 +77,10 @@ using UnityEngine.XR.Management;
 using UnityEngine.Rendering.Universal;
 #endif
 
+#if USING_XR_SDK_OCULUS
+using Unity.XR.Oculus;
+#endif
+
 using Settings = UnityEngine.XR.XRSettings;
 using Node = UnityEngine.XR.XRNode;
 
@@ -227,6 +231,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         ConformingToController,
         Natural,
     }
+
 
     public interface EventListener
     {
@@ -415,7 +420,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// @params (OVRPlugin.BoundaryVisibility newBoundaryVisibility)
     /// </remarks>
     public static event Action<OVRPlugin.BoundaryVisibility> BoundaryVisibilityChanged;
-
 
 
     /// <summary>
@@ -1687,9 +1691,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     static private SystemHeadsetTheme GetSystemHeadsetTheme()
     {
-#if UNITY_ANDROID
         if (!_isSystemHeadsetThemeCached)
         {
+#if UNITY_ANDROID
             const int UI_MODE_NIGHT_MASK = 0x30;
             const int UI_MODE_NIGHT_NO = 0x10;
             AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
@@ -1699,9 +1703,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             int uiMode = currentConfiguration.Get<int>("uiMode");
             int currentUIMode = uiMode & UI_MODE_NIGHT_MASK;
             _cachedSystemHeadsetTheme = currentUIMode == UI_MODE_NIGHT_NO ? SystemHeadsetTheme.Light : SystemHeadsetTheme.Dark;
+#endif // UNITY_ANDROID
             _isSystemHeadsetThemeCached = true;
         }
-#endif // UNITY_ANDROID
         return _cachedSystemHeadsetTheme;
     }
 
@@ -1767,13 +1771,16 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         Camera mainCamera = FindMainCamera();
         if (enabled)
         {
-            PrepareCameraForSpaceWarp(mainCamera);
-            m_lastSpaceWarpCamera = new WeakReference<Camera>(mainCamera);
+            if (mainCamera != null)
+            {
+                PrepareCameraForSpaceWarp(mainCamera);
+                m_lastSpaceWarpCamera = new WeakReference<Camera>(mainCamera);
+            }
         }
         else
         {
             Camera lastSpaceWarpCamera;
-            if (mainCamera != null && m_lastSpaceWarpCamera.TryGetTarget(out lastSpaceWarpCamera) && lastSpaceWarpCamera == mainCamera)
+            if (mainCamera != null && m_lastSpaceWarpCamera != null && m_lastSpaceWarpCamera.TryGetTarget(out lastSpaceWarpCamera) && lastSpaceWarpCamera == mainCamera)
             {
                 // Restore the depth texture mode only if we're disabling space warp on the same camera we enabled it on.
                 mainCamera.depthTextureMode = m_CachedDepthTextureMode;
@@ -1863,24 +1870,43 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                 {
                     mode = TrackingOriginModeFlags.Device;
                 }
+#if UNITY_OPENXR_1_9_0
+                else if (newOrigin == OVRPlugin.TrackingOrigin.FloorLevel)
+                {
+                    // Unity OpenXR Plugin defines Floor as Floor with Recentering on
+                    mode = TrackingOriginModeFlags.Floor;
+                    OpenXRSettings.SetAllowRecentering(true);
+                }
+                else if (newOrigin == OVRPlugin.TrackingOrigin.Stage)
+                {
+                    // Unity OpenXR Plugin defines Stage as Floor with Recentering off
+                    mode = TrackingOriginModeFlags.Floor;
+                    OpenXRSettings.SetAllowRecentering(false);
+                }
+#else
                 else if (newOrigin == OVRPlugin.TrackingOrigin.FloorLevel || newOrigin == OVRPlugin.TrackingOrigin.Stage)
                 {
                     mode = TrackingOriginModeFlags.Floor; // Stage in OpenXR
                 }
-                else
+#endif
+
+                // if the tracking origin mode is unsupported in OpenXR, we set the origin via OVRPlugin
+                if (mode != TrackingOriginModeFlags.Unknown)
                 {
-                    Debug.LogError("Unable to map TrackingOrigin {0} in Unity OpenXR");
+                    bool success = GetCurrentInputSubsystem().TrySetTrackingOriginMode(mode);
+                    if (!success)
+                    {
+                        Debug.LogError($"Unable to set TrackingOrigin {mode} to Unity Input Subsystem");
+                    }
+                    else
+                    {
+                        _trackingOriginType = value;
+#if UNITY_OPENXR_1_9_0
+                        OpenXRSettings.RefreshRecenterSpace();
+#endif
+                    }
+                    return;
                 }
-                bool success = GetCurrentInputSubsystem().TrySetTrackingOriginMode(mode);
-                if (!success)
-                {
-                    Debug.LogError("Unable to set TrackingOrigin {0} to Unity Input Subsystem");
-                }
-                else
-                {
-                    _trackingOriginType = value;
-                }
-                return;
             }
 #endif
 
@@ -2341,13 +2367,10 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         OVRPlugin.occlusionMesh = true;
 #endif
 
-        if (launchSimultaneousHandsControllersOnStartup)
+        // Inform the plugin of multimodal mode
+        if (!OVRPlugin.SetSimultaneousHandsAndControllersEnabled(launchSimultaneousHandsControllersOnStartup))
         {
-            // Inform the plugin that multimodal mode is enabled
-            if (!OVRPlugin.SetSimultaneousHandsAndControllersEnabled(true))
-            {
-                Debug.Log("Failed to set multimodal hands and controllers mode!");
-            }
+            Debug.Log("Failed to set multimodal hands and controllers mode!");
         }
 
         if (isInsightPassthroughEnabled)
@@ -2408,6 +2431,36 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             OVRPlugin.SetHandSkeletonVersion(runtimeSettings.HandSkeletonVersion);
         }
         Debug.Log($"[OVRManager] Current hand skeleton version is {OVRPlugin.HandSkeletonVersion}");
+
+#if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
+        var openXrSettings = OpenXRSettings.Instance;
+        if (openXrSettings != null)
+        {
+            var subsampledFeature = openXrSettings.GetFeature<MetaXRSubsampledLayout>();
+            var spaceWarpFeature = openXrSettings.GetFeature<MetaXRSpaceWarp>();
+
+            bool subsampledOn = false;
+            if (subsampledFeature != null)
+                subsampledOn = subsampledFeature.enabled;
+
+            bool spaceWarpOn = false;
+            if (spaceWarpFeature != null)
+                spaceWarpOn = spaceWarpFeature.enabled;
+
+            Debug.Log(string.Format("OpenXR Meta Quest Runtime Settings:\nDepth Submission Mode - {0}\nRendering Mode - {1}\nOptimize Buffer Discards - {2}\nSymmetric Projection - {3}\nSubsampled Layout - {4}\nSpace Warp - {5}",
+                    openXrSettings.depthSubmissionMode, openXrSettings.renderMode, openXrSettings.optimizeBufferDiscards, openXrSettings.symmetricProjection, subsampledOn, spaceWarpOn));
+        }
+#endif
+#if OCULUS_XR_PLUGIN_4_3_0_OR_NEWER
+        var oculusLoader = XRGeneralSettings.Instance.Manager.activeLoader as OculusLoader;
+        if (oculusLoader != null)
+        {
+            var oculusSettings = oculusLoader.GetSettings();
+            Debug.Log(string.Format("Oculus XR Runtime Settings:\nDepth Submission - {0}\nFoveated Rendering Method - {1}\nOptimize Buffer Discards - {2}\nSymmetric Projection - {3}\nSubsampled Layout - {4}\nSpace Warp - {5}\nLate Latching - {6}\nLow Overhead Mode - {7}",
+                    oculusSettings.DepthSubmission, oculusSettings.FoveatedRenderingMethod, oculusSettings.OptimizeBufferDiscards, oculusSettings.SymmetricProjection, oculusSettings.SubsampledLayout, oculusSettings.SpaceWarp, oculusSettings.LateLatching, oculusSettings.LowOverheadMode));
+        }
+#endif
+
 
         OVRManagerinitialized = true;
     }
@@ -2506,7 +2559,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     {
         if (s_displaySubsystems == null)
             s_displaySubsystems = new List<XRDisplaySubsystem>();
-        SubsystemManager.GetInstances(s_displaySubsystems);
+        SubsystemManager.GetSubsystems(s_displaySubsystems);
         if (s_displaySubsystems.Count > 0)
             return s_displaySubsystems[0];
         return null;
@@ -2529,7 +2582,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     {
         if (s_inputSubsystems == null)
             s_inputSubsystems = new List<XRInputSubsystem>();
-        SubsystemManager.GetInstances(s_inputSubsystems);
+        SubsystemManager.GetSubsystems(s_inputSubsystems);
         if (s_inputSubsystems.Count > 0)
             return s_inputSubsystems[0];
         return null;
@@ -3350,8 +3403,11 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
             if (currentMainCamera != null)
             {
-                Camera lastSpaceWarpCamera;
-                m_lastSpaceWarpCamera.TryGetTarget(out lastSpaceWarpCamera);
+                Camera lastSpaceWarpCamera = null;
+                if (m_lastSpaceWarpCamera != null)
+                {
+                    m_lastSpaceWarpCamera.TryGetTarget(out lastSpaceWarpCamera);
+                }
                 if (currentMainCamera != lastSpaceWarpCamera)
                 {
                     Debug.Log("Main camera changed. Updating new camera for space warp.");

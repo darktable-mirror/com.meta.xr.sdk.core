@@ -79,7 +79,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public const string ControllerTeleporter = "3503368f-ae74-4ba8-a0c1-cf904f4bf5b6";
         public const string PlatformInit = "40089589-8290-4ae3-a056-d9ca1ccaa35a";
-        public const string IPlatformSocial = "a29fd151-3fe0-46e4-8ae6-c899e8b9be35";
+        public const string IFriendsMatchmaking = "a29fd151-3fe0-46e4-8ae6-c899e8b9be35";
+        public const string LocalMatchmaking = "9141594f-eab4-43f9-b05e-17f2f40db586";
 
         public const string PlayerVoiceChat = "5523ee0f-69d0-4e9f-b4b3-1ca61874f631";
         public const string PlayerVoiceChatFusionInstallationRoutine = "ca29a203-ad6d-4c65-ae37-ffab1dc8a165";

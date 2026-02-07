@@ -744,6 +744,10 @@ public class OVRVirtualKeyboard : MonoBehaviour
 
     void OnDestroy()
     {
+        if (!OVRPlugin.initialized)
+        {
+            return;
+        }
         CommitTextEvent.RemoveListener(OnCommitText);
         BackspaceEvent.RemoveListener(OnBackspace);
         EnterEvent.RemoveListener(OnEnter);
@@ -780,6 +784,10 @@ public class OVRVirtualKeyboard : MonoBehaviour
 
     void OnDisable()
     {
+        if (!OVRPlugin.initialized)
+        {
+            return;
+        }
         HideKeyboard();
     }
 
@@ -1218,6 +1226,10 @@ public class OVRVirtualKeyboard : MonoBehaviour
 
     void Update()
     {
+        if (!OVRPlugin.initialized)
+        {
+            return;
+        }
         if (modelAvailable_)
         {
             UpdateInputs();
@@ -1547,7 +1559,7 @@ public class OVRVirtualKeyboard : MonoBehaviour
     [ContextMenu("Autofill Input Roots")]
     public void AutoPopulate()
     {
-        OVRCameraRig camRig = GameObject.FindObjectOfType<OVRCameraRig>();
+        OVRCameraRig camRig = FindAnyObjectByType<OVRCameraRig>();
         if (camRig == null)
         {
             Debug.LogWarning("Couldn't auto fill input transforms as we didn't have an OVRCameraRig.");

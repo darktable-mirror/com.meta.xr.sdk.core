@@ -32,6 +32,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     public class Icon : Controller
     {
         private RawImage _image;
+        internal RawImage RawImage => _image;
 
         /// <summary>
         /// The texture used by the image of the icon
@@ -51,11 +52,20 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             set => _image.color = value;
         }
 
+        /// <summary>
+        /// Sets the Raycast Target property of the instantiated <see cref="RawImage"/>
+        /// </summary>
+        public bool RaycastTarget
+        {
+            set => _image.raycastTarget = value;
+        }
+
         protected override void Setup(Controller owner)
         {
             base.Setup(owner);
             _image = GameObject.AddComponent<RawImage>();
+
+            RaycastTarget = false;
         }
     }
 }
-

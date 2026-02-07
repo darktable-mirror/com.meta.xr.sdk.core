@@ -18,145 +18,330 @@
  * limitations under the License.
  */
 
-
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.ToolingSupport;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
+using Meta.XR.Editor.Settings;
 using static Meta.XR.Editor.UserInterface.Styles;
-using static Meta.XR.Editor.UserInterface.Styles.Contents;
 using static Meta.XR.Editor.UserInterface.Utils;
-using static Meta.XR.Editor.UserInterface.Utils.ColorScope;
 
 namespace Meta.XR.ImmersiveDebugger.Editor
 {
-    internal class Settings : SettingsProvider
+    internal static class Settings
     {
-        public const string SettingsName = Utils.PublicName;
-        public static string SettingsPath => $"{OVRProjectSetupSettingsProvider.SettingsPath}/{SettingsName}";
-
-        public static readonly string Description =
-            "Displays the console and track Game Objects, MonoBehaviors and their members in real time within your headset." +
-            "\n\nYou can track your components' members by using either of the following methods: " +
-            $"\n• <i>In code:</i> Add the <b>{nameof(DebugMember)}</b> attribute to any member you want to track" +
-            $"\n• <i>In scene:</i> Add and configure the <b>{nameof(DebugInspector)}</b> component to any GameObject you want to track";
-
         private const string PanelLayerName = "Panel Layer";
         private const string MeshLayerName = "Mesh Layer";
 
         private static readonly GUIContent LayersDescription = new GUIContent(
-            $"<b>{SettingsName}</b> requires two layers :" +
+            $"<b>{Utils.ToolDescriptor.Name}</b> requires two layers :" +
             $"\n- <b>{PanelLayerName}</b> : Used to handle and renders the canvas into a Render Target." +
             $"\n- <b>{MeshLayerName}</b> : Used to render the mesh used for the overlay, will be passed to the Overlay Renderer." +
             "\nAt runtime in headset, those layers are only used as temporary rendering layers before <b>OVROverlayCanvas</b> renders the interface. Both layers should be culled by the cameras, because the rendering will occur on an overlay pass." +
             "\nAt runtime in editor, both layers need to be rendered by the main camera since there won't be any overlay pass." +
             "\n\nWe recommend to assign two layers that are not used by the project itself, and set <i>Automatically Update Culling Mask</i> on");
 
-        private static Item.Origins? _lastOrigin = null;
-        private bool _activated;
-
-        private Settings(string path, SettingsScope scopes, IEnumerable<string> keywords = null)
-            : base(path, scopes, keywords)
+        private static readonly Setting Enabled = new CustomBool()
         {
-        }
-
-        [SettingsProvider]
-        public static SettingsProvider Create()
-        {
-            return new Settings(SettingsPath, SettingsScope.Project);
-        }
-
-        public override void OnTitleBarGUI()
-        {
-            Utils.Item.DrawHeaderFromSettingProvider();
-        }
-
-        private static readonly string InternalNotice =
-            $"[Experimental] <b>{Utils.PublicName}</b> is currently an experimental feature.";
-
-        private void ShowExperimentalNotice()
-        {
-            EditorGUILayout.BeginHorizontal(GUIStyles.ExperimentalNoticeBox);
-            using (new ColorScope(Scope.Content, Colors.DarkGray))
+            Uid = nameof(Enabled),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ImmersiveDebuggerEnabled,
+            Set = (val) =>
             {
-                EditorGUILayout.LabelField(ExperimentalIcon, GUIStyles.NoticeIconStyle,
-                    GUILayout.Width(GUIStyles.NoticeIconStyle.fixedWidth));
-            }
+                if (val)
+                {
+                    UsageSettings.UsesImmersiveDebugger.SetValue(true);
+                }
+                RuntimeSettings.Instance.ImmersiveDebuggerEnabled = val;
+            },
+            Label = "Enable",
+            Tooltip = "Enable Immersive Debugger panels in runtime and allow collecting scripting attributes in Editor.",
+            SendTelemetry = true
+        };
 
-            EditorGUILayout.LabelField(InternalNotice, GUIStyles.ExperimentalNoticeTextStyle);
-            EditorGUILayout.EndHorizontal();
+        private static readonly Setting DisplayAtStartup = new CustomBool()
+        {
+            Uid = nameof(DisplayAtStartup),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ImmersiveDebuggerDisplayAtStartup,
+            Set = (val) => RuntimeSettings.Instance.ImmersiveDebuggerDisplayAtStartup = val,
+            Label = "Display at Start-up",
+            Tooltip = "Display Immersive Debugger panel when the application starts.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting FollowOverride = new CustomBool()
+        {
+            Uid = nameof(FollowOverride),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.FollowOverride,
+            Set = (val) => RuntimeSettings.Instance.FollowOverride = val,
+            Label = "Follow Camera Rig Translation",
+            Tooltip = "Whether or not the Immersive Debugger panel follows the player by default."
+        };
+
+        private static readonly Setting RotateOverride = new CustomBool()
+        {
+            Uid = nameof(RotateOverride),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.RotateOverride,
+            Set = (val) => RuntimeSettings.Instance.RotateOverride = val,
+            Label = "Follow Camera Rig Rotation",
+            Tooltip = "Whether or not the Immersive Debugger panel rotates with the player by default."
+        };
+
+        private static readonly Setting ShowInspectors = new CustomBool()
+        {
+            Uid = nameof(ShowInspectors),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ShowInspectors,
+            Set = (val) => RuntimeSettings.Instance.ShowInspectors = val,
+            Label = "Show Inspectors",
+            Tooltip = "Display Inspectors panel by default.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting ShowConsole = new CustomBool()
+        {
+            Uid = nameof(ShowConsole),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ShowConsole,
+            Set = (val) => RuntimeSettings.Instance.ShowConsole = val,
+            Label = "Show Console",
+            Tooltip = "Display Console by default.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting ShowInfoLog = new CustomBool()
+        {
+            Uid = nameof(ShowInfoLog),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ShowInfoLog,
+            Set = (val) => RuntimeSettings.Instance.ShowInfoLog = val,
+            Label = "Show Info Logs in Console",
+            Tooltip = "Show Info Logs in Console by default."
+        };
+
+        private static readonly Setting ShowWarningLog = new CustomBool()
+        {
+            Uid = nameof(ShowWarningLog),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ShowWarningLog,
+            Set = (val) => RuntimeSettings.Instance.ShowWarningLog = val,
+            Label = "Show Error Logs in Console",
+            Tooltip = "Show Warning Logs in Console by default."
+        };
+
+        private static readonly Setting ShowErrorLog = new CustomBool()
+        {
+            Uid = nameof(ShowErrorLog),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ShowErrorLog,
+            Set = (val) => RuntimeSettings.Instance.ShowErrorLog = val,
+            Label = "Show Warning Logs in Console",
+            Tooltip = "Show Error Logs in Console by default."
+        };
+
+        private static readonly Setting CollapsedIdenticalLogEntries = new CustomBool()
+        {
+            Uid = nameof(CollapsedIdenticalLogEntries),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.CollapsedIdenticalLogEntries,
+            Set = (val) => RuntimeSettings.Instance.CollapsedIdenticalLogEntries = val,
+            Label = "Collapse Identical Log Entries"
+        };
+
+        private static readonly Setting AutomaticLayerCullingUpdate = new CustomBool()
+        {
+            Uid = nameof(AutomaticLayerCullingUpdate),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.AutomaticLayerCullingUpdate,
+            Set = (val) => RuntimeSettings.Instance.AutomaticLayerCullingUpdate = val,
+            Label = "Automatically Update Culling Mask",
+            Tooltip = "The culling mask of the camera used by the Immersive Debugger is automatically updated to properly cull on/off the two layers."
+        };
+
+        private static readonly Setting CreateEventSystem = new CustomBool()
+        {
+            Uid = nameof(CreateEventSystem),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.CreateEventSystem,
+            Set = (val) => RuntimeSettings.Instance.CreateEventSystem = val,
+            Label = "Create Event System",
+            Tooltip = "As the Immersive Debugger requires an EventSystem, it can be automatically created if none was found.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting UseCustomIntegrationConfig = new CustomBool()
+        {
+            Uid = nameof(UseCustomIntegrationConfig),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.UseCustomIntegrationConfig,
+            Set = (val) => RuntimeSettings.Instance.UseCustomIntegrationConfig = val,
+            Label = "Use Custom Integration Config",
+            Tooltip = "Supply an implementation of CustomIntegrationConfigBase to define how Immersive Debugger works with the project.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting MaximumNumberOfLogEntries = new CustomInt()
+        {
+            Uid = nameof(MaximumNumberOfLogEntries),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.MaximumNumberOfLogEntries,
+            Set = (val) => RuntimeSettings.Instance.MaximumNumberOfLogEntries = val,
+            Label = "Maximum Number of Log Entries",
+            Tooltip = "Limits the number of Log Entries on the console."
+        };
+
+        private static readonly Setting ClickButton = new CustomFlags<OVRInput.Button>()
+        {
+            Uid = nameof(ClickButton),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ClickButton,
+            Set = (val) => RuntimeSettings.Instance.ClickButton = val,
+            Label = "Click Button",
+            Tooltip = "Customize the input button to interact with the Immersive Debugger panels in runtime.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting ImmersiveDebuggerToggleDisplayButton = new CustomFlags<OVRInput.Button>()
+        {
+            Uid = nameof(ImmersiveDebuggerToggleDisplayButton),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ImmersiveDebuggerToggleDisplayButton,
+            Set = (val) => RuntimeSettings.Instance.ImmersiveDebuggerToggleDisplayButton = val,
+            Label = "Toggle Display Input Button",
+            Tooltip = "Customize the input button to show/hide the Immersive Debugger panel in runtime.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting ToggleFollowTranslationButton = new CustomFlags<OVRInput.Button>()
+        {
+            Uid = nameof(ToggleFollowTranslationButton),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ToggleFollowTranslationButton,
+            Set = (val) => RuntimeSettings.Instance.ToggleFollowTranslationButton = val,
+            Label = "Toggle Follow Translation Button",
+            Tooltip = "Customize the input button to automatically follow the Camera Rig translation in runtime.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting ToggleFollowRotationButton = new CustomFlags<OVRInput.Button>()
+        {
+            Uid = nameof(ToggleFollowRotationButton),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.ToggleFollowRotationButton,
+            Set = (val) => RuntimeSettings.Instance.ToggleFollowRotationButton = val,
+            Label = "Toggle Follow Rotation Button",
+            Tooltip = "Customize the input button to automatically follow the Camera Rig rotation in runtime.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting PanelDistance = new CustomEnum<RuntimeSettings.DistanceOption>()
+        {
+            Uid = nameof(PanelDistance),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.PanelDistance,
+            Set = (val) => RuntimeSettings.Instance.PanelDistance = val,
+            Label = "Panel Distance",
+            Tooltip = "Set default panel distance from VR camera on startup.",
+            SendTelemetry = true
+        };
+
+        private static readonly Setting OverlayDepth = new CustomInt()
+        {
+            Uid = nameof(OverlayDepth),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.OverlayDepth,
+            Set = (val) => RuntimeSettings.Instance.OverlayDepth = val,
+            Label = "Overlay Depth",
+            Tooltip = "Set a depth for the overlay canvas where Immersive Debugger panel is drawn in runtime.",
+            SendTelemetry = false,
+        };
+
+        private static readonly Setting PanelLayer = new CustomLayer()
+        {
+            Uid = nameof(PanelLayer),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.PanelLayer,
+            Set = (val) => RuntimeSettings.Instance.PanelLayer = val,
+            Label = PanelLayerName,
+            Tooltip = "Set a layer for Immersive Debugger panels / objects in runtime.",
+            SendTelemetry = false
+        };
+
+        private static readonly Setting MeshRendererLayer = new CustomLayer()
+        {
+            Uid = nameof(MeshRendererLayer),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.MeshRendererLayer,
+            Set = (val) => RuntimeSettings.Instance.MeshRendererLayer = val,
+            Label = MeshLayerName,
+            Tooltip = "Set a different layer for Immersive Debugger mesh renderer in runtime.",
+            SendTelemetry = false
+        };
+
+        private static readonly Setting CustomIntegrationConfigClassName = new CustomObject<MonoScript>()
+        {
+            Uid = nameof(CustomIntegrationConfigClassName),
+            Owner = Utils.ToolDescriptor,
+            Get = () => FindMonoScriptByTypeName(RuntimeSettings.Instance.CustomIntegrationConfigClassName),
+            Set = (val) => RuntimeSettings.Instance.CustomIntegrationConfigClassName =
+                (val as MonoScript)?.GetClass()?.AssemblyQualifiedName,
+            Label = "Custom Integration Config",
+            SendTelemetry = false
+        };
+
+        private static readonly Setting HierarchyViewShowsPrivateMembers = new CustomBool()
+        {
+            Uid = nameof(HierarchyViewShowsPrivateMembers),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.HierarchyViewShowsPrivateMembers,
+            Set = (val) => RuntimeSettings.Instance.HierarchyViewShowsPrivateMembers = val,
+            Label = "Inspect Private Members",
+            Tooltip = "Whether or not the private members will be filtered out when using the hierarchy view",
+            SendTelemetry = true
+        };
+
+        private static void Draw(this Setting setting, Origins origin)
+        {
+            setting.DrawForGUI(origin, Utils.ToolDescriptor, SetDirty);
         }
 
-        public override void OnGUI(string searchContext)
+        private static void SetDirty()
         {
-            ShowExperimentalNotice();
+            EditorUtility.SetDirty(RuntimeSettings.Instance);
+        }
 
-            EditorGUILayout.BeginHorizontal(GUIStyles.DialogBox);
-            EditorGUILayout.LabelField(DialogIcon, GUIStyles.DialogIconStyle,
-                GUILayout.Width(GUIStyles.DialogIconStyle.fixedWidth));
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.LabelField(Description, GUIStyles.DialogTextStyle);
-            EditorGUILayout.EndVertical();
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Space();
-
-            EditorGUI.indentLevel++;
-
-            var previousLabelWidth = EditorGUIUtility.labelWidth;
-            EditorGUIUtility.labelWidth = Styles.Constants.LabelWidth;
-
-            DrawToggle(() => RuntimeSettings.Instance.ImmersiveDebuggerEnabled,
-                (val) => RuntimeSettings.Instance.ImmersiveDebuggerEnabled = val,
-                new GUIContent("Enable",
-                    "Enable Immersive Debugger panels in runtime and allow collecting scripting attributes in Editor"));
+        public static void OnGUI(Origins origin, string searchContext)
+        {
+            Enabled.Draw(origin);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Behavior", GUIStyles.BoldLabel);
-            DrawToggle(() => RuntimeSettings.Instance.ImmersiveDebuggerDisplayAtStartup,
-                (val) => RuntimeSettings.Instance.ImmersiveDebuggerDisplayAtStartup = val,
-                new GUIContent("Display at Start-up", "Display Immersive Debugger panel when the application starts"));
-            DrawPopup(() => RuntimeSettings.Instance.ImmersiveDebuggerToggleDisplayButton,
-                (val) => RuntimeSettings.Instance.ImmersiveDebuggerToggleDisplayButton = val,
-                new GUIContent("Toggle Display Input Button",
-                    "Customize the input button to show/hide the Immersive Debugger panel in runtime"));
-            DrawToggle(() => RuntimeSettings.Instance.FollowOverride,
-                (val) => RuntimeSettings.Instance.FollowOverride = val,
-                new GUIContent("Follow Camera Rig Translation",
-                    "Whether or not the Immersive Debugger panel follows the player by default"));
-            DrawToggle(() => RuntimeSettings.Instance.RotateOverride,
-                (val) => RuntimeSettings.Instance.RotateOverride = val,
-                new GUIContent("Follow Camera Rig Rotation",
-                    "Whether or not the Immersive Debugger panel rotates with the player by default"));
-            DrawPopup(() => RuntimeSettings.Instance.PanelDistance, val => RuntimeSettings.Instance.PanelDistance = val,
-                new GUIContent("Panel Distance", "Set default panel distance from VR camera on startup."));
+            DisplayAtStartup.Draw(origin);
+            FollowOverride.Draw(origin);
+            RotateOverride.Draw(origin);
+            PanelDistance.Draw(origin);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Default Toggles", GUIStyles.BoldLabel);
-            DrawToggle(() => RuntimeSettings.Instance.ShowInspectors,
-                (val) => RuntimeSettings.Instance.ShowInspectors = val,
-                new GUIContent("Show Inspectors", "Display Inspectors panel by default"));
-            DrawToggle(() => RuntimeSettings.Instance.ShowConsole,
-                (val) => RuntimeSettings.Instance.ShowConsole = val,
-                new GUIContent("Show Console", "Display Console by default"));
-            DrawToggle(() => RuntimeSettings.Instance.ShowInfoLog,
-                (val) => RuntimeSettings.Instance.ShowInfoLog = val,
-                new GUIContent("Show Info Logs in Console", "Show Info Logs in Console by default"));
-            DrawToggle(() => RuntimeSettings.Instance.ShowWarningLog,
-                (val) => RuntimeSettings.Instance.ShowWarningLog = val,
-                new GUIContent("Show Warning Logs in Console", "Show Warning Logs in Console by default"));
-            DrawToggle(() => RuntimeSettings.Instance.ShowErrorLog,
-                (val) => RuntimeSettings.Instance.ShowErrorLog = val,
-                new GUIContent("Show Error Logs in Console", "Show Error Logs in Console by default"));
-            DrawToggle(() => RuntimeSettings.Instance.CollapsedIdenticalLogEntries,
-                val => RuntimeSettings.Instance.CollapsedIdenticalLogEntries = val,
-                new GUIContent("Collapse Identical Log Entries"));
-            DrawIntField(() => RuntimeSettings.Instance.MaximumNumberOfLogEntries,
-                (val) => RuntimeSettings.Instance.MaximumNumberOfLogEntries = val,
-                new GUIContent("Maximum number of Log Entries", "Limits the number of Log Entries on the console"));
+            ShowInspectors.Draw(origin);
+            ShowConsole.Draw(origin);
+            ShowInfoLog.Draw(origin);
+            ShowWarningLog.Draw(origin);
+            ShowErrorLog.Draw(origin);
+            CollapsedIdenticalLogEntries.Draw(origin);
+            MaximumNumberOfLogEntries.Draw(origin);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Input Bindings", GUIStyles.BoldLabel);
+            ClickButton.Draw(origin);
+            ImmersiveDebuggerToggleDisplayButton.Draw(origin);
+            ToggleFollowTranslationButton.Draw(origin);
+            ToggleFollowRotationButton.Draw(origin);
 
             var dataAssets = RuntimeSettings.Instance.InspectedDataAssets;
             if (dataAssets.Count != 0)
@@ -166,11 +351,20 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                     new GUIContent("Inspected Data Sets", "A list of prebuilt dataset of inspected members of InspectedData scriptable object"),
                     GUIStyles.BoldLabel);
                 var dataToggle = RuntimeSettings.Instance.InspectedDataEnabled;
-                for (int i = 0; i < dataAssets.Count; i++)
+                for (var i = 0; i < dataAssets.Count; i++)
                 {
                     EditorGUILayout.BeginHorizontal();
-                    DrawToggle(() => dataToggle[i], val => dataToggle[i] = val,
-                        new GUIContent(dataAssets[i].DisplayName));
+
+                    var index = i;
+                    new CustomBool()
+                    {
+                        Uid = dataAssets[i].DisplayName,
+                        Owner = Utils.ToolDescriptor,
+                        Get = () => dataToggle[index],
+                        Set = val => dataToggle[index] = val,
+                        Label = dataAssets[i].DisplayName
+                    }.DrawForGUI(origin, Utils.ToolDescriptor);
+
                     EditorGUI.BeginDisabledGroup(true);
                     EditorGUILayout.ObjectField(dataAssets[i], typeof(InspectedData), false, GUILayout.ExpandWidth(true));
                     EditorGUI.EndDisabledGroup();
@@ -179,6 +373,27 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             }
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Advanced", GUIStyles.BoldLabel);
+            if (Foldout("Hierarchy View", "Hierarchy View"))
+            {
+                using (new IndentScope(EditorGUI.indentLevel + 1))
+                {
+                    HierarchyViewShowsPrivateMembers.Draw(origin);
+                }
+            }
+
+            if (Foldout("Integration", "Integration"))
+            {
+                using (new IndentScope(EditorGUI.indentLevel + 1))
+                {
+                    CreateEventSystem.Draw(origin);
+                    UseCustomIntegrationConfig.Draw(origin);
+
+                    EditorGUI.BeginDisabledGroup(!RuntimeSettings.Instance.UseCustomIntegrationConfig);
+                    CustomIntegrationConfigClassName.Draw(origin);
+                    EditorGUI.EndDisabledGroup();
+                }
+            }
+
             if (Foldout("Rendering", "Rendering"))
             {
                 using (new IndentScope(EditorGUI.indentLevel + 1))
@@ -193,147 +408,15 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                     EditorGUILayout.LabelField(LayersDescription, GUIStyles.DialogTextStyle);
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
-
-                    DrawLayerField(() => RuntimeSettings.Instance.PanelLayer,
-                        val => RuntimeSettings.Instance.PanelLayer = val,
-                        new GUIContent(PanelLayerName, "Set a layer for Immersive Debugger panels / objects in runtime"),
-                        sendTelemetry: false);
-                    DrawLayerField(() => RuntimeSettings.Instance.MeshRendererLayer,
-                        val => RuntimeSettings.Instance.MeshRendererLayer = val,
-                        new GUIContent(MeshLayerName, "Set a different layer for Immersive Debugger mesh renderer in runtime"),
-                        sendTelemetry: false);
-                    DrawToggle(() => RuntimeSettings.Instance.AutomaticLayerCullingUpdate,
-                        (val) => RuntimeSettings.Instance.AutomaticLayerCullingUpdate = val,
-                        new GUIContent("Automatically Update Culling Mask",
-                            "The culling mask of the camera used by the Immersive Debugger is automatically updated to properly cull on/off the two layers."));
-                    DrawTextField(() => RuntimeSettings.Instance.OverlayDepth.ToString(),
-                        val => RuntimeSettings.Instance.OverlayDepth = int.Parse(val),
-                        new GUIContent("Overlay Depth",
-                            "Set a depth for the overlay canvas where Immersive Debugger panel is drawn in runtime"),
-                        sendTelemetry: false);
+                    PanelLayer.Draw(origin);
+                    MeshRendererLayer.Draw(origin);
+                    AutomaticLayerCullingUpdate.Draw(origin);
+                    OverlayDepth.Draw(origin);
                 }
             }
-
-            if (Foldout("Integration", "Integration"))
-            {
-                using (new IndentScope(EditorGUI.indentLevel + 1))
-                {
-                    DrawToggle(() => RuntimeSettings.Instance.CreateEventSystem,
-                        (val) => RuntimeSettings.Instance.CreateEventSystem = val,
-                        new GUIContent("Create Event System",
-                            "As the Immersive Debugger requires an EventSystem, it can be automatically created if none was found."));
-
-                    DrawToggle(() => RuntimeSettings.Instance.UseCustomIntegrationConfig,
-                        (val) => RuntimeSettings.Instance.UseCustomIntegrationConfig = val,
-                        new GUIContent("Use Custom Integration Config",
-                            "Supply an implementation of CustomIntegrationConfigBase to define how Immersive Debugger works with the project"));
-                    EditorGUI.BeginDisabledGroup(!RuntimeSettings.Instance.UseCustomIntegrationConfig);
-                    DrawObjectField(
-                        () => FindMonoScriptByTypeName(RuntimeSettings.Instance.CustomIntegrationConfigClassName),
-                        (val) => RuntimeSettings.Instance.CustomIntegrationConfigClassName =
-                            (val as MonoScript)?.GetClass()?.AssemblyQualifiedName,
-                        new GUIContent("Custom Integration Config"), typeof(MonoScript), sendTelemetry: false);
-                    EditorGUI.EndDisabledGroup();
-                }
-            }
-
-            EditorGUIUtility.labelWidth = previousLabelWidth;
-            EditorGUI.indentLevel--;
         }
 
-        public static void OpenSettingsWindow(Item.Origins origin)
-        {
-            _lastOrigin = origin;
-            SettingsService.OpenProjectSettings(SettingsPath);
-        }
-
-        public override void OnActivate(string searchContext, VisualElement rootElement)
-        {
-            if (_activated) return;
-
-            _lastOrigin = _lastOrigin ?? Item.Origins.Settings;
-            OVRTelemetry.Start(Telemetry.MarkerId.SettingsAccessed)
-                .AddAnnotation(Telemetry.AnnotationType.Origin, _lastOrigin.ToString())
-                .Send();
-
-            _activated = true;
-        }
-
-        private void DrawToggle(Func<bool> get, Action<bool> set, GUIContent content, bool sendTelemetry = true)
-        {
-            DrawSetting(get, set, content, (guiContent, func) => EditorGUILayout.Toggle(guiContent, func.Invoke()),
-                sendTelemetry);
-        }
-
-        private void DrawIntField(Func<int> get, Action<int> set, GUIContent content, bool sendTelemetry = true)
-        {
-            DrawSetting(get, set, content, (guiContent, func) => EditorGUILayout.IntField(guiContent, func.Invoke()),
-                sendTelemetry);
-        }
-
-        private void DrawLayerField(Func<int> get, Action<int> set, GUIContent content, bool sendTelemetry = true)
-        {
-            DrawSetting(get, set, content, (guiContent, func) =>
-                {
-                    EditorGUILayout.BeginHorizontal();
-                    var value = EditorGUILayout.IntSlider(guiContent, func.Invoke(), 0, 31);
-                    EditorGUI.BeginChangeCheck();
-                    var otherValue = EditorGUILayout.LayerField(func.Invoke());
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        value = otherValue;
-                    }
-                    EditorGUILayout.EndHorizontal();
-                    return value;
-                },
-                sendTelemetry);
-        }
-
-        private void DrawPopup<T>(Func<T> get, Action<T> set, GUIContent content, bool sendTelemetry = true)
-            where T : Enum
-        {
-            DrawSetting(get, set, content,
-                ((guiContent, getFunction) => (T)EditorGUILayout.EnumPopup(guiContent, getFunction.Invoke())),
-                sendTelemetry);
-        }
-
-        private void DrawTextField(Func<string> get, Action<string> set, GUIContent content, bool sendTelemetry = true)
-        {
-            DrawSetting(get, set, content,
-                ((guiContent, getFunction) => EditorGUILayout.TextField(guiContent, getFunction.Invoke())),
-                sendTelemetry);
-        }
-
-        private void DrawObjectField(Func<UnityEngine.Object> get, Action<UnityEngine.Object> set, GUIContent content,
-            Type type, bool sendTelemetry = true)
-        {
-            DrawSetting(get, set, content,
-                ((guiContent, getFunction) =>
-                    EditorGUILayout.ObjectField(guiContent, getFunction.Invoke(), type, false)), sendTelemetry);
-        }
-
-        private void DrawSetting<T>(Func<T> get, Action<T> set, GUIContent content,
-            Func<GUIContent, Func<T>, T> editorGuiFunction, bool sendTelemetry = true)
-        {
-            EditorGUI.BeginChangeCheck();
-            var value = editorGuiFunction.Invoke(content, get);
-            if (EditorGUI.EndChangeCheck())
-            {
-                set.Invoke(value);
-
-                if (sendTelemetry)
-                {
-                    OVRTelemetry.Start(Telemetry.MarkerId.SettingsChanged)
-                        .AddAnnotation(Telemetry.AnnotationType.Type, content.text)
-                        .AddAnnotation(Telemetry.AnnotationType.Value, value.ToString())
-                        .Send();
-                }
-
-                EditorUtility.SetDirty(RuntimeSettings.Instance);
-            }
-        }
-
-        private MonoScript FindMonoScriptByTypeName(string typeName)
+        private static MonoScript FindMonoScriptByTypeName(string typeName)
         {
             if (string.IsNullOrEmpty(typeName))
             {

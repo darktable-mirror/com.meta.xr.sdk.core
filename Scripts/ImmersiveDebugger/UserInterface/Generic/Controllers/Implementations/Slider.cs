@@ -78,17 +78,20 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             raycastBackground.Sprite = null;
             _emptyBackground = Append<Background>("empty_background");
             _emptyBackground.LayoutStyle = Style.Load<LayoutStyle>("SliderBackground");
+            _emptyBackground.RaycastTarget = true;
+
             _fillBackground = Append<Background>("fill_background");
             _fillBackground.LayoutStyle = Style.Load<LayoutStyle>("SliderFill");
             _pill = Append<Icon>("pill");
             _pill.LayoutStyle = Style.Load<LayoutStyle>("SliderPill");
             _pill.Texture = Resources.Load<Texture2D>("Textures/icon_background_02");
             _pill.Color = Color.white;
+            _pill.RaycastTarget = true;
         }
 
         private void UpdatePillPosition()
         {
-            if (Tweak == null) return;
+            if (Tweak is not { Valid: true }) return;
 
             var width = RectTransform.rect.width;
             var idealPosition = Tweak.Tween * width;

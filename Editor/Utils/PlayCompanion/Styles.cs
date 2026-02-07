@@ -92,6 +92,7 @@ namespace Meta.XR.Editor.PlayCompanion
             public static readonly TextureContent MetaXRSimulator =
                 TextureContent.CreateContent("ovr_icon_simulator.png", TextureContent.Categories.Generic);
 
+
             public static readonly TextureContent DefaultPlayModeIcon =
                 TextureContent.CreateContent("ovr_icon_monitor.png", TextureContent.Categories.Generic);
 

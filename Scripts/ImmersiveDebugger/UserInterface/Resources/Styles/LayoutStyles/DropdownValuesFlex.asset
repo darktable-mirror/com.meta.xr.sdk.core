@@ -17,10 +17,10 @@ MonoBehaviour:
   anchor: 2
   pivot: 2
   size: {x: 0, y: 48}
-  margin: {x: 0, y: 26}
+  margin: {x: 4, y: 26}
   useBottomRightMargin: 0
   bottomRightMargin: {x: 0, y: 0}
-  spacing: 2
+  spacing: 1
   masks: 0
   adaptHeight: 1
   autoFitChildren: 0

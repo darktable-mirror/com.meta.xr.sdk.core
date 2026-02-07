@@ -54,17 +54,27 @@ namespace Meta.XR.Editor.Tags
         public bool ToggleableVisibility { get; set; }
         public bool DefaultVisibility { get; set; } = true;
         public bool Visibility => VisibilitySetting.Value;
-        private Settings.UserBool _visibilitySetting;
-        public Settings.UserBool VisibilitySetting
-            => _visibilitySetting ??= new Settings.UserBool($"Tag_{_tag.Name}_Visibility", DefaultVisibility, $"Show {_tag.Name} blocks");
+        private Settings.CustomBool _visibilitySetting;
+        public Settings.CustomBool VisibilitySetting
+            => _visibilitySetting ??= new Settings.UserBool()
+            {
+                Owner = _tag,
+                Uid = $"Tag_{_tag.Name}_Visibility",
+                Default = DefaultVisibility,
+                Label = $"Show {_tag.Name} blocks",
+            };
 
         private GUIStyle _style;
+        private GUIStyle _inlineStyle;
         private GUIContent _content;
         private float? _styleWidth;
-        private Tag.TagListType _listType;
 
-        protected virtual GUIStyle Style => _style ??= Icon != null ? Styles.GUIStyles.TagStyleWithIcon : Styles.GUIStyles.TagStyle;
-        protected virtual ColorStates BackgroundColorState => _listType == Tag.TagListType.Overlays ? Styles.GUIStyles.TagOverlayBackgroundColors : Styles.GUIStyles.TagBackgroundColors;
+        protected virtual GUIStyle Style => _style ??=
+            Icon != null ? Styles.GUIStyles.TagStyleWithIcon : Styles.GUIStyles.TagStyle;
+
+        protected virtual GUIStyle InlineStyle => _inlineStyle ??=
+            Icon != null ? Styles.GUIStyles.TagStyleInlinedWithIcon : Styles.GUIStyles.TagStyleInline;
+        protected virtual ColorStates BackgroundColorState => Styles.GUIStyles.TagBackgroundColors;
         protected GUIContent Content => _content ??= new GUIContent(_tag.Name);
         public virtual float StyleWidth => _styleWidth ??= Style.CalcSize(Content).x + 1;
 
@@ -125,9 +135,8 @@ namespace Meta.XR.Editor.Tags
         {
             hover = false;
             clicked = false;
-            _listType = listType;
 
-            if (!ShouldDraw(_listType)) return false;
+            if (!ShouldDraw(listType)) return false;
 
             var id = controlId + _tag.Name;
             var color = BackgroundColorState.GetColor(active, HoverHelper.IsHover(id));
@@ -138,6 +147,16 @@ namespace Meta.XR.Editor.Tags
             DrawIcon(rect);
             EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
             return true;
+        }
+
+        public void DrawSimple(bool inline = false)
+        {
+            var color = BackgroundColorState.GetColor(false, false);
+            var rect = GUILayoutUtility.GetRect(Content, inline ? InlineStyle : Style, GUILayout.Width(StyleWidth));
+            using var backgroundColorScope = new ColorScope(ColorScope.Scope.Background, color);
+            using var contentColorScope = new ColorScope(ColorScope.Scope.Content, Color);
+            DrawButton(_tag.Name, rect, out _);
+            DrawIcon(rect);
         }
     }
 }

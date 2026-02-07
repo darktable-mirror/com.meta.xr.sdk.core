@@ -20,6 +20,7 @@
 
 using System.Collections.Generic;
 using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
@@ -35,50 +36,43 @@ namespace Meta.XR.InputActions.Editor
         internal const string PublicName = "Input Actions";
         internal const string PublicTag = "[IA]";
 
+        public static readonly string Description =
+            "<b>Input Actions</b> are a way to define how inputs from certain devices such as the Logitech MX Ink Stylus are made available through the Meta Core SDK.\n" +
+            "Actions are defined using the Open XR Action specification, where an Action describes how that particular action, e.g. a button press, could be retrieved from a particular controller.\n" +
+            " - The Action name describes how the action can be accessed in code.\n" +
+            " - The Interaction Profile identifies which device the action applies to, e.g. <i>/interaction_profiles/oculus/touch_controller</i> would indicate this action should be used if the attached device is a Meta Quest Touch controller.\n" +
+            " - The Paths identify which input is to be returned from the device, e.g. <i>/user/hand/left/input/grip/pose</i> would indicate the action should return the grip pose of the left controller.\n\n" +
+            "Multiple actions can exist with the same name so long as they have different Interaction Profiles. When that action name is queried the Open XR runtime will determine the right action to use based on which devices are attached.";
+
         internal static readonly TextureContent.Category InputActionIcons = new("InputActions/Icons");
         internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_icon_stylus.png", InputActionIcons, $"Open {PublicName}");
 
         private const string DocumentationURL = "https://developer.oculus.com/documentation/unity/unity-inputactions/";
 
-        internal static Item Item = new Item()
+        internal static ToolDescriptor ToolDescriptor = new ToolDescriptor()
         {
             Name = PublicName,
+            Description = Description,
             Color = Styles.Colors.NewColor,
             Icon = StatusIcon,
-            InfoTextDelegate = ComputeInfoText,
             PillIcon = null,
-            OnClickDelegate = OnStatusMenuClick,
             Order = 2,
-            HeaderIcons = new List<Item.HeaderIcon>()
+            Experimental = true,
+            AddToMenu = false,
+            OnProjectSettingsGUI = InputSettings.OnGUI,
+            Documentation = new List<Documentation>()
             {
-                new Item.HeaderIcon()
+                new Documentation()
                 {
-                    TextureContent = ConfigIcon,
-                    Color = LightGray,
-                    Action = null
-                },
-                new Item.HeaderIcon()
-                {
-                    TextureContent = DocumentationIcon,
-                    Color = LightGray,
-                    Action = () => Application.OpenURL(DocumentationURL)
-                },
+                    Title = PublicName,
+                    Url = DocumentationURL
+                }
             }
         };
 
         static Utils()
         {
             //StatusMenu.RegisterItem(Item);
-        }
-
-        public static (string, Color?) ComputeInfoText()
-        {
-            return ("ComputeInfoText", null);
-        }
-
-        private static void OnStatusMenuClick(Item.Origins origin)
-        {
-            Debug.Log("OnStatusMenuClick");
         }
     }
 }

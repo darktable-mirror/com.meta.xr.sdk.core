@@ -20,10 +20,13 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
+using static Meta.XR.Editor.UserInterface.Utils;
 
 [InitializeOnLoad]
 internal static class OVREditorUtils
@@ -34,14 +37,18 @@ internal static class OVREditorUtils
     internal static double LastUpdateTime;
     internal static float DeltaTime { get; private set; }
 
-    internal static Item SettingsItem = new Item()
+    internal static readonly ToolDescriptor SettingsToolDescriptor = new ToolDescriptor()
     {
         Name = MetaXRSettingsName,
-        Color = Utils.HexToColor("#c4c4c4"),
+        MqdhCategoryId = "1046393670222453",
+        Color = HexToColor("#c4c4c4"),
         Icon = TextureContent.CreateContent("ovr_icon_settings.png", TextureContent.Categories.Generic),
         InfoTextDelegate = ComputeInfoText,
         OnClickDelegate = OnStatusMenuClick,
-        Order = 100
+        Order = 100,
+        AddToStatusMenu = true,
+        AddToMenu = false,
+        ShowHeader = false
     };
 
     static OVREditorUtils()
@@ -49,22 +56,21 @@ internal static class OVREditorUtils
         EditorApplication.update -= UpdateEditor;
         EditorApplication.update += UpdateEditor;
 
-        StatusMenu.RegisterItem(SettingsItem);
-
         OVRUserSettingsProvider.Register("Toolbar", StatusIcon.OnSettingsGUI);
     }
 
     internal static void UpdateEditor()
     {
+        var deltaTimeThreshold = 0.33f; // A delta time threshold in case we have a large delta from system
         var timeSinceStartup = EditorApplication.timeSinceStartup;
-        DeltaTime = (float)(timeSinceStartup - LastUpdateTime);
+        DeltaTime = Mathf.Min(deltaTimeThreshold, (float)(timeSinceStartup - LastUpdateTime));
         LastUpdateTime = timeSinceStartup;
     }
 
     private static (string, Color?) ComputeInfoText() => ("Open settings menu.", null);
 
 
-    private static void OnStatusMenuClick(Item.Origins origins)
+    private static void OnStatusMenuClick(Origins origins)
     {
         OVRUserSettingsProvider.OpenSettingsWindow(origins);
     }
@@ -111,71 +117,6 @@ internal static class OVREditorUtils
         {
             Undo.SetCurrentGroupName(_name);
             Undo.CollapseUndoOperations(_group);
-        }
-    }
-
-
-
-    public static class TweenHelper
-    {
-        private static readonly Dictionary<string, float> Tweens = new();
-
-        public static void Reset()
-        {
-            Tweens.Clear();
-        }
-
-        public static float GetTweenValue(string id, float target, float? start)
-        {
-            if (!Tweens.TryGetValue(id, out var current))
-            {
-                current = start ?? target;
-                Tweens[id] = current;
-            }
-
-            return current;
-        }
-
-        public static float Smooth(string id,
-            float target,
-            out bool completed,
-            float? start = null,
-            float speed = 10.0f,
-            float epsilon = 5.0f)
-        {
-            var current = GetTweenValue(id, target, start);
-
-            if (Math.Abs(target - current) <= epsilon)
-            {
-                current = target;
-                Tweens[id] = current;
-                completed = true;
-            }
-            else
-            {
-                current = Mathf.Lerp(current, target, 1f - Mathf.Exp(-speed * DeltaTime));
-                Tweens[id] = current;
-                completed = false;
-            }
-
-            return current;
-        }
-
-        public static float GUISmooth(string id, float target, float? start = null,
-            float speed = 10.0f, float epsilon = 5.0f, Action ifNotCompletedDelegate = null)
-        {
-            var shouldUpdate = Event.current.type == EventType.Layout;
-            var completed = true;
-            var current = shouldUpdate
-                ? Smooth(id, target, out completed, start, speed, epsilon)
-                : GetTweenValue(id, target, start);
-
-            if (!completed)
-            {
-                ifNotCompletedDelegate?.Invoke();
-            }
-
-            return current;
         }
     }
 }

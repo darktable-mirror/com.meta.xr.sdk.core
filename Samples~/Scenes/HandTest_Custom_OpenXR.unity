@@ -1826,6 +1826,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: OpenXRCustomHandPrefab_L
       objectReference: {fileID: 0}
+    - target: {fileID: 5272262661847662301, guid: deccf1bd75222ab419fef0130b2a4d9e,
+        type: 3}
+      propertyPath: _skeletonType
+      value: 4
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: deccf1bd75222ab419fef0130b2a4d9e, type: 3}
 --- !u!1001 &6348537340242195312
@@ -1894,6 +1899,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: OpenXRCustomHandPrefab_R
+      objectReference: {fileID: 0}
+    - target: {fileID: 6452580797138248955, guid: f4f1f0ff232ea644c8a980e61825dd44,
+        type: 3}
+      propertyPath: _skeletonType
+      value: 5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f4f1f0ff232ea644c8a980e61825dd44, type: 3}

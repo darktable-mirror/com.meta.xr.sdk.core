@@ -20,7 +20,8 @@
 
 using System;
 using System.Collections.Generic;
-using Meta.XR.Guides.Editor.Items;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
 
@@ -38,53 +39,73 @@ namespace Meta.XR.Guides.Editor
         /// </summary>
         /// <param name="title">Title of the window.</param>
         /// <param name="description">A brief description of this guide.</param>
-        /// <param name="itemPopulator">A static function that will return a list of <see cref="IGuideItem"/>(s).</param>
+        /// <param name="populator">A reference to the IIDentified class that owns the GetItems and Init methods.</param>
         /// <remarks>
-        /// The <paramref name="itemPopulator"/> parameter function needs to have the <see cref="GuideItemsAttribute"/> attribute
+        /// The <paramref name="populator"/> referenced class needs to have the <see cref="GuideItemsAttribute"/> attribute
         /// in order to correctly repaint the Guide window on Unity's domain reload.
         /// <example>
         /// <code>
         /// <![CDATA[
-        /// public static Foo()
-        /// {
-        ///     Guide.Create("Foo title", "Bar desc.", GetItems).Show();
-        /// }
-        ///
         /// [GuideItems]
-        /// public static List<IGuideItem> GetItems()
+        /// public class Foo
         /// {
-        ///     return new List<IGuideItem>();
+        ///     public static Foo()
+        ///     {
+        ///         Guide.Create("Foo title", "Bar desc.", this).Show();
+        ///     }
+        ///
+        ///     [Init]
+        ///     public static void Init(GuideWindow guideWindow)
+        ///     {
+        ///         // Initialize the window, register callbacks
+        ///     }
+        ///
+        ///     [GuideItems]
+        ///     public static List<IUserInterfaceItem> GetItems()
+        ///     {
+        ///         return new List<IUserInterfaceItem>();
+        ///     }
         /// }
         /// ]]>
         /// </code>
         /// </example>
         /// </remarks>
         /// <returns>Returns a <see cref="GuideWindow"/>.</returns>
-        public static GuideWindow Create(string title, string description, Func<List<IGuideItem>> itemPopulator) =>
-            Create(title, description, itemPopulator, GuideWindow.DefaultOptions);
+        public static GuideWindow Create(string title, string description, IIdentified populator) =>
+            Create(title, description, populator, GuideWindow.DefaultOptions);
 
         /// <summary>
         /// This will create a <see cref="GuideWindow"/> type of <see cref="EditorWindow"/>.
         /// </summary>
         /// <param name="title">Title of the window.</param>
         /// <param name="description">A brief description of this guide.</param>
-        /// <param name="itemPopulator">A static function that will return a list of <see cref="IGuideItem"/>(s).</param>
+        /// <param name="populator">A reference to the IIDentified class that owns the GetItems and Init methods.</param>
         /// <param name="guideOptions">Takes a <see cref="GuideWindow.GuideOptions"/>.</param>
         /// <remarks>
-        /// The <paramref name="itemPopulator"/> parameter function needs to have the <see cref="GuideItemsAttribute"/> attribute
+        /// The <paramref name="populator"/> referenced class needs to have the <see cref="GuideItemsAttribute"/> attribute
         /// in order to correctly repaint the Guide window on Unity's domain reload.
         /// <example>
         /// <code>
         /// <![CDATA[
-        /// public static Foo()
-        /// {
-        ///     Guide.Create("Foo title", "Bar desc.", GetItems).Show();
-        /// }
-        ///
         /// [GuideItems]
-        /// public static List<IGuideItem> GetItems()
+        /// public class Foo
         /// {
-        ///     return new List<IGuideItem>();
+        ///     public static Foo()
+        ///     {
+        ///         Guide.Create("Foo title", "Bar desc.", this).Show();
+        ///     }
+        ///
+        ///     [Init]
+        ///     public static void Init(GuideWindow guideWindow)
+        ///     {
+        ///         // Initialize the window, register callbacks
+        ///     }
+        ///
+        ///     [GuideItems]
+        ///     public static List<IUserInterfaceItem> GetItems()
+        ///     {
+        ///         return new List<IUserInterfaceItem>();
+        ///     }
         /// }
         /// ]]>
         /// </code>
@@ -94,16 +115,14 @@ namespace Meta.XR.Guides.Editor
         public static GuideWindow Create(
             string title,
             string description,
-            Func<List<IGuideItem>> itemPopulator,
+            IIdentified populator,
             GuideWindow.GuideOptions guideOptions)
         {
             if (GuideWindowIntances.TryGetValue(GetGuideHash(title, description), out var window))
                 return window;
 
-            var id = $"{itemPopulator.Method.DeclaringType}.{itemPopulator.Method.Name}";
             window = ScriptableObject.CreateInstance<GuideWindow>();
-            window.Setup(title, description, id, guideOptions);
-
+            window.Setup(title, description, populator, guideOptions);
             return window;
         }
 

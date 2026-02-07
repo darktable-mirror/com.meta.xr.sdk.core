@@ -21,20 +21,26 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using static OVRProjectSetupDrawer.Styles;
 using static OVRProjectSetupDrawer.Styles.Contents;
+using Styles = Meta.XR.Editor.UserInterface.Styles;
+using Utils = Meta.XR.Editor.UserInterface.Utils;
 
-internal class OVRConfigurationTask
+internal class OVRConfigurationTask : IIdentified
 {
     internal static readonly string ConsoleLinkHref = "OpenProjectSetupTool";
     private static readonly GUIContent FixButtonContent = new GUIContent("Fix", "Fix with recommended settings");
     private static readonly GUIContent ApplyButtonContent = new GUIContent("Apply", "Apply the recommended settings");
 
     public Hash128 Uid { get; }
+    public string Id => Uid.ToString();
 
     public OVRProjectSetup.TaskGroup Group { get; }
 
@@ -60,8 +66,8 @@ internal class OVRConfigurationTask
 
     public bool FixAutomatic { get; }
 
-    private readonly Dictionary<BuildTargetGroup, OVRProjectSetupSettingBool> _ignoreSettings =
-        new Dictionary<BuildTargetGroup, OVRProjectSetupSettingBool>();
+    private readonly Dictionary<BuildTargetGroup, Setting<bool>> _ignoreSettings =
+        new Dictionary<BuildTargetGroup, Setting<bool>>();
 
     private readonly Dictionary<BuildTargetGroup, bool> _isDoneCache = new Dictionary<BuildTargetGroup, bool>();
 
@@ -164,16 +170,22 @@ internal class OVRConfigurationTask
 
     public void SetIgnored(BuildTargetGroup buildTargetGroup, bool ignored)
     {
-        GetIgnoreSetting(buildTargetGroup).Value = ignored;
+        GetIgnoreSetting(buildTargetGroup).SetValue(ignored);
     }
 
     public bool Fix(BuildTargetGroup buildTargetGroup)
     {
+        UsageSettings.UsesProjectSetupTool.SetValue(true);
+
         var fixEvent = OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Fix);
         var previousResult = IsDone(buildTargetGroup);
         try
         {
             FixAction(buildTargetGroup);
+            if (Tags.HasFlag(OVRProjectSetup.TaskTags.RegenerateAndroidManifest))
+            {
+                OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(silentMode: Application.isBatchMode);
+            }
         }
         catch (OVRConfigurationTaskException exception)
         {
@@ -211,15 +223,19 @@ internal class OVRConfigurationTask
         return currentResult;
     }
 
-    public string ComputeIgnoreUid(BuildTargetGroup buildTargetGroup)
-        => $"{OVRProjectSetup.KeyPrefix}.{GetType().Name}.{Uid}.Ignored.{buildTargetGroup.ToString()}";
-
-    private OVRProjectSetupSettingBool GetIgnoreSetting(BuildTargetGroup buildTargetGroup)
+    private Setting<bool> GetIgnoreSetting(BuildTargetGroup buildTargetGroup)
     {
         if (!_ignoreSettings.TryGetValue(buildTargetGroup, out var item))
         {
-            var uid = ComputeIgnoreUid(buildTargetGroup);
-            item = new OVRProjectSetupProjectSettingBool(uid, false);
+            item = new OVRProjectSetupSettings.SettingBool()
+            {
+                Owner = this,
+                Uid = $"Ignored.{buildTargetGroup.ToString()}",
+                OldKey = $"OVRProjectSetup.{GetType().Name}.{Uid}.Ignored.{buildTargetGroup.ToString()}",
+                Default = false,
+                Label = "Ignore"
+            };
+
             _ignoreSettings.Add(buildTargetGroup, item);
         }
 
@@ -367,24 +383,15 @@ internal class OVRConfigurationTask
                 new object[] { buildTargetGroup, this });
         }
 
-        menu.AddItem(new GUIContent("Ignore"), IsIgnored(buildTargetGroup), OnIgnore,
-            new object[] { buildTargetGroup, this });
+        GetIgnoreSetting(buildTargetGroup).DrawForMenu(menu, Origins.Self, this, OnIgnore);
 
         menu.ShowAsContext();
     }
 
 
-    private static void OnIgnore(object args)
+    private static void OnIgnore()
     {
-        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
-
-        var ignore = !task.IsIgnored(buildTargetGroup);
-        if (ignore)
-        {
-            OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Ignored);
-        }
-
-        task?.SetIgnored(buildTargetGroup, ignore);
+        OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Ignored);
     }
 
     private static void OnDocumentation(object args)

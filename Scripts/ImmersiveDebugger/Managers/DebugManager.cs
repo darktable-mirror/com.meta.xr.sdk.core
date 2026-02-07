@@ -43,6 +43,9 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public event Action OnDisableAction;
         public event Action OnUpdateAction;
 
+        internal delegate bool ShouldRetrieveInstanceDelegate();
+        internal event ShouldRetrieveInstanceDelegate CustomShouldRetrieveInstanceCondition;
+
         protected readonly InstanceCache InstanceCache = new();
         protected readonly List<IDebugManager> SubDebugManagers = new();
 
@@ -80,6 +83,8 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
             OnReady?.Invoke(this);
             telemetryTracker.OnStart();
+
+            var _ = Hierarchy.Manager.Instance; // Kicks off the Hierarchy Manager
         }
 
         private void OnApplicationFocus(bool hasFocus)
@@ -113,7 +118,11 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             if (Time.time - _lastRetrievedTime > RetrievalIntervalInSec)
             {
                 ShouldRetrieveInstances = true;
-                _lastRetrievedTime = Time.time;
+            }
+
+            if (ShouldRetrieveInstances && CustomShouldRetrieveInstanceCondition != null)
+            {
+                ShouldRetrieveInstances = CustomShouldRetrieveInstanceCondition.Invoke();
             }
 
             if (!ShouldRetrieveInstances)
@@ -124,6 +133,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             _frameUpdateRecorder.Start();
 
             InstanceCache.RetrieveInstances();
+            _lastRetrievedTime = Time.time;
             ShouldRetrieveInstances = false;
         }
 
@@ -153,7 +163,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
         private void UnregisterInspector(InstanceHandle handle)
         {
-            UiPanel.UnregisterInspector(handle, null, true);
+            UiPanel.UnregisterInspector(handle, Category.Default, true);
         }
 
         private void RegisterTypesFromInspectedData()

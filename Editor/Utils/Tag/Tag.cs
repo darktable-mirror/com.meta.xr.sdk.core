@@ -19,12 +19,13 @@
  */
 
 using System;
+using Meta.XR.Editor.Id;
 using UnityEngine;
 
 namespace Meta.XR.Editor.Tags
 {
     [Serializable]
-    public struct Tag : IEquatable<Tag>
+    public struct Tag : IEquatable<Tag>, IIdentified
     {
         internal enum TagListType
         {
@@ -60,6 +61,7 @@ namespace Meta.XR.Editor.Tags
         }
 
         public string Name => name;
+        public string Id => Name;
         internal bool Valid => Name != null;
 
         internal TagBehavior Behavior => _behavior ??= TagBehavior.GetBehavior(this);
@@ -76,5 +78,7 @@ namespace Meta.XR.Editor.Tags
             var orderComparison = lhs.Behavior.Order.CompareTo(rhs.Behavior.Order);
             return orderComparison != 0 ? orderComparison : string.Compare(lhs.Name, rhs.Name, StringComparison.Ordinal);
         };
+
+        public void Draw(bool inline = false) => Behavior.DrawSimple(inline);
     }
 }

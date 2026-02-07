@@ -60,12 +60,21 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             set => _image.pixelsPerUnitMultiplier = value;
         }
 
+        /// <summary>
+        /// Sets the Raycast Target property of the instantiated <see cref="Image"/>
+        /// </summary>
+        public bool RaycastTarget
+        {
+            set => _image.raycastTarget = value;
+        }
+
         protected override void Setup(Controller owner)
         {
             base.Setup(owner);
             _image = GameObject.AddComponent<UnityEngine.UI.Image>();
             _image.type = UnityEngine.UI.Image.Type.Sliced;
+
+            RaycastTarget = false;
         }
     }
 }
-

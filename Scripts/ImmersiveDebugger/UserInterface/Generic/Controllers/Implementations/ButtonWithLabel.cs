@@ -60,6 +60,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
 
         /// <summary>
+        /// The layout style (used for margins and sizing) of the text that is being displayed on top of the button UI
+        /// </summary>
+        public LayoutStyle LabelLayoutStyle
+        {
+            set => _label.LayoutStyle = value;
+        }
+
+        /// <summary>
         /// String of the label text that is being displayed on top of the button UI.
         /// </summary>
         public string Label
@@ -103,6 +111,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 _background.Show();
                 _background.Color = Hover ? _backgroundStyle.colorHover : (Transparent ? _backgroundStyle.colorOff : _backgroundStyle.color);
+                _background.RaycastTarget = true;
             }
             else
             {

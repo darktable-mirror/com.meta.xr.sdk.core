@@ -442,7 +442,9 @@ partial class OculusBuildApp : EditorWindow
             gradlePath = OVRConfig.Instance.GetGradlePath();
             jdkPath = OVRConfig.Instance.GetJDKPath();
             androidSdkPath = OVRConfig.Instance.GetAndroidSDKPath();
+#pragma warning disable CS0618 // Type or member is obsolete
             applicationIdentifier = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android);
+#pragma warning restore CS0618 // Type or member is obsolete
             isDevelopmentBuild = EditorUserBuildSettings.development;
 #if UNITY_2019_3_OR_NEWER
             productName = "launcher";

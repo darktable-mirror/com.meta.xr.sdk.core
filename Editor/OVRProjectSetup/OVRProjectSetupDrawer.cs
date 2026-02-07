@@ -21,13 +21,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
-using static Meta.XR.Editor.UserInterface.Styles;
+using Meta.XR.Editor.Settings;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
-using static Meta.XR.Editor.UserInterface.Styles.Colors;
-using static Meta.XR.Editor.UserInterface.Styles.Contents;
+using Utils = Meta.XR.Editor.UserInterface.Utils;
 
 internal class OVRProjectSetupDrawer
 {
@@ -163,17 +164,41 @@ internal class OVRProjectSetupDrawer
         public static GUIStylesContainer GUIStyles => _guiStyles ??= new GUIStylesContainer();
     }
 
-    private readonly OVRProjectSetupSettingBool _showOutstandingItems =
-        new OVRProjectSetupUserSettingBool("ShowOutstandingItems", true);
+    private readonly CustomBool _showOutstandingItems =
+        new UserBool()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = "ShowOutstandingItems",
+            Default = true,
+            SendTelemetry = false
+        };
 
-    private readonly OVRProjectSetupSettingBool _showRecommendedItems =
-        new OVRProjectSetupUserSettingBool("ShowRecommendedItems", true);
+    private readonly CustomBool _showRecommendedItems =
+        new UserBool()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = "ShowRecommendedItems",
+            Default = true,
+            SendTelemetry = false
+        };
 
-    private readonly OVRProjectSetupSettingBool _showVerifiedItems =
-        new OVRProjectSetupUserSettingBool("ShowVerifiedItems", false);
+    private readonly CustomBool _showVerifiedItems =
+        new UserBool()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = "ShowVerifiedItems",
+            Default = false,
+            SendTelemetry = false
+        };
 
-    private readonly OVRProjectSetupSettingBool _showIgnoredItems =
-        new OVRProjectSetupUserSettingBool("ShowIgnoredItems", false);
+    private readonly CustomBool _showIgnoredItems =
+        new UserBool()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = "ShowIgnoredItems",
+            Default = false,
+            SendTelemetry = false
+        };
 
     private static readonly GUIContent Title = new GUIContent(OVRProjectSetupUtils.ProjectSetupToolPublicName);
 
@@ -257,7 +282,7 @@ internal class OVRProjectSetupDrawer
         return newValue;
     }
 
-    private bool FoldoutWithAdditionalAction(OVRProjectSetupSettingBool key, string label, Rect rect,
+    private bool FoldoutWithAdditionalAction(CustomBool key, string label, Rect rect,
         Action inlineAdditionalAction)
     {
         var previousLabelWidth = EditorGUIUtility.labelWidth;
@@ -274,13 +299,13 @@ internal class OVRProjectSetupDrawer
         return foldout;
     }
 
-    private bool Foldout(OVRProjectSetupSettingBool key, string label)
+    private bool Foldout(CustomBool key, string label)
     {
         var currentValue = key.Value;
         var newValue = EditorGUILayout.Foldout(currentValue, label, true, Styles.GUIStyles.Foldout);
         if (newValue != currentValue)
         {
-            key.Value = newValue;
+            key.SetValue(newValue);
         }
 
         return newValue;
@@ -316,26 +341,20 @@ internal class OVRProjectSetupDrawer
         _lastSummary = updater?.Summary;
     }
 
-    internal static void ShowSettingsMenu()
+    internal static void BuildSettingsMenu(GenericMenu menu)
     {
-        var menu = new GenericMenu();
-        OVRProjectSetup.Enabled.AppendToMenu(menu);
-        OVRProjectSetupUpdater.Enabled.AppendToMenu(menu);
-        OVRProjectSetup.RequiredThrowErrors.AppendToMenu(menu);
-        OVRProjectSetup.AllowLogs.AppendToMenu(menu);
-        OVRProjectSetup.ShowStatusIcon.AppendToMenu(menu);
-        OVRProjectSetup.ProduceReportOnBuild.AppendToMenu(menu);
-        menu.ShowAsContext();
+        const Origins origin = Origins.HeaderIcons;
+        var originData = OVRProjectSetup.ToolDescriptor;
+        OVRProjectSetup.Enabled.DrawForMenu(menu, origin, originData);
+        OVRProjectSetupUpdater.Enabled.DrawForMenu(menu, origin, originData);
+        OVRProjectSetup.RequiredThrowErrors.DrawForMenu(menu, origin, originData);
+        OVRProjectSetup.AllowLogs.DrawForMenu(menu, origin, originData);
+        OVRProjectSetup.ProduceReportOnBuild.DrawForMenu(menu, origin, originData);
     }
 
     internal void OnGUI()
     {
-        EditorGUILayout.BeginHorizontal(GUIStyles.DialogBox);
-        EditorGUILayout.LabelField(DialogIcon, GUIStyles.DialogIconStyle, GUILayout.Width(GUIStyles.DialogIconStyle.fixedWidth));
-        EditorGUILayout.BeginVertical();
-        EditorGUILayout.LabelField(Description, GUIStyles.DialogTextStyle);
-        EditorGUILayout.EndVertical();
-        EditorGUILayout.EndHorizontal();
+        OVRProjectSetup.ToolDescriptor.DrawDescriptionHeader(Description.text, Origins.Self);
 
         EditorGUILayout.Space();
 
@@ -451,7 +470,7 @@ internal class OVRProjectSetupDrawer
         }
     }
 
-    private void DrawCategory(OVRProjectSetupSettingBool key, Func<IEnumerable<OVRConfigurationTask>,
+    private void DrawCategory(CustomBool key, Func<IEnumerable<OVRConfigurationTask>,
         List<OVRConfigurationTask>> filter, BuildTargetGroup buildTargetGroup, string title, bool fixAllButton)
     {
         var tasks = filter(OVRProjectSetup.GetTasks(buildTargetGroup));

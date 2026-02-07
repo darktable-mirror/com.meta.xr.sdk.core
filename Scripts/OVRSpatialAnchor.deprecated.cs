@@ -598,10 +598,11 @@ partial class OVRSpatialAnchor
     /// Returns an <see cref="OVRTask"/>&lt;bool&gt; indicating the success of the erase operation.
     /// </returns>
     [Obsolete("Use EraseAnchorAsync instead.")]
-    public OVRTask<bool> EraseAsync(EraseOptions eraseOptions) =>
-        OVRAnchor.EraseSpace(_anchor.Handle, eraseOptions.Storage.ToSpaceStorageLocation(), out var requestId).IsSuccess()
-            ? OVRTask.FromRequest<bool>(requestId)
-            : OVRTask.FromResult(false);
+    public OVRTask<bool> EraseAsync(EraseOptions eraseOptions) => OVRTask
+        .Build(
+            OVRAnchor.EraseSpace(_anchor.Handle, eraseOptions.Storage.ToSpaceStorageLocation(), out var requestId),
+            requestId)
+        .ToTask(failureValue: false);
 
     /// <summary>
     /// (Obsolete) Represents options for saving an <see cref="OVRSpatialAnchor"/>.
@@ -710,9 +711,7 @@ partial class OVRSpatialAnchor
                 $"Saving {spaces.Count} spatial anchors.",
                 $"xrSaveSpaceListFB failed with error {result}.");
 
-            return result.IsSuccess()
-                ? OVRTask.FromRequest<OperationResult>(requestId)
-                : OVRTask.FromResult((OperationResult)result);
+            return OVRTask.Build(result, requestId).ToTask<OperationResult>();
         }
     }
 
@@ -742,14 +741,17 @@ partial class OVRSpatialAnchor
             throw new InvalidOperationException($"{nameof(LoadOptions)}.{nameof(LoadOptions.Uuids)} must not be null.");
         }
 
-        if (!options.ToQueryOptions().TryQuerySpaces(out var requestId))
+        var result = options.ToQueryOptions().TryQuerySpaces(out var requestId);
+        if (result)
+        {
+            Development.LogRequest(requestId, $"{nameof(OVRPlugin.QuerySpaces)}: Query created.");
+        }
+        else
         {
             Development.LogError($"{nameof(OVRPlugin.QuerySpaces)} failed.");
-            return OVRTask.FromResult<UnboundAnchor[]>(null);
         }
 
-        Development.LogRequest(requestId, $"{nameof(OVRPlugin.QuerySpaces)}: Query created.");
-        return OVRTask.FromRequest<UnboundAnchor[]>(requestId);
+        return OVRTask.Build(result, requestId).ToTask<UnboundAnchor[]>(failureValue: null);
     }
 
     private static NativeArray<ulong> ToNativeArray(ICollection<OVRSpatialAnchor> anchors)

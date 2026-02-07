@@ -21,6 +21,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.XR.Samples;
 using UnityEngine;
 
 // This namespace contains helper classes for the DynamicSceneManager.
@@ -30,6 +31,7 @@ namespace DynamicSceneManagerHelper
     /// A class that holds a list of anchors, along with data that
     /// can be used to identify when a change has occured.
     /// </summary>
+    [MetaCodeSample("CoreSDK-MixedReality")]
     class SceneSnapshot
     {
         public class Data

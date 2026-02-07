@@ -59,6 +59,8 @@ using UnityEditor.XR.Management;
 using UnityEngine.Rendering.Universal;
 #endif
 
+using Meta.XR.Editor.Utils;
+
 [InitializeOnLoad]
 public class OVRGradleGeneration
     : IPreprocessBuildWithReport, IPostprocessBuildWithReport
@@ -270,6 +272,8 @@ public class OVRGradleGeneration
             }
         }
 #endif
+
+        SendOVRManagerSettingsTelemetry();
     }
 
     public void OnPostGenerateGradleAndroidProject(string path)
@@ -394,6 +398,7 @@ public class OVRGradleGeneration
     public void OnPostprocessBuild(BuildReport report)
     {
 #if UNITY_ANDROID
+        SendXRPluginSettingsTelemetry();
         SendProjectSettingsTelemetry();
 
         if (autoIncrementVersion)
@@ -475,10 +480,135 @@ public class OVRGradleGeneration
                 }
 
                 // Begin thread to time upload and install
-                var thread = new Thread(delegate() { TimeDeploy(); });
+                var thread = new Thread(delegate () { TimeDeploy(); });
                 thread.Start();
             }
         }
+#endif
+    }
+
+    public void SendOVRManagerSettingsTelemetry()
+    {
+        var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+        if (ovrManager != null)
+        {
+            OVRPlugin.SendEvent("ovr_manager_dynamic_resolution", OVRTelemetry.GetTelemetrySettingString(ovrManager.enableDynamicResolution));
+            OVRPlugin.SendEvent("ovr_manager_min_quest2_resolution", ovrManager.quest2MinDynamicResolutionScale.ToString());
+            OVRPlugin.SendEvent("ovr_manager_max_quest2_resolution", ovrManager.quest2MaxDynamicResolutionScale.ToString());
+            OVRPlugin.SendEvent("ovr_manager_min_quest3_resolution", ovrManager.quest3MinDynamicResolutionScale.ToString());
+            OVRPlugin.SendEvent("ovr_manager_max_quest3_resolution", ovrManager.quest3MaxDynamicResolutionScale.ToString());
+        }
+    }
+
+    public void SendXRPluginSettingsTelemetry()
+    {
+#if USING_XR_MANAGEMENT
+        OVRTelemetryConstants.ProjectSettings.XrPlugin xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.Unknown;
+        var buildGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+        OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode foveatedRenderingMode = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode.Unknown;
+        OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI foveatedRenderingAPI = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI.Unknown;
+        OVRTelemetryConstants.ProjectSettings.DepthSubmissionMode depthSubmissionMode = OVRTelemetryConstants.ProjectSettings.DepthSubmissionMode.Unknown;
+#if USING_XR_SDK_OCULUS
+        var loader = GetActiveLoader<OculusLoader>(buildGroup);
+        if (loader)
+        {
+            xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.Oculus;
+            var oculusLoader = loader as OculusLoader;
+            OculusSettings settings = oculusLoader.GetSettings();
+            OVRPlugin.SendEvent("xr_optimize_buffer_discard", OVRTelemetry.GetTelemetrySettingString(settings.OptimizeBufferDiscards));
+            OVRPlugin.SendEvent("xr_symmetric_projection", OVRTelemetry.GetTelemetrySettingString(settings.SymmetricProjection));
+            OVRPlugin.SendEvent("xr_subsampled_layout", OVRTelemetry.GetTelemetrySettingString(settings.SubsampledLayout));
+
+#if OCULUS_XR_PLUGIN_3_2_1_OR_NEWER
+            depthSubmissionMode = settings.DepthSubmission ? OVRTelemetryConstants.ProjectSettings.DepthSubmissionMode.Depth24Bit : OVRTelemetryConstants.ProjectSettings.DepthSubmissionMode.None;
+
+            switch (settings.FoveatedRenderingMethod)
+            {
+                case OculusSettings.FoveationMethod.FixedFoveatedRendering:
+                    foveatedRenderingMode = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode.FixedFoveatedRendering;
+                    foveatedRenderingAPI = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI.Legacy;
+                    break;
+                case OculusSettings.FoveationMethod.EyeTrackedFoveatedRendering:
+                    foveatedRenderingMode = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode.EyeTrackedFoveatedRendering;
+                    foveatedRenderingAPI = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI.Legacy;
+                    break;
+#if OCULUS_XR_PLUGIN_4_3_0_OR_NEWER && UNITY_2023_2_OR_NEWER && URP_16_OR_NEWER
+                case OculusSettings.FoveationMethod.FixedFoveatedRenderingUsingUnityAPIForURP:
+                    foveatedRenderingMode = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode.FixedFoveatedRendering;
+                    foveatedRenderingAPI = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI.SRP;
+                    break;
+                case OculusSettings.FoveationMethod.EyeTrackedFoveatedRenderingUsingUnityAPIForURP:
+                    foveatedRenderingMode = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode.EyeTrackedFoveatedRendering;
+                    foveatedRenderingAPI = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI.SRP;
+                    break;
+#endif
+            }
+#endif
+        }
+#endif
+#if USING_XR_SDK_OPENXR
+        var xrloader = GetActiveLoader<OpenXRLoader>(buildGroup);
+        if (xrloader)
+        {
+            xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.OpenXR;
+            var settings = OpenXRSettings.GetSettingsForBuildTargetGroup(buildGroup);
+
+            if (settings != null)
+            {
+#if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
+                switch (settings.foveatedRenderingApi)
+                {
+                    case OpenXRSettings.BackendFovationApi.Legacy:
+                        foveatedRenderingAPI = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI.Legacy;
+                        break;
+                    case OpenXRSettings.BackendFovationApi.SRPFoveation:
+                        foveatedRenderingAPI = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingAPI.SRP;
+                        break;
+                }
+
+                OVRPlugin.SendEvent("xr_optimize_buffer_discard", OVRTelemetry.GetTelemetrySettingString(settings.optimizeBufferDiscards));
+                OVRPlugin.SendEvent("xr_symmetric_projection", OVRTelemetry.GetTelemetrySettingString(settings.symmetricProjection));
+#endif
+
+                switch (settings.depthSubmissionMode)
+                {
+                    case OpenXRSettings.DepthSubmissionMode.None:
+                        depthSubmissionMode = OVRTelemetryConstants.ProjectSettings.DepthSubmissionMode.None;
+                        break;
+                    case OpenXRSettings.DepthSubmissionMode.Depth16Bit:
+                        depthSubmissionMode = OVRTelemetryConstants.ProjectSettings.DepthSubmissionMode.Depth16Bit;
+                        break;
+                    case OpenXRSettings.DepthSubmissionMode.Depth24Bit:
+                        depthSubmissionMode = OVRTelemetryConstants.ProjectSettings.DepthSubmissionMode.Depth24Bit;
+                        break;
+                }
+
+                var metaXRETFRFeature = settings.GetFeature<Meta.XR.MetaXREyeTrackedFoveationFeature>();
+                if (metaXRETFRFeature != null && metaXRETFRFeature.enabled)
+                {
+                    foveatedRenderingMode = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode.EyeTrackedFoveatedRendering;
+                }
+                else
+                {
+                    var metaXRFoveationFeature = settings.GetFeature<Meta.XR.MetaXRFoveationFeature>();
+                    if (metaXRFoveationFeature != null && metaXRFoveationFeature.enabled)
+                    {
+                        foveatedRenderingMode = OVRTelemetryConstants.ProjectSettings.FoveatedRenderingMode.FixedFoveatedRendering;
+                    }
+                }
+
+
+            }
+        }
+#endif
+        OVRPlugin.SendEvent("xr_foveated_rendering_method", foveatedRenderingMode.ToString());
+        OVRPlugin.SendEvent("xr_foveated_rendering_api", foveatedRenderingAPI.ToString());
+        OVRPlugin.SendEvent("xr_depth_submission_mode", depthSubmissionMode.ToString());
+
+        OVRPlugin.SendEvent("xr_plugin_type", xrplugin.ToString());
+        OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.XrPluginType)
+            .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.XrPluginType, xrplugin.ToString())
+            .Send();
 #endif
     }
 
@@ -504,22 +634,35 @@ public class OVRGradleGeneration
         OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.RenderThreadingMode)
             .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.RenderThreadingMode, mode.ToString())
             .Send();
+        OVRPlugin.SendEvent("project_settings_graphics_jobs_mode", PlayerSettings.graphicsJobMode.ToString());
+        OVRPlugin.SendEvent("project_settings_multithreaded_rendering", OVRTelemetry.GetTelemetrySettingString(PlayerSettings.MTRendering));
 
-#if USING_XR_MANAGEMENT
-        OVRTelemetryConstants.ProjectSettings.XrPlugin xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.Unknown;
-        var buildGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
-#if USING_XR_SDK_OCULUS
-        if (IsLoaderActive<OculusLoader>(buildGroup))
-            xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.Oculus;
-#endif
-#if USING_XR_SDK_OPENXR
-        if (IsLoaderActive<OpenXRLoader>(buildGroup))
-            xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.OpenXR;
-#endif
-        OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.XrPluginType)
-            .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.XrPluginType, xrplugin.ToString())
-            .Send();
-#endif
+        var urpPackageInfo = PackageList.GetPackage("com.unity.render-pipelines.universal");
+        if (urpPackageInfo != null)
+        {
+            OVRPlugin.SendEvent("urp_version", urpPackageInfo.version);
+            OVRPlugin.SendEvent("urp_source", urpPackageInfo.source.ToString());
+            if (urpPackageInfo.source == UnityEditor.PackageManager.PackageSource.Git)
+            {
+                // Log the git branch if using our fork.
+                if (urpPackageInfo.packageId.Contains("https://github.com/Oculus-VR/Unity-Graphics.git"))
+                {
+                    OVRPlugin.SendEvent("urp_git_revision", urpPackageInfo.git.revision);
+                }
+            }
+        }
+
+        var openXRPackageInfo = PackageList.GetPackage("com.unity.xr.openxr");
+        if (openXRPackageInfo != null)
+        {
+            OVRPlugin.SendEvent("openxrplugin_version", openXRPackageInfo.version);
+        }
+
+        var oculusXRPackageInfo = PackageList.GetPackage("com.unity.xr.oculus");
+        if (oculusXRPackageInfo != null)
+        {
+            OVRPlugin.SendEvent("oculusxrplugin_version", oculusXRPackageInfo.version);
+        }
 
 #if URP_14_OR_NEWER
         var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
@@ -529,7 +672,40 @@ public class OVRGradleGeneration
             var urpPipelineAsset = pipelineAsset as UniversalRenderPipelineAsset;
             if (urpPipelineAsset != null)
             {
-                UniversalRendererData renderData = null;
+                OVRPlugin.SendEvent("urp_depth_texture", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.supportsCameraDepthTexture));
+                OVRPlugin.SendEvent("urp_color_texture", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.supportsCameraOpaqueTexture));
+                OVRPlugin.SendEvent("urp_srp_batcher", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.useSRPBatcher));
+                OVRPlugin.SendEvent("urp_dynamic_batching", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.supportsDynamicBatching));
+                OVRPlugin.SendEvent("urp_hdr", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.supportsHDR));
+                OVRPlugin.SendEvent("urp_hdr_precision", urpPipelineAsset.hdrColorBufferPrecision.ToString());
+                OVRPlugin.SendEvent("urp_msaa", urpPipelineAsset.msaaSampleCount.ToString());
+                OVRPlugin.SendEvent("urp_render_scale", urpPipelineAsset.renderScale.ToString());
+                OVRPlugin.SendEvent("urp_upscale_filtering", urpPipelineAsset.upscalingFilter.ToString());
+                OVRPlugin.SendEvent("urp_main_light_rendering_mode", urpPipelineAsset.mainLightRenderingMode.ToString());
+                OVRPlugin.SendEvent("urp_main_light_cast_shadows", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.supportsMainLightShadows));
+                if (urpPipelineAsset.supportsMainLightShadows)
+                {
+                    OVRPlugin.SendEvent("urp_main_light_shadow_resolution", urpPipelineAsset.mainLightShadowmapResolution.ToString());
+                }
+
+                OVRPlugin.SendEvent("urp_additional_lights_rendering_mode", urpPipelineAsset.additionalLightsRenderingMode.ToString());
+                OVRPlugin.SendEvent("urp_additional_lights_per_object_limit", urpPipelineAsset.maxAdditionalLightsCount.ToString());
+                OVRPlugin.SendEvent("urp_additional_lights_cast_shadows", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.supportsAdditionalLightShadows));
+                OVRPlugin.SendEvent("urp_additional_lights_shadow_atlas_resolution", urpPipelineAsset.additionalLightsShadowmapResolution.ToString());
+
+#if URP_17_OR_NEWER
+                OVRPlugin.SendEvent("urp_light_probe_system", urpPipelineAsset.lightProbeSystem.ToString());
+#endif
+                OVRPlugin.SendEvent("urp_reflection_probe_blending", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.reflectionProbeBlending));
+                OVRPlugin.SendEvent("urp_reflection_probe_box_projection", OVRTelemetry.GetTelemetrySettingString(urpPipelineAsset.reflectionProbeBoxProjection));
+
+#if (URP_17_OR_NEWER)
+                foreach (var rendererData in urpPipelineAsset.rendererDataList)
+                {
+                    UniversalRendererData urpRendererData = rendererData as UniversalRendererData;
+
+#else
+                UniversalRendererData urpRendererData = null;
                 var path = AssetDatabase.GetAssetPath(urpPipelineAsset);
                 var dependency = AssetDatabase.GetDependencies(path);
                 for (int i = 0; i < dependency.Length; i++)
@@ -537,45 +713,57 @@ public class OVRGradleGeneration
                     if (AssetDatabase.GetMainAssetTypeAtPath(dependency[i]) != typeof(UniversalRendererData))
                         continue;
 
-                    renderData = (UniversalRendererData)AssetDatabase.LoadAssetAtPath(dependency[i], typeof(UniversalRendererData));
-                    break;
-                }
+                    urpRendererData = (UniversalRendererData)AssetDatabase.LoadAssetAtPath(dependency[i], typeof(UniversalRendererData));
+#endif
 
-                if (renderData != null)
-                {
-                    OVRTelemetryConstants.ProjectSettings.RenderingPath renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Unknown;
-                    switch (renderData.renderingMode)
+                    if (urpRendererData != null)
                     {
-                        case RenderingMode.Forward:
-                            renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Forward;
-                            break;
-                        case RenderingMode.ForwardPlus:
-                            renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.ForwardPlus;
-                            break;
-                        case RenderingMode.Deferred:
-                            renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Deferred;
-                            break;
+                        OVRTelemetryConstants.ProjectSettings.RenderingPath renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Unknown;
+                        switch (urpRendererData.renderingMode)
+                        {
+                            case RenderingMode.Forward:
+                                renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Forward;
+                                break;
+                            case RenderingMode.ForwardPlus:
+                                renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.ForwardPlus;
+                                break;
+                            case RenderingMode.Deferred:
+                                renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Deferred;
+                                break;
+                        }
+                        OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.RenderingPath)
+                            .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.RenderingPath, renderingPath.ToString())
+                            .Send();
+
+                        OVRPlugin.SendEvent("urp_rendering_path", urpRendererData.renderingMode.ToString());
+                        OVRPlugin.SendEvent("urp_depth_priming_mode", urpRendererData.depthPrimingMode.ToString());
+                        OVRPlugin.SendEvent("urp_copy_depth_mode", urpRendererData.copyDepthMode.ToString());
+                        OVRPlugin.SendEvent("urp_post_processing", OVRTelemetry.GetTelemetrySettingString(urpRendererData.postProcessData != null));
+                        foreach (var feature in urpRendererData.rendererFeatures)
+                        {
+                            OVRPlugin.SendEvent("urp_renderer_feature", feature.name);
+                        }
                     }
-                    OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.RenderingPath)
-                        .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.RenderingPath, renderingPath.ToString())
-                        .Send();
                 }
             }
         }
 #endif
     }
 
-    public bool IsLoaderActive<T>(BuildTargetGroup group)
-    {
 #if USING_XR_MANAGEMENT
+    public UnityEngine.XR.Management.XRLoader GetActiveLoader<T>(BuildTargetGroup group)
+    {
         var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(group);
-        if (settings.Manager.activeLoaders.Count > 0)
+        foreach (var activeLoader in settings.Manager.activeLoaders)
         {
-            return settings.Manager.activeLoaders[0] is T;
+            if (activeLoader is T)
+            {
+                return activeLoader;
+            }
         }
-#endif
-        return false;
+        return null;
     }
+#endif
 
 #if UNITY_ANDROID
     public bool WaitForProcess;

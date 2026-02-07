@@ -18,6 +18,8 @@
  * limitations under the License.
  */
 
+using Meta.XR.Editor.Id;
+using Meta.XR.Guides.Editor;
 using UnityEditor;
 
 namespace Meta.XR.BuildingBlocks.Editor
@@ -50,10 +52,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             DrawHeader("Information");
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(InstallationRoutine.id)));
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(InstallationRoutine.targetBlockDataId)));
-            UIHelpers.DrawBlockRow(BlockData, null, OVRTelemetryConstants.BB.Origins.BlockInspector, BlockData, false);
+            UIHelpers.DrawBlockRow(BlockData, null, Origins.BlockInspector, BlockData, false);
 
             DrawHeader("Setup");
-            EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.packageDependencies)));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(InstallationRoutine.packageDependencies)));
             using (new EditorGUI.DisabledScope(!Data.GetUsesPrefab))
             {
                 EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(InstallationRoutine.prefab)));
@@ -67,6 +69,19 @@ namespace Meta.XR.BuildingBlocks.Editor
                 DrawVariants("Definition Variants", Data.DefinitionVariants, serializedObject);
                 DrawVariants("Parameter Variants", Data.ParameterVariants, serializedObject);
                 DrawVariants("Constants", Data.Constants, serializedObject);
+            }
+
+        }
+
+        private void DrawGuidedSetupField()
+        {
+            EditorGUI.BeginChangeCheck();
+            Data.selectedGuidedSetupIndex = EditorGUILayout.Popup("Guided Setup", Data.selectedGuidedSetupIndex,
+                Utils.GetClassNamesFromAssemblyQualifiedNames(GuideProcessor.GuidedSetupClasses));
+            if (EditorGUI.EndChangeCheck())
+            {
+                Data.guidedSetupName = GuideProcessor.GuidedSetupClasses[Data.selectedGuidedSetupIndex];
+                EditorUtility.SetDirty(Data);
             }
         }
 

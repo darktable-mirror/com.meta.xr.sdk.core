@@ -27,7 +27,6 @@ internal static class OVRProjectSetupTelemetryEvent
     {
         // Attention : Need to be kept in sync with QPL Event Ids
         public const int Fix = 163058027;
-        public const int Option = 163058846;
         public const int GoToSource = 163056520;
         public const int Summary = 163063879;
         public const int Open = 163056010;

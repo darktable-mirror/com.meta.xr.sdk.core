@@ -18,19 +18,34 @@
  * limitations under the License.
  */
 
-#if DEPTH_API_SUPPORTED
+#if XR_OCULUS_4_2_0_OR_NEWER
+#if UNITY_2022_3_OR_NEWER && !UNITY_2023_1
+#define IS_SUPPORTED_DEPTH_API_UNITY_VERSION
+#endif
 using Unity.XR.Oculus;
+using UnityEngine;
+using UnityEngine.XR;
 
 namespace Meta.XR.EnvironmentDepth
 {
     internal class DepthProvider : IDepthProvider
     {
-        public bool IsSupported => Utils.GetEnvironmentDepthSupported();
-        public bool RemoveHands { set => Utils.SetEnvironmentDepthHandRemoval(value); }
+        private readonly XRDisplaySubsystem _displaySubsystem;
+        private uint? _prevTextureId;
 
-        public bool GetDepthTextureId(ref uint textureId) => Utils.GetEnvironmentDepthTextureId(ref textureId);
+        public DepthProvider(XRDisplaySubsystem displaySubsystem)
+        {
+            _displaySubsystem = displaySubsystem;
+#if !IS_SUPPORTED_DEPTH_API_UNITY_VERSION
+            Debug.LogError("DepthAPI requires at least Unity 2022.3.0f");
+#endif
+        }
 
-        public void SetDepthEnabled(bool isEnabled, bool removeHands)
+        bool IDepthProvider.IsSupported => Utils.GetEnvironmentDepthSupported();
+
+        bool IDepthProvider.RemoveHands { set => Utils.SetEnvironmentDepthHandRemoval(value); }
+
+        void IDepthProvider.SetDepthEnabled(bool isEnabled, bool removeHands)
         {
             if (isEnabled)
             {
@@ -44,21 +59,46 @@ namespace Meta.XR.EnvironmentDepth
             }
         }
 
-        public DepthFrameDesc GetFrameDesc(int eye)
+        bool IDepthProvider.TryGetUpdatedDepthTexture(out RenderTexture depthTexture, DepthFrameDesc[] frameDescriptors)
+        {
+            depthTexture = null;
+            uint textureId = 0;
+            if (!_displaySubsystem.running || !Utils.GetEnvironmentDepthTextureId(ref textureId))
+            {
+                return false;
+            }
+
+            if (_prevTextureId == textureId)
+            {
+                return false;
+            }
+            _prevTextureId = textureId;
+
+#if IS_SUPPORTED_DEPTH_API_UNITY_VERSION
+            depthTexture = _displaySubsystem.GetRenderTexture(textureId);
+#endif
+            for (int i = 0; i < frameDescriptors.Length; i++)
+            {
+                frameDescriptors[i] = GetFrameDesc(i);
+            }
+            return true;
+        }
+
+        private static DepthFrameDesc GetFrameDesc(int eye)
         {
             var d = Utils.GetEnvironmentDepthFrameDesc(eye);
             return new DepthFrameDesc
             {
                 createPoseLocation = d.createPoseLocation,
-                createPoseRotation = d.createPoseRotation,
-                fovLeftAngle = d.fovLeftAngle,
-                fovRightAngle = d.fovRightAngle,
-                fovTopAngle = d.fovTopAngle,
-                fovDownAngle = d.fovDownAngle,
+                createPoseRotation = new Quaternion(d.createPoseRotation.x, d.createPoseRotation.y, d.createPoseRotation.z, d.createPoseRotation.w),
+                fovLeftAngleTangent = d.fovLeftAngle,
+                fovRightAngleTangent = d.fovRightAngle,
+                fovTopAngleTangent = d.fovTopAngle,
+                fovDownAngleTangent = d.fovDownAngle,
                 nearZ = d.nearZ,
                 farZ = d.farZ
             };
         }
     }
 }
-#endif // DEPTH_API_SUPPORTED
+#endif // XR_OCULUS_4_2_0_OR_NEWER

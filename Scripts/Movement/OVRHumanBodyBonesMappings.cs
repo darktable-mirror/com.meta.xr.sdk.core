@@ -22,19 +22,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// A partial class definition of the class responsible for retargeting from
-/// <see cref="OVRSkeleton"/> body tracking bones to a third party
-/// humanoid skeleton. Unlike <see cref="OVRCustomSkeleton"/>, the skeleton
-/// retargeted to does not need to use bones that match body tracking names, or
-/// have a hierarchy that matches what body tracking expects. Instead, you
-/// can use this class to apply [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/)
-/// to characters that have been imported as Unity Humanoids.
-///
-/// This partial definition contains maps useful for retargeting, such as
-/// maps between body tracking and humanoid bones for upper body and full
-/// body tracking.
-/// </summary>
 public partial class OVRUnityHumanoidSkeletonRetargeter
 {
     /// <summary>

@@ -59,7 +59,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private void Update()
         {
-            if (_watchTexture == null || _watchTexture.Texture == null)
+            if (_watchTexture is not { Valid: true }) return;
+
+            if (_watchTexture.Texture == null)
                 return;
 
             Texture = _watchTexture.Texture;

@@ -19,8 +19,10 @@
  */
 
 using System.Collections.Generic;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
 using UnityEditor;
+using static Meta.XR.Editor.ToolingSupport.ToolDescriptor;
 
 namespace Meta.XR.Editor.PlayCompanion
 {
@@ -29,8 +31,13 @@ namespace Meta.XR.Editor.PlayCompanion
     {
         private static readonly List<Item> Items = new List<Item>();
 
-        public static readonly Bool Enabled =
-            new UserBool("PlayCompanion.Enabled", true);
+        public static readonly CustomBool Enabled =
+            new UserBool()
+            {
+                Owner = null,
+                Uid = "PlayCompanion.Enabled",
+                Default = true
+            };
 
         static Manager()
         {
@@ -148,12 +155,7 @@ namespace Meta.XR.Editor.PlayCompanion
 
         private static void OnSettingsGUI()
         {
-            EditorGUI.BeginChangeCheck();
-            var value = EditorGUILayout.Toggle("Enable Play Button Options", Enabled.Value);
-            if (EditorGUI.EndChangeCheck())
-            {
-                Enabled.Value = value;
-            }
+            Enabled.DrawForGUI(Origins.UserSettings, null);
         }
     }
 }

@@ -22,6 +22,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace Meta.XR.ImmersiveDebugger
 {
@@ -39,7 +40,7 @@ namespace Meta.XR.ImmersiveDebugger
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Enum)]
     [Serializable]
-    public class DebugMember : Attribute
+    public class DebugMember : PreserveAttribute
     {
         public const string DisplayNameTooltip = "Optional name override to be used in the Inspector Panel";
 
@@ -104,6 +105,18 @@ namespace Meta.XR.ImmersiveDebugger
         {
             ParsedColors.TryGetValue(color, out Color);
         }
+
+        /// <summary>
+        /// Constructor of the DebugMember
+        /// </summary>
+        /// <param name="colorString">The string typed color used for DebugGizmo line drawing and inspector row pill icon, default to Gray.
+        /// Could be Hex code or literal colors from Unity https://docs.unity3d.com/ScriptReference/ColorUtility.TryParseHtmlString.html</param>
+        public DebugMember(string colorString)
+        {
+            if (!string.IsNullOrEmpty(colorString))
+            {
+                Color = ColorUtility.TryParseHtmlString(colorString, out var color) ? color : Color.gray;
+            }
+        }
     }
 }
-

@@ -19,6 +19,7 @@
  */
 
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -37,28 +38,41 @@ namespace Meta.XR.BuildingBlocks.Editor
                     new(null, "If no CameraRig is found, do the following:")
                 };
                 installationSteps.AddRange(base.InstallationSteps);
+                installationSteps.Add(new InstallationStepInfo(null, "Set <b>OVRManager.trackingOriginType</b> to <i>FloorLevel</i>."));
                 return installationSteps;
             }
         }
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
-            var existingCameraRig = FindObjectOfType<OVRCameraRig>();
-
-            if (existingCameraRig == null)
+            var cameraRig = FindFirstObjectByType<OVRCameraRig>();
+            if (cameraRig == null)
             {
-                return base.InstallRoutine(selectedGameObject);
+                // Instantiate Prefab (will be automatically unpacked)
+                var createdObjects = base.InstallRoutine(selectedGameObject);
+                cameraRig = createdObjects.FirstOrDefault()?.GetComponent<OVRCameraRig>();
+
+                // Update Manager to ensure Tracking Origin is Floor Level
+                var manager = cameraRig?.GetComponent<OVRManager>();
+                if (manager != null)
+                {
+                    manager.trackingOriginType = OVRManager.TrackingOrigin.FloorLevel;
+                }
+
+                return createdObjects;
             }
 
 #if UNITY_2021
-                    if (PrefabUtility.GetPrefabInstanceStatus(existingCameraRig.gameObject) != PrefabInstanceStatus.NotAPrefab)
-                    {
-                        PrefabUtility.UnpackPrefabInstance(
-                            PrefabUtility.GetOutermostPrefabInstanceRoot(existingCameraRig.gameObject),
-                            PrefabUnpackMode.Completely,
-                            InteractionMode.AutomatedAction);
-                    }
+            // Unpack pre-existing prefab, required for Unity 2021
+            if (cameraRig != null && PrefabUtility.GetPrefabInstanceStatus(cameraRig.gameObject) != PrefabInstanceStatus.NotAPrefab)
+            {
+                PrefabUtility.UnpackPrefabInstance(
+                    PrefabUtility.GetOutermostPrefabInstanceRoot(cameraRig.gameObject),
+                    PrefabUnpackMode.Completely,
+                    InteractionMode.AutomatedAction);
+            }
 #endif
-            return new List<GameObject> { existingCameraRig.gameObject };
+
+            return new List<GameObject> { cameraRig.gameObject };
         }
     }
 }

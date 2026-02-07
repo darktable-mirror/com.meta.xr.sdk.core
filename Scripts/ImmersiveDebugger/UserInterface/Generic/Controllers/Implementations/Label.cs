@@ -53,6 +53,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Text.horizontalOverflow = HorizontalWrapMode.Overflow;
             Text.verticalOverflow = VerticalWrapMode.Overflow;
             Text.text = "";
+
+            Text.raycastTarget = false;
         }
 
         /// <summary>

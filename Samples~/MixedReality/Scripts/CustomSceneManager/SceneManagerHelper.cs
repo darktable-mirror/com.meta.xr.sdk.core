@@ -18,12 +18,14 @@
  * limitations under the License.
  */
 
+using Meta.XR.Samples;
 using Unity.Collections;
 using UnityEngine;
 
 /// <summary>
 /// A smaller helper class for Custom Scene Manager samples.
 /// </summary>
+[MetaCodeSample("CoreSDK-MixedReality")]
 public class SceneManagerHelper
 {
     public GameObject AnchorGameObject { get; }

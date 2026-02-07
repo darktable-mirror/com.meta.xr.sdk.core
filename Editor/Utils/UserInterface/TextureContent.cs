@@ -18,18 +18,28 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
+using System;
 using System.IO;
+using Meta.XR.Editor.Id;
 using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
 {
+    [Serializable]
     internal class TextureContent
     {
-        public class Category
+        [Serializable]
+        public class Category : IIdentified
         {
-            private readonly string _relativePath;
+            [SerializeField]
+            private string _path;
+
+            [SerializeField]
+            private bool _isFullPath;
+
+            public string Id => _path;
+
             private string _fullPath;
 
             public bool TryGetFullPath(out string fullPath)
@@ -38,7 +48,7 @@ namespace Meta.XR.Editor.UserInterface
                 {
                     if (TryGetRootPath(out var rootPath))
                     {
-                        _fullPath = Path.Combine(rootPath, _relativePath);
+                        _fullPath = Path.Combine(rootPath, _path);
                     }
                 }
 
@@ -48,19 +58,20 @@ namespace Meta.XR.Editor.UserInterface
 
             public Category(string path, bool isFullPath = false)
             {
-                if (isFullPath)
+                _path = path;
+                _isFullPath = isFullPath;
+
+                if (_isFullPath)
                 {
                     _fullPath = path;
-                    return;
                 }
-                _relativePath = path;
             }
         }
 
         public static class Categories
         {
-            public static readonly Category BuiltIn = new Category(null);
-            public static readonly Category Generic = new Category("Icons");
+            public static readonly Category BuiltIn = new(null);
+            public static readonly Category Generic = new("Icons");
         }
 
         public static TextureContent CreateContent(string name, TextureContent.Category category, string tooltip = null)
@@ -105,9 +116,19 @@ namespace Meta.XR.Editor.UserInterface
         }
 
         private GUIContent _content;
-        private readonly string _name;
-        private readonly Category _category;
-        private readonly bool _builtIn;
+        public GUIContent Content => _content ??= new GUIContent
+        {
+            image = null,
+            tooltip = _tooltip
+        };
+
+        [SerializeField]
+        private string _name;
+
+        [SerializeField]
+        private Category _category;
+
+        [SerializeField]
         private string _tooltip;
 
         public string Name => _name;
@@ -117,7 +138,7 @@ namespace Meta.XR.Editor.UserInterface
             set
             {
                 _tooltip = value;
-                _content.tooltip = value;
+                Content.tooltip = value;
             }
             get => _tooltip;
         }
@@ -127,27 +148,22 @@ namespace Meta.XR.Editor.UserInterface
             _name = name;
             _tooltip = tooltip;
             _category = category;
-            _content = new GUIContent
-            {
-                image = null,
-                tooltip = _tooltip
-            };
         }
 
         public GUIContent GUIContent
         {
             get
             {
-                if (_content.image == null)
+                if (Content.image == null)
                 {
                     LoadContent();
                 }
 
-                return _content;
+                return Content;
             }
         }
 
-        public bool Valid => GUIContent.image != null;
+        public bool Valid => _name != null && GUIContent.image != null;
         public Texture Image => GUIContent.image;
 
         private void LoadContent()
@@ -163,9 +179,51 @@ namespace Meta.XR.Editor.UserInterface
                 var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(fullPath);
                 if (texture)
                 {
-                    _content.image = texture;
+                    Content.image = texture;
                 }
             }
+        }
+
+        public delegate void OnImageLoadedDelegate(Texture image);
+        private event OnImageLoadedDelegate OnImageLoadedEvent;
+
+        private void PollLoading()
+        {
+            if (!Valid) return;
+
+            // Calling all delegates
+            OnImageLoadedEvent?.Invoke(Image);
+
+            // Clearing all registered delegates
+            OnImageLoadedEvent = null;
+
+            // Unregistering from Editor update
+            EditorApplication.update -= PollLoading;
+        }
+
+        /// <summary>
+        /// When Image is accessed too early, it may not successfully load, in which case we recommend
+        /// delaying the loading and assignment using this method.
+        /// If using the legacy OnGUI() pattern, you probably don't need to use this delay assignment.
+        /// But when working with the new UI pattern of Unity, initialization of objects is done only once and
+        /// potentially too early for this TextureContent to be valid.
+        /// </summary>
+        public void RegisterToImageLoaded(OnImageLoadedDelegate del)
+        {
+            if (Valid)
+            {
+                del?.Invoke(Image);
+                return;
+            }
+
+            if (OnImageLoadedEvent == null)
+            {
+                // Registering to Editor update
+                EditorApplication.update += PollLoading;
+            }
+
+            // Registering the new delegate
+            OnImageLoadedEvent += del;
         }
     }
 }

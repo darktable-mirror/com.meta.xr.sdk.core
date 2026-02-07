@@ -54,8 +54,6 @@ namespace Meta.XR.ImmersiveDebugger
         /// </summary>
         public delegate Transform GetRightControllerTransformDelegate();
         public static event GetCameraDelegate GetCameraHandler;
-        public static event GetLeftControllerTransformDelegate GetLeftControllerTransformHandler;
-        public static event GetRightControllerTransformDelegate GetRightControllerTransformHandler;
 
         /// <summary>
         /// Setup all the configs with provided ICustomIntegrationConfig so it's used by Immersive Debugger
@@ -65,8 +63,6 @@ namespace Meta.XR.ImmersiveDebugger
         public static void SetupAllConfig(ICustomIntegrationConfig customConfig)
         {
             GetCameraHandler += customConfig.GetCamera;
-            GetLeftControllerTransformHandler += customConfig.GetLeftControllerTransform;
-            GetRightControllerTransformHandler += customConfig.GetRightControllerTransform;
         }
 
         /// <summary>
@@ -76,8 +72,6 @@ namespace Meta.XR.ImmersiveDebugger
         public static void ClearAllConfig(ICustomIntegrationConfig customConfig)
         {
             GetCameraHandler -= customConfig.GetCamera;
-            GetLeftControllerTransformHandler -= customConfig.GetLeftControllerTransform;
-            GetRightControllerTransformHandler -= customConfig.GetRightControllerTransform;
         }
 
         /// <summary>
@@ -87,24 +81,6 @@ namespace Meta.XR.ImmersiveDebugger
         public static Camera GetCamera()
         {
             return GetCameraHandler?.Invoke();
-        }
-
-        /// <summary>
-        /// Get Left controller, used to calculate ray casting to the panel in runtime
-        /// </summary>
-        /// <returns> Transform of the left controller</returns>
-        public static Transform GetLeftControllerTransform()
-        {
-            return GetLeftControllerTransformHandler?.Invoke();
-        }
-
-        /// <summary>
-        /// Get Right controller, used to calculate ray casting to the panel in runtime
-        /// </summary>
-        /// <returns>Transform of the right controller</returns>
-        public static Transform GetRightControllerTransform()
-        {
-            return GetRightControllerTransformHandler?.Invoke();
         }
     }
 
@@ -117,8 +93,6 @@ namespace Meta.XR.ImmersiveDebugger
     public interface ICustomIntegrationConfig
     {
         public Camera GetCamera();
-        public Transform GetLeftControllerTransform();
-        public Transform GetRightControllerTransform();
     }
 
     /// <summary>
@@ -139,6 +113,7 @@ namespace Meta.XR.ImmersiveDebugger
         {
             CustomIntegrationConfig.ClearAllConfig(this);
         }
+
         /// <summary>
         /// Indicates how a camera should be found in the application.
         /// This should be dynamically managed across scenes, if previous camera is destroyed,
@@ -146,24 +121,6 @@ namespace Meta.XR.ImmersiveDebugger
         /// </summary>
         /// <returns>The camera component Immersive Debugger is using to position panels</returns>
         public virtual Camera GetCamera()
-        {
-            return null;
-        }
-
-        /// <summary>
-        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
-        /// </summary>
-        /// <returns>The left controller component Immersive Debugger is using to detect ray casting for panels</returns>
-        public virtual Transform GetLeftControllerTransform()
-        {
-            return null;
-        }
-
-        /// <summary>
-        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
-        /// </summary>
-        /// <returns>The right controller component Immersive Debugger is using to detect ray casting for panels</returns>
-        public virtual Transform GetRightControllerTransform()
         {
             return null;
         }

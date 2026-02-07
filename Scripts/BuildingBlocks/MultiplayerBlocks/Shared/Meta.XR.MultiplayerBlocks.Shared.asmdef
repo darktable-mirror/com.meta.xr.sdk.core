@@ -9,7 +9,8 @@
         "meta.xr.mrutilitykit",
         "Oculus.Interaction.OVR",
         "Oculus.AvatarSDK2",
-        "Oculus.AvatarSDK2.Samples"
+        "Oculus.AvatarSDK2.Samples",
+        "Meta.XR.ImmersiveDebugger.Interface"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

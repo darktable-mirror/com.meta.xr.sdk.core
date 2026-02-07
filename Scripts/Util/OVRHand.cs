@@ -101,8 +101,24 @@ public class OVRHand : MonoBehaviour,
     private bool _wasIndexPinching = false;
     private bool _wasReleased = false;
 
+    /// <summary>
+    /// Enumerates the types of microgestures that can be recognized by the OVR hand tracking system.
+    /// Each microgesture corresponds to a specific hand movement or gesture recognized by the system.
+    /// </summary>
+    public enum MicrogestureType
+    {
+        NoGesture = OVRPlugin.MicrogestureType.NoGesture,
+        SwipeLeft = OVRPlugin.MicrogestureType.SwipeLeft,
+        SwipeRight = OVRPlugin.MicrogestureType.SwipeRight,
+        SwipeForward = OVRPlugin.MicrogestureType.SwipeForward,
+        SwipeBackward = OVRPlugin.MicrogestureType.SwipeBackward,
+        ThumbTap = OVRPlugin.MicrogestureType.ThumbTap,
+        Invalid = OVRPlugin.MicrogestureType.Invalid,
+    }
 
 
+    private OVRPlugin.HandTrackingState _handTrackingState = new OVRPlugin.HandTrackingState();
+    private bool _handTrackingStateValid;
 
     private static OVRHandSkeletonVersion GlobalHandSkeletonVersion =>
         OVRRuntimeSettings.Instance.HandSkeletonVersion;
@@ -241,6 +257,8 @@ public class OVRHand : MonoBehaviour,
 
             IsDataValid = true;
             IsDataHighConfidence = IsTracked && HandConfidence == TrackingConfidence.High;
+            _handTrackingStateValid =
+                OVRPlugin.GetHandTrackingState(step, (OVRPlugin.Hand)HandType, ref _handTrackingState);
 
             // Hands cannot be doing pointer poses or system gestures when they are holding controllers
             //OVRInput.Hand inputHandType = (HandType == Hand.)
@@ -302,6 +320,7 @@ public class OVRHand : MonoBehaviour,
 
             IsDataValid = false;
             IsDataHighConfidence = false;
+            _handTrackingStateValid = false;
         }
     }
 
@@ -414,6 +433,24 @@ public class OVRHand : MonoBehaviour,
     }
 
 
+    /// <summary>
+    /// Retrieves the current microgesture type based on the hand tracking state.
+    /// Returns the current type of microgesture being performed by the hand.
+    /// If the hand tracking state is not valid, it returns MicrogestureType.Invalid.
+    /// </summary>
+    public MicrogestureType GetMicrogestureType()
+    {
+        OVRPlugin.SendMicrogestureHint();
+        if (!_handTrackingStateValid)
+        {
+            return MicrogestureType.Invalid;
+        }
+
+        int microgestureValue = (int)_handTrackingState.Microgesture;
+        return microgestureValue >= (int)MicrogestureType.NoGesture && microgestureValue <= (int)MicrogestureType.ThumbTap
+            ? (MicrogestureType)microgestureValue
+            : MicrogestureType.Invalid;
+    }
 
 
     /// <summary>

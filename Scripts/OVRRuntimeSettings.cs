@@ -142,6 +142,7 @@ public class OVRRuntimeSettings : OVRRuntimeAssetsBase
         set => bodyTrackingJointSet = value;
     }
 
+
 #if UNITY_EDITOR
     /// <summary>
     /// Returns the path to the OVRRuntimeSettings asset in the project as a string.

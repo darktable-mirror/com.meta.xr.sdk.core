@@ -22,6 +22,10 @@ using UnityEditor;
 #if USING_XR_SDK_OCULUS
 using Unity.XR.Oculus;
 #endif
+#if OPEN_XR_META_2_1_OR_NEWER
+using UnityEngine.XR.OpenXR.Features.Meta;
+using UnityEngine.XR.OpenXR;
+#endif
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -50,7 +54,22 @@ namespace Meta.XR.EnvironmentDepth.Editor
             }
         }
 #endif
-
+#if OPEN_XR_META_2_1_OR_NEWER
+        private static OpenXRSettings OpenXRSettingsAndroid
+        {
+            get
+            {
+                return OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Android);
+            }
+        }
+        private static OpenXRSettings OpenXRSettingsStandalone
+        {
+            get
+            {
+                return OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Standalone);
+            }
+        }
+#endif
         static ProjectSetupDepthAPI()
         {
 #if UNITY_2022_3_OR_NEWER
@@ -59,7 +78,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: GROUP,
-                isDone: buildTargetGroup =>
+                isDone: _ =>
                 {
                     if (!_isCurrentSceneUsingDepth) return true;
                     return
@@ -67,42 +86,99 @@ namespace Meta.XR.EnvironmentDepth.Editor
                         PlayerSettings.GetGraphicsAPIs(BuildTarget.Android)[0] == GraphicsDeviceType.Vulkan;
                 },
                 message: "DepthAPI requires Vulkan to be set as the Default Graphics API.",
-                fix: buildTargetGroup =>
+                fix: _ =>
                 {
                     PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new GraphicsDeviceType[] { GraphicsDeviceType.Vulkan });
                 },
                 fixMessage: "Set Vulkan as Default Graphics API"
             );
-#if !DEPTH_API_SUPPORTED
+#if !XR_OCULUS_4_2_0_OR_NEWER && !OPEN_XR_META_2_1_OR_NEWER // We've got neither package
             const string xrOculusRequiredVersion = "com.unity.xr.oculus@4.2.0";
+            const string openXrMetaRequiredVersion = "com.unity.xr.meta-openxr@2.1.0-pre1";
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
-                isDone: buildTargetGroup =>
+                isDone: _ =>
                 {
                     if (!_isCurrentSceneUsingDepth) return true;
                     return false;
                 },
-                message: $"DepthAPI requires XR Oculus {xrOculusRequiredVersion}. Please upgrade in the package manager."
+                message: $"DepthAPI requires either XR Oculus {xrOculusRequiredVersion} or OpenXR {openXrMetaRequiredVersion}. Please upgrade in the package manager."
             );
 #endif
-#if USING_XR_SDK_OCULUS
+#if USING_XR_SDK_OCULUS && !OPEN_XR_META_2_1_OR_NEWER // We've got oculus package only
             // Multiview option
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Required,
+                group: GROUP,
+                isDone: _ =>
+                {
+                    if (!_isCurrentSceneUsingDepth) return true;
+                    if (OculusSettings == null) return true;
+                        return OculusSettings.m_StereoRenderingModeAndroid == OculusSettings.StereoRenderingModeAndroid.Multiview;
+                },
+                message: "DepthAPI requires Stereo Rendering Mode to be set to Multiview.",
+                fix: _ =>
+                {
+                    OculusSettings.m_StereoRenderingModeAndroid = OculusSettings.StereoRenderingModeAndroid.Multiview;
+                },
+                fixMessage: "Set Stereo Rendering Mode to Multiview."
+            );
+#endif
+#if OPEN_XR_META_2_1_OR_NEWER // We've got OpenXR Meta package (Regardless of whether we have oculus. We prioritize OpenXR)
+            // Occlusion feature enabled
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: GROUP,
                 isDone: buildTargetGroup =>
                 {
                     if (!_isCurrentSceneUsingDepth) return true;
-                    if (OculusSettings == null) return true;
-                    return OculusSettings.m_StereoRenderingModeAndroid == OculusSettings.StereoRenderingModeAndroid.Multiview;
+                    OpenXRSettings settings = OpenXRSettingsStandalone;
+                    if (buildTargetGroup == BuildTargetGroup.Android)
+                        settings = OpenXRSettingsAndroid;
+                    if (settings == null) return true;
+                    var occlusionFeature = settings.GetFeature<AROcclusionFeature>();
+                    var sessionFeature = settings.GetFeature<ARSessionFeature>();
+                    return occlusionFeature.enabled && sessionFeature.enabled;
                 },
-                message: "DepthAPI requires Stereo Rendering Mode to be set to Multiview.",
+                message: "DepthAPI requires Occlusions and Session to be enabled in the OpenXR menu.",
                 fix: buildTargetGroup =>
                 {
-                    OculusSettings.m_StereoRenderingModeAndroid = OculusSettings.StereoRenderingModeAndroid.Multiview;
+                    OpenXRSettings settings = OpenXRSettingsStandalone;
+                    if (buildTargetGroup == BuildTargetGroup.Android)
+                        settings = OpenXRSettingsAndroid;
+                    var occlusionFeature = settings.GetFeature<AROcclusionFeature>();
+                    var sessionFeature = settings.GetFeature<ARSessionFeature>();
+                    occlusionFeature.enabled = true;
+                    sessionFeature.enabled = true;
+                    EditorUtility.SetDirty(occlusionFeature);
+                    EditorUtility.SetDirty(sessionFeature);
                 },
-                fixMessage: "Set Stereo Rendering Mode to Multiview"
+                fixMessage: "Enable occlusion and session features."
+            );
+            // Multiview option enabled
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Required,
+                group: GROUP,
+                isDone: buildTargetGroup =>
+                {
+                    if (!_isCurrentSceneUsingDepth) return true;
+                    OpenXRSettings settings = OpenXRSettingsStandalone;
+                    if (buildTargetGroup == BuildTargetGroup.Android)
+                        settings = OpenXRSettingsAndroid;
+                    if (settings == null) return true;
+                    if (settings.renderMode == OpenXRSettings.RenderMode.SinglePassInstanced) return true;
+                    return false;
+                },
+                message: "DepthAPI requires render mode to be set to Single Instanced (Multiview).",
+                fix: buildTargetGroup =>
+                {
+                    OpenXRSettings settings = OpenXRSettingsStandalone;
+                    if (buildTargetGroup == BuildTargetGroup.Android)
+                        settings = OpenXRSettingsAndroid;
+                    settings.renderMode = OpenXRSettings.RenderMode.SinglePassInstanced;
+                },
+                fixMessage: "Set Stereo Rendering Mode to Multiview."
             );
 #endif
             // Quest 3 requirement support
@@ -112,16 +188,19 @@ namespace Meta.XR.EnvironmentDepth.Editor
                 isDone: _ =>
                 {
                     if (!_isCurrentSceneUsingDepth) return true;
-                    return OVRProjectConfig.CachedProjectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3);
+                    var targetDevices = OVRProjectConfig.CachedProjectConfig.targetDeviceTypes;
+                    return targetDevices.Contains(OVRProjectConfig.DeviceType.Quest3) &&
+                           targetDevices.Contains(OVRProjectConfig.DeviceType.Quest3S);
                 },
-                message: "Occlusion is only available on Quest 3 devices",
+                message: "Occlusion is only available on Quest 3 and 3S devices",
                 fix: _ =>
                 {
                     var projectConfig = OVRProjectConfig.CachedProjectConfig;
                     projectConfig.targetDeviceTypes.Add(OVRProjectConfig.DeviceType.Quest3);
+                    projectConfig.targetDeviceTypes.Add(OVRProjectConfig.DeviceType.Quest3S);
                     OVRProjectConfig.CommitProjectConfig(projectConfig);
                 },
-                fixMessage: "Set Quest 3 as the target device"
+                fixMessage: "Set Quest 3 and 3S as the target device"
             );
             // Scene requirement support
             OVRProjectSetup.AddTask(
@@ -172,7 +251,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
                 group: OVRProjectSetup.TaskGroup.Compatibility,
                 isDone: buildTargetGroup =>
                 {
-                    if (!_isCurrentSceneUsingDepth) return true;//we only check this if DepthTextureProvider is in the scene
+                    if (!_isCurrentSceneUsingDepth) return true;// We only check this if DepthTextureProvider is in the scene
                     return false;
                 },
                 message: "DepthAPI requires at least Unity 2022.3.0f"

@@ -19,9 +19,11 @@
  */
 
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Meta.XR.Editor.StatusMenu;
+using Meta.XR.Editor.Id;
+using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.ImmersiveDebugger.Utils;
 using UnityEditor;
 using UnityEngine;
@@ -42,6 +44,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         private float _dialogNoticeVerticalPadding;
         private GUIContent _dialogNotice;
         private string _filterComponent;
+        private SerializedProperty _category;
 
         private void Awake()
         {
@@ -55,6 +58,11 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                                              + GUIStyles.DialogBox.padding.right;
 
             _dialogNoticeVerticalPadding = GUIStyles.DialogBox.padding.bottom + GUIStyles.DialogBox.padding.top;
+        }
+
+        private void OnEnable()
+        {
+            _category = serializedObject.FindProperty("_category");
         }
 
         private bool Foldout(object handle)
@@ -87,7 +95,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             var expectedButtonHeight = ItemHeight;
             GUILayout.BeginArea(new Rect(0, 0, currentWidth, expectedButtonHeight));
             EditorGUILayout.BeginHorizontal();
-            Utils.Item.Show(null, true, Item.Origins.Component);
+            Utils.ToolDescriptor.DrawButton(null, false, true, Origins.Component);
             EditorGUILayout.EndVertical();
             GUILayout.EndArea();
             GUILayoutUtility.GetRect(currentWidth, expectedButtonHeight);
@@ -240,6 +248,13 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             {
                 EditorGUILayout.LabelField(Utils.PublicName, Utils.ComputeInfoText().Item1);
                 EditorGUILayout.ObjectField("Tracked instance", inspector.gameObject, typeof(GameObject), true);
+            }
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(_category, false);
+            if (EditorGUI.EndChangeCheck())
+            {
+                serializedObject.ApplyModifiedProperties();
             }
 
             EditorGUILayout.Space();

@@ -43,6 +43,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// <param name="eventData">The pointer event data from the click event</param>
         public void OnPointerClick(PointerEventData eventData)
         {
+            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
+            if (!PanelInputModule.Processing)
+            {
+                return;
+            }
+
             if (Controller != null)
             {
                 Controller.OnPointerClick();
@@ -56,6 +62,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// <param name="eventData">The pointer event data from the enter event</param>
         public void OnPointerEnter(PointerEventData eventData)
         {
+            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
+            if (!PanelInputModule.Processing)
+            {
+                return;
+            }
+
             if (Controller != null)
             {
                 Controller.OnPointerEnter();
@@ -69,6 +81,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// <param name="eventData">The pointer event data from the exit event</param>
         public void OnPointerExit(PointerEventData eventData)
         {
+            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
+            if (!PanelInputModule.Processing)
+            {
+                return;
+            }
+
             if (Controller != null)
             {
                 Controller.OnPointerExit();

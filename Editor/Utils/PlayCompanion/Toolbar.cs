@@ -55,7 +55,7 @@ namespace Meta.XR.Editor.PlayCompanion
 
         internal static readonly VisualElement DummyOffset;
         internal static readonly VisualElement MarginOffset;
-        internal static readonly VisualElement MetaIcon;
+        internal static readonly EditorToolbarButton MetaIcon;
 
         internal static readonly HashSet<Item> Items = new();
         internal static readonly List<(Item, EditorToolbarButton)> Buttons = new();
@@ -70,7 +70,6 @@ namespace Meta.XR.Editor.PlayCompanion
 
             MetaIcon = new EditorToolbarButton()
             {
-                icon = Styles.Contents.MetaIcon.Image as Texture2D,
                 style =
                 {
                     width = Styles.Constants.ButtonWidth,
@@ -83,6 +82,7 @@ namespace Meta.XR.Editor.PlayCompanion
                 },
                 tooltip = ToolbarTooltip
             };
+            Styles.Contents.MetaIcon.RegisterToImageLoaded(loadedImage => MetaIcon.icon = loadedImage as Texture2D);
             MetaIcon.AddToClassList(StripElementClass);
             MetaIcon.AddToClassList(StripElementLeftClass);
 
@@ -267,8 +267,14 @@ namespace Meta.XR.Editor.PlayCompanion
                 },
                 tooltip = item.Tooltip
             };
-            button.clicked += () => Manager.Toggle(item);
-
+            if (item.IsButton)
+            {
+                button.clicked += () => item.OnSelect?.Invoke();
+            }
+            else
+            {
+                button.clicked += () => Manager.Toggle(item);
+            }
             Insert(button);
 
             Buttons.Add((item, button));

@@ -53,7 +53,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             base.Setup(owner);
 
-            _scrollRect = GameObject.AddComponent<ScrollRect>();
+            _scrollRect = GameObject.AddComponent<PanelScrollRect>();
 
             _scrollRect.horizontal = false;
             _scrollRect.vertical = true;

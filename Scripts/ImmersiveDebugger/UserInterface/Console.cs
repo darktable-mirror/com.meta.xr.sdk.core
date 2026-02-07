@@ -163,8 +163,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             LogEntry.OnDisplayDetails = OnConsoleLineClicked;
         }
 
-        protected void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
+
             ConsoleLogsCache.OnLogReceived -= EnqueueLogEntry; // avoid duplicated registration if domain reload disabled
             ConsoleLogsCache.OnLogReceived += EnqueueLogEntry;
             ConsoleLogsCache.ConsumeStartupLogs(EnqueueLogEntry);
@@ -172,8 +174,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         protected override void OnDisable()
         {
-            base.OnDisable();
             ConsoleLogsCache.OnLogReceived -= EnqueueLogEntry;
+
+            base.OnDisable();
         }
 
         protected override void OnTransparencyChanged()
@@ -247,7 +250,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
 
             _entries.Add(entry);
-            _allEntries.Add(entry);
+
+            // Need to duplicate otherwise changing one instance will affect others.
+            var clonedEntry = OVRObjectPool.Get<LogEntry>();
+            clonedEntry.Setup(logString, stackTrace, severity);
+            _allEntries.Add(clonedEntry);
+
             severity.Count++;
 
             AppendToProxyFlex(entry);
@@ -258,7 +266,16 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             logEntry.Severity.Count -= logEntry.Count;
 
             _entries.Remove(logEntry);
-            _allEntries.RemoveAll(entry => entry == logEntry);
+            _allEntries.RemoveAll(entry =>
+            {
+                var canRemove = entry == logEntry;
+                if (canRemove)
+                {
+                    OVRObjectPool.Return(entry);
+                }
+
+                return canRemove;
+            });
 
             OVRObjectPool.Return(logEntry);
         }
@@ -283,7 +300,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private void Clear()
         {
             _entries.Clear();
+
+            foreach (var entry in _allEntries)
+            {
+                OVRObjectPool.Return(entry);
+            }
             _allEntries.Clear();
+
             _entryMap.Clear();
             _proxyFlex.Clear();
             foreach (var severity in _severities)

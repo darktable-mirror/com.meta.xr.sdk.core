@@ -21,6 +21,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.XR.Samples;
 using Unity.Collections;
 using UnityEngine;
 
@@ -34,6 +35,7 @@ using UnityEngine;
 /// Note: this class is for learning. It contains inefficiencies in order to
 ///       keep things simple (Linq and avoidable GC allocations).
 /// </summary>
+[MetaCodeSample("CoreSDK-MixedReality")]
 public class SceneModelLoader : MonoBehaviour
 {
     public GameObject SceneObjectPrefab;
@@ -90,6 +92,7 @@ public class SceneModelLoader : MonoBehaviour
             };
             if (anchor.TryGetComponent(out OVRSemanticLabels labels))
                 labels.GetClassifications(classifications);
+
 
             // create and parent Unity game object
             var gObj = Instantiate(SceneObjectPrefab, roomGameObject.transform);

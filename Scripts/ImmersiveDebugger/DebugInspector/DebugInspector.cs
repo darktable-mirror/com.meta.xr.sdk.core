@@ -37,6 +37,12 @@ namespace Meta.XR.ImmersiveDebugger
     [ExecuteInEditMode]
     public class DebugInspector : MonoBehaviour
     {
+        [Tooltip("Defines a default category for all inspected data handled by this component. " +
+                 "These can still be overriden by specifying another category individually in the inspected data properties.")]
+        [SerializeField] private string _category;
+
+        internal string Category => _category;
+
         [Serializable]
         internal class InspectionRegistry
         {

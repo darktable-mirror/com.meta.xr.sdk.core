@@ -44,17 +44,10 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
         private bool loadAvatarWhenConnected = true;
         [SerializeField] private GameObject avatarBehavior;
         [SerializeField] private GameObject avatarBehaviorSdk28Plus;
-        [Tooltip("If you're using Avatar Sample Assets as fallback avatars, and has manually adapted the preset zip file " +
-                 "for optimizing app size. Change this to the size of available avatars count in the preset zip file.")]
-        // developer might want to delete some avatars from the sample asset zip
+        [Tooltip("Specify the number of available avatars. This value depends on the SDK version.")]
+        // Developers might want to delete some avatars from the sample asset zip
         // e.g. the game has a maximum player count, they won't need more unique sample avatars
-        [SerializeField]
-        private int preloadedSampleAvatarSize =
-#if META_AVATAR_SDK_28_OR_NEWER
-            6;
-#else
-            32;
-#endif
+        [SerializeField] private int preloadedSampleAvatarSize = 6;
 
         [Tooltip("Adjust the level of detail used when streaming the avatars.")]
         [SerializeField] private AvatarStreamLOD avatarStreamLOD = AvatarStreamLOD.Medium;
@@ -68,6 +61,16 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
         private bool _sceneLoaded;
         private bool _entitlementCompleted;
         private PlatformInfo _platformInfo;
+
+        private void OnValidate()
+        {
+#if META_AVATAR_SDK_28_OR_NEWER
+            const int maxAllowedValue = 17;
+#else
+            const int maxAllowedValue = 32;
+#endif
+            preloadedSampleAvatarSize = Mathf.Clamp(preloadedSampleAvatarSize, 1, maxAllowedValue);
+        }
 
         private void HandleAvatarSpawned(IAvatarStreamConfig streamConfig)
         {

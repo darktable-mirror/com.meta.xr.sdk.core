@@ -18,8 +18,8 @@
  * limitations under the License.
  */
 
-
 using System;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace Meta.XR.ImmersiveDebugger.Utils
@@ -32,13 +32,20 @@ namespace Meta.XR.ImmersiveDebugger.Utils
         public int InstanceId { get; }
 
         public bool IsStatic => InstanceId == 0;
-        public bool Valid => Type != null && (IsStatic || Instance != null);
+        public bool Valid => Type != null && (IsStatic || Instance != null || Type == typeof(Scene));
 
         public InstanceHandle(Type type, Object instance)
         {
             Type = type;
             Instance = instance;
             InstanceId = instance != null ? instance.GetInstanceID() : 0;
+        }
+
+        public InstanceHandle(Scene scene)
+        {
+            Type = typeof(Scene);
+            Instance = null;
+            InstanceId = scene.handle;
         }
 
         public static InstanceHandle Static(Type type) => new InstanceHandle(type, null);

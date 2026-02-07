@@ -19,7 +19,6 @@
  */
 
 using Meta.XR.Editor.Id;
-using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
@@ -31,7 +30,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     internal static class UIHelpers
     {
-        internal static void DrawDocumentation(BlockData blockData, string origin)
+        internal static void DrawDocumentation(BlockData blockData, Origins origin)
         {
             EditorGUILayout.BeginVertical(Styles.GUIStyles.DocumentationBox);
 
@@ -81,7 +80,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        internal static Rect DrawBlockName(BlockData block, string origin, IIdentified originData, bool addInfoIcon = true,
+        internal static Rect DrawBlockName(BlockData block, Origins origin, IIdentified originData, bool addInfoIcon = true,
             GUIStyle containerStyle = null, GUIStyle labelStyle = null, GUIStyle iconStyle = null)
         {
             if (block == null) return Rect.zero;
@@ -110,12 +109,12 @@ namespace Meta.XR.BuildingBlocks.Editor
                 OriginData = originData
             }.Draw();
 
-            using var _ = new ColorScope(ColorScope.Scope.Content, Colors.LinkColor);
             if (addInfoIcon)
             {
                 new ActionLinkDescription()
                 {
                     Content = new GUIContent(Styles.Contents.InfoIcon),
+                    Color = Colors.LinkColor,
                     Style = iconStyle,
                     Action = () => BuildingBlocksWindow.ShowWindow(origin, originData, true, block),
                     ActionData = block,
@@ -131,7 +130,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             return rect;
         }
 
-        internal static void DrawBlockRow(BlockData data, BuildingBlock block, string origin, IIdentified originData, bool showAction = true)
+        internal static void DrawBlockRow(BlockData data, BuildingBlock block, Origins origin, IIdentified originData, bool showAction = true)
         {
             using var indentScope = new IndentScope(0);
 

@@ -22,3 +22,7 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.DepthAPI.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.TelemetryUI")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.About")]
+

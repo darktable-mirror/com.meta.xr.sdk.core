@@ -41,7 +41,7 @@ internal static partial class OVRTelemetry
         return marker.AddAnnotation("sdk_version", _sdkVersionString);
     }
 
-    private static string GetPlayModeOrigin() => Application.isPlaying
+    public static string GetPlayModeOrigin() => Application.isPlaying
         ? Application.isEditor ? "Editor Play" : "Build Play"
         : "Editor";
 
@@ -49,4 +49,6 @@ internal static partial class OVRTelemetry
     {
         return marker.AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, GetPlayModeOrigin());
     }
+
+    public static string GetTelemetrySettingString(bool value) => value ? "enabled" : "disabled";
 }

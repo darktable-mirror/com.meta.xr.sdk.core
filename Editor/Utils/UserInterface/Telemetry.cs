@@ -30,6 +30,7 @@ namespace Meta.XR.Editor.UserInterface
             public const int LinkClick = 163057622;
             public const int PageOpen = 163063708;
             public const int PageClose = 163065149;
+            public const int SettingsChanged = 163056413;
         }
 
         public static class AnnotationType
@@ -41,6 +42,9 @@ namespace Meta.XR.Editor.UserInterface
             public const string OriginData = "origin_data";
             public const string Action = "action";
             public const string ActionData = "action_data";
+            public const string ActionType = "action_type";
+            public const string Value = "value";
+            public const string SubOrigin = "sub_origin";
         }
     }
 }

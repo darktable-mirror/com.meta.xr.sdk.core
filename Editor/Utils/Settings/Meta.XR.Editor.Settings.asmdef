@@ -1,7 +1,11 @@
 {
     "name": "Meta.XR.Editor.Settings",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:f64c9ebcd7899c3448a08dc9f9ddbe30",
+        "GUID:72a933f94d34d054baaa26f7ecc4b09f",
+        "GUID:86d3c260f0a41e846ab28cd9e4fed3a8"
+    ],
     "includePlatforms": [
         "Editor"
     ],

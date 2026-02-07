@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Xml;
 using UnityEditor;
 
 namespace Meta.XR.Editor.Rules
@@ -50,15 +51,18 @@ namespace Meta.XR.Editor.Rules
                 fixMessage: $"PlayerSettings.Android.minSdkVersion = {MinimumAPILevel}"
             );
 
+            const AndroidSdkVersions targetAPILevel = (AndroidSdkVersions)32;
+
             // [Recommended] Android target level API
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Recommended,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
                 platform: BuildTargetGroup.Android,
-                isDone: _ => PlayerSettings.Android.targetSdkVersion == TargetAPILevel,
-                message: $"Target API should be set to {TargetAPILevelName} as to ensure latest version",
-                fix: _ => PlayerSettings.Android.targetSdkVersion = TargetAPILevel,
-                fixMessage: $"PlayerSettings.Android.targetSdkVersion = {TargetAPILevelName}"
+                conditionalValidity: _ => Enum.IsDefined(typeof(AndroidSdkVersions), "AndroidApiLevel32"),
+                isDone: _ => PlayerSettings.Android.targetSdkVersion == targetAPILevel,
+                message: $"Target API should be set to {ComputeTargetAPILevelNumericalName(targetAPILevel)} as to ensure the latest supported version",
+                fix: _ => PlayerSettings.Android.targetSdkVersion = targetAPILevel,
+                fixMessage: $"PlayerSettings.Android.targetSdkVersion = {ComputeTargetAPILevelNumericalName(targetAPILevel)}"
             );
 
             // [Required] Install Location
@@ -81,13 +85,17 @@ namespace Meta.XR.Editor.Rules
                 group: OVRProjectSetup.TaskGroup.Compatibility,
                 platform: BuildTargetGroup.Android,
                 isDone: buildTargetGroup =>
+#pragma warning disable CS0618 // Type or member is obsolete
                     PlayerSettings.GetScriptingBackend(buildTargetGroup) == ScriptingImplementation.IL2CPP,
+#pragma warning restore CS0618 // Type or member is obsolete
                 conditionalMessage: _ =>
                     IsTargetingARM64
                         ? "Building the ARM64 architecture requires using IL2CPP as the scripting backend"
                         : "Using IL2CPP as the scripting backend is recommended",
                 fix: buildTargetGroup =>
+#pragma warning disable CS0618 // Type or member is obsolete
                     PlayerSettings.SetScriptingBackend(buildTargetGroup, ScriptingImplementation.IL2CPP),
+#pragma warning restore CS0618 // Type or member is obsolete
                 fixMessage: "PlayerSettings.SetScriptingBackend(buildTargetGroup, ScriptingImplementation.IL2CPP)"
             );
 
@@ -119,25 +127,51 @@ namespace Meta.XR.Editor.Rules
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
                 platform: BuildTargetGroup.Android,
-                isDone: buildTargetGroup =>
-                    PlayerSettings.Android.applicationEntry == AndroidApplicationEntry.GameActivity,
+                isDone: _ => PlayerSettings.Android.applicationEntry == AndroidApplicationEntry.GameActivity &&
+                             ValidateManifestApplicationEntry(),
                 message: "Always specify single \"GameActivity\" application entry on Unity 2023.2+",
-                fix: buildTargetGroup =>
+                fix: _ =>
                     PlayerSettings.Android.applicationEntry = AndroidApplicationEntry.GameActivity,
-                fixMessage: "PlayerSettings.Android.applicationEntry = AndroidApplicationEntry.GameActivity"
+                fixMessage: "PlayerSettings.Android.applicationEntry = AndroidApplicationEntry.GameActivity",
+                tags: OVRProjectSetup.TaskTags.RegenerateAndroidManifest | OVRProjectSetup.TaskTags.HeavyProcessing
             );
 #endif
         }
 
-        private static AndroidSdkVersions MinimumAPILevel
-            => Enum.TryParse("AndroidApiLevel32", out AndroidSdkVersions androidSdkVersion) ?
-                androidSdkVersion : AndroidSdkVersions.AndroidApiLevel29;
+#if UNITY_2023_2_OR_NEWER
+        private static bool ValidateManifestApplicationEntry()
+        {
+            var xmlDoc = OVRManifestPreprocessor.GetAndroidManifestXmlDocument();
 
-        private static AndroidSdkVersions TargetAPILevel => AndroidSdkVersions.AndroidApiLevelAuto;
+            var element = (XmlElement)xmlDoc?.SelectSingleNode("/manifest");
+            if (element == null)
+            {
+                return false;
+            }
+
+            // Get android namespace URI from the manifest
+            var androidNamespaceUri = element.GetAttribute("xmlns:android");
+            if (string.IsNullOrEmpty(androidNamespaceUri))
+            {
+                return false;
+            }
+
+            var activityNode = xmlDoc.SelectSingleNode("/manifest/application/activity") as XmlElement;
+            if (activityNode == null)
+            {
+                return false;
+            }
+
+            var activityName = activityNode.GetAttribute("name", androidNamespaceUri);
+            return activityName == "com.unity3d.player.UnityPlayerGameActivity";
+        }
+#endif
+        private static AndroidSdkVersions MinimumAPILevel
+            => Enum.TryParse("AndroidApiLevel32", out AndroidSdkVersions androidSdkVersion)
+                ? androidSdkVersion
+                : AndroidSdkVersions.AndroidApiLevel29;
 
         private static string MinimumAPILevelName => ComputeTargetAPILevelNumericalName(MinimumAPILevel);
-
-        private static string TargetAPILevelName => ComputeTargetAPILevelNumericalName(TargetAPILevel);
 
         private static string ComputeTargetAPILevelNumericalName(AndroidSdkVersions version)
             => version == AndroidSdkVersions.AndroidApiLevelAuto ? "Auto" : $"{(int)version}";
