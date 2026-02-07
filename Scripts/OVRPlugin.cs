@@ -4449,7 +4449,8 @@ public static partial class OVRPlugin
     public static Result AcquireLayerSwapchain(int layerId, out int acquiredIndex)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        return false;
+        acquiredIndex = -1;
+        return Result.Failure_Unsupported;
 #else
         return OVRP_1_113_0.ovrp_AcquireLayerSwapchain(layerId, out acquiredIndex);
 #endif
@@ -5340,6 +5341,7 @@ public static partial class OVRPlugin
     public static bool GetControllerParametricProperties(Controller controllerMask, out HapticsParametricProperties hapticsProperties)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        hapticsProperties = new HapticsParametricProperties();
         return false;
 #else
         if (version >= OVRP_1_78_0.version)

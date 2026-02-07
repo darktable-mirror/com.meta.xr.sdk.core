@@ -34,7 +34,6 @@ using System.Collections.Generic;
 
 #if USING_XR_SDK
 using UnityEngine.XR;
-using UnityEngine.Experimental.XR;
 #endif
 
 using InputTracking = UnityEngine.XR.InputTracking;

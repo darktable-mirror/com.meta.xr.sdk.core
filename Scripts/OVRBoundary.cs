@@ -30,9 +30,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Runtime.InteropServices;
-#if !USING_XR_SDK && !REQUIRES_XR_SDK
-using Boundary = UnityEngine.Experimental.XR.Boundary;
-#endif
 
 /// <summary>
 /// OVRBoundary provides access to the boundary system, which ensures user
@@ -110,11 +107,7 @@ public class OVRBoundary
             return OVRPlugin.GetBoundaryConfigured();
         else
         {
-#if !USING_XR_SDK && !REQUIRES_XR_SDK
-            return Boundary.configured;
-#else
             return false;
-#endif
         }
     }
 
@@ -174,15 +167,6 @@ public class OVRBoundary
     {
         if (OVRManager.loadedXRDevice != OVRManager.XRDevice.Oculus)
         {
-#if !USING_XR_SDK && !REQUIRES_XR_SDK
-            if (Boundary.TryGetGeometry(cachedGeometryList,
-                    (boundaryType == BoundaryType.PlayArea) ? Boundary.Type.PlayArea : Boundary.Type.TrackedArea))
-            {
-                Vector3[] arr = cachedGeometryList.ToArray();
-                return arr;
-            }
-
-#endif
             Debug.LogError("This functionality is not supported in your current version of Unity.");
             return null;
         }
@@ -233,15 +217,8 @@ public class OVRBoundary
     {
         if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
             return OVRPlugin.GetBoundaryDimensions((OVRPlugin.BoundaryType)boundaryType).FromVector3f();
-
         else
         {
-#if !USING_XR_SDK && !REQUIRES_XR_SDK
-            Vector3 dimensions;
-            if (Boundary.TryGetDimensions(out dimensions,
-                    (boundaryType == BoundaryType.PlayArea) ? Boundary.Type.PlayArea : Boundary.Type.TrackedArea))
-                return dimensions;
-#endif
             return Vector3.zero;
         }
     }
@@ -256,11 +233,7 @@ public class OVRBoundary
             return OVRPlugin.GetBoundaryVisible();
         else
         {
-#if !USING_XR_SDK && !REQUIRES_XR_SDK
-            return Boundary.visible;
-#else
             return false;
-#endif
         }
     }
 
@@ -273,11 +246,5 @@ public class OVRBoundary
     {
         if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
             OVRPlugin.SetBoundaryVisible(value);
-        else
-        {
-#if !USING_XR_SDK && !REQUIRES_XR_SDK
-            Boundary.visible = value;
-#endif
-        }
     }
 }

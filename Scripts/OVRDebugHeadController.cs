@@ -31,7 +31,6 @@ using System.Collections;
 
 #if USING_XR_SDK
 using UnityEngine.XR;
-using UnityEngine.Experimental.XR;
 #endif
 
 /// <summary>

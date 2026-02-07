@@ -1,7 +1,7 @@
 {
   "name": "com.meta.xr.sdk.core",
   "displayName": "Meta XR Core SDK",
-  "version": "83.0.0",
+  "version": "83.0.1",
   "description": "Meta XR Core SDK package provides the latest features to create immersive experiences for Meta XR devices.",
   "samples": [
     {
@@ -29,12 +29,12 @@
   "licensesUrl": "https://developers.meta.com/horizon/licenses/oculussdk/",
   "licenseMessage": "By adding or using this package you agree to the terms and conditions of the Meta Platforms Technologies SDK License Agreement: https://developer.oculus.com/licenses/oculussdk",
   "keywords": [
-    "XR",
-    "Quest",
     "SDK",
-    "Utilities",
     "Meta",
-    "Oculus"
+    "XR",
+    "Oculus",
+    "Quest",
+    "Utilities"
   ],
   "documentationUrl": "https://developer.oculus.com/documentation/unity/",
   "changelogUrl": "https://developer.oculus.com/downloads/package/meta-xr-core-sdk/"
