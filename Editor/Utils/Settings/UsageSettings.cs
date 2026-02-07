@@ -22,24 +22,20 @@ namespace Meta.XR.Editor.Settings
 {
     internal static class UsageSettings
     {
-        public static readonly ProjectSettings.SettingBool UsesBuildingBlocks = new()
+        public static readonly UserInt NumberOfActiveSessions = new()
         {
-            Uid = "UsageSettings.UsesBuildingBlocks",
+            Uid = "UsageSettings.NumberOfActiveSessions",
         };
 
-        public static readonly ProjectSettings.SettingBool UsesProjectSetupTool = new()
+        public static readonly OnlyOnceUserString UserActivationDate = new()
         {
-            Uid = "UsageSettings.UsesProjectSetupTool",
+            Uid = "UsageSettings.UserActivationDate",
         };
 
+        // Kept to support older versions of XR Simulator
         public static readonly ProjectSettings.SettingBool UsesXRSimulator = new()
         {
             Uid = "UsageSettings.UsesXRSimulator",
-        };
-
-        public static readonly ProjectSettings.SettingBool UsesImmersiveDebugger = new()
-        {
-            Uid = "UsageSettings.UsesImmersiveDebugger",
         };
     }
 }

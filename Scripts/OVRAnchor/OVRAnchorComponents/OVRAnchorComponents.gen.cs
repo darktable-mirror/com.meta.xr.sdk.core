@@ -1113,6 +1113,93 @@ public readonly partial struct OVRMarkerPayload : IOVRAnchorComponent<OVRMarkerP
     private OVRMarkerPayload(OVRAnchor anchor) => Handle = anchor.Handle;
 }
 
+public readonly partial struct OVRRoomMesh : IOVRAnchorComponent<OVRRoomMesh>, IEquatable<OVRRoomMesh>
+{
+    /// @cond
+
+    SpaceComponentType IOVRAnchorComponent<OVRRoomMesh>.Type => Type;
+
+    ulong IOVRAnchorComponent<OVRRoomMesh>.Handle => Handle;
+
+    OVRRoomMesh IOVRAnchorComponent<OVRRoomMesh>.FromAnchor(OVRAnchor anchor) => new OVRRoomMesh(anchor);
+
+    /// @endcond
+
+    /// <summary>
+    /// A null representation of an OVRRoomMesh.
+    /// </summary>
+    /// <remarks>
+    /// Use this to compare with another component to determine whether it is null.
+    /// </remarks>
+    public static readonly OVRRoomMesh Null = default;
+
+    /// <summary>
+    /// Whether this object represents a valid anchor component.
+    /// </summary>
+    public bool IsNull => Handle == 0;
+
+    /// <summary>
+    /// True if this component is enabled and no change to its enabled status is pending.
+    /// </summary>
+    public bool IsEnabled => !IsNull && GetSpaceComponentStatus(Handle, Type, out var enabled, out var pending) && enabled && !pending;
+
+
+
+
+    /// @cond
+    OVRTask<bool> IOVRAnchorComponent<OVRRoomMesh>.SetEnabledAsync(bool enabled, double timeout)
+        => throw new NotSupportedException("The RoomMesh component cannot be enabled or disabled.");
+    /// @endcond
+
+
+    /// <summary>
+    /// Compares this component for equality with <paramref name="other" />.
+    /// </summary>
+    /// <param name="other">The other component to compare with.</param>
+    /// <returns>True if both components belong to the same <see cref="OVRAnchor" />, otherwise false.</returns>
+    public bool Equals(OVRRoomMesh other) => Handle == other.Handle;
+
+    /// <summary>
+    /// Compares two components for equality.
+    /// </summary>
+    /// <param name="lhs">The component to compare with <paramref name="rhs" />.</param>
+    /// <param name="rhs">The component to compare with <paramref name="lhs" />.</param>
+    /// <returns>True if both components belong to the same <see cref="OVRAnchor" />, otherwise false.</returns>
+    public static bool operator ==(OVRRoomMesh lhs, OVRRoomMesh rhs) => lhs.Equals(rhs);
+
+    /// <summary>
+    /// Compares two components for inequality.
+    /// </summary>
+    /// <param name="lhs">The component to compare with <paramref name="rhs" />.</param>
+    /// <param name="rhs">The component to compare with <paramref name="lhs" />.</param>
+    /// <returns>True if the components do not belong to the same <see cref="OVRAnchor" />, otherwise false.</returns>
+    public static bool operator !=(OVRRoomMesh lhs, OVRRoomMesh rhs) => !lhs.Equals(rhs);
+
+    /// <summary>
+    /// Compares this component for equality with <paramref name="obj" />.
+    /// </summary>
+    /// <param name="obj">The `object` to compare with.</param>
+    /// <returns>True if <paramref name="obj" /> is an OVRRoomMesh and <see cref="Equals(OVRRoomMesh)" /> is true, otherwise false.</returns>
+    public override bool Equals(object obj) => obj is OVRRoomMesh other && Equals(other);
+
+    /// <summary>
+    /// Gets a hashcode suitable for use in a Dictionary or HashSet.
+    /// </summary>
+    /// <returns>A hashcode for this component.</returns>
+    public override int GetHashCode() => unchecked(Handle.GetHashCode() * 486187739 + ((int)Type).GetHashCode());
+
+    /// <summary>
+    /// Gets a string representation of this component.
+    /// </summary>
+    /// <returns>A string representation of this component.</returns>
+    public override string ToString() => $"{Handle}.RoomMesh";
+
+    internal SpaceComponentType Type => SpaceComponentType.RoomMesh;
+
+    internal ulong Handle { get; }
+
+    private OVRRoomMesh(OVRAnchor anchor) => Handle = anchor.Handle;
+}
 
 partial struct OVRAnchor
 {
@@ -1128,6 +1215,9 @@ partial struct OVRAnchor
         { typeof(OVRAnchorContainer), SpaceComponentType.SpaceContainer },
         { typeof(OVRTriangleMesh), SpaceComponentType.TriangleMesh },
         { typeof(OVRDynamicObject), SpaceComponentType.DynamicObject },
+#pragma warning disable 0618
         { typeof(OVRMarkerPayload), SpaceComponentType.MarkerPayload },
+#pragma warning restore 0618
+        { typeof(OVRRoomMesh), SpaceComponentType.RoomMesh },
     };
 }

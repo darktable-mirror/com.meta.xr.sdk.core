@@ -42,6 +42,8 @@ namespace Meta.XR.Editor.UserInterface
 
         private static readonly Dictionary<object, bool> Foldouts = new();
 
+        private static string _assetPath;
+
         public static bool ShouldRenderEditorUI()
             => !Application.isBatchMode && IsMainEditorProcess();
 
@@ -98,6 +100,13 @@ namespace Meta.XR.Editor.UserInterface
             }
 
             return new Color32(r, g, b, a);
+        }
+
+        public static Color HexToColorWithAlpha(string hex, float alpha)
+        {
+            Color color = HexToColor(hex);
+            color.a = alpha;
+            return color;
         }
 
         public static string ColorToHex(Color color)
@@ -262,12 +271,34 @@ namespace Meta.XR.Editor.UserInterface
             return defaultRectangle;
         }
 
+        internal static bool IsInsidePackageDistribution()
+        {
+            if (string.IsNullOrEmpty(_assetPath))
+            {
+                var so = ScriptableObject.CreateInstance(typeof(PackageCheckerScriptable));
+                var script = MonoScript.FromScriptableObject(so);
+                _assetPath = AssetDatabase.GetAssetPath(script);
+            }
+
+            return _assetPath.StartsWith("Packages\\", StringComparison.InvariantCultureIgnoreCase) ||
+                   _assetPath.StartsWith("Packages/", StringComparison.InvariantCultureIgnoreCase);
+        }
+
         internal static void CenterWindow(this EditorWindow window)
         {
             // Aligning center of passed window with Editor Main Window
             var positionProxy = window.position;
             positionProxy.center = GetEditorMainWindowPosition().center;
             window.position = positionProxy;
+        }
+
+        internal static Rect Contract(this Rect rect, int offset)
+        {
+            rect.x += offset;
+            rect.y += offset;
+            rect.width -= offset * 2;
+            rect.height -= offset * 2;
+            return rect;
         }
 
         internal class Repainter

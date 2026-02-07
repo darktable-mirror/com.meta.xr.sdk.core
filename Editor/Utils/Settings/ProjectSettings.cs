@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -71,12 +72,8 @@ namespace Meta.XR.Editor.Settings
 
         public bool GetProjectBool(string key, bool defaultValue)
         {
-            if (!boolProperties.TryGetValue(key, out var value))
-            {
-                // To avoid clutter, getter doesn't add to the dictionary
-                value = defaultValue;
-            }
-
+            var value = boolProperties.GetValueOrDefault(key, defaultValue);
+            // To avoid clutter, getter doesn't add to the dictionary
             return value;
         }
 

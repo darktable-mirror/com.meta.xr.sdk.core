@@ -16,3 +16,5 @@ MonoBehaviour:
   font: {fileID: 12800000, guid: d7b7c71c81d721f439d51761df04d4d6, type: 3}
   fontSize: 8
   color: {r: 0.60784316, g: 0.6609151, b: 0.72156864, a: 1}
+  horizontalOverflow: 0
+  fontStyle: 0

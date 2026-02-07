@@ -73,6 +73,7 @@ partial struct OVRAnchor
                         if (!component.IsEnabled) continue;
                         return component.TrackableType;
                     }
+#pragma warning disable 0618
                     case SpaceComponentType.MarkerPayload:
                     {
                         var component = GetComponent<OVRMarkerPayload>();
@@ -83,6 +84,7 @@ partial struct OVRAnchor
 
                         break;
                     }
+#pragma warning restore 0618
                 }
             }
         }
@@ -105,11 +107,13 @@ partial struct OVRAnchor
                     requiredComponentsOut.Add(SpaceComponentType.DynamicObject);
                     break;
                 }
+#pragma warning disable 0618
                 case TrackableType.QRCode:
                 {
                     requiredComponentsOut.Add(SpaceComponentType.MarkerPayload);
                     break;
                 }
+#pragma warning restore 0618
             }
         }
     }
@@ -212,6 +216,7 @@ partial struct OVRAnchor
                 {
                     return trackableTypes.Contains(anchor.GetComponent<OVRDynamicObject>().TrackableType);
                 }
+#pragma warning disable 0618
                 case SpaceComponentType.MarkerPayload:
                 {
                     var component = anchor.GetComponent<OVRMarkerPayload>();
@@ -221,6 +226,7 @@ partial struct OVRAnchor
                     }
                     break;
                 }
+#pragma warning restore 0618
             }
 
             return false;

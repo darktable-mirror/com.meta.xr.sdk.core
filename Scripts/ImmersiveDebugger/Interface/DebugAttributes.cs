@@ -33,6 +33,28 @@ namespace Meta.XR.ImmersiveDebugger
     }
 
     /// <summary>
+    /// Attribute to add decorative text elements (headers, descriptions, separators) above debug members in the Inspector Panel.
+    /// Can be applied multiple times to add multiple decorative elements before the main member.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Enum, AllowMultiple = true)]
+    [Serializable]
+    public class DebugDecorativeText : PreserveAttribute
+    {
+        /// <summary>
+        /// The text content to display in the decorative element.
+        /// </summary>
+        public string Content = "";
+
+        /// <summary>
+        /// The style name used for both layout and text styling of the decorative element.
+        /// The system loads styles using Style.Load(styleName) and Style.Instantiate(styleName)
+        /// from Unity Resources at "Styles/TextStyles/" and "Styles/LayoutStyles/" respectively.
+        /// Common values include "Content", "H1", "H2", etc. Defaults to "Content".
+        /// </summary>
+        public string Style = "Content";
+    }
+
+    /// <summary>
     /// Annotate field, property, functions with this will show in Immersive Debugger panel in runtime.
     /// Without additional parameters specified, by default we're watching fields/properties,
     /// and provide a button to call function without parameter.

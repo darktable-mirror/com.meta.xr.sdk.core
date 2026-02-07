@@ -106,6 +106,34 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
             EditorGUILayout.Space();
 
+            // Manual pick when multiple choices
+            if (Selection.RoutinesToChooseFrom.Count > 1)
+            {
+                EditorGUILayout.LabelField("Variant Selection", GUIStyles.InspectorHeaderLabel);
+                EditorGUILayout.LabelField("Pick the option that matches best your needs.");
+                EditorGUILayout.Space();
+                var index = Selection.FavouriteRoutine ?
+                    Selection.RoutinesToChooseFrom.IndexOf(Selection.FavouriteRoutine)
+                    : 0;
+                if (index < 0) index = 0;
+                var names = Selection.RoutinesToChooseFrom.Select(routine =>
+                    string.IsNullOrEmpty(routine.DisplayName) ? routine.name : routine.DisplayName)
+                    .ToArray();
+                var newIndex = EditorGUILayout.Popup(index, names);
+                if (index != newIndex)
+                {
+                    Selection.FavouriteRoutine = Selection.RoutinesToChooseFrom[newIndex];
+                    changed = true;
+                }
+
+                var description = Selection.RoutinesToChooseFrom[newIndex].Description;
+                if (!string.IsNullOrEmpty(description))
+                {
+                    EditorGUILayout.LabelField(description, Styles.GUIStyles.InfoStyle);
+                }
+                EditorGUILayout.Space();
+            }
+
             // Notice
             var canBeConfirmed = !Selection.HasMissingDependencies;
             if (!canBeConfirmed)
@@ -115,6 +143,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             // Buttons
+            EditorGUILayout.Space();
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.Space(0, true);
             if (DrawButton("Confirm", Styles.Contents.ConfirmIcon, canBeConfirmed))

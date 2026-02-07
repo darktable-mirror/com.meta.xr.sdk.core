@@ -22,14 +22,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Assets.Oculus.VR.Editor;
 using Meta.XR.Editor.EditorCoroutine;
 using Meta.XR.Editor.Id;
-using UnityEditor;
-using UnityEngine;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
-using Meta.XR.Guides.Editor;
+using UnityEditor;
+using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 
 namespace Meta.XR.BuildingBlocks.Editor
@@ -38,7 +36,7 @@ namespace Meta.XR.BuildingBlocks.Editor
     {
         private const float DetailPaneShowAmount = 0.95f;
         private const float BlockDragStartThreshold = 2.0f;
-        private float BackButtonAreaWidth => Styles.GUIStyles.LongBackButton.fixedWidth + 1;
+        private static float BackButtonAreaWidth => Styles.GUIStyles.LongBackButton.fixedWidth + 1;
         private static float InstallationStepsPanelHeight { get; set; } = 200;
         private static float SetupPanelHeight { get; set; }
 
@@ -51,7 +49,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static bool _stepsFoldout = true;
         private Vector2 _setupViewScrollPosition;
         private Action<float> _onTransitionCompleted;
-        private Stack<BlockData> _backHistory = new();
+        private readonly Stack<BlockData> _backHistory = new();
         private static bool _variantInitialized;
         private static VariantsSelection _variantsSelection;
         private static VariantsSelection VariantsSelection
@@ -70,31 +68,30 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private bool _variantSelectionChanged;
 
-        private static List<BlockData> OptionalDependencies
-        {
-            get
-            {
-                if (_selectedBlock is not InterfaceBlockData interfaceBlockData)
-                    return new List<BlockData>();
-
-                return InterfaceBlockData.ComputeOptionalDependencies(interfaceBlockData, VariantsSelection).ToList();
-            }
-        }
+        private static IEnumerable<BlockData> OptionalDependencies =>
+            _selectedBlock is not InterfaceBlockData interfaceBlockData
+                ? Enumerable.Empty<BlockData>()
+                : InterfaceBlockData.ComputeOptionalDependencies(interfaceBlockData, VariantsSelection);
 
         private static Vector2 CurrentMousePosition { get; set; }
 
         private void ListenForKeyPresses()
         {
-            if (ShouldBackToMain(Event.current))
+            if (!ShouldBackToMain(Event.current))
             {
-                ReturnToGrid();
-                Event.current.Use();
+                return;
             }
+
+            ReturnToGrid();
+            Event.current.Use();
         }
 
         private bool ShouldBackToMain(Event current)
         {
-            if (CurrentTargetPage != Page.Details || current == null) return false;
+            if (CurrentTargetPage != Page.Details || current == null)
+            {
+                return false;
+            }
 
             return (current.type == EventType.KeyUp && current.keyCode == KeyCode.Escape) // Escape on keyboard
                    || (current.type == EventType.MouseDown && current.button == 3); // Previous Button on mouse
@@ -202,7 +199,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             // Reserved space for rules.
 
             // Installation steps
-            ShowInstallationSteps(blockData, null);
+            ShowInstallationSteps(blockData);
 
             // Usage instructions
             ShowUsageInstructions(blockData);
@@ -218,7 +215,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void ShowVariantsSelection(BlockData blockData)
         {
-            if (blockData is not InterfaceBlockData interfaceBlockData)
+            if (blockData is not InterfaceBlockData)
                 return;
 
             EditorGUILayout.BeginVertical(Styles.GUIStyles.SetupSection);
@@ -228,11 +225,13 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             foreach (var variant in VariantsSelection)
             {
-                if (variant.NeedsChoice(VariantsSelection, out var variantChanged))
+                if (!variant.NeedsChoice(VariantsSelection, out var variantChanged))
                 {
-                    variant.DrawGUI(null, out variantChanged);
-                    _variantSelectionChanged |= variantChanged;
+                    continue;
                 }
+
+                variant.DrawGUI(null, out variantChanged);
+                _variantSelectionChanged |= variantChanged;
             }
             EditorGUILayout.EndVertical();
 
@@ -242,7 +241,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
-        private static void ShowInstallationSteps(BlockData blockData, BuildingBlock block)
+        private static void ShowInstallationSteps(BlockData blockData)
         {
             var dependencies = blockData.Dependencies.ToList();
 
@@ -285,13 +284,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private static void DrawInstallationStepGroup(BlockData owner, string groupTitle, IReadOnlyCollection<InstallationStepInfo> steps, ref bool foldout)
+        private static void DrawInstallationStepGroup(BlockData owner, string groupTitle, IEnumerable<InstallationStepInfo> steps, ref bool foldout)
         {
-            if (steps.Count == 0) return;
+            var installationStepInfos = steps as InstallationStepInfo[] ?? steps.ToArray();
+            if (installationStepInfos.Length == 0) return;
 
-            using (var color = new XR.Editor.UserInterface.Utils.ColorScope(
+            using (new XR.Editor.UserInterface.Utils.ColorScope(
                        XR.Editor.UserInterface.Utils.ColorScope.Scope.Background,
-                       XR.Editor.UserInterface.Styles.Colors.InstallationStepPanelBackground))
+                       InstallationStepPanelBackground))
             {
                 EditorGUILayout.BeginVertical(Styles.GUIStyles.InstallationStepGroupPanelStyle);
             }
@@ -299,7 +299,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             foldout = EditorGUILayout.Foldout(foldout, groupTitle, true, Styles.GUIStyles.InstallationStepFoldoutStyle);
             if (foldout)
             {
-                foreach (var step in steps)
+                foreach (var step in installationStepInfos)
                 {
                     DrawStep(owner, step);
                 }
@@ -315,7 +315,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 if (step.LinkedProjectAsset is BlockData targetBlockData)
                 {
-                    new ActionLinkDescription()
+                    new ActionLinkDescription
                     {
                         Content = new GUIContent(step.Message),
                         Style = Styles.GUIStyles.InstallationStepLabelStyle,
@@ -327,7 +327,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 }
                 else
                 {
-                    new AssetLinkDescription()
+                    new AssetLinkDescription
                     {
                         Content = new GUIContent(step.Message),
                         Style = Styles.GUIStyles.InstallationStepLabelStyle,
@@ -345,15 +345,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private static List<InstallationStepInfo> PreinstallsInfo(List<BlockData> dependencies)
+        private static IEnumerable<InstallationStepInfo> PreinstallsInfo(IEnumerable<BlockData> dependencies)
         {
-            var installationInfos = new List<InstallationStepInfo>();
-            foreach (var dependency in dependencies)
-            {
-                installationInfos.Add(new InstallationStepInfo(dependency, "Installs {0}."));
-            }
-
-            return installationInfos;
+            return dependencies.Select(dependency => new InstallationStepInfo(dependency, "Installs {0}."));
         }
 
         private void ShowBottomButtons(BlockData block)
@@ -368,7 +362,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (_backHistory.Count > 1)
             {
-                new ActionLinkDescription()
+                new ActionLinkDescription
                 {
                     Content = new GUIContent("<"),
                     Style = Styles.GUIStyles.ThinButtonSmall,
@@ -381,7 +375,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             GUILayout.FlexibleSpace();
 
-            new ActionLinkDescription()
+            new ActionLinkDescription
             {
                 Content = new GUIContent("Back to Main"),
                 Style = Styles.GUIStyles.ThinButtonLarge,
@@ -400,7 +394,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     new GUIContent("Add Block", "Missing required packages, unable to add block to the scene") :
                     new GUIContent("Installed", "Block already added to the current scene");
             EditorGUI.BeginDisabledGroup(!canBeAdded || packageMissing);
-            new ActionLinkDescription()
+            new ActionLinkDescription
             {
                 Content = addBlockBtnContent,
                 Style = Styles.GUIStyles.ThinButtonLarge,
@@ -425,7 +419,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (canBeSelected)
             {
-                new ActionLinkDescription()
+                new ActionLinkDescription
                 {
                     Content = new GUIContent(selectText),
                     Style = Styles.GUIStyles.ThinButtonLarge,
@@ -454,7 +448,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void ShowPackageDependencies(BlockData blockData)
+        private static void ShowPackageDependencies(BlockData blockData)
         {
             var dependencies = blockData.CollectPackageDependencies(new HashSet<string>());
 
@@ -466,7 +460,10 @@ namespace Meta.XR.BuildingBlocks.Editor
                 }
             }
 
-            if (!dependencies.Any()) return;
+            if (!dependencies.Any())
+            {
+                return;
+            }
 
             EditorGUILayout.BeginVertical(Styles.GUIStyles.SetupSection);
             EditorGUILayout.LabelField("Package Dependencies", Styles.GUIStyles.OffWhiteLargeLabel);
@@ -480,7 +477,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void ShowDependencyBlocks(BlockData block)
+        private static void ShowDependencyBlocks(BlockData block)
         {
             var dependencies = block.Dependencies.ToList();
             dependencies.AddRange(OptionalDependencies);
@@ -491,9 +488,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
-        private void ShowUsageInstructions(BlockData blockData)
+        private static void ShowUsageInstructions(BlockData blockData)
         {
-            if (string.IsNullOrEmpty(blockData.UsageInstructions)) return;
+            if (string.IsNullOrEmpty(blockData.UsageInstructions))
+            {
+                return;
+            }
 
             EditorGUILayout.BeginVertical(Styles.GUIStyles.SetupSection);
             EditorGUILayout.LabelField("Usage Instructions", Styles.GUIStyles.OffWhiteLargeLabel);
@@ -501,7 +501,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void ShowDocumentations(BlockData block)
+        private static void ShowDocumentations(BlockData block)
         {
             GUILayout.FlexibleSpace();
 
@@ -513,7 +513,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void DrawDetailPaneBackButton(BlockData block)
         {
-            new ActionLinkDescription()
+            new ActionLinkDescription
             {
                 Content = new GUIContent(Styles.Contents.BackIcon),
                 Style = Styles.GUIStyles.LongBackButton,
@@ -529,7 +529,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             DrawSeparator(separatorRect, CharcoalGraySemiTransparent.ToTexture());
         }
 
-        private void DrawSeparator(Rect rect, Texture texture) => GUI.DrawTexture(rect, texture, ScaleMode.ScaleAndCrop);
+        private static void DrawSeparator(Rect rect, Texture texture) => GUI.DrawTexture(rect, texture, ScaleMode.ScaleAndCrop);
 
         private void Back()
         {

@@ -18,13 +18,14 @@
  * limitations under the License.
  */
 
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Meta.XR.BuildingBlocks
 {
     /// <summary>
-    /// A helper class to receive Room Mesh load completion event.
+    /// \deprecated A helper class to receive Room Mesh load completion event.
     /// </summary>
     /// <remarks>
     /// This Unity component is part of Scene Mesh Building Blocks. Subscribe to this event to be notified when Room Mesh is loaded.
@@ -32,6 +33,7 @@ namespace Meta.XR.BuildingBlocks
     /// For more information on Scene Mesh, see [Scene Mesh](https://developer.oculus.com/documentation/unity/unity-scene-build-mixed-reality/#scene-mesh) in Using the Scene Model.
     /// Scene Mesh documentation</a>.
     /// </remarks>
+    [Obsolete("The scene mesh Building Block is obsolete. Use the Effect Mesh building block (Global Mesh variant) located in the MRUK package.")]
     public class RoomMeshEvent : MonoBehaviour
     {
         /// <summary>

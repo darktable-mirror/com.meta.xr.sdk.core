@@ -19,7 +19,9 @@
  */
 
 using System;
+using System.Collections.Generic;
 using UnityEditor;
+using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -30,21 +32,33 @@ namespace Meta.XR.Editor.UserInterface
         private readonly bool _toggleOnLeft;
         private readonly string _label;
         private readonly Action<bool> _onToggleChanged;
+        private readonly GUILayoutOption[] _options;
 
-        public Toggle(string label = "", bool toggleOnLeft = true, Action<bool> onToggleChanged = null)
+        public Toggle(string label = "", bool toggleOnLeft = true, Action<bool> onToggleChanged = null) : this(label,
+            toggleOnLeft, false, onToggleChanged)
+        {
+        }
+
+        public Toggle(string label = "", bool toggleOnLeft = true, bool selected = false,
+            Action<bool> onToggleChanged = null, params GUILayoutOption[] options)
         {
             _label = label;
             _toggleOnLeft = toggleOnLeft;
             _onToggleChanged = onToggleChanged;
+            State = selected;
+            _options = options;
         }
 
         public void Draw()
         {
-            var newState = _toggleOnLeft ? EditorGUILayout.ToggleLeft(_label, State) : EditorGUILayout.Toggle(_label, State);
+            var newState = _toggleOnLeft
+                ? EditorGUILayout.ToggleLeft(_label, State, EditorStyles.toggle, _options)
+                : EditorGUILayout.Toggle(_label, State, EditorStyles.toggle, _options);
             if (newState != State)
             {
                 _onToggleChanged?.Invoke(newState);
             }
+
             State = newState;
         }
     }

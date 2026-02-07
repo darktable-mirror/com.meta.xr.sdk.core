@@ -18,12 +18,14 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    [Obsolete("Surface projected passthrough is being deprecated and support for it will be removed in a future release.")]
     public class PassthroughWindowBlockData : BlockData
     {
         internal override bool CanBeAddedOverGameObject => true;

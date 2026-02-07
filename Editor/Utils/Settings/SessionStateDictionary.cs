@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -168,7 +167,7 @@ namespace Meta.XR.Editor.RemoteContent
             return _cachedKeys;
         }
 
-        private void UpdateStoredKeys(List<string> keys)
+        private void UpdateStoredKeys(IEnumerable<string> keys)
         {
             var keysString = string.Join(",", keys);
             SessionState.SetString(_keysListKey, keysString);

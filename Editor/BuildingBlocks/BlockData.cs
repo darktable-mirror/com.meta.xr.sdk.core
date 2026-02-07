@@ -24,16 +24,15 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
-using Meta.XR.Editor.Settings;
-using Meta.XR.Editor.ToolingSupport;
+using Meta.XR.Editor.UPST.Notifications;
+using Meta.XR.Editor.Utils;
 using Meta.XR.Guides.Editor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
-using Meta.XR.Editor.UPST.Notifications;
-
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -110,7 +109,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             NotificationsScheduler.PauseForSeconds(30);
 
-            UsageSettings.UsesBuildingBlocks.SetValue(true);
+            Utils.ToolDescriptor.Usage.RecordUsage();
 
             using (new OVREditorUtils.UndoScope($"Install {Utils.BlockPublicTag} {BlockName}"))
             {
@@ -133,7 +132,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         [ContextMenu("Install")]
         private async void ContextMenuInstall()
         {
-            await AddToProject(null, null);
+            await AddToProject();
         }
 
         private async Task InstallWithDependenciesAndCommit(List<GameObject> selectedGameObjects)
@@ -154,12 +153,13 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                 SaveScene();
                 var createdBlocks =
-                    installedObjects.SelectMany(gameObject => gameObject.GetComponents<BuildingBlock>());
+                    installedObjects
+                        .Where(gameObject => gameObject != null)
+                        .SelectMany(gameObject => gameObject.GetComponents<BuildingBlock>());
                 await FixSetupRules(createdBlocks);
 
-                // Wait for 1 frame.
                 await Task.Yield();
-                Utils.SelectBlocksInScene(installedObjects);
+                Utils.SelectBlocksInScene(installedObjects.Where(obj => obj != null));
             }
             catch (Exception e)
             {
@@ -199,7 +199,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             await OVRProjectSetup.UpdateTasksAsync(buildTargetGroup, logMessages: OVRProjectSetup.LogMessages.Disabled);
 
             var additionalRules = blocks
-                .SelectMany<BuildingBlock, OVRConfigurationTask>(block => block.GetAssociatedRules()).ToList();
+                .SelectMany(block => block.GetAssociatedRules()).ToList();
 
             bool IsRequired(OVRConfigurationTask task) =>
                 !task.IsDone(buildTargetGroup)
@@ -292,7 +292,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                 var block = Undo.AddComponent(spawnedObject, ComponentType) as BuildingBlock;
                 SetupBlockComponent(block);
-                while (UnityEditorInternal.ComponentUtility.MoveComponentUp(block))
+                while (ComponentUtility.MoveComponentUp(block))
                 {
                 }
 

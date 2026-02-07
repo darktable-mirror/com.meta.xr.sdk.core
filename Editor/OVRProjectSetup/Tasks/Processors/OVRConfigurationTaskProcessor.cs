@@ -23,6 +23,7 @@ using UnityEditor;
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 internal abstract class OVRConfigurationTaskProcessor
 {
@@ -54,7 +55,7 @@ internal abstract class OVRConfigurationTaskProcessor
     // Status
     public bool Started => _startTime != -1;
     public bool Processing => _enumerator != null;
-    public bool Completed => Started && (_enumerator == null || _enumerator.Current == null);
+    public virtual bool Completed => Started && (_enumerator == null || _enumerator.Current == null);
     public List<OVRConfigurationTask> Tasks => _tasks;
 
     protected OVRConfigurationTaskProcessor(OVRConfigurationTaskRegistry registry, BuildTargetGroup buildTargetGroup,
@@ -111,7 +112,7 @@ internal abstract class OVRConfigurationTaskProcessor
         _startTime = Environment.TickCount;
     }
 
-    public void Update()
+    public virtual void Update()
     {
         var updateTime = Environment.TickCount;
         var currentTime = updateTime;

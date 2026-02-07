@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -31,7 +32,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     internal abstract class VariantHandle
     {
-        private const BindingFlags BindingFLags = BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
+        protected const BindingFlags BindingFLags = BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
 
         public MemberInfo MemberInfo { get; }
         public VariantAttribute Attribute { get; }
@@ -123,6 +124,13 @@ namespace Meta.XR.BuildingBlocks.Editor
                 variants.Add(variantHandle);
             }
 
+            // Sort variants by Order property first, then by member name alphabetically
+            variants.Sort((a, b) =>
+            {
+                var orderComparison = a.Attribute.Order.CompareTo(b.Attribute.Order);
+                return orderComparison != 0 ? orderComparison : string.Compare(a.MemberInfo.Name, b.MemberInfo.Name, StringComparison.Ordinal);
+            });
+
             return variants;
         }
 
@@ -168,8 +176,30 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
         }
 
-        public override string ToJson() => JsonUtility.ToJson(Value);
-        public override void FromJson(string json) => RawValue = JsonUtility.FromJson<T>(json);
+        public override string ToJson()
+        {
+            // Handle string values directly since JsonUtility doesn't serialize primitive strings correctly
+            if (typeof(T) == typeof(string))
+            {
+                return Value?.ToString() ?? string.Empty;
+            }
+
+            // For other types, use JsonUtility
+            return JsonUtility.ToJson(Value);
+        }
+
+        public override void FromJson(string json)
+        {
+            // Handle string values directly
+            if (typeof(T) == typeof(string))
+            {
+                RawValue = (T)(object)(json ?? string.Empty);
+                return;
+            }
+
+            // For other types, use JsonUtility
+            RawValue = JsonUtility.FromJson<T>(json);
+        }
         public override VariantHandle ToSelection(bool forceValue = true) => new VariantForSelection<T>(this, forceValue);
 
         public override void DrawGUI(SerializedObject serializedObject, out bool changed)
@@ -187,20 +217,30 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 var name = ObjectNames.NicifyVariableName(MemberInfo.Name);
                 EditorGUILayout.LabelField(name, Styles.GUIStyles.LabelStyle, GUILayout.Width(Constants.LabelWidth));
-                switch (Value)
+
+                // Check if we have an options method specified for any type
+                if (!string.IsNullOrEmpty(Attribute.OptionsMethod))
                 {
-                    case int intValue:
-                        ApplyValue((T)(object)EditorGUILayout.IntField(intValue), out changed);
-                        break;
-                    case string stringValue:
-                        ApplyValue((T)(object)EditorGUILayout.TextField(stringValue), out changed);
-                        break;
-                    case bool boolValue:
-                        ApplyValue((T)(object)EditorGUILayout.Toggle(boolValue), out changed);
-                        break;
-                    case Enum enumValue:
-                        ApplyValue((T)(object)EditorGUILayout.EnumPopup(enumValue), out changed);
-                        break;
+                    DrawFieldWithOptions(out changed);
+                }
+                else
+                {
+                    // Fall back to default field drawing
+                    switch (Value)
+                    {
+                        case int intValue:
+                            ApplyValue((T)(object)EditorGUILayout.IntField(intValue), out changed);
+                            break;
+                        case string stringValue:
+                            ApplyValue((T)(object)EditorGUILayout.TextField(stringValue), out changed);
+                            break;
+                        case bool boolValue:
+                            ApplyValue((T)(object)EditorGUILayout.Toggle(boolValue), out changed);
+                            break;
+                        case Enum enumValue:
+                            ApplyValue((T)(object)EditorGUILayout.EnumPopup(enumValue), out changed);
+                            break;
+                    }
                 }
             }
 
@@ -212,6 +252,161 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             EditorGUILayout.EndVertical();
+        }
+
+        private void DrawStringField(string stringValue, out bool changed)
+        {
+            changed = false;
+
+            // Check if we have an options method specified
+            if (!string.IsNullOrEmpty(Attribute.OptionsMethod))
+            {
+                var options = GetStringOptions();
+                if (options is { Length: > 0 })
+                {
+                    var currentIndex = Array.IndexOf(options, stringValue);
+                    if (currentIndex < 0) currentIndex = 0; // Default to first option if current value not found
+
+                    var newIndex = EditorGUILayout.Popup(currentIndex, options);
+                    if (newIndex != currentIndex && newIndex >= 0 && newIndex < options.Length)
+                    {
+                        ApplyValue((T)(object)options[newIndex], out changed);
+                    }
+                    return;
+                }
+            }
+
+            // Fall back to regular text field if no options or options method failed
+            ApplyValue((T)(object)EditorGUILayout.TextField(stringValue), out changed);
+        }
+
+        /// <summary>
+        /// Helper method to search for a method in the type hierarchy, including base classes
+        /// </summary>
+        private static MethodInfo GetMethodFromTypeHierarchy(Type type, string methodName)
+        {
+            var currentType = type;
+            while (currentType != null)
+            {
+                var method = currentType.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+                if (method != null)
+                    return method;
+
+                currentType = currentType.BaseType;
+            }
+            return null;
+        }
+
+        private void DrawFieldWithOptions(out bool changed)
+        {
+            changed = false;
+
+            try
+            {
+                var optionsMethod = GetMethodFromTypeHierarchy(Owner.GetType(), Attribute.OptionsMethod);
+                if (optionsMethod == null)
+                {
+                    Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' not found on type '{Owner.GetType().Name}' or its base classes");
+                    DrawFallbackField(out changed);
+                    return;
+                }
+
+                var result = optionsMethod.Invoke(Owner, null);
+                if (result == null)
+                {
+                    Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' returned null");
+                    DrawFallbackField(out changed);
+                    return;
+                }
+
+                // Handle IEnumerable<T> where T matches our field type
+                if (result is IEnumerable enumerable)
+                {
+                    var options = enumerable.Cast<T>().ToArray();
+                    if (options.Length == 0)
+                    {
+                        Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' returned empty collection");
+                        DrawFallbackField(out changed);
+                        return;
+                    }
+
+                    // Find current index
+                    var currentIndex = Array.IndexOf(options, Value);
+                    if (currentIndex < 0)
+                    {
+                        // Current value is not in available options, reset to first option
+                        ApplyValue(options[0], out var resetChanged);
+                        currentIndex = 0;
+                    }
+
+                    // Create display names for the popup
+                    var displayNames = options.Select(option => option?.ToString() ?? "null").ToArray();
+
+                    var newIndex = EditorGUILayout.Popup(currentIndex, displayNames);
+                    if (newIndex != currentIndex && newIndex >= 0 && newIndex < options.Length)
+                    {
+                        ApplyValue(options[newIndex], out changed);
+                    }
+                    return;
+                }
+
+                Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' did not return an IEnumerable");
+                DrawFallbackField(out changed);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to get options from method '{Attribute.OptionsMethod}': {ex.Message}");
+                DrawFallbackField(out changed);
+            }
+        }
+
+        private void DrawFallbackField(out bool changed)
+        {
+            // Fall back to default field drawing
+            switch (Value)
+            {
+                case int intValue:
+                    ApplyValue((T)(object)EditorGUILayout.IntField(intValue), out changed);
+                    break;
+                case string stringValue:
+                    ApplyValue((T)(object)EditorGUILayout.TextField(stringValue), out changed);
+                    break;
+                case bool boolValue:
+                    ApplyValue((T)(object)EditorGUILayout.Toggle(boolValue), out changed);
+                    break;
+                case Enum enumValue:
+                    ApplyValue((T)(object)EditorGUILayout.EnumPopup(enumValue), out changed);
+                    break;
+                default:
+                    EditorGUILayout.LabelField($"Unsupported type: {typeof(T).Name}");
+                    changed = false;
+                    break;
+            }
+        }
+
+        private string[] GetStringOptions()
+        {
+            try
+            {
+                var optionsMethod = GetMethodFromTypeHierarchy(Owner.GetType(), Attribute.OptionsMethod);
+                if (optionsMethod == null) return null;
+
+                var result = optionsMethod.Invoke(Owner, null);
+                switch (result)
+                {
+                    case IEnumerable<string> stringEnumerable:
+                        return stringEnumerable.ToArray();
+                    case IEnumerable enumerable:
+                        // Handle other IEnumerable types by converting to string
+                        return enumerable.Cast<object>().Select(x => x?.ToString() ?? string.Empty).ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to get string options from method '{Attribute.OptionsMethod}': {ex.Message}");
+            }
+
+            return null;
         }
 
         internal void ApplyValue(T value, out bool changed)

@@ -22,7 +22,9 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
+using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
@@ -44,6 +46,7 @@ namespace Meta.XR.Editor.ToolingSupport
 
         public string Name;
         public string Id => Name;
+        public string RampUpKey => Id?.Replace(" ", "_");
         public string MqdhCategoryId;
         public string Description;
         public string MenuDescription;
@@ -57,10 +60,12 @@ namespace Meta.XR.Editor.ToolingSupport
         public Action<Origins> OnClickDelegate;
         public bool CloseOnClick = true;
         public bool Experimental = false;
+        public bool DrawExperimentalInStatusMenu = false;
         public bool CanBeNew = false;
         public bool ShowHeader = true;
         public bool AddToStatusMenu = false;
         public bool AddToMenu = true;
+        public bool EnableRampUp = false;
         public string MenuPathShortcut;
         public Action<Origins, string> OnUserSettingsGUI;
         public Action<Origins, string> OnProjectSettingsGUI;
@@ -68,6 +73,8 @@ namespace Meta.XR.Editor.ToolingSupport
         public Action<GenericMenu> BuildOptionsMenuDelegate;
 
         private CustomBool _new;
+        private ToolUsage _toolUsage;
+        private bool? _rampUpEnabled;
 
         private CustomBool New => _new ??=
             new UserBool()
@@ -103,6 +110,45 @@ namespace Meta.XR.Editor.ToolingSupport
             ToolRegistry.Register(this);
         }
 
+        public ToolUsage Usage
+        {
+            get
+            {
+                _toolUsage ??= new ToolUsage(Id);
+                return _toolUsage;
+            }
+        }
+
+        public bool IsRampedUp
+        {
+            get
+            {
+                if (!EnableRampUp) return true;
+
+                if (!_rampUpEnabled.HasValue)
+                {
+                    _rampUpEnabled = FeatureRampUpManager.GetRemoteKeysResult(RampUpKey, defaultValue: false);
+                }
+
+                return _rampUpEnabled.Value;
+            }
+        }
+
+        internal async Task<bool> CheckRampUpAsync()
+        {
+            if (!EnableRampUp)
+            {
+                _rampUpEnabled = true;
+                return true;
+            }
+
+            await FeatureRampUpManager.WaitForKeysFetchingAsync();
+
+            _rampUpEnabled = FeatureRampUpManager.GetRemoteKeysResult(RampUpKey, defaultValue: false);
+
+            return _rampUpEnabled.Value;
+        }
+
         public void Initialize()
         {
             SetupMenuPath();
@@ -111,6 +157,8 @@ namespace Meta.XR.Editor.ToolingSupport
         private void SetupMenuPath()
         {
             if (OnClickDelegate == null || !AddToMenu) return;
+
+            if (!IsRampedUp) return;
 
             Utils.AddMenuItem(MenuPath, () => OnClickDelegate(Origins.Menu), MenuPathShortcut, Order);
         }
@@ -254,11 +302,18 @@ namespace Meta.XR.Editor.ToolingSupport
                 EditorGUILayout.BeginHorizontal(GUIStyle.none);
                 var label = prependOpen ? $"Open {Name}" : Name;
                 var width = Styles.GUIStyles.Title.CalcSize(new GUIContent(label));
-                EditorGUILayout.LabelField(label, hover ? Styles.GUIStyles.TitleHover : Styles.GUIStyles.Title, GUILayout.Width(width.x));
+                EditorGUILayout.LabelField(label, hover ? Styles.GUIStyles.TitleHover : Styles.GUIStyles.Title,
+                    GUILayout.Width(width.x));
                 if (New.Value)
                 {
                     var tag = new Tag("New");
                     tag.Draw();
+                }
+
+                if (DrawExperimentalInStatusMenu)
+                {
+                    var tagExperimental = new Tag("Experimental");
+                    tagExperimental.Draw();
                 }
 
                 GUILayout.FlexibleSpace();
@@ -330,7 +385,8 @@ namespace Meta.XR.Editor.ToolingSupport
         private void DrawIcon(bool hover)
         {
             using var _ = new ColorScope(ColorScope.Scope.Content, hover ? UnityEngine.Color.white : LightGray);
-            EditorGUILayout.LabelField(Icon, Styles.GUIStyles.IconStyle, GUILayout.Width(Styles.GUIStyles.IconStyle.fixedWidth));
+            EditorGUILayout.LabelField(Icon, Styles.GUIStyles.IconStyle,
+                GUILayout.Width(Styles.GUIStyles.IconStyle.fixedWidth));
         }
 
         private void UpdateCurrentWidth()
@@ -357,12 +413,14 @@ namespace Meta.XR.Editor.ToolingSupport
             {
                 EditorGUILayout.BeginHorizontal(GUIStyles.Header);
             }
+
             {
                 using (new ColorScope(ColorScope.Scope.Content, Color))
                 {
                     EditorGUILayout.LabelField(Icon, GUIStyles.HeaderIconStyle, GUILayout.Width(32.0f),
                         GUILayout.ExpandWidth(false));
                 }
+
                 EditorGUILayout.LabelField(Name, GUIStyles.HeaderLabel);
 
                 EditorGUILayout.Space(0, true);
@@ -424,6 +482,7 @@ namespace Meta.XR.Editor.ToolingSupport
                 item.Link.Origin = origin;
                 item.Link.Draw();
             }
+
             EditorGUILayout.EndVertical();
         }
 
@@ -457,9 +516,11 @@ namespace Meta.XR.Editor.ToolingSupport
             var menu = new GenericMenu();
             if (OnUserSettingsGUI != null)
             {
-                menu.AddItem(new GUIContent("Go to User Preferences"), false, () => OpenUserSettings(Origins.HeaderIcons));
+                menu.AddItem(new GUIContent("Go to User Preferences"), false,
+                    () => OpenUserSettings(Origins.HeaderIcons));
                 menu.AddSeparator(string.Empty);
             }
+
             ShowOverview.DrawForMenu(menu, Origins.HeaderIcons, this);
             BuildOptionsMenuDelegate?.Invoke(menu);
             menu.ShowAsContext();

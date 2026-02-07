@@ -18,8 +18,10 @@
  * limitations under the License.
  */
 
+#if USING_XR_MANAGEMENT && (USING_XR_SDK_OCULUS || USING_XR_SDK_OPENXR)
+#define USING_XR_SDK
+#endif
 
-using System.Collections;
 using System.Collections.Generic;
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using UnityEngine;
@@ -47,6 +49,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private OVRInput.Controller _controller;
 
         private static OVRPlugin.HandState _handState = new();
+
+        private static bool IsEditorPlayMode => Application.isEditor && Application.isPlaying
+#if USING_XR_SDK
+                                                && OVRManager.GetCurrentDisplaySubsystem() == null
+#endif
+        ;
 
         // Registering of raycasters will be static, as PanelInputModule may not exists in the same scene and
         // at the same time than raycasters.
@@ -245,18 +253,34 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private static PointerEventData.FramePressState ComputeControllerState(OVRInput.Controller controller)
         {
+            // Use mouse input in Editor Play mode
+            if (IsEditorPlayMode)
+            {
+                var pressed = Input.GetMouseButtonDown(0);
+                var released = Input.GetMouseButtonUp(0);
+
+                if (pressed && released)
+                    return PointerEventData.FramePressState.PressedAndReleased;
+                if (pressed)
+                    return PointerEventData.FramePressState.Pressed;
+                if (released)
+                    return PointerEventData.FramePressState.Released;
+                return PointerEventData.FramePressState.NotChanged;
+            }
+
+            // Original VR controller logic
             var button = RuntimeSettings.Instance.ClickButton;
 
-            var pressed = OVRInput.GetDown(button, controller);
-            var released = OVRInput.GetUp(button, controller);
+            var pressed_vr = OVRInput.GetDown(button, controller);
+            var released_vr = OVRInput.GetUp(button, controller);
 
-            if (pressed && released)
+            if (pressed_vr && released_vr)
                 return PointerEventData.FramePressState.PressedAndReleased;
 
-            if (pressed)
+            if (pressed_vr)
                 return PointerEventData.FramePressState.Pressed;
 
-            if (released)
+            if (released_vr)
                 return PointerEventData.FramePressState.Released;
 
             return PointerEventData.FramePressState.NotChanged;
@@ -316,6 +340,22 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private void UpdateRayTransform(Transform rayTransform, OVRInput.Controller controller)
         {
+            // Use mouse position to create ray in Editor Play mode
+            if (IsEditorPlayMode)
+            {
+                var mousePosition = Input.mousePosition;
+                var camera = _debugInterface?.Camera ?? Camera.main;
+
+                if (camera != null)
+                {
+                    var ray = camera.ScreenPointToRay(mousePosition);
+                    rayTransform.position = ray.origin;
+                    rayTransform.rotation = Quaternion.LookRotation(ray.direction);
+                }
+                return;
+            }
+
+            // Original VR controller logic
             var handToFetch = controller switch
             {
                 OVRInput.Controller.LHand => OVRPlugin.Hand.HandLeft,

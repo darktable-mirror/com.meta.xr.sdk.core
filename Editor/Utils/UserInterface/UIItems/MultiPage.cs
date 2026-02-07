@@ -194,7 +194,7 @@ namespace Meta.XR.Editor.UserInterface
 
             PrevButton.Invisible = _currentPageIndex == 0;
             NextButton.Action.BackgroundColor = NextButton.Disable ? Color.white : Styles.Colors.MetaMultiplierForButton;
-            NextButton.Action.Content = new GUIContent(_currentPageIndex >= Pages.Count - 1 ? "Close" : "Next");
+            NextButton.Action.Content = new GUIContent(_currentPageIndex >= Pages.Count - 1 ? "Finish" : "Next");
 
             PrevButton.Action.ActionData = CurrentPage;
             NextButton.Action.ActionData = CurrentPage;

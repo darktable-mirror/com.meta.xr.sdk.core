@@ -57,6 +57,7 @@ namespace Meta.XR.Editor.UserInterface
         public IIdentified OriginData;
         public int Order = 10;
         public bool Underline;
+        public MouseCursor? MouseCursor = UnityEditor.MouseCursor.Link;
 
         public void Draw(params GUILayoutOption[] options)
         {
@@ -94,7 +95,11 @@ namespace Meta.XR.Editor.UserInterface
                 Handles.color = Color.white;
             }
 
-            EditorGUIUtility.AddCursorRect(position, MouseCursor.Link);
+            if (MouseCursor.HasValue)
+            {
+                EditorGUIUtility.AddCursorRect(position, MouseCursor.Value);
+            }
+
             return GUI.Button(position, Content, Style);
         }
 

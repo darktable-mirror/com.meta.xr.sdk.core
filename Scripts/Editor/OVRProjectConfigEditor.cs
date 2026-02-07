@@ -179,7 +179,7 @@ public class OVRProjectConfigEditor : Editor
                 // System Keyboard Support
                 OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Requires System Keyboard",
                         "If checked, the Oculus System keyboard will be enabled for Unity input fields and any calls to open/close the Unity TouchScreenKeyboard."),
-                    ref projectConfig.requiresSystemKeyboard, ref hasModified);
+                    ref projectConfig.requiresSystemKeyboard, ref hasModified, "https://developers.meta.com/horizon/documentation/unity/unity-keyboard-overlay");
 
                 // Tracked Keyboard Support
                 bool trackedKeyboardSupportAvailable = OVRPluginInfo.IsOVRPluginOpenXRActivated();
@@ -192,7 +192,7 @@ public class OVRProjectConfigEditor : Editor
 
                     OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Tracked Keyboard Support",
                             "Show user's physical keyboard in correct position in VR."),
-                        ref projectConfig.trackedKeyboardSupport, ref hasModified);
+                        ref projectConfig.trackedKeyboardSupport, ref hasModified, "https://developers.meta.com/horizon/documentation/unity/tk-overview");
                 }
 
                 // Virtual Keyboard Support
@@ -206,7 +206,7 @@ public class OVRProjectConfigEditor : Editor
 
                     OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Virtual Keyboard Support",
                             "Provides a consistent typing experience across Meta Quest VR applications."),
-                        ref projectConfig.virtualKeyboardSupport, ref hasModified);
+                        ref projectConfig.virtualKeyboardSupport, ref hasModified, "https://developers.meta.com/horizon/documentation/unity/VK-unity-overview");
 
                     if (projectConfig.requiresSystemKeyboard
                         && projectConfig.virtualKeyboardSupport != OVRProjectConfig.FeatureSupport.None)
@@ -337,7 +337,7 @@ public class OVRProjectConfigEditor : Editor
                 OVREditorUtil.SetupTexture2DField(projectConfig, new GUIContent("System Splash Screen",
                         "If set, the Splash Screen will be presented by the Operating System as a high quality composition layer at launch time."),
                     ref projectConfig.systemSplashScreen, ref splashScreenTextureModified,
-                    "https://developer.oculus.com/documentation/unity/unity-splash-screen/");
+                    "https://developers.meta.com/horizon/documentation/unity/unity-splash-screen/");
 
                 if (splashScreenTextureModified)
                 {
@@ -427,7 +427,7 @@ public class OVRProjectConfigEditor : Editor
                     OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Skip Unneeded Shaders",
                         "If checked, prevent building shaders (BiRP only) that are not used by default to reduce time spent when building."),
                         ref projectConfig.skipUnneededShaders, ref hasModified,
-                        "https://developer.oculus.com/documentation/unity/unity-strip-shaders/");
+                        "https://developers.meta.com/horizon/documentation/unity/unity-strip-shaders/");
                 }
 
                 OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("IL2CPP Link Time Optimization",
@@ -439,9 +439,9 @@ public class OVRProjectConfigEditor : Editor
                 OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Remove Existing Gradle AndroidManifest per Build",
                     "If checked, this will always delete the AndroidManifest file in the gradle project before a build which is known to prevent the AndroidManfiest from updating properly."),
                     ref projectConfig.removeGradleManifest, ref hasModified);
-                OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Horizon OS SDK Tag", "If checked, the application can specify the minimum required Horizon OS SDK version needed to run and the target version the application was created for."),
-                    ref projectConfig.horizonOsSdkEnabled, ref hasModified);
-                if (projectConfig.horizonOsSdkEnabled)
+                OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Disable Horizon OS SDK Tag", "Unless disabled, the application can specify the minimum required Horizon OS SDK version needed to run and the target version the application was created for."),
+                    ref projectConfig.horizonOsSdkDisabled, ref hasModified);
+                if (!projectConfig.horizonOsSdkDisabled)
                 {
                     var sdkLabels = new GUIContent[OVRProjectConfig.horizonOsSdkVersions.Length];
                     for (var i = 0; i < OVRProjectConfig.horizonOsSdkVersions.Length; i++)

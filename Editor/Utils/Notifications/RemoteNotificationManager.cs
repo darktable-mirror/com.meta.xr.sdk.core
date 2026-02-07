@@ -28,14 +28,15 @@ using UnityEditor;
 using UnityEngine;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.RemoteContent;
+using Meta.XR.Editor.Callbacks;
 
 namespace Meta.XR.Editor.Notifications
 {
     [InitializeOnLoad]
     internal static class RemoteNotificationManager
     {
-        private static readonly RemoteJsonContentDownloader Downloader;
-        private static readonly Validator Validator = new();
+        private static RemoteJsonContentDownloader _downloader;
+        private static Validator _validator;
 
         private static readonly CustomBool InitSession = new OnlyOncePerSessionBool
         {
@@ -46,12 +47,13 @@ namespace Meta.XR.Editor.Notifications
 
         static RemoteNotificationManager()
         {
-            if (!InitSession.Value)
-            {
-                return;
-            }
+            InitializeOnLoad.Register(Initialize);
+        }
 
-            Downloader = new RemoteJsonContentDownloader(
+        private static void Initialize()
+        {
+            _validator = new Validator();
+            _downloader = new RemoteJsonContentDownloader(
                     cacheFile: "remote_notifications.json",
                     url: "https://www.facebook.com/developerframeworktools/unity/notifications")
                 .WithCacheDuration(TimeSpan.FromHours(2))
@@ -65,6 +67,15 @@ namespace Meta.XR.Editor.Notifications
 
         private static async Task InitializeAsync()
         {
+            if (!InitSession)
+            {
+                return;
+            }
+
+            UsageSettings.NumberOfActiveSessions.SetValue(UsageSettings.NumberOfActiveSessions + 1);
+            UsageSettings.UserActivationDate.SetValue(DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
+
+            await FeatureRampUpManager.WaitForKeysFetchingAsync();
             var successfulLoad = await Reload();
             if (!successfulLoad)
             {
@@ -75,42 +86,44 @@ namespace Meta.XR.Editor.Notifications
 
         private static async Task ForceDownloadAsync()
         {
-            Downloader.ClearCache();
+            _downloader.ClearCache();
             await Reload();
         }
 
         private static async Task<bool> Reload()
         {
-            var result = await Downloader.Fetch();
+            var result = await _downloader.Fetch();
             if (!result.IsSuccess)
             {
                 return false;
             }
 
-            var (parseSuccess, notifications) = GetNotificationsFromJsonString(result.Content);
-            if (!parseSuccess)
-            {
-                return false;
-            }
-
+            var notifications = await GetNotificationsFromJsonString(result.Content);
             EnqueueNotifications(notifications);
             return true;
         }
 
-        private static (bool, IEnumerable<Notification>) GetNotificationsFromJsonString(string jsonData)
+        private static bool IsNotificationRampedUp(this NotificationData data)
+        {
+            return string.IsNullOrEmpty(data.rampUpKey)
+                   || FeatureRampUpManager.GetRemoteKeysResult(data.rampUpKey);
+        }
+
+        private static Task<Notification[]> GetNotificationsFromJsonString(string jsonData)
         {
             try
             {
                 var response = JsonUtility.FromJson<NotificationsResponse>(jsonData);
-                var notifications =
-                    (response.notifications ?? Enumerable.Empty<NotificationData>())
-                    .Where(data => data.IsNotificationValid(Validator))
+                var notificationsTasks = (response.notifications ?? Enumerable.Empty<NotificationData>())
+                    .Where(data => data.IsNotificationValid(_validator))
+                    .Where(IsNotificationRampedUp)
                     .Select(data => data.BuildNotificationFromData());
-                return (true, notifications);
+
+                return Task.WhenAll(notificationsTasks);
             }
             catch (Exception)
             {
-                return (false, Array.Empty<Notification>());
+                return Task.FromResult(Array.Empty<Notification>());
             }
         }
 

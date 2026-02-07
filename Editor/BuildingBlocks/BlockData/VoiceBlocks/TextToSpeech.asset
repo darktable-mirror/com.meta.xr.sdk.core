@@ -14,16 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: ab791591-5ee2-431a-93e7-1749d1b5ad8f
   version: 1
-  blockName: Text-to-Speech
+  blockName: Speak Text
   description: Enables your app to read out a provided text.
   tags:
     array:
     - name: Voice
   thumbnail: {fileID: 2800000, guid: e19dd181df67c81468e76d169719c758, type: 3}
-  order: 0
+  remoteThumbnailContentId: 0
   prefab: {fileID: 0}
+  selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies: []
+  guidedSetupName: 
   packageDependencies:
   - com.meta.xr.sdk.voice
   isSingleton: 1

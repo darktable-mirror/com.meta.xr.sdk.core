@@ -41,6 +41,7 @@ namespace Meta.XR.Editor.PlayCompanion
         public Action OnEditorQuitting { get; set; }
         public Func<bool> ShouldBeSelected { get; set; }
         public Func<bool> ShouldBeUnselected { get; set; }
+        public Func<Color> TintColor { get; set; }
         public bool Show { get; set; }
         public bool IsButton { get; set; } = false;
 

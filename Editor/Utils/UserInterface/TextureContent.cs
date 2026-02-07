@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Meta.XR.Editor.Id;
 using UnityEditor;
@@ -33,6 +34,9 @@ namespace Meta.XR.Editor.UserInterface
         public class Category : IIdentified
         {
             [SerializeField]
+            private string _pathKey;
+
+            [SerializeField]
             private string _path;
 
             [SerializeField]
@@ -46,7 +50,7 @@ namespace Meta.XR.Editor.UserInterface
             {
                 if (_fullPath == null)
                 {
-                    if (TryGetRootPath(out var rootPath))
+                    if (TryGetRootPath(_pathKey, out var rootPath))
                     {
                         _fullPath = Path.Combine(rootPath, _path);
                     }
@@ -56,10 +60,11 @@ namespace Meta.XR.Editor.UserInterface
                 return fullPath != null;
             }
 
-            public Category(string path, bool isFullPath = false)
+            public Category(string path, bool isFullPath = false, string pathKey = "Oculus.VR.Editor")
             {
                 _path = path;
                 _isFullPath = isFullPath;
+                _pathKey = pathKey;
 
                 if (_isFullPath)
                 {
@@ -79,23 +84,22 @@ namespace Meta.XR.Editor.UserInterface
             return new TextureContent(name, category, tooltip);
         }
 
-        private static string _rootPath;
+        private static readonly Dictionary<object, string> RootPaths = new();
 
-        private static bool TryGetRootPath(out string rootPath)
+        private static bool TryGetRootPath(string key, out string rootPath)
         {
-            if (_rootPath == null)
+            if (!RootPaths.TryGetValue(key, out rootPath))
             {
-                var g = AssetDatabase.FindAssets($"t:Script {nameof(TextureContent)}");
+                var g = AssetDatabase.FindAssets($"t:AssemblyDefinitionAsset {key}");
                 if (g.Length > 0)
                 {
-                    _rootPath = AssetDatabase.GUIDToAssetPath(g[0]);
-                    _rootPath = Path.GetDirectoryName(_rootPath);
-                    _rootPath = Path.GetDirectoryName(_rootPath);
-                    _rootPath = Path.GetDirectoryName(_rootPath);
+                    rootPath = AssetDatabase.GUIDToAssetPath(g[0]);
+                    rootPath = Path.GetDirectoryName(rootPath);
                 }
+
+                RootPaths[key] = rootPath;
             }
 
-            rootPath = _rootPath;
             return rootPath != null;
         }
 

@@ -4,6 +4,7 @@ Shader "URP/UI/Prerendered"
     {
         _MainTex("Texture", 2D) = "white" {}
         _Color("Color", Color) = (1,1,1,1)
+        [Enum(UnityEngine.Rendering.BlendMode)] _AlphaWrite("Alpha Write", Int) = 0
     }
     SubShader
     {
@@ -17,13 +18,14 @@ Shader "URP/UI/Prerendered"
         {
             Tags {"RenderType"="Transparent"}
 
-            Blend One OneMinusSrcAlpha, Zero OneMinusSrcAlpha
+            Blend One OneMinusSrcAlpha, [_AlphaWrite] OneMinusSrcAlpha
             Cull Off
             ZWrite Off
 
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_instancing
             #pragma multi_compile _ ALPHA_SQUARED
             #pragma multi_compile _ EXPENSIVE
             #pragma multi_compile _ OVERLAP_MASK
@@ -50,6 +52,7 @@ Shader "URP/UI/Prerendered"
             HLSLPROGRAM
             #pragma vertex mv_vert
             #pragma fragment mv_frag
+            #pragma multi_compile_instancing
             #pragma multi_compile _ ALPHA_SQUARED
             #pragma multi_compile _ EXPENSIVE
 
@@ -75,6 +78,7 @@ Shader "URP/UI/Prerendered"
             HLSLPROGRAM
             #pragma vertex mv_vert
             #pragma fragment mv_frag
+            #pragma multi_compile_instancing
             #pragma multi_compile _ ALPHA_SQUARED
             #pragma multi_compile _ EXPENSIVE
 

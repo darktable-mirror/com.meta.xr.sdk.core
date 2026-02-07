@@ -58,11 +58,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 var sceneBlocks = Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None);
 
-                if (sceneBlocks.Length > 0)
-                {
-                    UsageSettings.UsesBuildingBlocks.SetValue(true);
-                }
-
                 foreach (var block in sceneBlocks)
                 {
                     OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.OpenSceneWithBlock)

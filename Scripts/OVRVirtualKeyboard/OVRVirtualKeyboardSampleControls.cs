@@ -309,14 +309,28 @@ public class OVRVirtualKeyboardSampleControls : MonoBehaviour
         }
     }
 
+    private bool IsActiveHandPinching()
+    {
+        OVRHand activeHand = inputHandler.ActiveInteractionDevice switch
+        {
+            OVRInput.Controller.LHand => keyboard.handLeft,
+            OVRInput.Controller.RHand => keyboard.handRight,
+            _ => null
+        };
+        return activeHand == null ? false :
+            activeHand.GetFingerIsPinching(OVRHand.HandFinger.Index);
+    }
+
     void Update()
     {
         var isPressed = OVRInput.Get(
-            OVRInput.Button.One | // right hand pinch
-            OVRInput.Button.Three | // left hand pinch
+            OVRInput.Button.One |
+            OVRInput.Button.Three |
             OVRInput.Button.PrimaryIndexTrigger |
             OVRInput.Button.SecondaryIndexTrigger,
-            OVRInput.Controller.All);
+            OVRInput.Controller.All) |
+            IsActiveHandPinching();
+
         if (isMovingKeyboardFinished_ && !isPressed)
         {
             keyboard.InputEnabled = true;

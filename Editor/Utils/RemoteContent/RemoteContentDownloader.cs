@@ -24,6 +24,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Meta.XR.Editor.RemoteContent
 {
@@ -60,15 +61,17 @@ namespace Meta.XR.Editor.RemoteContent
     internal abstract class RemoteContentDownloader<T> where T : RemoteContentDownloader<T>
     {
         private readonly string _url;
-        private readonly string _fileName;
+        private string _fileName;
         private readonly Dictionary<string, string> _urlParameters = new();
 
         private TimeSpan _cacheDuration = TimeSpan.FromDays(1);
         private string _cacheDirectory = "remote_content";
         private string _cacheFilePath;
         private bool _useCache = true;
-        private bool _displayProgress;
+        private IScopedProgressDisplayer _progressDisplayer = NullScopedScopedProgressDisplayer.Instance;
         private bool _enforceMediaType = true;
+        private bool _missingMachineIdParam;
+
 
         protected string CacheFilePath
         {
@@ -105,9 +108,9 @@ namespace Meta.XR.Editor.RemoteContent
             return (T)this;
         }
 
-        public T WithProgressDisplay()
+        public T WithProgressDisplay(IScopedProgressDisplayer progressDisplayer)
         {
-            _displayProgress = true;
+            _progressDisplayer = progressDisplayer;
             return (T)this;
         }
 
@@ -129,6 +132,15 @@ namespace Meta.XR.Editor.RemoteContent
             return (T)this;
         }
 
+        public T WithCachePerSDKVersion()
+        {
+            if (SdkVersion.HasValue)
+            {
+                _fileName = $"{SdkVersion.Value}_{_fileName}";
+            }
+            return (T)this;
+        }
+
         public T WithUrlParameter(string key, string value)
         {
             if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
@@ -144,9 +156,16 @@ namespace Meta.XR.Editor.RemoteContent
             return WithUrlParameter("sdk_version", SdkVersion.HasValue ? SdkVersion.Value.ToString() : string.Empty);
         }
 
-        public T WithMachineIdUrlParameter()
+        public T WithMachineIdUrlParameter(bool required = false)
         {
-            return WithUrlParameter("machine_id", OVRPlugin.GetMachineID());
+            var machineID = OVRPlugin.GetMachineID();
+
+            if (required && string.IsNullOrEmpty(machineID))
+            {
+                _missingMachineIdParam = true;
+            }
+
+            return WithUrlParameter("machine_id", machineID);
         }
 
         protected RemoteContentDownloader(string fileName, string url)
@@ -163,6 +182,11 @@ namespace Meta.XR.Editor.RemoteContent
 
         protected RemoteContentDownloader(string fileName, ulong contentId)
             : this(fileName, UrlFromContentId(contentId))
+        {
+        }
+
+        protected RemoteContentDownloader(ulong contentId) :
+            this(contentId.ToString(), UrlFromContentId(contentId))
         {
         }
 
@@ -233,6 +257,11 @@ namespace Meta.XR.Editor.RemoteContent
         {
             try
             {
+                if (_missingMachineIdParam)
+                {
+                    return DownloadResult<TContent>.Failure("Machine ID is required but not available");
+                }
+
                 if (_useCache && HasValidCache())
                 {
                     var cachedContent = await ReadFromCache<TContent>();
@@ -261,15 +290,38 @@ namespace Meta.XR.Editor.RemoteContent
             }
         }
 
-        private async Task<DownloadResult<byte[]>> DownloadRawContent()
+        protected async Task<bool> PreDownload<TContent>()
         {
-            using IScopedProgressDisplayer scopedProgressDisplayer =
-                _displayProgress
-                    ? new ScopedScopedProgressDisplayer("[Meta XR] Fetching remote content")
-                    : NullScopedScopedProgressDisplayer.Instance;
+            try
+            {
+                if (_useCache && HasValidCache())
+                {
+                    return true;
+                }
 
-            return await DownloadContent(scopedProgressDisplayer);
+                var downloadResult = await DownloadRawContent();
+
+                if (!downloadResult.IsSuccess)
+                {
+                    return false;
+                }
+
+                var convertedContent = ConvertFromBytes<TContent>(downloadResult.Content);
+
+                if (_useCache)
+                {
+                    await WriteToCache(convertedContent);
+                }
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
+
+        private async Task<DownloadResult<byte[]>> DownloadRawContent() => await DownloadContent(_progressDisplayer);
 
         private static string UrlFromContentId(ulong contentId) =>
             $"https://www.facebook.com/framework_tools/remote_content_fetch/{contentId}";
@@ -344,8 +396,8 @@ namespace Meta.XR.Editor.RemoteContent
         {
         }
 
-        public RemoteBinaryContentDownloader(string cacheFile, ulong contentId)
-            : base(cacheFile, contentId)
+        public RemoteBinaryContentDownloader(ulong contentId)
+            : base(contentId)
         {
         }
 
@@ -391,6 +443,26 @@ namespace Meta.XR.Editor.RemoteContent
             }
 
             return (TContent)(object)bytes;
+        }
+
+        private Task PreDownload()
+        {
+            return base.PreDownload<byte[]>();
+        }
+
+        public static async Task PreloadDownloaders(IEnumerable<RemoteBinaryContentDownloader> downloaders)
+        {
+            var downloadTasks = downloaders
+                .Select(downloader => downloader.PreDownload())
+                .ToArray();
+
+            const int batchSize = 5;
+
+            for (var i = 0; i < downloadTasks.Length; i += batchSize)
+            {
+                var batch = downloadTasks.Skip(i).Take(batchSize);
+                await Task.WhenAll(batch);
+            }
         }
     }
 }

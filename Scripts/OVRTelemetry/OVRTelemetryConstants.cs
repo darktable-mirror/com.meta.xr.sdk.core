@@ -56,6 +56,9 @@ internal static class OVRTelemetryConstants
             public const int ComponentAdd = 163060094;
             public const int FeaturesInScene = 163069415;
             public const int StartRampKeys = 163066800;
+            public const int SceneActivity = 163061743;
+            public const int SceneInactivity = 163060244;
+            public const int EditorShutdown = 163059212;
         }
 
         public static class AnnotationType
@@ -64,6 +67,8 @@ internal static class OVRTelemetryConstants
             public const string AssemblyName = "AssemblyName";
             public const string UsesProSkin = "UsesProSkin";
             public const string Origin = "Origin";
+            public const string Samples = "Samples";
+            public const string SessionDuration = "SessionDuration";
         }
     }
 

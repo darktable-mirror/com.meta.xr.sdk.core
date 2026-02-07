@@ -18,19 +18,18 @@
  * limitations under the License.
  */
 
-using Meta.XR.Editor.Tags;
-using System.Linq;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
+using UnityEditor;
+using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using static Meta.XR.Editor.UserInterface.Telemetry;
-using UnityEditor;
-using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -39,13 +38,16 @@ namespace Meta.XR.BuildingBlocks.Editor
         private class SessionStateCollection : CustomSetting<CollectionTagBehavior>
         {
             private bool _hasBeenFetched;
-            private CollectionTagBehavior _savedCollection = null;
+            private CollectionTagBehavior _savedCollection;
 
             public override CollectionTagBehavior Value
             {
                 get
                 {
-                    if (_hasBeenFetched) return _savedCollection;
+                    if (_hasBeenFetched)
+                    {
+                        return _savedCollection;
+                    }
 
                     var collectionName = SessionState.GetString(Key, string.Empty);
                     _hasBeenFetched = true;
@@ -84,6 +86,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private bool _isSwitchToNextPageCompleted;
 
         private Page CurrentTargetPage { get; set; } = Page.Collections;
+
         private bool IsPageVisible(Page page)
         {
             var pagePosition = GetPageStartPosition(page);
@@ -91,7 +94,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                    && _horizontalPageRatio <= (pagePosition + 0.99f);
         }
 
-        private static SessionStateCollection _selectedCollection = new SessionStateCollection()
+        private static readonly SessionStateCollection SelectedCollection = new()
         {
             Owner = Utils.ToolDescriptor,
             SendTelemetry = false,
@@ -100,16 +103,20 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private bool _disabledCollectionPage;
         private static IReadOnlyList<Tag> _collectionTags;
-        private static bool ValidCollections => _collectionTags != null && _collectionTags.Any() && _collectionTags.Contains(CustomTagBehaviors.AllBuildingBlocksCollection);
 
-        private static Setting<bool> SkipCollectionOnStart = new UserBool()
+        private static bool ValidCollections => _collectionTags != null && _collectionTags.Any() &&
+                                                _collectionTags.Contains(CustomTagBehaviors
+                                                    .AllBuildingBlocksCollection);
+
+        private static readonly Setting<bool> SkipCollectionOnStart = new UserBool
         {
             Owner = Utils.ToolDescriptor,
             Uid = "SkipCollectionOnStart",
             Default = false,
             SendTelemetry = true,
             Label = "Skip Collection Page on Start",
-            Tooltip = "Whether or not Building Blocks directly open on the grid view, skipping the Collection page by default."
+            Tooltip =
+                "Whether or not Building Blocks directly open on the grid view, skipping the Collection page by default."
         };
 
         private static void RefreshCollectionTags()
@@ -130,17 +137,21 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             if (!ValidCollections) return;
 
-            EditorGUILayout.BeginVertical(Styles.GUIStyles.CollectionsPageStyle, GUILayout.Width(dimensions.WindowWidth));
+            EditorGUILayout.BeginVertical(Styles.GUIStyles.CollectionsPageStyle,
+                GUILayout.Width(dimensions.WindowWidth));
 
             var contentWidth = dimensions.WindowWidth - LargeMargin;
-            _collectionsPageScrollPosition = EditorGUILayout.BeginScrollView(_collectionsPageScrollPosition, false, false,
+            _collectionsPageScrollPosition = EditorGUILayout.BeginScrollView(_collectionsPageScrollPosition, false,
+                false,
                 GUIStyle.none, GUI.skin.verticalScrollbar, Styles.GUIStyles.NoMargin, GUILayout.Width(contentWidth));
 
             EditorGUILayout.LabelField("Collections", Styles.GUIStyles.LargeLabelStyleFullWhite);
-            EditorGUILayout.LabelField("Pick one of our curated <b>Collections of Building Blocks</b> to get the most useful features that will help you bring your idea to life.", Styles.GUIStyles.SmallLabelStyle);
+            EditorGUILayout.LabelField(
+                "Pick one of our curated <b>Collections of Building Blocks</b> to get the most useful features that will help you bring your idea to life.",
+                Styles.GUIStyles.SmallLabelStyle);
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Or browse ", Styles.GUIStyles.SmallLabelStyle);
-            new ActionLinkDescription()
+            new ActionLinkDescription
             {
                 Content = new GUIContent(CustomTagBehaviors.AllBuildingBlocksCollection),
                 Style = Styles.GUIStyles.SmallInlineLinkLabelStyle,
@@ -174,6 +185,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                     EditorGUILayout.Space(DoubleMargin, false);
                 }
+
                 EditorGUILayout.EndHorizontal();
                 EditorGUILayout.Space(DoubleMargin);
                 EditorGUILayout.EndVertical();
@@ -198,7 +210,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             var hoverExpectedColor = isHover ? Styles.Colors.ComplementaryColor : CharcoalGray;
 
             var tween = Tween.Fetch(tag, ZoomIn);
-            var expectedTarget = isHover ? Styles.Constants.CollectionThumbnailZoomIn : Styles.Constants.CollectionThumbnailZoomOut;
+            var expectedTarget = isHover
+                ? Styles.Constants.CollectionThumbnailZoomIn
+                : Styles.Constants.CollectionThumbnailZoomOut;
             if (Math.Abs(tween.Target - expectedTarget) > Styles.Constants.CollectionThumbnailZoomingEpsilon)
             {
                 tween.Start = Styles.Constants.CollectionThumbnailZoomOut;
@@ -208,22 +222,29 @@ namespace Meta.XR.BuildingBlocks.Editor
                 tween.Activate();
             }
 
-            var thumbnailHeight = dimensions.ExpectedCollectionThumbnailWidth / Styles.Constants.CollectionThumbnailDivRatio;
+            var thumbnailHeight = dimensions.ExpectedCollectionThumbnailWidth /
+                                  Styles.Constants.CollectionThumbnailDivRatio;
             ShowCollectionThumbnail(collectionTagBehavior, thumbnailHeight, tween.Current);
 
-            var descriptionRect = EditorGUILayout.BeginVertical(Styles.GUIStyles.CollectionDescriptionAreaStyle, GUILayout.Height(dimensions.ExpectedCollectionThumbnailHeight - thumbnailHeight));
+            var descriptionRect = EditorGUILayout.BeginVertical(Styles.GUIStyles.CollectionDescriptionAreaStyle,
+                GUILayout.Height(dimensions.ExpectedCollectionThumbnailHeight - thumbnailHeight));
             descriptionRect.height = dimensions.ExpectedCollectionThumbnailHeight - thumbnailHeight - 2;
-            GUI.DrawTexture(descriptionRect, CharcoalGraySemiTransparent.ToTexture(), ScaleMode.ScaleAndCrop, false, 1f, GUI.color, Vector4.zero, Styles.Constants.LowerRoundedBorderVectors);
-            GUI.DrawTexture(gridRect, hoverExpectedColor.ToTexture(), ScaleMode.ScaleAndCrop, false, 1f, GUI.color, Vector4.one * 1.5f, Styles.Constants.RoundedBorderVectors);
+            GUI.DrawTexture(descriptionRect, CharcoalGraySemiTransparent.ToTexture(), ScaleMode.ScaleAndCrop, false, 1f,
+                GUI.color, Vector4.zero, Styles.Constants.LowerRoundedBorderVectors);
+            GUI.DrawTexture(gridRect, hoverExpectedColor.ToTexture(), ScaleMode.ScaleAndCrop, false, 1f, GUI.color,
+                Vector4.one * 1.5f, Styles.Constants.RoundedBorderVectors);
 
-            var colorOverride = isHover ? Color.white : XR.Editor.UserInterface.Styles.Colors.CollectionTagsColor;
-            using (new Meta.XR.Editor.UserInterface.Utils.ColorScope(XR.Editor.UserInterface.Utils.ColorScope.Scope.Content, colorOverride))
+            var colorOverride = isHover ? Color.white : CollectionTagsColor;
+            using (new XR.Editor.UserInterface.Utils.ColorScope(
+                       XR.Editor.UserInterface.Utils.ColorScope.Scope.Content, colorOverride))
             {
                 GUILayout.Label(collectionTagBehavior.Tag, Styles.GUIStyles.LargeLabelStyleFullWhite);
             }
 
             var showAll = tag == CustomTagBehaviors.AllBuildingBlocksCollection;
-            var blockCount = showAll ? _blockList.Count : (BlocksContentManager.GetCollection(collectionTagBehavior)?.Count ?? 0);
+            var blockCount = showAll
+                ? _blockList.Count
+                : BlocksContentManager.GetCollection(collectionTagBehavior)?.Count ?? 0;
             var subLabelText = showAll ? $"{blockCount} blocks" : $"{blockCount} recommended blocks";
             GUILayout.Label(subLabelText, Styles.GUIStyles.CollectionAreaStatusStyle);
             EditorGUILayout.Space();
@@ -233,7 +254,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (CollectionButton(gridRect, id))
             {
-                if (!showAll) _selectedCollection.SetValue(collectionTagBehavior);
+                if (!showAll) SelectedCollection.SetValue(collectionTagBehavior);
                 RefreshBlockList();
                 SwitchToPage(Page.Grid, Origins.BlockCollectionPage, null);
             }
@@ -255,11 +276,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             return hit;
         }
 
-        private void ShowCollectionThumbnail(CollectionTagBehavior behavior, float targetHeight, float zoomIn)
+        private static void ShowCollectionThumbnail(CollectionTagBehavior behavior, float targetHeight, float zoomIn)
         {
-            var thumbnailAreaStyle = new GUIStyle(Styles.GUIStyles.ThumbnailAreaStyle);
-            thumbnailAreaStyle.fixedHeight = targetHeight;
-            var thumbnailArea = EditorGUILayout.BeginVertical(thumbnailAreaStyle, GUILayout.Height(thumbnailAreaStyle.fixedHeight));
+            var thumbnailAreaStyle = new GUIStyle(Styles.GUIStyles.ThumbnailAreaStyle)
+            {
+                fixedHeight = targetHeight
+            };
+            var thumbnailArea =
+                EditorGUILayout.BeginVertical(thumbnailAreaStyle, GUILayout.Height(thumbnailAreaStyle.fixedHeight));
             {
                 if (Event.current.type == EventType.Repaint)
                 {
@@ -284,13 +308,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        internal static void ReturnToCollections()
+        private static void ReturnToCollections()
         {
             var window = GetWindow<BuildingBlocksWindow>(WindowName);
-            window.ReturnToCollections(window.GetOrigin(window.CurrentTargetPage), _selectedBlock);
+            window.ReturnToCollections(GetOrigin(window.CurrentTargetPage), _selectedBlock);
         }
 
-        private void ReturnToCollections(Origins origin, IIdentified originData) => SwitchToPage(Page.Collections, origin, originData);
+        private void ReturnToCollections(Origins origin, IIdentified originData) =>
+            SwitchToPage(Page.Collections, origin, originData);
 
         private void SwitchToPage(Page targetPage, Origins origin, IIdentified originData, BlockData blockData = null)
         {
@@ -307,6 +332,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                     break;
                 case Page.Grid:
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(targetPage), targetPage, null);
             }
 
             TriggerPageTransition(targetPage, instant: false);
@@ -365,14 +392,15 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 tween.Start = tween.Target;
             }
+
             tween.Activate();
         }
 
-        private void DrawBackToCollectionIcon()
+        private static void DrawBackToCollectionIcon()
         {
             if (!ValidCollections) return;
 
-            new ActionLinkDescription()
+            new ActionLinkDescription
             {
                 Content = new GUIContent(Styles.Contents.CollectionIcon.Image, "Back to Collections"),
                 Style = Styles.GUIStyles.LargeButton,
@@ -384,10 +412,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             }.Draw();
         }
 
-        private float GetPageContentScrollPosition(Page page)
+        private static float GetPageContentScrollPosition(Page page)
         {
             if (!ValidCollections && page == Page.Collections)
+            {
                 page = Page.Grid;
+            }
 
             var multiplier = page switch
             {
@@ -397,12 +427,15 @@ namespace Meta.XR.BuildingBlocks.Editor
                 _ => 0
             };
 
-            if (!ValidCollections) multiplier -= 1;
+            if (!ValidCollections)
+            {
+                multiplier -= 1;
+            }
 
             return multiplier;
         }
 
-        private float GetPageStartPosition(Page page)
+        private static float GetPageStartPosition(Page page)
         {
             if (!ValidCollections && page == Page.Collections)
                 page = Page.Grid;
@@ -420,7 +453,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             return multiplier;
         }
 
-        private Origins GetOrigin(Page page) => page switch
+        private static Origins GetOrigin(Page page) => page switch
         {
             Page.Collections => Origins.BlockCollectionPage,
             Page.Grid => Origins.BlockGrid,
@@ -430,22 +463,25 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void DrawSelectedCollectionTag()
         {
-            var selectedCollection = _selectedCollection.Value;
+            var selectedCollection = SelectedCollection.Value;
             if (selectedCollection == null) return;
-            selectedCollection.Draw($"collection_{_selectedCollection}", Tag.TagListType.Filters, true, out _, out var collectionTagCloseClicked);
-            if (collectionTagCloseClicked) ResetCollectionState();
+            selectedCollection.Draw($"collection_{SelectedCollection}", Tag.TagListType.Filters, true, out _,
+                out var collectionTagCloseClicked);
+            if (collectionTagCloseClicked)
+            {
+                ResetCollectionState();
+            }
         }
 
         private void ResetCollectionState()
         {
-            _selectedCollection.Reset();
+            SelectedCollection.Reset();
             RefreshBlockList();
         }
 
         private static void ResetCurrentBlockList()
         {
-            _currentBlockList.Clear();
-            _currentBlockList.AddRange(SortBlocks(Filter(_blockList)).ToList());
+            _currentBlockList = SortBlocks(Filter(_blockList));
         }
     }
 }

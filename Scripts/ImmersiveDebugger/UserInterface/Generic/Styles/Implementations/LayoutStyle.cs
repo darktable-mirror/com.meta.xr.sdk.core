@@ -59,6 +59,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         public bool adaptHeight;
         public bool autoFitChildren;
         public bool isOverlayCanvas;
+        public bool ignoreFlexLayout;
+        public Vector2 adaptiveHeightPadding;
 
         public float LeftMargin => margin.x;
         public float TopMargin => margin.y;
@@ -100,4 +102,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
     }
 }
-

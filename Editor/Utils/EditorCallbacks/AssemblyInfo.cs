@@ -28,3 +28,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.ImmersiveDebugger")]
 [assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.RemoteContent")]
+[assembly: InternalsVisibleTo("Meta.MCPBridge")]
+[assembly: InternalsVisibleTo("Meta.MCPBridge.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
+

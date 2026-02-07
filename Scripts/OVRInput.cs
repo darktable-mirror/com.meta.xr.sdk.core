@@ -322,7 +322,39 @@ public static class OVRInput
         ControllerNotInHand,
     }
 
+    [Flags]
+    /// Describes if and how the haptic data in this structure is part of a
+    /// longer haptic stream.
+    public enum HapticsParametricStreamFrameType : uint
+    {
+        None = OVRPlugin.HapticsParametricStreamFrameType.None,                              ///< For a single call to SetControllerHapticsParametric().
+        FirstFrame = OVRPlugin.HapticsParametricStreamFrameType.FirstFrame,                  ///< For the first call.
+        IntermediateFrame = OVRPlugin.HapticsParametricStreamFrameType.IntermediateFrame,    ///< For calls in the middle.
+        LastFrame = OVRPlugin.HapticsParametricStreamFrameType.LastFrame,                    ///< For the last call of the stream sequence.
+        MaxEnum = OVRPlugin.HapticsParametricStreamFrameType.MaxEnum                         ///< Max value of this enum.
+    }
 
+    /// <summary> This structure contains device-specific properties about streaming timing
+    /// and supported frequency range. </summary>
+    public struct HapticsParametricProperties
+    {
+        /// <summary> Ideal rate the application should
+        /// submit haptic frames with, in nanoseconds, for applications that generate
+        /// haptic data on the fly. </summary>
+        public Int64 IdealFrameSubmissionRate;
+
+        /// <summary> Minimum amount of haptic data, in nanoseconds,
+        /// the application should submit in the first haptic frame. </summary>
+        public Int64 MinimumFirstFrameDuration;
+
+        /// <summary> Minimum frequency, in Hertz, supported by the
+        /// device. </summary>
+        public float MinFrequencyHz;
+
+        /// <summary> Maximum frequency, in Hertz, supported by the
+        /// device. </summary>
+        public float MaxFrequencyHz;
+    }
 
     public struct HapticsAmplitudeEnvelopeVibration
     {
@@ -339,6 +371,60 @@ public static class OVRInput
         public bool Append;
     }
 
+    /// <summary> This structure describes an amplitude of frequency point. </summary>
+    public struct HapticsParametricPoint
+    {
+        /// <summary> Time of the amplitude or frequency point, as a duration
+        /// in nanoseconds since the start of the haptic event. </summary>
+        public Int64 Time;
+
+        /// <summary> Normalized value of the vibration amplitude or
+        /// frequency at this point in time, with a value between 0.0 and 1.0
+        /// (inclusive). </summary>
+        public float Value;
+    }
+
+    /// <summary> This structure describes a transient, which is a brief and abrupt change of
+    /// amplitude and frequency. </summary>
+    public struct HapticsParametricTransient
+    {
+        /// <summary> Time of the transient, as a duration in nanoseconds
+        /// since the start of the haptic event. </summary>
+        public Int64 Time;
+
+        /// <summary> Normalized amplitude of the transient, with a value
+        /// between 0.0 and 1.0 (inclusive). </summary>
+        public float Amplitude;
+
+        /// <summary> Normalized frequency of the transient, with a value
+        /// between 0.0 and 1.0 (inclusive). </summary>
+        public float Frequency;
+    }
+
+    /// <summary> This structure describes a parametric haptic event with a series of amplitude points,
+    //  frequency points and transients.  </summary>
+    public struct HapticsParametricVibration
+    {
+        public HapticsParametricPoint[] AmplitudePoints;
+        public HapticsParametricPoint[] FrequencyPoints;
+        public HapticsParametricTransient[] Transients;
+
+        /// <summary> Absolute frequency, in Hertz, that the normalized frequency
+        // of 0.0 maps to. Can be OVRPlugin.HapticsConstants.ParametricHapticsUnspecifiedFrequency,
+        // in which case a frequency of 0.0 is mapped to the lowest
+        // frequency supported by the device. </summary>
+        public float MinFrequencyHz;
+
+        /// <summary> Absolute frequency, in Hertz, that the normalized frequency
+        // of 1.0 maps to. Can be OVRPlugin.HapticsConstants.ParametricHapticsUnspecifiedFrequency,
+        // in which case a frequency of 1.0 is mapped to the highest
+        // frequency supported by the device. </summary>
+        public float MaxFrequencyHz;
+
+        /// <summary> Describes if and how the haptic data in this structure is part of a
+        /// longer haptic stream. </summary>
+        public HapticsParametricStreamFrameType StreamFrameType;
+    }
 
     public static readonly float AXIS_AS_BUTTON_THRESHOLD = 0.5f;
     public static readonly float AXIS_DEADZONE_THRESHOLD = 0.2f;
@@ -352,6 +438,10 @@ public static class OVRInput
     private static bool _pluginSupportsActiveController = false;
     private static bool _pluginSupportsActiveControllerCached = false;
     private static System.Version _pluginSupportsActiveControllerMinVersion = new System.Version(1, 9, 0);
+
+#if !OVR_DISABLE_HAND_PINCH_BUTTON_MAPPING
+    private static OVRPlugin.HandState CachedHandState;
+#endif
 
     public static bool pluginSupportsActiveController
     {
@@ -1147,6 +1237,32 @@ public static class OVRInput
 
         return false;
     }
+
+#if !OVR_DISABLE_HAND_PINCH_BUTTON_MAPPING
+    private static void InjectPinchButtonMapping(ref uint buttons)
+    {
+        // Do not apply this mapping while controllers are posing hands with Capsense
+        // to avoid conflict between A/X button being pressed on controller vs a mapped hand pinch
+        if (!AreHandPosesGeneratedByControllerData(OVRPlugin.Step.Render, Hand.HandLeft))
+        {
+            if (OVRPlugin.GetHandState(OVRPlugin.Step.Render, OVRPlugin.Hand.HandLeft, ref CachedHandState)) {
+                if ((CachedHandState.Pinches & OVRPlugin.HandFingerPinch.Index) != 0)
+                {
+                    buttons |= (uint)RawButton.X;
+                }
+            }
+        }
+        if (!AreHandPosesGeneratedByControllerData(OVRPlugin.Step.Render, Hand.HandRight))
+        {
+            if (OVRPlugin.GetHandState(OVRPlugin.Step.Render, OVRPlugin.Hand.HandRight, ref CachedHandState)) {
+                if ((CachedHandState.Pinches & OVRPlugin.HandFingerPinch.Index) != 0)
+                {
+                    buttons |= (uint)RawButton.A;
+                }
+            }
+        }
+    }
+#endif
 
     /// <summary>
     /// Gets the current down state of the given virtual button mask with the given controller mask.
@@ -2114,6 +2230,41 @@ public static class OVRInput
         return samplesConsumed;
     }
 
+    public static void SetControllerHapticsParametric(HapticsParametricVibration hapticsVibration,
+        Controller controllerMask = Controller.Active)
+    {
+        if ((controllerMask & Controller.Active) != 0)
+            controllerMask |= activeControllerType;
+
+        for (int i = 0; i < controllers.Count; i++)
+        {
+            OVRControllerBase controller = controllers[i];
+
+            if (ShouldResolveController(controller.controllerType, controllerMask))
+            {
+                controller.SetControllerHapticsParametric(hapticsVibration);
+            }
+        }
+    }
+
+    public static HapticsParametricProperties GetControllerParametricProperties(Controller controllerMask = Controller.Active)
+    {
+        if ((controllerMask & Controller.Active) != 0)
+            controllerMask |= activeControllerType;
+
+        for (int i = 0; i < controllers.Count; i++)
+        {
+            OVRControllerBase controller = controllers[i];
+
+            if (ShouldResolveController(controller.controllerType, controllerMask))
+            {
+                return controller.GetControllerParametricProperties();
+            }
+            Debug.LogError("Invalid controller mask for controller " + controller.controllerType);
+        }
+
+        return new HapticsParametricProperties();
+    }
 
     public static float GetControllerSampleRateHz(Controller controllerMask = Controller.Active)
     {
@@ -3182,6 +3333,17 @@ public static class OVRInput
             if (state.RThumbstick.x >= AXIS_AS_BUTTON_THRESHOLD)
                 state.Buttons |= (uint)RawButton.RThumbstickRight;
 
+#if !OVR_DISABLE_HAND_PINCH_BUTTON_MAPPING
+            // Legacy mapping removed from OVRPlugin that maps hand pinches to controller button presses.
+            // Limiting this mapping to only Hand controller types allows for filtering with a controller mask.
+            if (controllerType == Controller.LHand ||
+                controllerType == Controller.RHand ||
+                controllerType == Controller.Hands)
+            {
+                InjectPinchButtonMapping(ref state.Buttons);
+            }
+#endif
+
             previousState = currentState;
             currentState = state;
 
@@ -3360,8 +3522,65 @@ public static class OVRInput
             return samplesConsumed;
         }
 
+        /// <summary>
+        /// Sets the <see cref="HapticsParametricVibration"/> for the physical controller represented by
+        /// this instance.
+        /// </summary>
+        /// <param name="hapticsVibration">The desired parametric vibration to be sent to the system</param>
+        public virtual void SetControllerHapticsParametric(HapticsParametricVibration hapticsVibration)
+        {
+            GCHandle pinnedAmplitudes = GCHandle.Alloc(hapticsVibration.AmplitudePoints, GCHandleType.Pinned);
+            GCHandle pinnedFrequencies = GCHandle.Alloc(hapticsVibration.FrequencyPoints, GCHandleType.Pinned);
+            GCHandle pinnedTransients = GCHandle.Alloc(hapticsVibration.Transients, GCHandleType.Pinned);
+
+            try
+            {
+                OVRPlugin.HapticsParametricVibration vibration;
+                vibration.AmplitudePointCount = (UInt32)hapticsVibration.AmplitudePoints.Length;
+                vibration.AmplitudePoints = pinnedAmplitudes.AddrOfPinnedObject();
+                vibration.FrequencyPointCount = (UInt32)hapticsVibration.FrequencyPoints.Length;
+                vibration.FrequencyPoints = pinnedFrequencies.AddrOfPinnedObject();
+                vibration.TransientCount = (UInt32)hapticsVibration.Transients.Length;
+                vibration.Transients = pinnedTransients.AddrOfPinnedObject();
+                vibration.MinFrequencyHz = hapticsVibration.MinFrequencyHz;
+                vibration.MaxFrequencyHz = hapticsVibration.MaxFrequencyHz;
+                vibration.StreamFrameType = (OVRPlugin.HapticsParametricStreamFrameType)(uint)hapticsVibration.StreamFrameType;
+                OVRPlugin.SetControllerHapticsParametric((OVRPlugin.Controller)controllerType, vibration);
+            }
+            finally
+            {
+                if (pinnedAmplitudes.IsAllocated)
+                {
+                    pinnedAmplitudes.Free();
+                }
+
+                if (pinnedFrequencies.IsAllocated)
+                {
+                    pinnedFrequencies.Free();
+                }
+
+                if (pinnedTransients.IsAllocated)
+                {
+                    pinnedTransients.Free();
+                }
+            }
+        }
 
 
+        /// <summary>
+        /// Retrieves the hardware parametric properties of the physical controller represented by this instance.
+        /// </summary>
+        /// <returns>The haptics parametric properties</returns>
+        public virtual HapticsParametricProperties GetControllerParametricProperties()
+        {
+            OVRPlugin.GetControllerParametricProperties((OVRPlugin.Controller)controllerType, out OVRPlugin.HapticsParametricProperties hapticsParametricProperties);
+            HapticsParametricProperties properties = new HapticsParametricProperties();
+            properties.IdealFrameSubmissionRate = hapticsParametricProperties.IdealFrameSubmissionRate;
+            properties.MinimumFirstFrameDuration = hapticsParametricProperties.MinimumFirstFrameDuration;
+            properties.MinFrequencyHz = hapticsParametricProperties.MinFrequencyHz;
+            properties.MaxFrequencyHz = hapticsParametricProperties.MaxFrequencyHz;
+            return properties;
+        }
 
         /// <summary>
         /// Retrieves the hardware sampling rate of the physical controller represented by this instance.
@@ -4981,5 +5200,5 @@ public static class OVRInput
         }
     }
 
-    #pragma warning restore format
+#pragma warning restore format
 }

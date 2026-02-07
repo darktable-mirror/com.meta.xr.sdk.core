@@ -54,7 +54,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private float _lastScroll;
 
-        public ProxyFlex(int numberOfInstantiatedControllers, int maximumNumberOfProxies, LayoutStyle layoutStyle, ScrollView scrollView)
+        public ProxyFlex(int numberOfInstantiatedControllers, int maximumNumberOfProxies, LayoutStyle layoutStyle,
+            ScrollView scrollView)
         {
             _scrollView = scrollView;
 
@@ -92,6 +93,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         public void RemoveProxy(ProxyControllerType proxy)
         {
             _proxyChildren.Remove(proxy);
+            if (proxy.Target)
+            {
+                _targetsDictionary.Remove(proxy.Target);
+            }
+
             OVRObjectPool.Return(proxy);
             Dirty = true;
         }
@@ -102,7 +108,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             {
                 OVRObjectPool.Return(proxy);
             }
+
             _proxyChildren.Clear();
+            _targetsDictionary.Clear();
             Dirty = true;
         }
 
@@ -195,4 +203,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
     }
 }
-

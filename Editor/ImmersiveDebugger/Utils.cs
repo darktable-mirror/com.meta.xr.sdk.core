@@ -53,7 +53,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         private const string DocumentationUrl = "https://developer.oculus.com/documentation/unity/immersivedebugger-overview";
 
 
-        internal static readonly ToolDescriptor ToolDescriptor = new ToolDescriptor()
+        internal static readonly ToolDescriptor ToolDescriptor = new()
         {
             Name = PublicName,
             MqdhCategoryId = "1062327272563816",

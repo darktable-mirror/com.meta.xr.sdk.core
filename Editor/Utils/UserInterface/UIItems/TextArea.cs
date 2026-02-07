@@ -26,7 +26,8 @@ namespace Meta.XR.Editor.UserInterface
 {
     internal class TextArea : TextField
     {
-        public TextArea(string text, int lines = 3, params GUILayoutOption[] options) : base("", text, options)
+        public TextArea(string text, int lines = 3, string placeholder = "", params GUILayoutOption[] options) : base(
+            "", text, placeholder, options)
         {
             var layoutOptions = new List<GUILayoutOption>
             {
@@ -39,6 +40,7 @@ namespace Meta.XR.Editor.UserInterface
         public override void Draw()
         {
             Text = EditorGUILayout.TextArea(Text, _options);
+            DrawPlaceholder();
         }
     }
 }

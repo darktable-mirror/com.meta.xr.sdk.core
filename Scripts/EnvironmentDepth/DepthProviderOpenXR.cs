@@ -82,7 +82,11 @@ namespace Meta.XR.EnvironmentDepth
                         RenderTexture renderTexture = depthTextureData.Value.renderTexture;
                         if (renderTexture != null)
                         {
+#if UNITY_OPENXR_1_15_0
+                            UnityXRDisplay.DestroyTexture(depthTextureData.Value.textureId);
+#else
                             Object.Destroy(renderTexture);
+#endif
                         }
                     }
                     _depthTextures = null;

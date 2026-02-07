@@ -20,28 +20,25 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using UnityEngine;
 using System.Linq;
+using System.Threading.Tasks;
+using Meta.XR.Editor.RemoteContent;
+using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
 {
     internal class RemoteTextureContent : TextureContent
     {
-        public TimeSpan CacheDuration { get; set; } = TimeSpan.FromDays(7);
+        public ulong ContentId { get; }
         private readonly GUIContent _guiContent;
         private event OnImageLoadedDelegate OnImageLoadedEvent;
+        public static TimeSpan CacheDuration { get; set; } = TimeSpan.FromDays(7);
         private bool _valid;
 
-
-        public RemoteTextureContent(string fileName, ulong contentId, Category category, string tooltip = null)
-            : base(fileName, category, tooltip)
+        private RemoteTextureContent(ulong contentId, Category category, string tooltip = null)
+            : base("remoteImage", category, tooltip)
         {
-            if (!IsValidImageFileName(fileName))
-            {
-                throw new ArgumentException("The provided name is not a valid image file name.", nameof(fileName));
-            }
+            ContentId = contentId;
 
             _guiContent = new GUIContent
             {
@@ -51,21 +48,42 @@ namespace Meta.XR.Editor.UserInterface
                     hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy
                 }
             };
-
-            _ = FetchImageAsync(fileName, contentId);
         }
 
-        private async Task FetchImageAsync(string fileName, ulong contentId)
+        public static RemoteTextureContent CreateWithAutoDownload(ulong contentId, Category category, string tooltip = null)
         {
-            var downloader = new RemoteContent.RemoteBinaryContentDownloader(fileName, contentId)
+            var instance = new RemoteTextureContent(contentId, category, tooltip);
+            _ = instance.FetchImageAsync(contentId);
+            return instance;
+        }
+
+        public static async Task<DownloadResult<RemoteTextureContent>> CreateAsync(ulong contentId, Category category,
+            string tooltip = null)
+        {
+            var instance = new RemoteTextureContent(contentId, category, tooltip);
+            var result = await instance.FetchImageAsync(contentId);
+
+            return result.IsSuccess
+                ? DownloadResult<RemoteTextureContent>.Success(instance)
+                : DownloadResult<RemoteTextureContent>.Failure(result.ErrorMessage);
+        }
+
+        private static RemoteBinaryContentDownloader BuildDownloader(ulong contentId)
+        {
+            return new RemoteBinaryContentDownloader(contentId)
                 .WithCacheDuration(CacheDuration)
                 .WithCacheDirectory("remote_textures");
+        }
+
+        private async Task<DownloadResult<byte[]>> FetchImageAsync(ulong contentId)
+        {
+            var downloader = BuildDownloader(contentId);
 
             var result = await downloader.Fetch();
 
             if (!result.IsSuccess)
             {
-                return;
+                return result;
             }
 
             ((Texture2D)Image).LoadImage(result.Content);
@@ -73,6 +91,8 @@ namespace Meta.XR.Editor.UserInterface
 
             OnImageLoadedEvent?.Invoke(Image);
             OnImageLoadedEvent = null;
+
+            return result;
         }
 
         public override void RegisterToImageLoaded(OnImageLoadedDelegate @delegate)
@@ -87,23 +107,17 @@ namespace Meta.XR.Editor.UserInterface
         }
 
         public override Texture Image => _guiContent.image;
-
         public override bool Valid => _valid;
         public override GUIContent GUIContent => _guiContent;
         public override GUIContent Content => GUIContent;
 
-        private static readonly string[] ValidImageExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
-
-        private static bool IsValidImageFileName(string fileName)
+        public static async Task PreloadRemoteTextures(IEnumerable<ulong> contentIds)
         {
-            var extension = Path.GetExtension(fileName);
-            if (!ValidImageExtensions.Any(ext => ext.Equals(extension, StringComparison.OrdinalIgnoreCase)))
-            {
-                return false;
-            }
+            var downloaders = contentIds
+                .Where(id => id != 0)
+                .Select(BuildDownloader);
 
-            var invalidChars = Path.GetInvalidFileNameChars();
-            return fileName.IndexOfAny(invalidChars) < 0;
+            await RemoteBinaryContentDownloader.PreloadDownloaders(downloaders);
         }
     }
 }

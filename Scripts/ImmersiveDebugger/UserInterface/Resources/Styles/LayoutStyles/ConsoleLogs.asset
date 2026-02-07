@@ -24,4 +24,5 @@ MonoBehaviour:
   masks: 1
   adaptHeight: 1
   autoFitChildren: 0
-  ignorePosition: 0
+  isOverlayCanvas: 0
+  ignoreFlexLayout: 0

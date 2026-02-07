@@ -33,6 +33,7 @@ namespace Meta.XR.Editor.UserInterface
         public TextureContent NormalIcon { get; set; } = Styles.Contents.RadioButtonIcon;
         public TextureContent SelectedIcon { get; set; } = Styles.Contents.RadioButtonSelectedIcon;
         public Func<IDynamicColorItem, Color> FetchDynamicColor { get; set; }
+        public bool HandleOwnClicks { get; set; } = true;
 
         private readonly string _label;
         private readonly Color _normalColor;
@@ -69,14 +70,18 @@ namespace Meta.XR.Editor.UserInterface
             new Icon(icon, color, _label).Draw();
             EditorGUILayout.EndVertical();
 
-            var hit = HoverHelper.Button(Id, rect, new GUIContent(), GUIStyle.none, out _);
-            if (hit && !State)
+            // Only handle clicks if HandleOwnClicks is true
+            if (HandleOwnClicks)
             {
-                State = true;
-                OnSelect?.Invoke(Id);
-            }
+                var hit = HoverHelper.Button(Id, rect, new GUIContent(), GUIStyle.none, out _);
+                if (hit && !State)
+                {
+                    State = true;
+                    OnSelect?.Invoke(Id);
+                }
 
-            EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
+                EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
+            }
         }
 
         public bool ToggleState() => State = !State;

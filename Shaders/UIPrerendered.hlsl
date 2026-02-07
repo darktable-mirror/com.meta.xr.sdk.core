@@ -5,6 +5,7 @@
 struct appdata_t {
     float4 vertex : POSITION;
     float2 texcoord : TEXCOORD0;
+    UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
 struct v2f {
@@ -14,6 +15,8 @@ struct v2f {
     float4 curPositionCS : TEXCOORD8;
     float4 prevPositionCS : TEXCOORD9;
 #endif
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+    UNITY_VERTEX_OUTPUT_STEREO
 };
 
 sampler2D _MainTex;
@@ -22,12 +25,16 @@ float4 _Color;
 
 v2f vert(appdata_t v) {
     v2f o;
+    UNITY_SETUP_INSTANCE_ID(v);
+    UNITY_TRANSFER_INSTANCE_ID(v, o);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
     o.vertex = mul(unity_MatrixVP, mul(unity_ObjectToWorld, v.vertex));
     o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
     return o;
 }
 
 float4 frag(v2f i) : SV_Target {
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
     #if !WITH_CLIP && !ALPHA_TO_MASK && !ALPHA_BLEND
         if (_Color.x == 0 && _Color.y == 0 && _Color.z == 0)
         {
@@ -100,6 +107,9 @@ float4 frag(v2f i) : SV_Target {
 
     v2f mv_vert(appdata_t v) {
         v2f o;
+        UNITY_SETUP_INSTANCE_ID(v);
+        UNITY_TRANSFER_INSTANCE_ID(v, o);
+        UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
         o.vertex = mul(unity_MatrixVP, mul(unity_ObjectToWorld, v.vertex));
         o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
         // for motion vectors, only apply camera movement
@@ -116,6 +126,7 @@ float4 frag(v2f i) : SV_Target {
     }
 
     float4 mv_frag(v2f i) : SV_Target {
+        UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
         // We only need to sample from the texture with clip on
         #if WITH_CLIP || ALPHA_TO_MASK
             #if EXPENSIVE

@@ -241,7 +241,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         public static IReadOnlyList<BlockBaseData> FilteredRegistry
             => _filteredRegistry ??= BlocksContentManager.FilterBlockWindowContent(UnfilteredRegistry);
 
-        public static void MarkFilteredRegistryDirty() => _filteredRegistry = null;
+        private static void MarkFilteredRegistryDirty() => _filteredRegistry = null;
 
         private static int ComputeNumberOfNewBlocks() =>
             FilteredRegistry.Count(data => !data.Hidden && (data.Tags.Contains(NewTag) || data.Tags.Contains(NewVersionTag)));
@@ -571,22 +571,28 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             internal static IEnumerable<BlockBaseData> MostUsed(IEnumerable<BlockBaseData> blocks, SerializableDictionary<string, int> frequencyTable)
             {
-                if (frequencyTable == null) return blocks;
+                if (frequencyTable == null)
+                {
+                    return blocks;
+                }
 
-                var unusedBlocks = blocks.Where(b => !frequencyTable.ContainsKey(b.Id));
+                var blockDict = blocks.ToDictionary(b => b.Id, b => b);
+
                 var frequentlyUsedBlocks = frequencyTable
                     .OrderByDescending(kvp => kvp.Value)
-                    .SelectMany(kvp => blocks.Where(block => block.Id == kvp.Key))
-                    .ToList();
-                frequentlyUsedBlocks.AddRange(unusedBlocks);
+                    .Select(kvp => blockDict.GetValueOrDefault(kvp.Key))
+                    .Where(block => block != null);
 
-                return frequentlyUsedBlocks;
+                var unusedBlocks = blockDict.Values.Where(b => !frequencyTable.ContainsKey(b.Id));
+
+                return frequentlyUsedBlocks.Concat(unusedBlocks);
             }
 
             public static IEnumerable<BlockBaseData> MostPopular(IEnumerable<BlockBaseData> blocks)
             {
-                return blocks.Where(obj => !string.IsNullOrEmpty(obj.name))
-                    .OrderBy(block => block.Order)
+                return blocks
+                    .Where(obj => !string.IsNullOrEmpty(obj.name))
+                    .OrderBy(BlocksContentManager.GetBlockOrder)
                     .ThenBy(block => block.BlockName.Value);
             }
         }

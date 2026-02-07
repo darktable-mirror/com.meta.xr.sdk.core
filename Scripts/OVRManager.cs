@@ -656,6 +656,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     private const int _pixelStepPerFrame = 32;
 
+
     /// <summary>
     /// Adaptive Resolution is based on Unity engine's renderViewportScale/eyeTextureResolutionScale feature
     /// But renderViewportScale was broken in an array of Unity engines, this function help to filter out those broken engines
@@ -1298,6 +1299,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     [SerializeField, HideInInspector]
     internal bool requestPassthroughCameraAccessPermissionOnStartup;
     #endregion
+
 
     /// <summary>
     /// The native XR API being used
@@ -1995,6 +1997,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     private bool _readOnlyWideMotionModeHandPosesEnabled = false;
     [Tooltip("Defines if hand poses can leverage algorithms to retrieve hand poses outside of the normal tracking area.")]
     public bool wideMotionModeHandPosesEnabled = false;
+
 
     public bool IsSimultaneousHandsAndControllersSupported
     {
@@ -3022,6 +3025,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 
 
+
         OVRInput.Update();
 
         UpdateHMDEvents();
@@ -3295,6 +3299,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             }
         }
     }
+
 
     public void UpdateDynamicResolutionVersion()
     {

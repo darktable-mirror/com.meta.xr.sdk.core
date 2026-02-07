@@ -31,9 +31,6 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static HashSet<Tag> CollectionTags { get; } = new();
 
         // Collection tags
-        private static Tag ImmersiveExperienceCollection { get; } = new Tag("Immersive Experience");
-        private static Tag MixedRealityCollection { get; } = new Tag("Mixed Reality");
-        private static Tag MultiplayerTabletop { get; } = new Tag("Tabletop Games");
         internal static Tag AllBuildingBlocksCollection { get; } = new Tag("All Building Blocks");
 
         // Feature tags
@@ -43,11 +40,13 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static Tag PlatformTag { get; }
         private static Tag VoiceTag { get; }
         private static Tag AvatarsTag { get; }
+        private static Tag MovementTag { get; }
         private static Tag PassthroughTag { get; }
         private static Tag SceneTag { get; }
         private static Tag SpatialAnchorTag { get; }
         private static Tag HapticsTag { get; }
         private static Tag MultiplayerFeatureTag { get; }
+        private static Tag AITag { get; }
 
         // Usage tags
         private static Tag UtilityTag { get; }
@@ -56,26 +55,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         static CustomTagBehaviors()
         {
-            // Collection tags
-            SetDefaultCollectionTagBehavior(ImmersiveExperienceCollection,
-                "Our list of fundational blocks designed to empower you to create engaging and dynamic VR applications. " +
-                "Serving as the ideal starting point for building fully immersive environments and virtual interactions with both hands and controllers.",
-                Styles.Contents.ImmersiveExperienceCollectionThumb);
-
-            SetDefaultCollectionTagBehavior(MixedRealityCollection,
-                "Seamlessly merge digital and physical worlds with features such as passthrough, " +
-                "occlusion, and object placement. Explore this collection to create experiences where virtual and real elements coexist and interact.",
-                Styles.Contents.MixedRealityCollectionThumb);
-
-            SetDefaultCollectionTagBehavior(MultiplayerTabletop,
-                "For engaging and shared experiences centered around a virtual tabletop, this collection " +
-                "provides the necessary tools to enable social interactions and recreate the fun and camaraderie" +
-                " of traditional tabletop gaming in a digital space.",
-                Styles.Contents.TableTopCollectionThumb);
-
-            SetDefaultCollectionTagBehavior(AllBuildingBlocksCollection,
-                "Browse the entire catalog of Building Blocks and drag and drop any Meta Quest functionalities directly to your scene.",
-                Styles.Contents.AllBlocksThumb);
+            SetDefaultCollectionTagBehavior(AllBuildingBlocksCollection);
 
             // Feature tags
             AudioTag = MakeFeatureTag("Audio", "sdk_icons/mono/audio_icon.png");
@@ -86,10 +66,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             HapticsTag = MakeFeatureTag("Haptics", "sdk_icons/mono/haptics_icon.png");
 
             AvatarsTag = MakeFeatureTag("Avatars", "sdk_icons/mono/avatar_icon.png");
+            MovementTag = MakeFeatureTag("Movement", "sdk_icons/mono/movement_icon.png");
             PassthroughTag = MakeFeatureTag("Passthrough", "sdk_icons/mono/passthrough_icon.png");
             SceneTag = MakeFeatureTag("Scene", "sdk_icons/mono/scene_icon.png");
             SpatialAnchorTag = MakeFeatureTag("Spatial Anchor", "sdk_icons/mono/anchor_icon.png");
             MultiplayerFeatureTag = MakeFeatureTag("Multiplayer", "sdk_icons/mono/multiplayer_icon.png");
+            AITag = MakeFeatureTag("AI", "sdk_icons/mono/ai_icon.png");
 
             // Usage tags
             UtilityTag = new Tag("Utility")
@@ -119,7 +101,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             };
         }
 
-        private static void SetDefaultCollectionTagBehavior(Tag tag, string description, TextureContent thumbnail)
+        internal static void SetDefaultCollectionTagBehavior(Tag tag, string description = null, TextureContent thumbnail = null, ulong remoteThumbnailContentId = 0ul)
         {
             CollectionTags.Add(tag);
             _ = new CollectionTagBehavior(tag)
@@ -129,8 +111,9 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Show = CollectionTagBehavior.DefaultSettings.Show,
                 CanFilterBy = CollectionTagBehavior.DefaultSettings.CanFilterBy,
                 ShowOverlay = CollectionTagBehavior.DefaultSettings.ShowOverlay,
-                Description = description,
-                Thumbnail = thumbnail,
+                Description = description ?? "",
+                Thumbnail = thumbnail ?? Styles.Contents.DefaultCollectionThumb,
+                RemoteThumbnailContentId = remoteThumbnailContentId,
                 Automated = true
             };
         }

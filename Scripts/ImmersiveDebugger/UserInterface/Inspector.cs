@@ -35,6 +35,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Flex _flex;
         private Background _background;
         private readonly Dictionary<MemberInfo, Member> _registry = new();
+        private readonly Dictionary<MemberInfo, List<Controller>> _decorativeMembers = new();
         private ImageStyle _backgroundImageStyle;
         private Toggle _foldout;
 
@@ -122,6 +123,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             if (!_registry.TryGetValue(memberInfo, out var member))
             {
+                // Create decorative members (header and help text) before the main member
+                CreateDecorativeMembers(memberInfo);
+
+                // Create the main member
                 member = _flex.Append<Member>(memberInfo.Name);
                 member.LayoutStyle = Style.Instantiate<LayoutStyle>("Member");
                 member.Title = string.IsNullOrEmpty(attribute.DisplayName) ? $"{memberInfo.Name}" : attribute.DisplayName;
@@ -138,10 +143,38 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 if (!_foldout.State)
                 {
                     _flex.Forget(member);
+                    // Also forget decorative members if they exist
+                    if (_decorativeMembers.TryGetValue(memberInfo, out var decorativeList))
+                    {
+                        foreach (var decorativeMember in decorativeList)
+                        {
+                            _flex.Forget(decorativeMember);
+                        }
+                    }
                 }
             }
 
             return member;
+        }
+
+        private void CreateDecorativeMembers(MemberInfo memberInfo)
+        {
+            var decorativeAttributes = memberInfo.GetCustomAttributes<DebugDecorativeText>();
+            var decorativeList = new List<Controller>();
+            foreach (var decorativeAttribute in decorativeAttributes)
+            {
+                var content = _flex.Append<Label>($"{memberInfo.Name}_decoration");
+                content.LayoutStyle = Style.Instantiate<LayoutStyle>(decorativeAttribute.Style);
+                content.TextStyle = Style.Load<TextStyle>(decorativeAttribute.Style);
+                content.Content = decorativeAttribute.Content;
+                decorativeList.Add(content);
+            }
+
+            // Store decorative members for cleanup
+            if (decorativeList.Count > 0)
+            {
+                _decorativeMembers[memberInfo] = decorativeList;
+            }
         }
 
         public IMember GetMember(MemberInfo memberInfo)
@@ -155,8 +188,19 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _foldout.Icon = Resources.Load<Texture2D>(state ? "Textures/caret_down_icon" : "Textures/caret_right_icon");
             if (state)
             {
+                // Remember members in the correct order: decorative members before their corresponding main member
                 foreach (var member in _registry)
                 {
+                    // First, remember any decorative members for this main member
+                    if (_decorativeMembers.TryGetValue(member.Key, out var decorativeList))
+                    {
+                        foreach (var decorativeMember in decorativeList)
+                        {
+                            _flex.Remember(decorativeMember);
+                        }
+                    }
+
+                    // Then remember the main member
                     _flex.Remember(member.Value);
                 }
                 _flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorFlex");

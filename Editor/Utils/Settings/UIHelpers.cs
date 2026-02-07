@@ -27,12 +27,37 @@ namespace Meta.XR.Editor.Settings
 {
     internal static class UIHelpers
     {
-        public static void DrawToggle(Func<bool> get, Action<bool> set, GUIContent content, bool toggleLeft = false)
+        public static void DrawToggle(Func<bool> get, Action<bool> set, GUIContent content, bool toggleLeft = false, bool tightSpacing = false)
         {
             Func<GUIContent, Func<bool>, bool> editorGuiMethod = toggleLeft ?
-                (guiContent, func) => EditorGUILayout.ToggleLeft(guiContent, func.Invoke())
-                : (guiContent, func) => EditorGUILayout.Toggle(guiContent, func.Invoke());
+                (guiContent, func) =>
+                {
+                    if (tightSpacing) return DrawLeftToggleTightLayout(func, guiContent);
+                    else return EditorGUILayout.ToggleLeft(guiContent, func.Invoke());
+                }
+            : (guiContent, func) =>
+            {
+                if (tightSpacing) return DrawRightToggleTightLayout(func, guiContent);
+                else return EditorGUILayout.Toggle(guiContent, func.Invoke());
+            };
             DrawSetting(get, set, content, editorGuiMethod);
+        }
+
+        private static bool DrawLeftToggleTightLayout(Func<bool> get, GUIContent content)
+        {
+            var toggleValue = EditorGUILayout.Toggle(get.Invoke(), GUILayout.Width(25));
+            GUILayout.Space(2);
+            var labelSize = EditorStyles.label.CalcSize(content);
+            EditorGUILayout.LabelField(content, GUILayout.Width(labelSize.x + 15));
+            return toggleValue;
+        }
+
+        private static bool DrawRightToggleTightLayout(Func<bool> get, GUIContent content)
+        {
+            var labelSize = EditorStyles.label.CalcSize(content);
+            EditorGUILayout.LabelField(content, GUILayout.Width(labelSize.x + 15));
+            var toggleValue = EditorGUILayout.Toggle(get.Invoke(), GUILayout.Width(25));
+            return toggleValue;
         }
 
         public static void DrawFloatField(Func<float> get, Action<float> set, GUIContent content)

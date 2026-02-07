@@ -24,9 +24,6 @@ using Meta.XR.BuildingBlocks;
 using UnityEngine;
 using Logger = Meta.XR.MultiplayerBlocks.Colocation.Logger;
 using Object = UnityEngine.Object;
-#if META_MR_UTILITY_KIT_DEFINED
-using Meta.XR.MRUtilityKit;
-#endif // META_MR_UTILITY_KIT_DEFINED
 
 namespace Meta.XR.MultiplayerBlocks.Shared
 {
@@ -75,17 +72,6 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             }
 
             NetworkAdapter.SetConfig(networkData, networkMessenger);
-#if META_MR_UTILITY_KIT_DEFINED
-            // If using Colocation, MRUK shouldn't have world lock enabled as both
-            // of World Lock and Colocation are using CameraRig to adjust positions.
-            // For colocated guest player, they shouldn't use Scene as their cameraRig
-            // is aligned with host player and has offset with real-world scene anchors.
-            // Host player should be the one interacting with scene as the source of truth.
-            if (MRUK.Instance != null)
-            {
-                MRUK.Instance.EnableWorldLock = false;
-            }
-#endif // META_MR_UTILITY_KIT_DEFINED
             param.colocationLauncher = new AutomaticColocationLauncher();
             param.colocationLauncher.Init(
                 NetworkAdapter.NetworkData,

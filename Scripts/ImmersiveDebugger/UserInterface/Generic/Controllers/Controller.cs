@@ -235,7 +235,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             RefreshLayout();
         }
 
-        protected void Clear(bool destroy)
+        public void Clear(bool destroy)
         {
             while (_children.Count > 0)
             {

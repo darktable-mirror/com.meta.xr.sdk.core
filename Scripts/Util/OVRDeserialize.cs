@@ -282,4 +282,5 @@ internal static class OVRDeserialize
         public Bool PoseValid;
         public Posef PoseInPreviousSpace;
     }
+
 }

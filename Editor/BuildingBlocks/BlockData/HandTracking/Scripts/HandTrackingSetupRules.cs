@@ -26,9 +26,15 @@ namespace Meta.XR.BuildingBlocks.Editor
     [InitializeOnLoad]
     internal static class HandTrackingSetupRules
     {
+        private static string InputMappingScriptDefine = "OVR_DISABLE_HAND_PINCH_BUTTON_MAPPING";
+        private static UnityEditor.Build.NamedBuildTarget[] BuildTargetsToCheck =
+        {
+            UnityEditor.Build.NamedBuildTarget.Android,
+            UnityEditor.Build.NamedBuildTarget.Standalone
+        };
+
         static HandTrackingSetupRules()
         {
-
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
@@ -75,6 +81,38 @@ namespace Meta.XR.BuildingBlocks.Editor
                     OVRProjectConfig.CommitProjectConfig(projectConfig);
                 },
                 fixMessage: $"Select Hand Tracking V2"
+            );
+
+            // Rule to assist in deprecation of legacy hand input mapping
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                group: OVRProjectSetup.TaskGroup.Compatibility,
+                isDone: _ =>
+                {
+                    foreach (var buildTarget in BuildTargetsToCheck)
+                    {
+                        if (!PlayerSettings.GetScriptingDefineSymbols(buildTarget).Contains(InputMappingScriptDefine))
+                            return false;
+                    }
+                    return true;
+                },
+                message: $"Disable hand pinch detection through OVRInput, which will be deprecated in a future release. " +
+                $"If your project utilizes this behavior, please update your project to use the recommended API for detecting " +
+                $"hand pinches going forward: OVRHand.GetFingerIsPinching.",
+                url: "https://developers.meta.com/horizon/documentation/unity/unity-handtracking-interactions/#pinch",
+                fix: _ =>
+                {
+                    foreach (var buildTarget in BuildTargetsToCheck)
+                    {
+                        string curDefines = PlayerSettings.GetScriptingDefineSymbols(buildTarget);
+                        if (!curDefines.Contains(InputMappingScriptDefine))
+                        {
+                            PlayerSettings.SetScriptingDefineSymbols(buildTarget,
+                                curDefines != "" ? $"{curDefines};{InputMappingScriptDefine}" : InputMappingScriptDefine);
+                        }
+                    }
+                },
+                fixMessage: $"Set script define {InputMappingScriptDefine} to disable legacy mapping"
             );
         }
 

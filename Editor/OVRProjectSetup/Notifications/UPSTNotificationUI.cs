@@ -42,7 +42,7 @@ namespace Meta.XR.Editor.UPST.Notifications
                     new GroupedItem(GetGuideItemsForNotificationData(notificationData),
                         UserInterface.Utils.UIItemPlacementType.Vertical)
                 },
-                GradientColor = Meta.XR.Editor.UserInterface.Utils.HexToColor("#6a6a6a")
+                GradientColor = Meta.XR.Editor.UserInterface.Styles.Colors.Grey6a
             };
 
             notificationData.CloseAction = () =>

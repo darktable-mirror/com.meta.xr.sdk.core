@@ -133,7 +133,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _background.Color = Transparent ? _backgroundImageStyle.colorOff : _backgroundImageStyle.color;
         }
 
-        private void RefreshLogCounter()
+        internal void RefreshLogCounter()
         {
             if (_counterBackground == null || _counterLabel == null) return;
 
@@ -143,7 +143,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (showCounter)
             {
                 _counterLabel.Content = Entry.Count.ToString();
-                _counterBackground.LayoutStyle.size.x = Mathf.Clamp(_counterLabel.Text.preferredWidth + 8, DefaultCounterBackgroundWidth, MaxCounterBackgroundWidth);
+                _counterBackground.LayoutStyle.size.x = Mathf.Clamp(_counterLabel.Text.preferredWidth + 8,
+                    DefaultCounterBackgroundWidth, MaxCounterBackgroundWidth);
                 _counterBackground.RefreshLayout();
             }
 
@@ -172,7 +173,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         protected override void OnHoverChanged()
         {
             base.OnHoverChanged();
-            _background.Color = Hover ? _backgroundImageStyle.colorHover : Transparent ? _backgroundImageStyle.colorOff : _backgroundImageStyle.color;
+            _background.Color = Hover ? _backgroundImageStyle.colorHover :
+                Transparent ? _backgroundImageStyle.colorOff : _backgroundImageStyle.color;
         }
     }
 

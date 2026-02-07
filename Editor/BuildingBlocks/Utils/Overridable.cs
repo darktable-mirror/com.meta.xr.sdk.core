@@ -24,14 +24,14 @@ namespace Meta.XR.BuildingBlocks.Editor
     {
         private readonly T _originalValue;
         private T _overrideValue;
-        private bool _isOverridden;
+        public bool IsOverriden { get; private set; }
 
         public Overridable(T originalValue)
         {
             _originalValue = originalValue;
         }
 
-        public T Value => _isOverridden ? _overrideValue : _originalValue;
+        public T Value => IsOverriden ? _overrideValue : _originalValue;
 
         public void SetOverride(T overrideValue)
         {
@@ -42,12 +42,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             _overrideValue = overrideValue;
-            _isOverridden = true;
+            IsOverriden = true;
         }
 
         public void RemoveOverride()
         {
-            _isOverridden = false;
+            IsOverriden = false;
         }
 
         public static implicit operator T(Overridable<T> overridable) => overridable.Value;

@@ -112,7 +112,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     }
 
     public static readonly int minSdkVersion = 60;
-    public static readonly int[] skippedSdkVersions = { 70, 73, 75 };
+    public static readonly int[] skippedSdkVersions = { 70, 73, 75, 80 };
     public static int currentSdkVersion = (OVRPlugin.wrapperVersion == null || OVRPlugin.wrapperVersion == new Version(0, 0, 0)) ? minSdkVersion : OVRPlugin.wrapperVersion.Minor - 32;
     public static int[] horizonOsSdkVersions = Enumerable.Range(minSdkVersion, currentSdkVersion - minSdkVersion + 1)
     .Except(skippedSdkVersions)
@@ -143,7 +143,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool disableBackups = true;
     public bool enableNSCConfig = true;
     public string securityXmlPath;
-    public bool horizonOsSdkEnabled = false;
+    public bool horizonOsSdkDisabled = false;
     public int minHorizonOsSdkVersion = minSdkVersion;
     public int targetHorizonOsSdkVersion = currentSdkVersion;
 
@@ -328,7 +328,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
                 projectConfig.requiresSystemKeyboard = false;
                 projectConfig.experimentalFeaturesEnabled = false;
                 projectConfig.insightPassthroughSupport = FeatureSupport.None;
-                projectConfig.horizonOsSdkEnabled = false;
+                projectConfig.horizonOsSdkDisabled = false;
                 projectConfig.minHorizonOsSdkVersion = horizonOsSdkVersions[0];
                 projectConfig.targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
                 AssetDatabase.CreateAsset(projectConfig, oculusProjectConfigAssetPath);

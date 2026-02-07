@@ -49,6 +49,8 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
+        public void Reset() => _currentIndex = 0;
+
         public void OnValidate()
         {
             _lastTimer = Time.realtimeSinceStartup;

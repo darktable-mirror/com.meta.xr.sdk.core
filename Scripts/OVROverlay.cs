@@ -1289,7 +1289,7 @@ public class OVROverlay : MonoBehaviour
 
     bool TrySubmitLayer()
     {
-        if (!enabled)
+        if (!this || !enabled)
         {
             DisableImmediately();
             return false;
@@ -1360,6 +1360,7 @@ public class OVROverlay : MonoBehaviour
             return false;
         }
 
+        int submitSwapchainIndex = frameIndex;
         if (needsTextures)
         {
             bool useMipmaps = (newDesc.MipLevels > 1);
@@ -1376,12 +1377,17 @@ public class OVROverlay : MonoBehaviour
             if (frameIndex > prevFrameIndex)
             {
                 int stage = frameIndex % stageCount;
+                if (OVRPlugin.IsSuccess(OVRPlugin.AcquireLayerSwapchain(layerId, out int acquiredIndex)))
+                {
+                    stage = acquiredIndex;
+                    submitSwapchainIndex = acquiredIndex;
+                }
                 if (!PopulateLayer(newDesc.MipLevels, isHdr, newDesc.TextureSize, newDesc.SampleCount, stage))
                     return false;
             }
         }
 
-        bool isOverlayVisible = SubmitLayer(overlay, headLocked, noDepthBufferTesting, pose, scale, frameIndex);
+        bool isOverlayVisible = SubmitLayer(overlay, headLocked, noDepthBufferTesting, pose, scale, submitSwapchainIndex);
 
         prevFrameIndex = frameIndex;
         if (isDynamic)

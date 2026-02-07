@@ -89,13 +89,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             var runtimeSettings = RuntimeSettings.Instance;
             if (!runtimeSettings.AutomaticLayerCullingUpdate) return;
+            if (!RuntimeSettings.Instance.ShouldUseOverlay) return;
 
             var currentCullingMask = Camera.cullingMask;
 
             // If we are using overlay, then we don't want the main camera to render either layer
-            var expectedCullingMask = SetBits(currentCullingMask, runtimeSettings.PanelLayer,
-                runtimeSettings.MeshRendererLayer, !RuntimeSettings.Instance.ShouldUseOverlay
-            );
+            var expectedCullingMask = SetBit(currentCullingMask, runtimeSettings.PanelLayer, !RuntimeSettings.Instance.ShouldUseOverlay);
+            expectedCullingMask = SetBit(expectedCullingMask, runtimeSettings.MeshRendererLayer, OverlayCanvas.ShouldRenderImposters);
 
             if (expectedCullingMask != currentCullingMask)
             {
@@ -103,19 +103,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
-        private static int SetBits(int cullingMask, int bitPosition1, int bitPosition2, bool state)
+        private static int SetBit(int cullingMask, int bitPosition1, bool state)
         {
             if (state)
             {
                 // Set bits to true using OR
                 cullingMask |= (1 << bitPosition1);
-                cullingMask |= (1 << bitPosition2);
             }
             else
             {
                 // Set bits to false using AND with NOT
                 cullingMask &= ~(1 << bitPosition1);
-                cullingMask &= ~(1 << bitPosition2);
             }
 
             return cullingMask;

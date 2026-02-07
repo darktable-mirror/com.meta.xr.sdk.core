@@ -25,11 +25,11 @@ using System.Linq;
 using System.Text;
 using Meta.XR.Editor.EditorCoroutine;
 using Meta.XR.Editor.Id;
+using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
-using Meta.XR.Editor.Settings;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Utils;
@@ -42,34 +42,42 @@ namespace Meta.XR.BuildingBlocks.Editor
         private const string WindowName = Utils.BlocksPublicName;
 
         private const string DragAndDropLabel = "Dragging Block";
-        private const string DragAndDropBlockDataLabel = nameof(BuildingBlocksWindow) + nameof(DragAndDropBlockDataLabel);
-        private const string DragAndDropBlockThumbnailLabel = nameof(BuildingBlocksWindow) + nameof(DragAndDropBlockThumbnailLabel);
-        private const string DragAndDropStartMousePosition = nameof(BuildingBlocksWindow) + nameof(DragAndDropStartMousePosition);
+
+        private const string DragAndDropBlockDataLabel =
+            nameof(BuildingBlocksWindow) + nameof(DragAndDropBlockDataLabel);
+
+        private const string DragAndDropBlockThumbnailLabel =
+            nameof(BuildingBlocksWindow) + nameof(DragAndDropBlockThumbnailLabel);
+
+        private const string DragAndDropStartMousePosition =
+            nameof(BuildingBlocksWindow) + nameof(DragAndDropStartMousePosition);
 
         internal static readonly GUIContent Description =
-            new GUIContent("<b>Building Blocks</b> helps you get up and running faster thanks to a library of XR capabilities" +
-                           " that you can simply drag and drop into your project." +
-                           $"\n• Drag and drop any <b>Building Block</b> into your scene." +
-                           $"\n• You can drag and drop a <b>Building Block</b> directly into an existing <b>{nameof(GameObject)}</b> when relevant." +
-                           $"\n• You can use multiple blocks to enable more XR capabilities." +
-                           $"\n• Click on a <b>Building Block</b> to see more information.");
+            new GUIContent(
+                "<b>Building Blocks</b> helps you get up and running faster thanks to a library of XR capabilities" +
+                " that you can simply drag and drop into your project." +
+                "\n• Drag and drop any <b>Building Block</b> into your scene." +
+                $"\n• You can drag and drop a <b>Building Block</b> directly into an existing <b>{nameof(GameObject)}</b> when relevant." +
+                "\n• You can use multiple blocks to enable more XR capabilities." +
+                "\n• Click on a <b>Building Block</b> to see more information.");
 
         private Vector2 _scrollPosition;
 
         private float _horizontalPageRatio;
-        private static List<BlockBaseData> _currentBlockList = new();
+        private static IEnumerable<BlockBaseData> _currentBlockList = Enumerable.Empty<BlockBaseData>();
 
-        private AnimatedContent _outline = null;
-        private AnimatedContent _tutorial = null;
+        private AnimatedContent _outline;
+        private AnimatedContent _tutorial;
 
         private static readonly CustomBool TutorialCompleted =
-            new UserBool()
+            new UserBool
             {
                 Owner = Utils.ToolDescriptor,
                 Uid = "TutorialCompleted",
                 OldKey = "OVRProjectSetup.BuildingBlocksTutorialCompleted",
                 Default = false
             };
+
         private static bool _shouldShowTutorial;
 
 
@@ -82,9 +90,9 @@ namespace Meta.XR.BuildingBlocks.Editor
         private readonly Dimensions _dimensions = new();
 
         private const string SortTypeAlphabetically = "Alphabetically";
-        private const string SortTypeMostUsed = "My recently used";
+        private const string SortTypeMostUsed = "My most used";
         private const string SortTypeMostPopular = "Most popular";
-        private static string[] _sortTypes = { SortTypeMostPopular, SortTypeAlphabetically, SortTypeMostUsed };
+        private static readonly string[] SortTypes = { SortTypeMostPopular, SortTypeAlphabetically, SortTypeMostUsed };
         private static int _selectedSortTypeIndex;
 
         internal class Dimensions
@@ -124,7 +132,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                 ExpectedThumbnailWidth = Mathf.FloorToInt((scrollableAreaWidth - marginToRemove) / NumberOfColumns);
                 ExpectedThumbnailHeight = Mathf.FloorToInt(ExpectedThumbnailWidth / Styles.Constants.ThumbnailRatio);
-                if (ExpectedThumbnailWidth != _previousThumbnailWidth || ExpectedThumbnailHeight != _previousThumbnailHeight)
+                if (ExpectedThumbnailWidth != _previousThumbnailWidth ||
+                    ExpectedThumbnailHeight != _previousThumbnailHeight)
                 {
                     _previousThumbnailWidth = ExpectedThumbnailWidth;
                     _previousThumbnailHeight = ExpectedThumbnailHeight;
@@ -135,20 +144,22 @@ namespace Meta.XR.BuildingBlocks.Editor
                 CollectionNumberOfColumn = Mathf.FloorToInt((float)collectionAreaWidth / collectionWidth);
                 if (CollectionNumberOfColumn < 1) CollectionNumberOfColumn = 1;
 
-                ExpectedCollectionThumbnailWidth = Mathf.FloorToInt((float)(collectionAreaWidth - Margin) / CollectionNumberOfColumn);
-                ExpectedCollectionThumbnailHeight = Mathf.FloorToInt(ExpectedCollectionThumbnailWidth / Styles.Constants.CollectionDivRatio);
+                ExpectedCollectionThumbnailWidth =
+                    Mathf.FloorToInt((float)(collectionAreaWidth - Margin) / CollectionNumberOfColumn);
+                ExpectedCollectionThumbnailHeight =
+                    Mathf.FloorToInt(ExpectedCollectionThumbnailWidth / Styles.Constants.CollectionDivRatio);
             }
         }
 
-        internal static void ShowWindow(Origins origin, IIdentified originData, bool showDetailPane = false, BlockData data = null)
-
+        internal static void ShowWindow(Origins origin, IIdentified originData, bool showDetailPane = false,
+            BlockData data = null)
         {
             var window = GetWindow<BuildingBlocksWindow>(WindowName);
             window.minSize = new Vector2(800, 400);
 
             OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.OpenWindow)
                 .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.ActionTrigger, origin.ToString())
-                .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.BlocksCount, _blockList?.Count ?? 0)
+                .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.BlocksCount, _blockList.Count)
                 .Send();
 
             if (showDetailPane)
@@ -256,38 +267,44 @@ namespace Meta.XR.BuildingBlocks.Editor
             // Init current block list to detect filter change
             ResetCurrentBlockList();
 
-            if (ValidCollections)
+            if (!ValidCollections)
             {
-                if (_selectedCollection.Value != null)
-                {
-                    TriggerPageTransition(Page.Grid, instant: true);
-                }
-                else
-                {
-                    TriggerPageTransition(SkipCollectionOnStart.Value ? Page.Grid : Page.Collections, instant: true);
-                }
+                return;
+            }
+
+            if (SelectedCollection.Value != null)
+            {
+                TriggerPageTransition(Page.Grid, instant: true);
+            }
+            else
+            {
+                TriggerPageTransition(SkipCollectionOnStart.Value ? Page.Grid : Page.Collections, instant: true);
             }
         }
 
-        internal static void RefreshBlockList()
+        private static void RefreshBlockList()
         {
-            var selectedCollection = _selectedCollection.Value;
-            var showingCollection = selectedCollection != null;
-            if (showingCollection)
+            var selectedCollection = SelectedCollection.Value;
+            if (selectedCollection != null)
             {
-                _blockList = BlocksContentManager.GetCollection(selectedCollection).ToList();
+                _blockList = BlocksContentManager.GetCollection(selectedCollection);
             }
             else
             {
                 _blockList = Utils.FilteredRegistry;
-
-                _blockList = Utils.Sort.MostPopular(_blockList).ToList();
             }
 
-            _blockList = _blockList.Where(block => !block.Hidden).ToList();
+            _blockList = Utils.Sort.MostPopular(_blockList)
+                .Where(block => !block.Hidden)
+                .ToList();
 
-            _tagList = Tag.Registry.SortedTags.Where(tag => _blockList.Any((data =>
-                data.Tags.Contains(tag) && data.Tags.All(otherTag => otherTag.Behavior.Visibility)))).ToList();
+            UpdateCurrentBlockList();
+
+            _tagList = Tag.Registry.SortedTags
+                .Where(tag => _blockList.Any(data =>
+                    data.Tags.Contains(tag)
+                    && data.Tags.All(otherTag => otherTag.Behavior.Visibility))
+                );
         }
 
         private void OnDisable()
@@ -302,8 +319,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             _repainter.OnDisable();
         }
 
-        private static IReadOnlyList<BlockBaseData> _blockList;
-        private static IList<Tag> _tagList;
+        private static IReadOnlyCollection<BlockBaseData> _blockList = Array.Empty<BlockBaseData>();
+        private static IEnumerable<Tag> _tagList = Enumerable.Empty<Tag>();
 
         private void ShowList(Dimensions dimensions)
         {
@@ -314,22 +331,36 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.BeginVertical();
 
             #region Search bar
+
             GUI.SetNextControlName(FilterSearchControlName);
-            var estimatedTextContent = new GUIContent($"Sort by: {_sortTypes[_selectedSortTypeIndex]} <buffer>");
+            var estimatedTextContent = new GUIContent($"Sort by: {SortTypes[_selectedSortTypeIndex]} <buffer>");
             var spaceForSortByField = EditorStyles.label.CalcSize(estimatedTextContent).x + Padding * 2;
+
+            var previousFilterSearch = _filterSearch;
             _filterSearch = EditorGUILayout.TextField(_filterSearch, GUI.skin.FindStyle("SearchTextField"));
-            var availableWidth = dimensions.WindowWidth - Margin * 2 - spaceForSortByField - Styles.GUIStyles.LargeButton.fixedWidth;
+            if (_filterSearch != previousFilterSearch)
+            {
+                UpdateCurrentBlockList();
+                ReturnToGrid();
+            }
+
+            var availableWidth = dimensions.WindowWidth - Margin * 2 - spaceForSortByField -
+                                 Styles.GUIStyles.LargeButton.fixedWidth;
+
             #endregion // Search bar
 
             #region Tags and SortBy section
+
             EditorGUILayout.BeginHorizontal();
 
-            CommonUIHelpers.DrawList("window", _tagList, Tag.TagListType.Filters, availableWidth, TagSearch, OnSelectTag, () => DrawSelectedCollectionTag());
+            CommonUIHelpers.DrawList("window", _tagList, Tag.TagListType.Filters, availableWidth, TagSearch,
+                OnSelectTag, DrawSelectedCollectionTag);
 
             GUILayout.FlexibleSpace();
             ShowSortBy(spaceForSortByField);
 
             EditorGUILayout.EndHorizontal();
+
             #endregion // Tags and SortBy section
 
             EditorGUILayout.EndVertical();
@@ -340,18 +371,22 @@ namespace Meta.XR.BuildingBlocks.Editor
                 GUI.FocusControl(FilterSearchControlName);
                 if (!String.IsNullOrEmpty(_filterSearch))
                 {
-                    TextEditor textEditor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
+                    TextEditor textEditor =
+                        (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
                     textEditor.SelectAll();
                 }
+
                 _requestFilterSearchFocus = false;
             }
 
-            EditorGUILayout.BeginScrollView(new Vector2(_horizontalPageRatio * dimensions.WindowWidth, 0.0f), false, false, GUIStyle.none, GUIStyle.none, Styles.GUIStyles.NoMargin, GUILayout.Width(dimensions.WindowWidth));
+            EditorGUILayout.BeginScrollView(new Vector2(_horizontalPageRatio * dimensions.WindowWidth, 0.0f), false,
+                false, GUIStyle.none, GUIStyle.none, Styles.GUIStyles.NoMargin,
+                GUILayout.Width(dimensions.WindowWidth));
             EditorGUILayout.BeginHorizontal();
 
             EditorGUI.BeginDisabledGroup(CurrentTargetPage == Page.Details);
             ShowCollectionsPage(dimensions);
-            ShowList(_blockList, Filter, dimensions);
+            ShowBlocks(dimensions);
             EditorGUI.EndDisabledGroup();
 
             if (CurrentTargetPage == Page.Details)
@@ -359,6 +394,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 var lastRect = GUILayoutUtility.GetLastRect();
                 if (GUI.Button(lastRect, "", GUIStyle.none))
                 {
+                    UpdateCurrentBlockList();
                     ReturnToGrid();
                 }
             }
@@ -369,13 +405,19 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndScrollView();
         }
 
-        public void ShowSortBy(float estimatedTotalSpace)
+        private void ShowSortBy(float estimatedTotalSpace)
         {
             EditorGUILayout.BeginHorizontal(GUILayout.Width(estimatedTotalSpace));
             var labelContent = new GUIContent("Sort by");
             var labelWidth = EditorStyles.label.CalcSize(labelContent).x;
             EditorGUILayout.LabelField(labelContent, GUILayout.Width(labelWidth));
-            _selectedSortTypeIndex = EditorGUILayout.Popup(_selectedSortTypeIndex, _sortTypes);
+            var previousSortIndex = _selectedSortTypeIndex;
+            _selectedSortTypeIndex = EditorGUILayout.Popup(_selectedSortTypeIndex, SortTypes);
+            if (previousSortIndex != _selectedSortTypeIndex)
+            {
+                UpdateCurrentBlockList();
+                ReturnToGrid();
+            }
             EditorGUILayout.EndHorizontal();
         }
 
@@ -388,9 +430,11 @@ namespace Meta.XR.BuildingBlocks.Editor
             if (TagSearch.Any(tag => !block.Tags.Contains(tag))) return false;
 
             var containsSearch = string.IsNullOrEmpty(_filterSearch)
-                           || block.blockName.Contains(_filterSearch, StringComparison.InvariantCultureIgnoreCase)
-                           || block.Description.Value.Contains(_filterSearch, StringComparison.InvariantCultureIgnoreCase)
-                           || block.Tags.Any(tag => tag.Name.Contains(_filterSearch, StringComparison.InvariantCultureIgnoreCase));
+                                 || block.blockName.Contains(_filterSearch, StringComparison.InvariantCultureIgnoreCase)
+                                 || block.Description.Value.Contains(_filterSearch,
+                                     StringComparison.InvariantCultureIgnoreCase)
+                                 || block.Tags.Any(tag =>
+                                     tag.Name.Contains(_filterSearch, StringComparison.InvariantCultureIgnoreCase));
             return containsSearch;
         }
 
@@ -398,30 +442,32 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             var blockHeight = dimensions.ExpectedThumbnailHeight + +Styles.GUIStyles.DescriptionAreaStyle.fixedHeight +
                               3 + Margin;
-            var minLineIndex = (_scrollPosition.y / blockHeight) - 1;
+            var minLineIndex = _scrollPosition.y / blockHeight - 1;
             var maximumNumberOfLinesShown = dimensions.WindowHeight / blockHeight;
             var maxLineIndex = minLineIndex + maximumNumberOfLinesShown + 1;
             return minLineIndex <= lineIndex && lineIndex <= maxLineIndex;
         }
 
-        private void ShowList(IEnumerable<BlockBaseData> blocks, Func<IEnumerable<BlockBaseData>,
-                IEnumerable<BlockBaseData>> filter, Dimensions dimensions)
+        private void ShowBlocks(Dimensions dimensions)
         {
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, false, true, GUIStyle.none, GUI.skin.verticalScrollbar, Styles.GUIStyles.NoMargin, GUILayout.Width(dimensions.WindowWidth));
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, false, true, GUIStyle.none,
+                GUI.skin.verticalScrollbar, Styles.GUIStyles.NoMargin, GUILayout.Width(dimensions.WindowWidth));
 
             var blockWidth = dimensions.ExpectedThumbnailWidth;
-            var blockHeight = dimensions.ExpectedThumbnailHeight + Styles.GUIStyles.DescriptionAreaStyle.fixedHeight + 3;
+            var blockHeight = dimensions.ExpectedThumbnailHeight + Styles.GUIStyles.DescriptionAreaStyle.fixedHeight +
+                              3;
 
             var columnIndex = 0;
             var lineIndex = 0;
             var showTutorial = _shouldShowTutorial;
             EditorGUILayout.BeginHorizontal(Styles.GUIStyles.NoMargin);
-            var filteredBlocks = SortBlocks(filter(blocks)).ToList();
-            foreach (var block in filteredBlocks)
+            foreach (var block in _currentBlockList)
             {
-                var blockRect = new Rect(columnIndex * (blockWidth + Margin) + Margin, lineIndex * (blockHeight + Margin), blockWidth, blockHeight);
+                var blockRect = new Rect(columnIndex * (blockWidth + Margin) + Margin,
+                    lineIndex * (blockHeight + Margin), blockWidth, blockHeight);
                 var isVisibleInScrollView = IsVisibleInScrollView(lineIndex, dimensions);
-                Show(block, blockRect, isVisibleInScrollView, dimensions.ExpectedThumbnailWidth, dimensions.ExpectedThumbnailHeight);
+                Show(block, blockRect, isVisibleInScrollView, dimensions.ExpectedThumbnailWidth,
+                    dimensions.ExpectedThumbnailHeight);
 
                 if (showTutorial && block.IsInteractable)
                 {
@@ -441,39 +487,16 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndScrollView();
-
-            // Close the detail page if user starts searching for something.
-            if (ShouldCloseTheDetailPane(filteredBlocks))
-            {
-                ReturnToGrid();
-            }
-        }
-
-        private bool ShouldCloseTheDetailPane(IEnumerable<BlockBaseData> filteredBlocks)
-        {
-            if (CurrentTargetPage == Page.Grid)
-            {
-                _currentBlockList.Clear();
-                _currentBlockList.AddRange(filteredBlocks);
-                return false;
-            };
-
-            return !_currentBlockList.SequenceEqual(filteredBlocks);
         }
 
         private static IEnumerable<BlockBaseData> SortBlocks(IEnumerable<BlockBaseData> blocks)
         {
-            return _sortTypes[_selectedSortTypeIndex] switch
+            return SortTypes[_selectedSortTypeIndex] switch
             {
                 SortTypeAlphabetically => Utils.Sort.Alphabetical(blocks),
                 SortTypeMostUsed => Utils.Sort.MostUsed(blocks),
                 _ => blocks
             };
-        }
-
-        private BlockBaseData GetBlockFromId(IEnumerable<BlockBaseData> blocks, string id)
-        {
-            return blocks.FirstOrDefault(block => block.Id == id);
         }
 
         private void ShowThumbnail(BlockBaseData block, int expectedThumbnailWidth, int expectedThumbnailHeight)
@@ -482,14 +505,16 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 fixedHeight = expectedThumbnailHeight
             };
-            var thumbnailArea = EditorGUILayout.BeginVertical(thumbnailAreaStyle, GUILayout.Height(thumbnailAreaStyle.fixedHeight));
+            var thumbnailArea =
+                EditorGUILayout.BeginVertical(thumbnailAreaStyle, GUILayout.Height(thumbnailAreaStyle.fixedHeight));
             {
                 thumbnailArea.height = expectedThumbnailHeight;
                 GUI.DrawTexture(thumbnailArea, block.Thumbnail, ScaleMode.ScaleAndCrop, false,
                     Styles.Constants.ThumbnailSourceRatio, GUI.color, Vector4.zero,
                     Styles.Constants.UpperRoundedBorderVectors);
 
-                Meta.XR.Editor.Tags.CommonUIHelpers.DrawList(block.Id + "_overlay", block.Tags, Tag.TagListType.Overlays, expectedThumbnailWidth, TagSearch, OnSelectTag);
+                CommonUIHelpers.DrawList(block.Id + "_overlay", block.Tags,
+                    Tag.TagListType.Overlays, expectedThumbnailWidth, TagSearch, OnSelectTag);
             }
             EditorGUILayout.EndVertical();
 
@@ -505,7 +530,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static bool ShouldShowMissingPackageDependencies(BlockBaseData block)
             => block != null && block.GetCache().HasMissingPackageDependencies;
 
-        private void ShowBlockInstallButton(BlockBaseData block, Rect blockRect, bool canBeAdded, bool canBeSelected)
+        private static void ShowBlockInstallButton(BlockBaseData block, Rect blockRect, bool canBeAdded, bool canBeSelected)
         {
             GUILayout.BeginArea(blockRect, Styles.GUIStyles.LargeButtonArea);
             GUILayout.FlexibleSpace();
@@ -516,11 +541,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             if (canBeAdded)
             {
                 var addIcon = block is BlockDownloaderData ? Styles.Contents.DownloadIcon : Styles.Contents.AddIcon;
-                new ActionLinkDescription()
+                new ActionLinkDescription
                 {
                     Content = new GUIContent(addIcon),
                     Style = Styles.GUIStyles.LargeButton,
-                    Action = () => block.AddToProject(null, block.RequireListRefreshAfterInstall ? RefreshBlockList : null),
+                    Action = () =>
+                        block.AddToProject(null, block.RequireListRefreshAfterInstall ? RefreshBlockList : null),
                     ActionData = block,
                     Origin = Origins.BlockGrid,
                     OriginData = null
@@ -528,7 +554,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
             else if (ShouldShowMissingPackageDependencies(blockData))
             {
-                new ActionLinkDescription()
+                new ActionLinkDescription
                 {
                     Content = new GUIContent(Styles.Contents.DownloadPackageDependenciesIcon),
                     Style = Styles.GUIStyles.LargeButton,
@@ -541,7 +567,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (canBeSelected)
             {
-                new ActionLinkDescription()
+                new ActionLinkDescription
                 {
                     Content = new GUIContent(Styles.Contents.SelectIcon),
                     Style = Styles.GUIStyles.LargeButton,
@@ -556,7 +582,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             GUILayout.EndArea();
         }
 
-        private void MissingPackageDependenciesPopup(BlockData blockData)
+        private static void MissingPackageDependenciesPopup(BlockData blockData)
         {
             var message = new StringBuilder();
             message.Append(
@@ -567,7 +593,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 if (CustomPackageDependencyRegistry.IsPackageDepInCustomRegistry(packageId))
                 {
                     var packageDepInfo = CustomPackageDependencyRegistry.GetPackageDepInfo(packageId);
-                    message.Append($"- {packageDepInfo.PackageDisplayName}: {packageDepInfo.InstallationInstructions}\n");
+                    message.Append(
+                        $"- {packageDepInfo.PackageDisplayName}: {packageDepInfo.InstallationInstructions}\n");
                 }
                 else
                 {
@@ -611,7 +638,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                         // This logic replaces an EditorGUILayout.LabelField which enforces a height of 18f (hardcoded)
                         var rect = EditorGUILayout.GetControlRect(false, DoubleMargin, labelStyle);
                         EditorGUI.LabelField(rect, block.BlockName, labelStyle);
-                        Meta.XR.Editor.Tags.CommonUIHelpers.DrawList(block.Id, block.Tags, Tag.TagListType.Filters, style.fixedWidth, TagSearch, OnSelectTag);
+                        CommonUIHelpers.DrawList(block.Id, block.Tags, Tag.TagListType.Filters,
+                            style.fixedWidth, TagSearch, OnSelectTag);
                     }
                     EditorGUILayout.EndVertical();
                 }
@@ -620,27 +648,31 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void ShowDragAndDrop(BlockBaseData block, Rect blockRect, bool canBeAdded)
+        private static void ShowDragAndDrop(BlockBaseData block, Rect blockRect, bool canBeAdded)
         {
             var hoverGrid = HoverHelper.IsHover(block.Id + "Grid", Event.current, blockRect);
-            if (canBeAdded)
+            if (!canBeAdded)
             {
-                if (hoverGrid)
-                {
-                    if (Event.current.type == EventType.Repaint)
-                    {
-                        EditorGUIUtility.AddCursorRect(blockRect, MouseCursor.Pan);
-                    }
+                return;
+            }
 
-                    if (Event.current.type == EventType.MouseDown)
-                    {
-                        SetDragAndDrop(block);
-                    }
-                }
+            if (!hoverGrid)
+            {
+                return;
+            }
+
+            switch (Event.current.type)
+            {
+                case EventType.Repaint:
+                    EditorGUIUtility.AddCursorRect(blockRect, MouseCursor.Pan);
+                    break;
+                case EventType.MouseDown:
+                    SetDragAndDrop(block);
+                    break;
             }
         }
 
-        private void DrawEmptyGridItem(int expectedThumbnailWidth, int expectedThumbnailHeight)
+        private static void DrawEmptyGridItem(int expectedThumbnailWidth, int expectedThumbnailHeight)
         {
             // Early return with empty grid item
             var emptyGridStyle = new GUIStyle(Styles.GUIStyles.GridItemStyleWithHover)
@@ -684,7 +716,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             ShowThumbnail(block, expectedThumbnailWidth, expectedThumbnailHeight);
 
             var canBeSelected = numberInScene > 0;
-            ShowDescription(block, blockRect, expectedThumbnailWidth, expectedThumbnailHeight, canBeAdded, canBeSelected);
+            ShowDescription(block, blockRect, expectedThumbnailWidth, expectedThumbnailHeight, canBeAdded,
+                canBeSelected);
 
             ShowBlockInstallButton(block, blockRect, canBeAdded, canBeSelected);
 
@@ -702,7 +735,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
-        private void Show(BlockBaseData block, Rect blockRect, bool isVisibleInScrollView, int expectedThumbnailWidth, int expectedThumbnailHeight)
+        private void Show(BlockBaseData block, Rect blockRect, bool isVisibleInScrollView, int expectedThumbnailWidth,
+            int expectedThumbnailHeight)
         {
             if (!isVisibleInScrollView)
             {
@@ -721,7 +755,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void ShowTutorial(Rect dragArea)
         {
-            if (_outline == null && TextureContent.BuildPath("bb_outline.asset", Utils.BuildingBlocksAnimations, out var outlinePath))
+            if (_outline == null &&
+                TextureContent.BuildPath("bb_outline.asset", Utils.BuildingBlocksAnimations, out var outlinePath))
             {
                 _outline = AssetDatabase.LoadAssetAtPath<AnimatedContent>(outlinePath);
             }
@@ -732,7 +767,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 GUI.DrawTexture(dragArea, _outline.CurrentFrame);
             }
 
-            if (_tutorial == null && TextureContent.BuildPath("bb_tutorial.asset", Utils.BuildingBlocksAnimations, out var tutorialPath))
+            if (_tutorial == null && TextureContent.BuildPath("bb_tutorial.asset", Utils.BuildingBlocksAnimations,
+                    out var tutorialPath))
 
             {
                 _tutorial = AssetDatabase.LoadAssetAtPath<AnimatedContent>(tutorialPath);
@@ -752,7 +788,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             if (!DragAndDropStarted) return;
 
             var blockThumbnail = DragAndDrop.GetGenericData(DragAndDropBlockThumbnailLabel) as Texture2D;
-            var startMousePosition = (Vector2)(DragAndDrop.GetGenericData(DragAndDropStartMousePosition) ?? Vector2.zero);
+            var startMousePosition =
+                (Vector2)(DragAndDrop.GetGenericData(DragAndDropStartMousePosition) ?? Vector2.zero);
             var dragDistance = Vector2.Distance(CurrentMousePosition, startMousePosition);
             if (blockThumbnail && dragDistance >= BlockDragStartThreshold)
             {
@@ -806,7 +843,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                     if (CurrentTargetPage != Page.Details)
                     {
-                        var startMousePosition = (Vector2)(DragAndDrop.GetGenericData(DragAndDropStartMousePosition) ?? Vector2.zero);
+                        var startMousePosition =
+                            (Vector2)(DragAndDrop.GetGenericData(DragAndDropStartMousePosition) ?? Vector2.zero);
                         var dragDistance = Vector2.Distance(CurrentMousePosition, startMousePosition);
                         if (dragDistance < BlockDragStartThreshold)
                         {
@@ -814,16 +852,13 @@ namespace Meta.XR.BuildingBlocks.Editor
                             SwitchToPage(Page.Details, Origins.BlockGrid, _selectedBlock, _selectedBlock);
                         }
                     }
+
                     ResetDragAndDrop();
                     needsRepaint = true;
 
                     currentEvent.Use();
                 }
                 break;
-
-                default:
-                    needsRepaint = false;
-                    break;
             }
 
             return needsRepaint;
@@ -883,7 +918,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private static bool DragAndDropStarted => DragAndDrop.GetGenericData(DragAndDropBlockDataLabel) != null;
 
-        private void SetDragAndDrop(BlockBaseData block)
+        private static void SetDragAndDrop(BlockBaseData block)
         {
             if (DragAndDropStarted) return;
 
@@ -918,6 +953,14 @@ namespace Meta.XR.BuildingBlocks.Editor
                 TagSearch.Clear();
                 TagSearch.Add(tag);
             }
+
+            UpdateCurrentBlockList();
+            ReturnToGrid();
+        }
+
+        private static void UpdateCurrentBlockList()
+        {
+            _currentBlockList = SortBlocks(Filter(_blockList));
         }
     }
 }

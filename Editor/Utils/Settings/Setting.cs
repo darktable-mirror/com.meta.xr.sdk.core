@@ -118,7 +118,13 @@ namespace Meta.XR.Editor.Settings
     internal abstract class Setting<T> : Setting
     {
         public T Default { get; set; }
+
         public abstract T Value { get; protected set; }
+
+        public static implicit operator T(Setting<T> setting)
+        {
+            return setting == null ? default : setting.Value;
+        }
 
         public void SetValue(T value, Origins origin = Origins.Unknown, IIdentified originData = null, Action callback = null)
         {
@@ -200,13 +206,14 @@ namespace Meta.XR.Editor.Settings
             public bool OnLeft;
             public bool Inverted;
             public GUIContent Content;
+            public bool TightSpacing;
         }
 
         public void DrawForGUI(DrawOptions options)
             => UIHelpers.DrawToggle(() => options.Inverted ? !Value : Value, value =>
             {
                 SetValue(options.Inverted ? !value : value, options.origin, options.originData, options.callback);
-            }, options.Content, options.OnLeft);
+            }, options.Content, options.OnLeft, options.TightSpacing);
     }
 
     internal class UserBool : CustomBool
@@ -237,6 +244,23 @@ namespace Meta.XR.Editor.Settings
         {
             Get = () => EditorPrefs.GetInt(Key, string.IsNullOrEmpty(OldKey) ? Default : EditorPrefs.GetInt(OldKey, Default));
             Set = value => EditorPrefs.SetInt(Key, value);
+        }
+    }
+
+    internal class OnlyOnceUserInt : UserInt
+    {
+        public OnlyOnceUserInt()
+        {
+            var baseSetter = Set;
+            Set = value =>
+            {
+                if (EditorPrefs.HasKey(Key))
+                {
+                    return;
+                }
+
+                baseSetter(value);
+            };
         }
     }
 
@@ -302,6 +326,23 @@ namespace Meta.XR.Editor.Settings
         {
             Get = () => EditorPrefs.GetString(Key, string.IsNullOrEmpty(OldKey) ? Default : EditorPrefs.GetString(OldKey, Default));
             Set = value => EditorPrefs.SetString(Key, value);
+        }
+    }
+
+    internal class OnlyOnceUserString : UserString
+    {
+        public OnlyOnceUserString()
+        {
+            var baseSetter = Set;
+            Set = value =>
+            {
+                if (EditorPrefs.HasKey(Key))
+                {
+                    return;
+                }
+
+                baseSetter(value);
+            };
         }
     }
 

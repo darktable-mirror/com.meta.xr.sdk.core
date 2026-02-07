@@ -41,7 +41,7 @@ namespace Meta.XR.Guides.Editor.About
         // It may be too early to retrieve version, so we use a nullable int to add the flag of
         // whether or not we could retrieve it
         private static int? _version;
-        public static int? Version => _version ??= ComputePackageVersion(PackageName);
+        public static int? Version => _version ??= PackageList.ComputePackageVersion(PackageName);
 
         private static WelcomePage _welcomePage;
         private static WelcomePage WelcomePage => _welcomePage ??= new WelcomePage();
@@ -59,7 +59,7 @@ namespace Meta.XR.Guides.Editor.About
         }
 
         private static int? _latestVersion;
-        public static int? LatestVersion => _latestVersion ??= ComputeLatestPackageVersion(PackageName);
+        public static int? LatestVersion => _latestVersion ??= PackageList.ComputeLatestPackageVersion(PackageName);
 
         [MenuItem("Meta/About Meta XR SDK", false, 2000)]
         private static void SetupGuide()
@@ -69,7 +69,7 @@ namespace Meta.XR.Guides.Editor.About
 
         public static ToolDescriptor ToolDescriptor = new()
         {
-            Order = -1,
+            Order = -11,
             Icon = MetaWhiteIcon,
             Name = "Welcome to Meta XR SDK",
             MenuDescription = "Get Started",
@@ -138,32 +138,6 @@ namespace Meta.XR.Guides.Editor.About
             {
                 return (null, null, false);
             }
-        }
-
-        private static int? ComputePackageVersion(string packageName)
-            => ComputePackageVersion(packageName, packageInfo => packageInfo.version);
-
-        private static int? ComputeLatestPackageVersion(string packageName)
-            => ComputePackageVersion(packageName, packageInfo => packageInfo.versions.latest);
-
-        private static int? ComputePackageVersion(string packageName,
-            Func<UnityEditor.PackageManager.PackageInfo, string> extractVersionFromPackageInfo)
-        {
-            // Returning null as an indicator that it has not been retrieved yet
-            if (!PackageList.PackageManagerListAvailable) return null;
-
-            var version = 0;
-            var package = PackageList.GetPackage(packageName);
-
-            if (package == null) return version;
-
-            var versionParts = extractVersionFromPackageInfo.Invoke(package).Split('.');
-            if (versionParts.Length > 0)
-            {
-                int.TryParse(versionParts[0], out version);
-            }
-
-            return version;
         }
     }
 }

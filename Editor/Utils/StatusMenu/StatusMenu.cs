@@ -37,7 +37,7 @@ namespace Meta.XR.Editor.StatusMenu
 
         private static void PrepareItems()
         {
-            var registeredItems = ToolRegistry.Registry.Where(item => item.AddToStatusMenu).ToList();
+            var registeredItems = ToolRegistry.Registry.Where(item => item.AddToStatusMenu && item.IsRampedUp).ToList();
             registeredItems.Sort((x, y) => x.Order.CompareTo(y.Order));
             _registeredItems = registeredItems;
         }

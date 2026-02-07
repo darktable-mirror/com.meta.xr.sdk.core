@@ -77,6 +77,26 @@ public class BasicSceneManager : MonoBehaviour
         }).ToList();
         await Task.WhenAll(tasks);
 
+        // fetch room mesh, creating objects per room face
+        await OVRAnchor.FetchAnchorsAsync(rooms, new OVRAnchor.FetchOptions
+        {
+            SingleComponentType = typeof(OVRRoomMesh),
+        });
+        tasks = rooms.Select(async room =>
+        {
+            var roomObject = new GameObject($"RoomMesh-{room.Uuid}");
+
+            // can we locate it in the world?
+            if (!room.TryGetComponent(out OVRLocatable locatable))
+                return;
+            await locatable.SetEnabledAsync(true);
+
+            // set location and create objects for each room face
+            var helper = new SceneManagerHelper(roomObject, _trackingSpace, _material);
+            helper.SetLocation(locatable);
+            helper.CreateRoomMesh(room.GetComponent<OVRRoomMesh>());
+        }).ToList();
+        await Task.WhenAll(tasks);
     }
 
     async Task CreateSceneAnchors(GameObject roomGameObject, List<OVRAnchor> anchors)
@@ -97,6 +117,13 @@ public class BasicSceneManager : MonoBehaviour
             if (anchor.TryGetComponent(out OVRSemanticLabels labels))
                 labels.GetClassifications(classifications);
 
+            // ignore walls, ceilings and floors, as they will come from the room mesh
+            if (classifications.Contains(OVRSemanticLabels.Classification.Floor) ||
+                classifications.Contains(OVRSemanticLabels.Classification.Ceiling) ||
+                classifications.Contains(OVRSemanticLabels.Classification.WallFace))
+            {
+                return;
+            }
 
             // create and parent Unity game object
             var gameObject = new GameObject(string.Join(',', classifications));

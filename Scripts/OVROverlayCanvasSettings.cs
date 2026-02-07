@@ -72,7 +72,7 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
     private bool _overrideDefaultCanvasMaterial = false;
 #endif
 
-    public int MaxSimultaneousCanvases = 1;
+    public int MaxSimultaneousCanvases = 4;
     public int CanvasRenderLayer = 31;
     public int CanvasLayer = -1;
 

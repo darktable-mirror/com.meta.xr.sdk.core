@@ -53,9 +53,16 @@ namespace Meta.XR.Editor.Notifications
             public readonly GUIStyle NotificationBox = new()
             {
                 margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(DoubleMargin, DoubleMargin, DoubleMargin, DoubleMargin),
+                padding = new RectOffset(0, 0, 0, 0),
                 stretchHeight = false,
-                normal = { background = CharcoalGray.ToTexture() }
+                normal = { background = Transparent.ToTexture() }
+            };
+
+            public readonly GUIStyle NotificationHorizontal = new()
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(DoubleMargin, DoubleMargin, DoubleMargin, DoubleMargin),
+                stretchHeight = false
             };
 
             public readonly GUIStyle NotificationContentBox = new()
@@ -100,7 +107,7 @@ namespace Meta.XR.Editor.Notifications
 
         public static class Contents
         {
-            private static readonly TextureContent.Category NotificationsTextures = new("Utils/Notifications/textures");
+            public static readonly TextureContent.Category NotificationsTextures = new("Utils/Notifications/textures");
 
             public static readonly TextureContent NotificationGradientNeutral =
                 TextureContent.CreateContent("notifications_gradient_neutral.png", NotificationsTextures, null);
@@ -109,8 +116,9 @@ namespace Meta.XR.Editor.Notifications
         public static class Constants
         {
             public const int Width = 512;
-            public const float BorderRadius = 4.0f;
+            public const float BorderRadius = 8.0f;
             public static Vector4 RoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
+            public static Vector4 TopRoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, 0f, 0f);
         }
 
         private static GUIStylesContainer _guiStyles;

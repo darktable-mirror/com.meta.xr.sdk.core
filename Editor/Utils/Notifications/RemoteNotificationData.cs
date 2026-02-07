@@ -39,6 +39,9 @@ namespace Meta.XR.Editor.Notifications
         public float duration;
         public NotificationUrlButton urlButton;
         public NotificationFilter[] filters;
+        public string rampUpKey;
+        public string gradientColor;
+        public ulong headerContentId;
     }
 
     [Serializable]

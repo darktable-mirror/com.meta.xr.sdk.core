@@ -132,6 +132,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal static void DrawBlockRow(BlockData data, BuildingBlock block, Origins origin, IIdentified originData, bool showAction = true)
         {
+            if (data == null && block == null) return;
+
             using var indentScope = new IndentScope(0);
 
             data = data ? data : block.GetBlockData();

@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.ToolingSupport;
 using UnityEngine;
 
 namespace Meta.XR.Editor.Notifications
@@ -103,60 +104,126 @@ namespace Meta.XR.Editor.Notifications
             protected override T GetField() => _fieldCallback();
         }
 
-        private readonly Dictionary<string, FilterChecker> _checkers;
+        private readonly IReadOnlyDictionary<string, FilterChecker> _checkers;
+
+        private static IEnumerable<(string Key, FilterChecker Checker)> GetFiltersForToolUsage(
+            ToolUsage toolUsage)
+        {
+            yield return (
+                $"{toolUsage.ToolId}_is_used",
+                new CallbackFilterChecker<bool>(() => toolUsage.IsUsed));
+
+            yield return (
+                $"{toolUsage.ToolId}_times_used",
+                new CallbackFilterChecker<int>(() => toolUsage.TimesUsed));
+
+            yield return (
+                $"{toolUsage.ToolId}_days_since_last_used",
+                new CallbackFilterChecker<int>(() => toolUsage.DaysSinceLastUsed));
+
+            yield return (
+                $"{toolUsage.ToolId}_last_used_in_sdk_version",
+                new CallbackFilterChecker<int>(() => toolUsage.LastUsedInSDKVersion ?? ToolUsage.MissingSDKVersion));
+        }
 
         public Validator()
         {
-            _checkers = new Dictionary<string, FilterChecker>
+            var checkers = new Dictionary<string, FilterChecker>
             {
                 { "platform", new ValueFilterChecker<string>(Application.platform.ToString()) },
                 { "unity_version", new ValueFilterChecker<Version>(ParseUnityVersion(Application.unityVersion)) },
-                { "uses_bb", new CallbackFilterChecker<bool>(() => UsageSettings.UsesBuildingBlocks.Value)},
-                { "uses_xrsim", new CallbackFilterChecker<bool>(() => UsageSettings.UsesXRSimulator.Value)},
-                { "uses_id", new CallbackFilterChecker<bool>(() => UsageSettings.UsesImmersiveDebugger.Value)},
-                { "uses_upst", new CallbackFilterChecker<bool>(() => UsageSettings.UsesProjectSetupTool.Value)},
+                {
+                    "number_active_sessions", new CallbackFilterChecker<int>(() => UsageSettings.NumberOfActiveSessions)
+                },
+                {
+                    "days_since_activation", new CallbackFilterChecker<int>(() =>
+                    {
+                        if (!long.TryParse(UsageSettings.UserActivationDate, out var activationTime))
+                        {
+                            return 0;
+                        }
+
+                        var storedDate = DateTimeOffset.FromUnixTimeSeconds(activationTime);
+                        var elapsed = DateTimeOffset.UtcNow - storedDate;
+                        return (int)elapsed.TotalDays;
+                    })
+                }
             };
 
-            var sdkVersion = GetSdkVersion();
+            var sdkVersion = ToolUsage.GetSdkVersion();
             if (sdkVersion.HasValue)
             {
-                _checkers.Add("sdk_version", new ValueFilterChecker<int>(sdkVersion.Value));
+                checkers.Add("sdk_version", new ValueFilterChecker<int>(sdkVersion.Value));
             }
+
+            foreach (var tool in ToolRegistry.Registry)
+            {
+                foreach (var (key, checker) in GetFiltersForToolUsage(tool.Usage))
+                {
+                    if (checkers.TryAdd(key, checker))
+                    {
+                        continue;
+                    }
+                }
+            }
+
+            _checkers = checkers;
         }
 
         public bool ValidateFilter(NotificationFilter filter)
         {
-            return _checkers.TryGetValue(filter.field, out var checker) &&
-                   checker.CheckCondition(filter.@operator, filter.value);
-        }
-
-        private static int? GetSdkVersion()
-        {
-            var versionZero = new Version(0, 0, 0);
-            if (OVRPlugin.wrapperVersion == null || OVRPlugin.wrapperVersion == versionZero)
+            if (string.IsNullOrEmpty(filter.field) || string.IsNullOrEmpty(filter.@operator))
             {
-                return null;
+                return false;
             }
 
-            return OVRPlugin.wrapperVersion.Minor - 32;
+            if (!_checkers.TryGetValue(filter.field, out var checker))
+            {
+                return false;
+            }
+
+            try
+            {
+                return checker.CheckCondition(filter.@operator, filter.value);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private static Version ParseUnityVersion(string versionString)
         {
-            var versionParts = versionString.Split('.');
-
-            var major = int.Parse(versionParts[0]);
-            var minor = int.Parse(versionParts[1]);
-            var patch = 0;
-
-            if (versionParts.Length <= 2)
+            try
             {
+                var versionParts = versionString.Split('.');
+
+                if (versionParts.Length < 2)
+                {
+                    return new Version(0, 0, 0);
+                }
+
+                if (!int.TryParse(versionParts[0], out var major) || !int.TryParse(versionParts[1], out var minor))
+                {
+                    return new Version(0, 0, 0);
+                }
+
+                var patch = 0;
+                if (versionParts.Length > 2)
+                {
+                    var patchString = new string(versionParts[2].TakeWhile(char.IsDigit).ToArray());
+                    if (!string.IsNullOrEmpty(patchString))
+                    {
+                        int.TryParse(patchString, out patch);
+                    }
+                }
+
                 return new Version(major, minor, patch);
             }
-
-            var patchString = new string(versionParts[2].TakeWhile(char.IsDigit).ToArray());
-            patch = int.Parse(patchString);
-            return new Version(major, minor, patch);
+            catch (Exception)
+            {
+                return new Version(0, 0, 0);
+            }
         }
     }
 }

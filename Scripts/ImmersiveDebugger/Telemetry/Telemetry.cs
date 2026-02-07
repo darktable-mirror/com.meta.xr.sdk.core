@@ -55,7 +55,8 @@ namespace Meta.XR.ImmersiveDebugger
         {
             Attributes,
             DebugInspector,
-            Hierarchy
+            Hierarchy,
+            RuntimeAPI,
         }
 
         internal static class AnnotationType

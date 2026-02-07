@@ -18,6 +18,8 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace Meta.XR.Samples
 {
     /// <summary>
@@ -26,7 +28,14 @@ namespace Meta.XR.Samples
     /// [MetaCodeSample("SampleName")]
     /// public class MyClassName { ... }
     /// </summary>
-    public class MetaCodeSampleAttribute : System.Attribute
+    [AttributeUsage(AttributeTargets.Class | // validOn = any Type decl
+                    AttributeTargets.Struct |
+                    AttributeTargets.Enum |
+                    AttributeTargets.Interface |
+                    AttributeTargets.Delegate,
+                    AllowMultiple = true, // some classes may be shared between multiple samples
+                    Inherited = false)]
+    public class MetaCodeSampleAttribute : Attribute
     {
         public MetaCodeSampleAttribute(string sampleName)
         {

@@ -39,6 +39,8 @@ namespace Meta.XR.BuildingBlocks.Editor
         public const string RoomMesh = "6b8a377d-05de-449b-a9c4-8ed22606f71c";
         public const string Occlusion = "c1dbe32c-fed2-4835-8e6a-3fbb4f4f4315";
         public const string MRUK = "d4413f4f-542f-451f-92ee-4801f27d676a";
+        public const string PassthroughCameraAccess = "0792d3af-c7d9-4f9c-a6f0-fd580a051e48";
+        public const string PassthroughCameraVisualizer = "15e72970-0a71-4798-8064-2eb968d0ff69";
 
         // Utilities
         public const string Cube = "7358e191-33b7-43ca-b066-b2f00531ac66";
@@ -58,6 +60,11 @@ namespace Meta.XR.BuildingBlocks.Editor
         public const string SpeechToTextBlock = "af49bc82-4174-46e0-b1e4-40f1c05b4908";
         public const string TextToSpeech = "ab791591-5ee2-431a-93e7-1749d1b5ad8f";
         public const string Haptics = "ad78e7c1-6a4d-422e-99f0-5b1a1ae07f6f";
+
+        // AI Blocks
+        public const string IObjectDetection = "6fe30b32-9c96-40d7-bf3b-17df4f960bf4";
+        public const string ISpeechToText = "b246d3bb-3f91-4efe-893c-c4c2d0de7210";
+        public const string ITextToSpeech = "89916747-a8be-4d3e-8563-65b00c7d2ffa";
 
 
         // Multiplayer Blocks
@@ -93,5 +100,11 @@ namespace Meta.XR.BuildingBlocks.Editor
         public const string INetworkedGrabbableObject = "e9b4b64f-1c7e-4dff-8f3c-ce409bdc3951";
         public const string NetworkedGrabbableObjectNGOInstallationRoutine = "d5c83ff6-47e4-4c98-acdd-041d4686912f";
         public const string NetworkedGrabbableObjectFusionInstallationRoutine = "54548176-30f4-4a4a-8057-340a383c6102";
+
+        // Movement Blocks
+        public const string CharacterRetargeter = "1735b3a5-6b02-42a3-bbee-e48234afe14b";
+        public const string INetworkedCharacterRetargeter = "fda8488b-014e-4281-b04a-032b40822ec7";
+        public const string NetworkedCharacterRetargeterNGOInstallationRoutine = "58241853-b2af-4174-9391-cf096d19d988";
+        public const string NetworkedCharacterRetargeterFusionInstallationRoutine = "b3b95d33-fc1b-41bc-82b8-577567e52558";
     }
 }

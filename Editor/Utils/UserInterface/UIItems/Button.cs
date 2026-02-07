@@ -45,6 +45,7 @@ namespace Meta.XR.Editor.UserInterface
             EditorGUI.BeginDisabledGroup(Disable);
             using var allColor = new Utils.ColorScope(Utils.ColorScope.Scope.All, Invisible ? new Color(0, 0, 0, 0) : Color.white);
             Style ??= new GUIStyle(GUI.skin.button);
+            Action.MouseCursor = Invisible ? null : MouseCursor.Link;
             Action.Style = Style;
             Action.Draw(_options);
             EditorGUI.EndDisabledGroup();

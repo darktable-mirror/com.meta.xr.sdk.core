@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Linq;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -38,12 +39,14 @@ internal static class OVRPassthroughHelper
         return true;
     }
 
+    [Obsolete("Flexible layering will be removed in a future update. Only one background Passthrough layer will be available.")]
     internal static bool IsAnyPassthroughLayerUnderlay()
     {
         return OVRProjectSetupUtils.FindComponentsInScene<OVRPassthroughLayer>()
             .Any(p => p.overlayType == OVROverlay.OverlayType.Underlay);
     }
 
+    [Obsolete("Flexible layering will be removed in a future update. Only one background Passthrough layer will be available.")]
     internal static bool InitPassthroughLayerUnderlay(GameObject ovrCameraRig)
     {
         var passthroughLayers = OVRProjectSetupUtils.FindComponentsInScene<OVRPassthroughLayer>().ToList();

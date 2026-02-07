@@ -37,7 +37,39 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal Tag Tag => _tag;
 
         public string Description { get; set; }
-        public TextureContent Thumbnail { get; set; }
+        public ulong RemoteThumbnailContentId { get; set; }
+
+        private RemoteTextureContent _remoteThumbnail;
+        private RemoteTextureContent RemoteThumbnail
+        {
+            get
+            {
+                if (RemoteThumbnailContentId == 0ul) return null;
+                if (_remoteThumbnail?.ContentId != RemoteThumbnailContentId)
+                {
+                    _remoteThumbnail = RemoteTextureContent.CreateWithAutoDownload(
+                        RemoteThumbnailContentId,
+                        Utils.BuildingBlocksThumbnails);
+                }
+
+                return _remoteThumbnail;
+            }
+        }
+
+        private TextureContent _thumbnail;
+        public TextureContent Thumbnail
+        {
+            get
+            {
+                if (RemoteThumbnail?.Valid ?? false)
+                {
+                    return RemoteThumbnail;
+                }
+
+                return _thumbnail;
+            }
+            set => _thumbnail = value;
+        }
 
         internal struct DefaultSettings
         {

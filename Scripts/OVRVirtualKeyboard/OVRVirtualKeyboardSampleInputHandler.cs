@@ -68,6 +68,13 @@ public class OVRVirtualKeyboardSampleInputHandler : MonoBehaviour
     [SerializeField]
     private LineRenderer rightLinePointer;
 
+    /// <summary>
+    /// The currently active interaction device, which is the device
+    /// that most recently interacted with the scene.
+    /// </summary>
+    public OVRInput.Controller ActiveInteractionDevice =>
+        interactionDevice_.GetValueOrDefault(OVRInput.Controller.None);
+
     private OVRInput.Controller? interactionDevice_;
     private float linePointerInitialWidth_;
 

@@ -42,11 +42,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         private void UpdateAnchoredPosition(Controller controller, ref Vector2 offset, Vector2 direction)
         {
             var margin = controller.LayoutStyle.margin;
+            var bottomMargin = controller.LayoutStyle.useBottomRightMargin ?
+                margin :
+                controller.LayoutStyle.bottomRightMargin;
             var anchoredPosition = new Vector2(margin.x, -margin.y);
             var size = controller.RectTransform.sizeDelta;
             controller.RectTransform.anchoredPosition = anchoredPosition + offset;
 
-            offset += direction * size;
+            offset += direction * (size + margin + bottomMargin);
             offset += direction * _layoutStyle.spacing;
         }
 
@@ -57,8 +60,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
             var flexibleSpaceRemaining = RectTransform.sizeDelta.x;
             var fixedSizedChildCount = 0;
+            var ignoredChildCount = 0;
+
             foreach (var child in _children)
             {
+                // Skip children that should be ignored in flex layout
+                if (child.LayoutStyle.ignoreFlexLayout)
+                {
+                    ignoredChildCount++;
+                    continue;
+                }
+
                 if (child.LayoutStyle.layout is LayoutStyle.Layout.Fixed)
                 {
                     flexibleSpaceRemaining -= child.LayoutStyle.size.x + child.LayoutStyle.margin.x * 2 + _layoutStyle.spacing;
@@ -66,11 +78,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 }
             }
 
-            var remainingChild = _children.Count - fixedSizedChildCount;
+            var remainingChild = _children.Count - fixedSizedChildCount - ignoredChildCount;
             if (remainingChild == 0) return;
 
             foreach (var child in _children)
             {
+                // Skip children that should be ignored in flex layout
+                if (child.LayoutStyle.ignoreFlexLayout)
+                {
+                    continue;
+                }
+
                 var estimatedCellWidth = Mathf.RoundToInt((flexibleSpaceRemaining / remainingChild)) - _layoutStyle.spacing;
                 if (child.LayoutStyle.layout is not LayoutStyle.Layout.Fixed)
                 {
@@ -96,6 +114,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
             foreach (var child in _children)
             {
+                if (child.LayoutStyle.ignoreFlexLayout)
+                {
+                    // Items with ignoreFlexLayout are always shown and don't affect culling logic
+                    child.Show();
+                    continue;
+                }
+
                 if (!lastWasShown && IsVerticallyInViewport(child, viewportRect, scroll))
                 {
                     child.Show();
@@ -115,20 +140,35 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         private static bool IsVerticallyInViewport(Controller controller, Rect viewportRect, Vector2 scroll)
         {
             var position = -controller.RectTransform.anchoredPosition - scroll;
+            var itemHeight = controller.RectTransform.sizeDelta.y;
+            var itemBottom = position.y;
+            var itemTop = position.y + itemHeight;
 
-            if (position.y >= viewportRect.yMin)
+            var isVisible = false;
+
+            // Check if item overlaps viewport vertically
+            if (itemTop >= viewportRect.yMin && itemBottom < viewportRect.yMax)
             {
-                if (position.y < viewportRect.yMax)
-                {
-                    return true;
-                }
+                // Item is fully within viewport
+                isVisible = true;
             }
-            else if (position.y + controller.RectTransform.sizeDelta.y >= viewportRect.yMin)
+            else if (itemBottom < viewportRect.yMin && itemTop >= viewportRect.yMin)
             {
-                return true;
+                // Item extends below viewport but starts within it
+                isVisible = true;
+            }
+            else if (itemBottom < viewportRect.yMax && itemTop >= viewportRect.yMax)
+            {
+                // Item extends above viewport but ends within it
+                isVisible = true;
+            }
+            else if (itemBottom >= viewportRect.yMin && itemTop < viewportRect.yMax)
+            {
+                // Item spans entire viewport
+                isVisible = true;
             }
 
-            return false;
+            return isVisible;
         }
 
         protected override void RefreshLayoutPreChildren()
@@ -155,9 +195,27 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                     _ => throw new ArgumentOutOfRangeException()
                 };
 
-                var offset = Vector2.zero;
+                // Apply top padding offset for adaptive height containers
+                var topPaddingOffset = Vector2.zero;
+                if (LayoutStyle.adaptHeight && LayoutStyle.adaptiveHeightPadding.x > 0)
+                {
+                    topPaddingOffset = direction switch
+                    {
+                        var d when d == Vector2.down => new Vector2(0, -LayoutStyle.adaptiveHeightPadding.x),
+                        var d when d == Vector2.up => new Vector2(0, LayoutStyle.adaptiveHeightPadding.x),
+                        _ => Vector2.zero
+                    };
+                }
+
+                var offset = topPaddingOffset;
                 foreach (var child in _children)
                 {
+                    // Skip children that should be ignored in flex layout
+                    if (child.LayoutStyle.ignoreFlexLayout)
+                    {
+                        continue;
+                    }
+
                     UpdateAnchoredPosition(child, ref offset, direction);
                 }
 
@@ -169,7 +227,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
             if (LayoutStyle.adaptHeight)
             {
-                RectTransform.sizeDelta = new Vector2(RectTransform.sizeDelta.x, Mathf.Abs(_sizeDelta.y));
+                var totalAdaptivePadding = LayoutStyle.adaptiveHeightPadding.x + LayoutStyle.adaptiveHeightPadding.y;
+                RectTransform.sizeDelta = new Vector2(RectTransform.sizeDelta.x, Mathf.Abs(_sizeDelta.y) + totalAdaptivePadding);
             }
         }
 

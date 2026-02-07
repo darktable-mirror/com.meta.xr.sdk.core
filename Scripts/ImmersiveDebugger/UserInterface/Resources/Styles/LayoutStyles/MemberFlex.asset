@@ -22,6 +22,6 @@ MonoBehaviour:
   bottomRightMargin: {x: 0, y: 0}
   spacing: 6
   masks: 0
-  adaptHeight: 0
+  adaptHeight: 1
   autoFitChildren: 0
   isOverlayCanvas: 0

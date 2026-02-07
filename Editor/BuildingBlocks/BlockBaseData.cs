@@ -71,6 +71,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             Description = new Overridable<string>(description);
             BlockName = new Overridable<string>(blockName);
+            RemoteThumbnailContentId = new Overridable<ulong>(remoteThumbnailContentId);
         }
 
         public void OnAwake()
@@ -180,11 +181,36 @@ namespace Meta.XR.BuildingBlocks.Editor
         #endregion
 
         [SerializeField] internal Texture2D thumbnail;
+        [SerializeField] internal ulong remoteThumbnailContentId;
+        public Overridable<ulong> RemoteThumbnailContentId { get; private set; } = new(0ul);
+
+        private RemoteTextureContent _remoteThumbnail;
+        private RemoteTextureContent RemoteThumbnail
+        {
+            get
+            {
+                if (RemoteThumbnailContentId == 0ul) return null;
+                if (_remoteThumbnail?.ContentId != RemoteThumbnailContentId)
+                {
+                    _remoteThumbnail = RemoteTextureContent.CreateWithAutoDownload(
+                        RemoteThumbnailContentId,
+                        Utils.BuildingBlocksThumbnails);
+                }
+
+                return _remoteThumbnail;
+            }
+        }
+
 
         public Texture2D Thumbnail
         {
             get
             {
+                if (RemoteThumbnail?.Valid ?? false)
+                {
+                    return RemoteThumbnail.Image as Texture2D;
+                }
+
                 if (thumbnail != null)
                 {
                     return thumbnail;
@@ -202,9 +228,6 @@ namespace Meta.XR.BuildingBlocks.Editor
         public virtual bool Hidden => Tags.Any(tag => tag.Behavior.Visibility == false);
 
         public bool Experimental => Tags.Contains(Utils.ExperimentalTag);
-
-        [SerializeField] internal int order;
-        public int Order => order;
 
 
 

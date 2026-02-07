@@ -5,6 +5,7 @@ Shader "URP/UI/Prerendered Opaque"
         _MainTex("Texture", 2D) = "white" {}
         _Color("Color", Color) = (1,1,1,1)
         _AlphaToMask("AlphaToMask", Int) = 0
+        [Enum(UnityEngine.Rendering.BlendMode)] _AlphaWrite("Alpha Write", Int) = 0
     }
     SubShader
     {
@@ -17,13 +18,14 @@ Shader "URP/UI/Prerendered Opaque"
         Pass
         {
             ZWrite On
-            Blend One Zero, Zero Zero
+            Blend One Zero, [_AlphaWrite] Zero
             AlphaToMask [_AlphaToMask]
 
 
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_instancing
             #pragma multi_compile _ WITH_CLIP
             #pragma multi_compile _ EXPENSIVE
             #pragma multi_compile _ ALPHA_TO_MASK
@@ -44,6 +46,7 @@ Shader "URP/UI/Prerendered Opaque"
             HLSLPROGRAM
             #pragma vertex mv_vert
             #pragma fragment mv_frag
+            #pragma multi_compile_instancing
             #pragma multi_compile _ WITH_CLIP
             #pragma multi_compile _ EXPENSIVE
             #pragma multi_compile _ ALPHA_TO_MASK
@@ -64,6 +67,7 @@ Shader "URP/UI/Prerendered Opaque"
             HLSLPROGRAM
             #pragma vertex mv_vert
             #pragma fragment mv_frag
+            #pragma multi_compile_instancing
             #pragma multi_compile _ WITH_CLIP
             #pragma multi_compile _ EXPENSIVE
             #pragma multi_compile _ ALPHA_TO_MASK

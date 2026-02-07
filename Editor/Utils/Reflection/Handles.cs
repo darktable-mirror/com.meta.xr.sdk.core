@@ -32,7 +32,8 @@ namespace Meta.XR.Editor.Reflection
 
         protected string TargetName => Attribute?.Name;
 
-        public const BindingFlags TargetFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
+        public const BindingFlags TargetFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic |
+                                                BindingFlags.Public | BindingFlags.FlattenHierarchy;
 
         public abstract bool Valid { get; }
     }
@@ -77,8 +78,7 @@ namespace Meta.XR.Editor.Reflection
         protected virtual bool HasValidAttribute => !string.IsNullOrEmpty(TargetName) && TargetType != null;
 
         public string BuildError(string errorMessage)
-         => $"This reflection usage {{{GetType().Name} {Attribute?.ToString()}}} is invalid : {errorMessage}.";
-
+            => $"This reflection usage {{{GetType().Name} {Attribute?.ToString()}}} is invalid : {errorMessage}.";
     }
 
     internal class PropertyInfoHandle : Handle<PropertyInfo>
@@ -122,9 +122,11 @@ namespace Meta.XR.Editor.Reflection
                 return _staticDelegate;
             }
         }
+
         public override bool Valid => base.Valid && Invoke != null;
 
-        protected virtual TDelegateType CreateDelegate() => (TDelegateType)Target?.CreateDelegate(typeof(TDelegateType));
+        protected virtual TDelegateType CreateDelegate() =>
+            (TDelegateType)Target?.CreateDelegate(typeof(TDelegateType));
 
         protected override void Process()
         {
@@ -145,7 +147,6 @@ namespace Meta.XR.Editor.Reflection
     internal class StaticMethodInfoHandleWithWrapper<TOut> : StaticMethodInfoHandle<Func<TOut>>
     {
         protected override Func<TOut> CreateDelegate() => () => (TOut)Target?.Invoke(null, new object[] { });
-
     }
 
     internal class StaticMethodInfoHandleWithWrapper<T1, TOut> : StaticMethodInfoHandle<Func<T1, TOut>>
@@ -156,5 +157,16 @@ namespace Meta.XR.Editor.Reflection
     internal class StaticMethodInfoHandleWithWrapperAction<T1> : StaticMethodInfoHandle<Action<T1>>
     {
         protected override Action<T1> CreateDelegate() => (_in) => Target?.Invoke(null, new object[] { _in });
+    }
+
+    internal class StaticMethodInfoHandleWithWrapperAction<T1, T2, T3> : StaticMethodInfoHandle<Action<T1, T2, T3>>
+    {
+        protected override Action<T1, T2, T3> CreateDelegate() =>
+            (T1, T2, T3) => Target?.Invoke(null, new object[] { T1, T2, T3 });
+    }
+
+    internal class StaticMethodInfoHandleWithWrapperAction : StaticMethodInfoHandle<Action>
+    {
+        protected override Action CreateDelegate() => () => Target?.Invoke(null, new object[] { });
     }
 }

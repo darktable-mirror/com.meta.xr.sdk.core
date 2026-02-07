@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Reflection;
 using Meta.XR.Editor.Settings;
@@ -82,6 +83,8 @@ internal class OVRConfigurationTask : IIdentified
 
     public Action<BuildTargetGroup> FixAction { get; }
 
+    public Func<BuildTargetGroup, Task> AsyncFixAction { get; }
+
     public bool FixAutomatic { get; }
 
     private readonly Dictionary<BuildTargetGroup, Setting<bool>> _ignoreSettings = new();
@@ -90,6 +93,7 @@ internal class OVRConfigurationTask : IIdentified
 
     private readonly Dictionary<BuildTargetGroup, bool> _isDoneCache = new();
 
+    private bool _isFixing;
 
     public OVRConfigurationTask(
         OVRProjectSetup.TaskGroup group,
@@ -104,7 +108,25 @@ internal class OVRConfigurationTask : IIdentified
         OptionalLambdaType<BuildTargetGroup, bool> valid,
         bool fixAutomatic)
         :
-        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, fix, level, message, fixMessage, url, manualSetup,
+        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, fix, null, level, message, fixMessage, url, manualSetup,
+            valid, fixAutomatic)
+    {
+    }
+
+    public OVRConfigurationTask(
+        OVRProjectSetup.TaskGroup group,
+        BuildTargetGroup platform,
+        Func<BuildTargetGroup, bool> isDone,
+        Func<BuildTargetGroup, Task> asyncFix,
+        OptionalLambdaType<BuildTargetGroup, OVRProjectSetup.TaskLevel> level,
+        OptionalLambdaType<BuildTargetGroup, string> message,
+        OptionalLambdaType<BuildTargetGroup, string> fixMessage,
+        OptionalLambdaType<BuildTargetGroup, string> url,
+        OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup> manualSetup,
+        OptionalLambdaType<BuildTargetGroup, bool> valid,
+        bool fixAutomatic)
+        :
+        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, null, asyncFix, level, message, fixMessage, url, manualSetup,
             valid, fixAutomatic)
     {
     }
@@ -115,6 +137,7 @@ internal class OVRConfigurationTask : IIdentified
         BuildTargetGroup platform,
         Func<BuildTargetGroup, bool> isDone,
         Action<BuildTargetGroup> fix,
+        Func<BuildTargetGroup, Task> asyncFix,
         OptionalLambdaType<BuildTargetGroup, OVRProjectSetup.TaskLevel> level,
         OptionalLambdaType<BuildTargetGroup, string> message,
         OptionalLambdaType<BuildTargetGroup, string> fixMessage,
@@ -127,6 +150,7 @@ internal class OVRConfigurationTask : IIdentified
         Group = group;
         IsDone = isDone;
         FixAction = fix;
+        AsyncFixAction = asyncFix;
         Level = level;
         Message = message;
         Tags = tags;
@@ -168,9 +192,9 @@ internal class OVRConfigurationTask : IIdentified
         }
         else
         {
-            if (FixAction != null)
+            if (FixAction != null || AsyncFixAction != null)
             {
-                throw new ArgumentException(nameof(FixAction), "Fix action should be null");
+                throw new ArgumentException("Fix actions should be null for manually fixable tasks");
             }
 
             if (_isDone != null)
@@ -179,11 +203,16 @@ internal class OVRConfigurationTask : IIdentified
             }
         }
 
+        // Ensure only one type of fix action is provided
+        if (FixAction != null && AsyncFixAction != null)
+        {
+            throw new ArgumentException("Cannot provide both sync and async fix actions. Use only one.");
+        }
+
         if (Level == null)
         {
             throw new ArgumentNullException(nameof(Level));
         }
-
 
         if (Message == null || !Message.Valid || string.IsNullOrEmpty(Message.Default))
         {
@@ -253,10 +282,16 @@ internal class OVRConfigurationTask : IIdentified
 
     public bool Fix(BuildTargetGroup buildTargetGroup)
     {
-        UsageSettings.UsesProjectSetupTool.SetValue(true);
+        OVRProjectSetup.ToolDescriptor.Usage.RecordUsage();
+
+        var previousResult = IsDone(buildTargetGroup);
+
+        if (previousResult)
+        {
+            return true; // Task is already fixed.
+        }
 
         var fixEvent = OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Fix);
-        var previousResult = IsDone(buildTargetGroup);
         try
         {
             FixAction(buildTargetGroup);
@@ -275,8 +310,69 @@ internal class OVRConfigurationTask : IIdentified
         InvalidateCache(buildTargetGroup);
         var currentResult = IsDone(buildTargetGroup);
 
-        var hasChanged = currentResult != previousResult;
-        if (hasChanged)
+        if (currentResult)
+        {
+            var fixMessage = FixMessage.GetValue(buildTargetGroup);
+            Debug.Log(
+                fixMessage != null
+                    ? $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\" : {fixMessage}"
+                    : $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\"");
+        }
+        else
+        {
+            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Cancel);
+        }
+
+
+        fixEvent
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString())
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
+                Level.GetValue(buildTargetGroup).ToString())
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Group, Group.ToString())
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, buildTargetGroup.ToString())
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, currentResult ? "true" : "false")
+            .Send();
+
+        return currentResult;
+    }
+
+    public async Task<bool> FixAsync(BuildTargetGroup buildTargetGroup)
+    {
+        OVRProjectSetup.ToolDescriptor.Usage.RecordUsage();
+
+        var previousResult = IsDone(buildTargetGroup);
+
+        if (previousResult)
+        {
+            return true; // Task is already fixed.
+        }
+
+        var fixEvent = OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Fix);
+        try
+        {
+            await AsyncFixAction(buildTargetGroup);
+            if (Tags.HasFlag(OVRProjectSetup.TaskTags.RegenerateAndroidManifest))
+            {
+                OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(silentMode: Application.isBatchMode);
+            }
+        }
+        catch (OVRConfigurationTaskException exception)
+        {
+            Debug.LogWarning(
+                $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
+            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning(
+                $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
+            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+        }
+
+        InvalidateCache(buildTargetGroup);
+        var currentResult = IsDone(buildTargetGroup);
+
+        if (currentResult)
         {
             var fixMessage = FixMessage.GetValue(buildTargetGroup);
             Debug.Log(
@@ -419,7 +515,7 @@ internal class OVRConfigurationTask : IIdentified
 
         EditorGUI.EndDisabledGroup();
 
-        if (FixAction != null)
+        if (FixAction != null || AsyncFixAction != null)
         {
             EditorGUI.BeginDisabledGroup(cannotBeFixed);
             var content = Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required
@@ -428,12 +524,23 @@ internal class OVRConfigurationTask : IIdentified
 
             var fixMessage = FixMessage.GetValue(buildTargetGroup);
             var tooltip = fixMessage != null ? $"{content.tooltip} :\n{fixMessage}" : content.tooltip;
-            content = new GUIContent(content.text, tooltip);
+
+            var buttonText = _isFixing
+                ? Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required
+                    ? "Fixing..."
+                    : "Applying..."
+                : content.text;
+
+            content = new GUIContent(buttonText, tooltip);
             if (GUILayout.Button(content, GUIStyles.FixButton))
             {
+                _isFixing = true;
                 OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Fixed);
-
-                OVRProjectSetup.FixTask(buildTargetGroup, this, blocking: false, onCompleted: onAfterFixed);
+                OVRProjectSetup.FixTask(buildTargetGroup, this, blocking: false, onCompleted: processor =>
+                {
+                    _isFixing = false;
+                    onAfterFixed?.Invoke(processor);
+                });
             }
 
             EditorGUI.EndDisabledGroup();

@@ -103,16 +103,21 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _collapseActiveIcon = Resources.Load<Texture2D>("Textures/compress_icon");
             _collapseInactiveIcon = Resources.Load<Texture2D>("Textures/expand_icon");
 
-            _collapseBtn = RegisterControl("LogCollapse", LogCollapseMode ? _collapseInactiveIcon : _collapseActiveIcon, Style.Load<ImageStyle>("LogCollapseIcon"), ToggleCollapseMode);
+            _collapseBtn = RegisterControl("LogCollapse", LogCollapseMode ? _collapseInactiveIcon : _collapseActiveIcon,
+                Style.Load<ImageStyle>("LogCollapseIcon"), ToggleCollapseMode);
             _collapseBtn.State = LogCollapseMode;
 
             // Bin button
-            RegisterControl("Clear", Resources.Load<Texture2D>("Textures/bin_icon"), Style.Load<ImageStyle>("BinIcon"), Clear);
+            RegisterControl("Clear", Resources.Load<Texture2D>("Textures/bin_icon"), Style.Load<ImageStyle>("BinIcon"),
+                Clear);
 
             // Severity buttons
-            var errorSeverity = new SeverityEntry(this, "Error", Resources.Load<Texture2D>("Textures/error_icon"), Style.Load<ImageStyle>("ErrorIcon"), Style.Load<ImageStyle>("PillError"));
-            var warningSeverity = new SeverityEntry(this, "Warning", Resources.Load<Texture2D>("Textures/warning_icon"), Style.Load<ImageStyle>("WarningIcon"), Style.Load<ImageStyle>("PillWarning"));
-            var infoSeverity = new SeverityEntry(this, "Log", Resources.Load<Texture2D>("Textures/notice_icon"), Style.Load<ImageStyle>("NoticeIcon"), Style.Load<ImageStyle>("PillInfo"));
+            var errorSeverity = new SeverityEntry(this, "Error", Resources.Load<Texture2D>("Textures/error_icon"),
+                Style.Load<ImageStyle>("ErrorIcon"), Style.Load<ImageStyle>("PillError"));
+            var warningSeverity = new SeverityEntry(this, "Warning", Resources.Load<Texture2D>("Textures/warning_icon"),
+                Style.Load<ImageStyle>("WarningIcon"), Style.Load<ImageStyle>("PillWarning"));
+            var infoSeverity = new SeverityEntry(this, "Log", Resources.Load<Texture2D>("Textures/notice_icon"),
+                Style.Load<ImageStyle>("NoticeIcon"), Style.Load<ImageStyle>("PillInfo"));
             _severities.Add(infoSeverity);
             _severities.Add(warningSeverity);
             _severities.Add(errorSeverity);
@@ -133,7 +138,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _scrollView.Flex.LayoutStyle = Style.Load<LayoutStyle>("ConsoleLogs");
 
             MaximumNumberOfLogEntries = runtimeSettings.MaximumNumberOfLogEntries;
-            _proxyFlex = new ProxyFlex<ConsoleLine, ProxyConsoleLine>(NumberOfLines, MaximumNumberOfLogEntries, Style.Load<LayoutStyle>("ConsoleLine"), _scrollView);
+            _proxyFlex = new ProxyFlex<ConsoleLine, ProxyConsoleLine>(NumberOfLines, MaximumNumberOfLogEntries,
+                Style.Load<LayoutStyle>("ConsoleLine"), _scrollView);
 
             // Log detail panel
             _logDetailPaneBackground = Append<Background>("background");
@@ -167,7 +173,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             base.OnEnable();
 
-            ConsoleLogsCache.OnLogReceived -= EnqueueLogEntry; // avoid duplicated registration if domain reload disabled
+            ConsoleLogsCache.OnLogReceived -=
+                EnqueueLogEntry; // avoid duplicated registration if domain reload disabled
             ConsoleLogsCache.OnLogReceived += EnqueueLogEntry;
             ConsoleLogsCache.ConsumeStartupLogs(EnqueueLogEntry);
         }
@@ -182,7 +189,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         protected override void OnTransparencyChanged()
         {
             base.OnTransparencyChanged();
-            _logDetailPaneBackground.Color = Transparent ? _logDetailPaneBackgroundImageStyle.colorOff : _logDetailPaneBackgroundImageStyle.color;
+            _logDetailPaneBackground.Color = Transparent
+                ? _logDetailPaneBackgroundImageStyle.colorOff
+                : _logDetailPaneBackgroundImageStyle.color;
         }
 
         internal Label RegisterCount()
@@ -222,6 +231,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
+        private LogEntry CloneEntry(LogEntry entry)
+        {
+            var clone = OVRObjectPool.Get<LogEntry>();
+            clone.Setup(entry.Label, entry.Callstack, entry.Severity);
+            clone.Count = entry.Count;
+            return clone;
+        }
+
         private void EnqueueLogEntry(string logString, string stackTrace, LogType type)
         {
             var severity = GetSeverity(type);
@@ -236,11 +253,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 _entries.Remove(entry);
                 _proxyFlex.RemoveProxy(entry.Line);
                 entry.Count++;
+                entry.Line?.Target?.RefreshLogCounter();
             }
             else
             {
                 if (_entries.Count >= MaximumNumberOfLogEntries)
                 {
+                    _entryMap.Remove(ComputeLogHash(_entries[0].Label, _entries[0].Callstack));
                     RemoveLogEntry(_entries[0]);
                 }
 
@@ -252,13 +271,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _entries.Add(entry);
 
             // Need to duplicate otherwise changing one instance will affect others.
-            var clonedEntry = OVRObjectPool.Get<LogEntry>();
-            clonedEntry.Setup(logString, stackTrace, severity);
-            _allEntries.Add(clonedEntry);
+            _allEntries.Add(CloneEntry(entry));
 
             severity.Count++;
 
             AppendToProxyFlex(entry);
+            Dirty = true;
         }
 
         private void RemoveLogEntry(LogEntry logEntry)
@@ -276,6 +294,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
                 return canRemove;
             });
+            _proxyFlex.RemoveProxy(logEntry.Line);
 
             OVRObjectPool.Return(logEntry);
         }
@@ -305,6 +324,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             {
                 OVRObjectPool.Return(entry);
             }
+
             _allEntries.Clear();
 
             _entryMap.Clear();
@@ -356,11 +376,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 {
                     _entries.Remove(mappedEntry);
                     _proxyFlex.RemoveProxy(mappedEntry.Line);
+
                     mappedEntry.Count++;
                 }
 
                 _entries.Add(mappedEntry);
                 AppendToProxyFlex(mappedEntry);
+                mappedEntry?.Line?.Target?.RefreshLogCounter();
             }
 
             Dirty = true;
@@ -369,6 +391,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private void ResetLogCount()
         {
             foreach (var entry in _allEntries) entry.Count = 0;
+            foreach (var entry in _entryMap.Values) entry.Count = 0;
         }
 
         private void FlattenEntries()
@@ -377,8 +400,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _proxyFlex.Clear();
             foreach (var entry in _allEntries)
             {
-                _entries.Add(entry);
-                AppendToProxyFlex(entry);
+                var clonedEntry = CloneEntry(entry);
+                _entries.Add(clonedEntry);
+                AppendToProxyFlex(clonedEntry);
+
+                var hash = ComputeLogHash(entry.Label, entry.Callstack);
+                _entryMap[hash] = clonedEntry;
             }
 
             Dirty = true;
@@ -433,26 +460,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             hash.Add(content.GetHashCode());
             hash.Add(stackTrace.GetHashCode());
             return hash.ToHashCode();
-        }
-
-        internal void SetPanelPosition(RuntimeSettings.DistanceOption distanceOption, bool skipAnimation = false)
-        {
-            var consolePanelPositions = ValueContainer<Vector3>.Load("ConsolePanelPositions");
-            _targetPosition = distanceOption switch
-            {
-                RuntimeSettings.DistanceOption.Close => consolePanelPositions["Close"],
-                RuntimeSettings.DistanceOption.Far => consolePanelPositions["Far"],
-                _ => consolePanelPositions["Default"]
-            };
-
-            if (skipAnimation)
-            {
-                SphericalCoordinates = _targetPosition;
-                _currentPosition = _targetPosition;
-                return;
-            }
-
-            _lerpCompleted = false;
         }
     }
 }

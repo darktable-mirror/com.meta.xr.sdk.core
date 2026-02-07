@@ -70,6 +70,18 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 Text.fontSize = value.fontSize;
                 Text.alignment = value.textAlignement;
                 Text.color = value.color;
+                Text.horizontalOverflow = value.horizontalOverflow;
+                Text.fontStyle = FontStyle.Normal;
+            }
+        }
+
+        protected override void RefreshLayoutPostChildren()
+        {
+            if (!_hasRectTransform) return;
+
+            if (LayoutStyle.adaptHeight)
+            {
+                RectTransform.sizeDelta = new Vector2(RectTransform.sizeDelta.x, Mathf.Abs(Text.preferredHeight));
             }
         }
     }

@@ -4,12 +4,13 @@ Shader "UI/Prerendered Opaque"
     {
         _MainTex("Texture", 2D) = "white" {}
         _Color("Color", Color) = (1,1,1,1)
+        [Enum(UnityEngine.Rendering.BlendMode)] _AlphaWrite("Alpha Write", Int) = 0
     }
     SubShader
     {
         Tags {"Queue"="Geometry" "IgnoreProjector"="True" "RenderType"="Opaque"}
 
-        Blend One Zero, Zero Zero
+        Blend One Zero, [_AlphaWrite] Zero
 
         Pass
         {
@@ -26,11 +27,14 @@ Shader "UI/Prerendered Opaque"
             struct appdata_t {
                 float4 vertex : POSITION;
                 float2 texcoord : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct v2f {
                 float4 vertex : SV_POSITION;
                 half2 texcoord : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             sampler2D _MainTex;
@@ -39,12 +43,16 @@ Shader "UI/Prerendered Opaque"
 
             v2f vert(appdata_t v) {
                 v2f o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
                 return o;
             }
 
             fixed4 frag(v2f i) : SV_Target {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 #if !WITH_CLIP && !ALPHA_TO_MASK
                     if (_Color.x == 0 && _Color.y == 0 && _Color.z == 0)
                     {

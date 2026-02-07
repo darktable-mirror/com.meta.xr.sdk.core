@@ -98,6 +98,7 @@ namespace Meta.XR
             "XR_FB_composition_layer_depth_test " +
             "XR_FB_haptic_amplitude_envelope " +
             "XR_FB_haptic_pcm " +
+            "XR_EXTX1_haptic_parametric " +
             "XR_META_local_dimming " +
             "XR_META_hand_tracking_wide_motion_mode " +
             "XR_EXT_hand_tracking_data_source " +
@@ -118,12 +119,16 @@ namespace Meta.XR
             "XR_META_hand_tracking_microgestures " +
             "XR_META_spatial_entity_persistence " +
             "XR_META_spatial_entity_discovery " +
+            "XR_META_spatial_entity_semantic_label " +
+            "XR_META_spatial_entity_room_mesh " +
             "XR_META_boundary_visibility " +
             "XR_META_face_tracking_visemes " +
             "XR_META_headset_id " +
             "XR_FB_composition_layer_settings " +
             "XR_META_automatic_layer_filter " +
             "XR_METAX1_spatial_entity_marker " +
+            "XR_EXT_spatial_entity " +
+            "XR_EXT_spatial_marker_tracking " +
             "XR_META_environment_raycast " +
             "XR_EXT_future " +
             "XR_EXTX2_stationary_reference_space " +

@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using Meta.XR.BuildingBlocks.Editor;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.Utils;
 using UnityEditor;
@@ -60,7 +61,8 @@ namespace Meta.XR.Guides.Editor.About
                 {
                     if (_dictionary != null) return;
 
-                    var result = await RemoteJsonContent<RemoteContent>.Create("onboarding_copy.json", 30362822839999478);
+                    var result =
+                        await RemoteJsonContent<RemoteContent>.Create("onboarding_copy.json", 30362822839999478);
                     if (!result.IsSuccess) return;
 
                     _dictionary = result.Content.dictionary.ToDictionary(pair => pair.key, pair => pair.value);
@@ -107,17 +109,30 @@ namespace Meta.XR.Guides.Editor.About
         private enum PageId
         {
             Welcome,
+            Role,
             Tools,
             Resources,
             ReleaseNotes,
         }
 
         private UserString _selectedDiscovery = null;
+
         private UserString SelectedDiscovery => _selectedDiscovery ??= new UserString()
         {
             Default = null,
             Label = "Discovery",
             Uid = "Discovery",
+            SendTelemetry = true,
+            Owner = this
+        };
+
+        private UserString _selectedRole = null;
+
+        private UserString SelectedRole => _selectedRole ??= new UserString()
+        {
+            Default = null,
+            Label = "Role",
+            Uid = "Role",
             SendTelemetry = true,
             Owner = this
         };
@@ -140,8 +155,86 @@ namespace Meta.XR.Guides.Editor.About
         private const string CardIdVeteranToXR = "card_id_veteranToXR";
         private const string CardIdUpdate = "card_id_update";
 
+        // For role page
+        private const string CardIdRole1 = "card_id_role1";
+        private const string CardIdRole2 = "card_id_role2";
+        private const string CardIdRole3 = "card_id_role3";
+        private const string CardIdRole4 = "card_id_role4";
+        private const string CardIdRole5 = "card_id_role5";
+
+        // Role configuration structure
+        private struct RoleConfig
+        {
+            public string Id;
+            public RemoteString Title;
+
+            public RoleConfig(string id, RemoteString title)
+            {
+                Id = id;
+                Title = title;
+            }
+        }
+
+        // Cached role configurations
+        private RoleConfig[] _roleConfigs;
+
+        private RoleConfig[] GetRoleConfigs() => _roleConfigs ??= new RoleConfig[]
+        {
+            new(CardIdRole1, Role1Title),
+            new(CardIdRole2, Role2Title),
+            new(CardIdRole3, Role3Title),
+            new(CardIdRole4, Role4Title),
+            new(CardIdRole5, Role5Title)
+        };
+
+        // Resource configuration structure
+        public struct ResourceConfig
+        {
+            public string Id;
+            public RemoteString Title;
+            public RemoteString Content;
+            public RemoteString Url;
+            public System.Func<string> DynamicUrl; // For dynamic URLs like UrlApi
+            public TextureContent ActionIcon;
+
+            public ResourceConfig(string id, RemoteString title, RemoteString content, RemoteString url,
+                TextureContent actionIcon = null)
+            {
+                Id = id;
+                Title = title;
+                Content = content;
+                Url = url;
+                DynamicUrl = null;
+                ActionIcon = actionIcon ?? BuildingBlocks.Editor.Styles.Contents.SelectIcon;
+            }
+
+            public ResourceConfig(string id, RemoteString title, RemoteString content, System.Func<string> dynamicUrl,
+                TextureContent actionIcon = null)
+            {
+                Id = id;
+                Title = title;
+                Content = content;
+                Url = null;
+                DynamicUrl = dynamicUrl;
+                ActionIcon = actionIcon ?? BuildingBlocks.Editor.Styles.Contents.SelectIcon;
+            }
+
+            public string GetUrl() => DynamicUrl?.Invoke() ?? Url;
+        }
+
+        // Cached resource configurations
+        private ResourceConfig[] _resourceConfigs;
+
+        public ResourceConfig[] GetResourceConfigs() => _resourceConfigs ??= new ResourceConfig[]
+        {
+            new(CardIdBuild, BuildTitle, BuildContent, UrlBuildingWithUnity),
+            new(CardIdAPI, ApiReferenceTitle, ApiReferenceContent, () => UrlApi), // Dynamic URL for API reference
+            new(CardIdSamples, SamplesTitle, SamplesContent, UrlSamples),
+            new(CardIdMQDH, MQDHTitle, MQDHContent, UrlMQDH),
+            new(CardIdDevDashboard, DeveloperDashboardTitle, DeveloperDashboardContent, UrlDevDashboard),
+        };
+
         // For tools page
-        private const string CardIdUpst = "card_id_upst";
         private const string CardIdBB = "card_id_mruk";
         private const string CardIdXrSim = "card_id_xr_sim";
         private const string CardIdID = "card_id_id";
@@ -158,140 +251,210 @@ namespace Meta.XR.Guides.Editor.About
 
         public readonly RemoteString UrlBuildingWithUnity =
             new(nameof(UrlBuildingWithUnity), "https://developers.meta.com/horizon/develop/unity");
+
         public readonly RemoteString UrlSamples =
             new(nameof(UrlSamples), "https://developers.meta.com/horizon/code-samples/unity");
+
         public readonly RemoteString UrlMQDH =
             new(nameof(UrlMQDH), "https://developers.meta.com/horizon/documentation/unity/ts-mqdh/");
+
         public readonly RemoteString UrlDevDashboard =
             new(nameof(UrlDevDashboard), "https://developers.meta.com/horizon/manage");
+
         public readonly RemoteString UrlUpdate =
             new(nameof(UrlUpdate), "https://developers.meta.com/horizon/downloads/package/meta-xr-sdk-all-in-one-upm");
+
         public readonly RemoteString UrlInstallXrSimulator =
             new(nameof(UrlInstallXrSimulator), "https://developers.meta.com/horizon/documentation/unity/xrsim-intro");
 
         // Content strings
         public readonly RemoteString WelcomeHeader =
             new(nameof(WelcomeHeader), "Welcome to Meta XR SDK");
+
         public readonly RemoteString WelcomeUpdate =
             new(nameof(WelcomeUpdate), "Unlock powerful new features and tools with the latest Meta XR SDK!");
+
         public readonly RemoteString WelcomeIntro =
             new(nameof(WelcomeIntro), "You're about to embark on an exciting journey into the world" +
-            " of virtual reality. Whether you're just starting out or you're a" +
-            " seasoned XR expert, we've tailored paths to suit your experience level." +
-            " Get started on creating immersive experiences together!");
+                                      " of virtual reality. Whether you're just starting out or you're a" +
+                                      " seasoned XR expert, we've tailored paths to suit your experience level." +
+                                      " Get started on creating immersive experiences together!");
+
         public readonly RemoteString WelcomeNewToXRTitle =
             new(nameof(WelcomeNewToXRTitle), "I’m new to XR");
+
         public readonly RemoteString WelcomeNewToXRContent =
-            new(nameof(WelcomeNewToXRContent), "Show me the relevant starting resources and tools to get started on the right foot");
+            new(nameof(WelcomeNewToXRContent),
+                "Show me the relevant starting resources and tools to get started on the right foot");
+
         public readonly RemoteString WelcomeVeteranToXRTitle =
             new(nameof(WelcomeVeteranToXRTitle), "I’m experienced to XR");
+
         public readonly RemoteString WelcomeVeteranToXRContent =
-            new(nameof(WelcomeVeteranToXRContent), "Show me advanced tools and solutions to get to the path of building quicker");
+            new(nameof(WelcomeVeteranToXRContent),
+                "Show me advanced tools and solutions to get to the path of building quicker");
+
         public readonly RemoteString WelcomeUpdateLink =
             new(nameof(WelcomeUpdateLink), "See release notes");
+
         public readonly RemoteString WelcomeDescriptionUptoDate =
             new(nameof(WelcomeDescriptionUptoDate), "• Up to date");
+
         public readonly RemoteString ReleaseNotesHeader =
             new(nameof(ReleaseNotesHeader), "Release Notes");
+
         public readonly RemoteString ResourcesHeader =
             new(nameof(ResourcesHeader), "Resources");
+
         public readonly RemoteString ResourcesDescription =
             new(nameof(ResourcesDescription), "Documentation and external tools to get the most out of Meta XR SDK");
+
         public readonly RemoteString ResourcesIntro =
             new(nameof(ResourcesIntro), "Here are some resources to troubleshoot any issues, " +
-            "understand APIs deeper and get further inspiration from reference content.");
+                                        "understand APIs deeper and get further inspiration from reference content.");
+
         public readonly RemoteString ToolsHeader =
             new(nameof(ToolsHeader), "Tools");
-        public readonly RemoteString ToolsNewToXRDescription =
-            new(nameof(ToolsNewToXRDescription), "Getting Started Toolkit");
-        public readonly RemoteString ToolsVeteranToXRDescription =
-            new(nameof(ToolsVeteranToXRDescription), "Advanced Iteration Tools");
+
+        public readonly RemoteString ToolsDescription =
+            new(nameof(ToolsDescription), "Meta XR Tools Menu");
+
         public readonly RemoteString ToolsIntro =
             new(nameof(ToolsIntro), "The Meta XR Tools menu provides quick access to all the tools" +
-            " included in the Meta SDK, designed to enhance your development experience." +
-            " It is conveniently located in the top left corner of your editor.");
+                                    " included in the Meta SDK, designed to enhance your development experience." +
+                                    " It is conveniently located in the top left corner of your editor.");
+
         public readonly RemoteString ApiReferenceTitle =
             new(nameof(ApiReferenceTitle), "API Reference");
+
         public readonly RemoteString ApiReferenceContent =
             new(nameof(ApiReferenceContent), "For detailed reference information on Meta XR SDK classes and methods");
+
         public readonly RemoteString SamplesTitle =
             new(nameof(SamplesTitle), "Samples and Showcases");
+
         public readonly RemoteString SamplesContent =
             new(nameof(SamplesContent), "Explore common usages of the Meta XR SDK features with our sample projects");
+
         public readonly RemoteString BuildTitle =
             new(nameof(BuildTitle), "Building with Unity");
+
         public readonly RemoteString BuildContent =
-            new(nameof(BuildContent), "Our documentation hub for building interactive and immersive experiences for Horizon OS with Unity");
+            new(nameof(BuildContent),
+                "Our documentation hub for building interactive and immersive experiences for Horizon OS with Unity");
+
         public readonly RemoteString MQDHTitle =
             new(nameof(MQDHTitle), "Meta Quest Developer Hub");
+
         public readonly RemoteString MQDHContent =
-            new(nameof(MQDHContent), "Streamline your development workflow with this desktop companion app, featuring device management, performance analysis, and more");
+            new(nameof(MQDHContent),
+                "Streamline your development workflow with this desktop companion app, featuring device management, performance analysis, and more");
+
         public readonly RemoteString DeveloperDashboardTitle =
             new(nameof(DeveloperDashboardTitle), "Developer Dashboard");
+
         public readonly RemoteString DeveloperDashboardContent =
-            new(nameof(DeveloperDashboardContent), "Publish your app and setup your Meta XR Platform features for the Meta Quest Store");
-        public readonly RemoteString ProjectSetupToolHeader =
-            new(nameof(ProjectSetupToolHeader), "Project Setup Tool");
-        public readonly RemoteString ProjectSetupToolOpen =
-            new(nameof(ProjectSetupToolOpen), "Fix Issues");
-        public readonly RemoteString ProjectSetupToolContent =
-            new(nameof(ProjectSetupToolContent), "Get your project ready for Meta Quest and automatically fix any issues");
+            new(nameof(DeveloperDashboardContent),
+                "Publish your app and setup your Meta XR Platform features for the Meta Quest Store");
+
         public readonly RemoteString BuildingBlocksHeader =
             new(nameof(BuildingBlocksHeader), "Building Blocks");
+
         public readonly RemoteString BuildingBlocksOpen =
             new(nameof(BuildingBlocksOpen), "Open");
+
         public readonly RemoteString BuildingBlocksContent =
-            new(nameof(BuildingBlocksContent), "Start building your project by adding Building Blocks directly into your scene");
+            new(nameof(BuildingBlocksContent),
+                "Start building your project by adding Building Blocks directly into your scene");
 
         public readonly RemoteString ImmersiveDebuggerHeader =
             new(nameof(ImmersiveDebuggerHeader), "Immersive Debugger");
+
         public readonly RemoteString ImmersiveDebuggerContent =
             new(nameof(ImmersiveDebuggerContent), "Inspect and tweak your scene in headset");
+
         public readonly RemoteString ImmersiveDebuggerEnabled =
             new(nameof(ImmersiveDebuggerEnabled), "Enabled");
+
         public readonly RemoteString ImmersiveDebuggerDisabled =
             new(nameof(ImmersiveDebuggerDisabled), "Disabled");
+
         public readonly RemoteString ImmersiveDebuggerOpen =
             new(nameof(ImmersiveDebuggerOpen), "Open");
+
         public readonly RemoteString XrSimulatorHeader =
             new(nameof(XrSimulatorHeader), "Meta XR Simulator");
+
         public readonly RemoteString XrSimulatorContent =
             new(nameof(XrSimulatorContent), "Iterate quickly without a headset with our OpenXR simulator");
+
         public readonly RemoteString XrSimulatorStatusDefault =
             new(nameof(XrSimulatorStatusDefault), "Not installed");
+
         public readonly RemoteString MetaXRSimulatorInstall =
             new(nameof(MetaXRSimulatorInstall), "Install");
+
         public readonly RemoteString MetaXRSimulatorEnable =
             new(nameof(MetaXRSimulatorEnable), "Enable");
+
         public readonly RemoteString XrSimulatorEnabled =
             new(nameof(XrSimulatorEnabled), "Enabled");
+
         public readonly RemoteString XrSimulatorDisabled =
             new(nameof(XrSimulatorDisabled), "Disabled");
+
         public readonly RemoteString ResourceView =
             new(nameof(ResourceView), "View");
+
         public readonly RemoteString WelcomeUpdateOpenUPM =
             new(nameof(WelcomeUpdateOpenUPM), "Update");
+
+        // Role page content strings
+        public readonly RemoteString RoleHeader =
+            new(nameof(RoleHeader), "Welcome to Meta XR SDK");
+
+        public readonly RemoteString RoleIntro =
+            new(nameof(RoleIntro),
+                "Selecting a role will help us to recommend, as well as grant you early access to new tools / resources.");
+
+        public readonly RemoteString Role1Title =
+            new(nameof(Role1Title), "Game Developer");
+
+        public readonly RemoteString Role2Title =
+            new(nameof(Role2Title), "Q/A Tester");
+
+        public readonly RemoteString Role3Title =
+            new(nameof(Role3Title), "Artist");
+
+        public readonly RemoteString Role4Title =
+            new(nameof(Role4Title), "Production Manager");
+
+        public readonly RemoteString Role5Title =
+            new(nameof(Role5Title), "Other");
         #endregion
 
         public string BuildingBlocksStatus =>
-            $"{BuildingBlocks.Editor.Utils.FilteredRegistry.Count} blocks available!";
+            $"{BuildingBlocks.Editor.Utils.FilteredRegistry.Count(data => !data.Hidden)} blocks available!";
+
         public string ReleaseNotesDescription =>
             $"Meta XR Core SDK • Version {Version}";
+
         public string WelcomeDescription =>
             $"Version {About.Version}";
+
         public string WelcomeDescriptionUpdate =>
             "• New version available! ";
+
         public string WelcomeUpdateTitle =>
             $"Version {About.LatestVersion} is available!";
 
         public string UrlApi =>
-            $"https://developers.meta.com/horizon/reference/unity/{About.Version}";
+            $"https://developers.meta.com/horizon/reference/unity/v{About.Version}";
 
         private readonly Dictionary<string, RadioButton> _radioButtonsMap = new();
         private readonly Dictionary<string, Card> _cardsMap = new();
 
         private readonly Repainter _repainter = new();
-        private BulletedLabel _upstStatus;
         private BulletedLabel _bbStatus;
         private BulletedLabel _xrSimStatus;
         private BulletedLabel _versionStatus;
@@ -345,28 +508,6 @@ namespace Meta.XR.Guides.Editor.About
                     About.Version < About.LatestVersion);
         }
 
-        private void UpstProcessQueueOnProcessorCompleted(OVRConfigurationTaskProcessor processor)
-        {
-            var updater = processor as OVRConfigurationTaskUpdater;
-            var summary = updater?.Summary;
-            ProcessSummary(summary);
-        }
-
-        private void ProcessSummary(OVRConfigurationTaskUpdaterSummary summary)
-        {
-            if (_upstStatus == null) return;
-            if (summary == null) return;
-
-            var status = summary?.HighestFixLevel switch
-            {
-                OVRProjectSetup.TaskLevel.Required => UIStyles.ContentStatusType.Error,
-                OVRProjectSetup.TaskLevel.Recommended => UIStyles.ContentStatusType.Warning,
-                OVRProjectSetup.TaskLevel.Optional => UIStyles.ContentStatusType.Normal,
-                _ => UIStyles.ContentStatusType.Success
-            };
-            _upstStatus.SetStatus(status);
-            _upstStatus.SetLabel(summary?.ComputeInfoMessage());
-        }
 
 #if USING_META_XR_SIMULATOR
         private void RefreshXrSimulatorStatus()
@@ -376,7 +517,7 @@ namespace Meta.XR.Guides.Editor.About
             var activated = Meta.XR.Simulator.Editor.Enabler.Activated;
             var status = activated
                 ? UIStyles.ContentStatusType.Success
-                : UIStyles.ContentStatusType.Disabled;  // Using the new Disabled status type
+                : UIStyles.ContentStatusType.Disabled; // Using the new Disabled status type
             var message = activated
                 ? XrSimulatorEnabled
                 : XrSimulatorDisabled;
@@ -393,12 +534,12 @@ namespace Meta.XR.Guides.Editor.About
             if (_idStatus == null) return;
 
             var enabled = Meta.XR.ImmersiveDebugger.Editor.Utils.IsEnabled;
-            var message = enabled ?
-                ImmersiveDebuggerEnabled
+            var message = enabled
+                ? ImmersiveDebuggerEnabled
                 : ImmersiveDebuggerDisabled;
             var status = enabled
                 ? UIStyles.ContentStatusType.Success
-                : UIStyles.ContentStatusType.Disabled;  // Using the new Disabled status type
+                : UIStyles.ContentStatusType.Disabled; // Using the new Disabled status type
 
             // Set label first, then status to ensure color is applied correctly
             _idStatus.SetLabel(message);
@@ -477,6 +618,7 @@ namespace Meta.XR.Guides.Editor.About
             return currentPage switch
             {
                 PageId.Welcome => GuideStyles.Contents.ObWelcome,
+                PageId.Role => GuideStyles.Contents.ObWelcome,
                 PageId.Tools => GuideStyles.Contents.ObTools,
                 PageId.Resources => GuideStyles.Contents.ObResources,
                 PageId.ReleaseNotes => GuideStyles.Contents.ObRelease,
@@ -534,7 +676,11 @@ namespace Meta.XR.Guides.Editor.About
                 {
                     HasCompletedActionDelegate = HasCompletedPage,
                     Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.PageGroup,
-
+                },
+                new(PageId.Role.ToString(), Enumerable.Empty<IUserInterfaceItem>(), UIItemPlacementType.Vertical)
+                {
+                    HasCompletedActionDelegate = HasCompletedPage,
+                    Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.PageGroup,
                 },
                 new(PageId.Tools.ToString(), Enumerable.Empty<IUserInterfaceItem>(), UIItemPlacementType.Vertical)
                 {
@@ -544,7 +690,8 @@ namespace Meta.XR.Guides.Editor.About
                 {
                     HasCompletedActionDelegate = HasCompletedPage,
                 },
-                new(PageId.ReleaseNotes.ToString(), Enumerable.Empty<IUserInterfaceItem>(), UIItemPlacementType.Vertical)
+                new(PageId.ReleaseNotes.ToString(), Enumerable.Empty<IUserInterfaceItem>(),
+                    UIItemPlacementType.Vertical)
                 {
                     HasCompletedActionDelegate = HasCompletedPage,
                 },
@@ -585,6 +732,11 @@ namespace Meta.XR.Guides.Editor.About
                     return _radioButtonsMap[CardIdNewToXR].State
                            || _radioButtonsMap[CardIdVeteranToXR].State;
 
+                case PageId.Role:
+                    var roleConfigs = GetRoleConfigs();
+                    return roleConfigs.Any(config =>
+                        _radioButtonsMap.ContainsKey(config.Id) && _radioButtonsMap[config.Id].State);
+
                 default:
                     return true;
             }
@@ -596,8 +748,9 @@ namespace Meta.XR.Guides.Editor.About
             if (pageIndex < 0 || pageIndex >= pages.Count ||
                 !Enum.TryParse(pages[pageIndex].PageId, out _currentPage))
             {
-                // In case of error, or going past the last page, Close
+                // Going past the last page - close first, then open Meta XR Tools menu with delay
                 _window.Close();
+                EditorApplication.delayCall += () => StatusIcon.ShowDropdown();
                 return;
             }
 
@@ -618,6 +771,7 @@ namespace Meta.XR.Guides.Editor.About
             if (pageIndex == pages.Count - 1)
             {
                 _window.DontShowAgain.SetValue(true);
+                About.ToolDescriptor.Usage.RecordUsage();
             }
         }
 
@@ -634,6 +788,7 @@ namespace Meta.XR.Guides.Editor.About
             return pageId switch
             {
                 PageId.Welcome => BuildWelcomePage(),
+                PageId.Role => BuildRolePage(),
                 PageId.Tools => BuildToolsPage(),
                 PageId.Resources => BuildResourcesPage(),
                 PageId.ReleaseNotes => BuildReleaseNotesContent(),
@@ -660,7 +815,7 @@ namespace Meta.XR.Guides.Editor.About
 
         private void OnSelect(string id)
         {
-            if (!_radioButtonsMap.ContainsKey(id) || !_cardsMap.ContainsKey(id))
+            if (id == null || !_radioButtonsMap.ContainsKey(id) || !_cardsMap.ContainsKey(id))
                 return;
 
             _cardsMap[id].SetSelected(true);
@@ -676,7 +831,51 @@ namespace Meta.XR.Guides.Editor.About
                     _cardsMap[CardIdNewToXR].SetSelected(false);
                     _radioButtonsMap[CardIdNewToXR].State = false;
                     break;
+                default:
+                    // Check if it's a role card and handle mutual exclusion generically
+                    var roleConfigs = GetRoleConfigs();
+                    if (roleConfigs.Any(config => config.Id == id))
+                    {
+                        DeselectOtherRoles(id);
+                    }
+                    break;
             }
+        }
+
+        private void DeselectOtherRoles(string selectedId)
+        {
+            var roleConfigs = GetRoleConfigs();
+            foreach (var roleConfig in roleConfigs)
+            {
+                if (roleConfig.Id != selectedId)
+                {
+                    if (_cardsMap.ContainsKey(roleConfig.Id)) _cardsMap[roleConfig.Id].SetSelected(false);
+                    if (_radioButtonsMap.ContainsKey(roleConfig.Id)) _radioButtonsMap[roleConfig.Id].State = false;
+                }
+            }
+        }
+
+        private Card CreateRoleCard(RoleConfig roleConfig)
+        {
+            var action = new ActionLinkDescription()
+            {
+                Id = roleConfig.Id,
+                Content = new GUIContent(roleConfig.Title),
+                Origin = Origins.GuidedSetup,
+                ActionData = SelectedRole,
+                OriginData = this
+            };
+            action.Action = () => { SelectedRole.SetValue(roleConfig.Id, Origins.Self, action); };
+
+            var card = GetCard(roleConfig.Title, string.Empty, roleConfig.Id, true, false, null, action, null);
+
+            // Set up mutual exclusion for this card
+            var roleConfigs = GetRoleConfigs();
+            card.Disabled = id => roleConfigs.Any(config =>
+                config.Id != roleConfig.Id && _radioButtonsMap.ContainsKey(config.Id) &&
+                _radioButtonsMap[config.Id].State);
+
+            return card;
         }
 
         private GroupedItem CenteredRadioButton(RadioButton btn) => CenteredItem(btn);
@@ -694,7 +893,9 @@ namespace Meta.XR.Guides.Editor.About
             if (_radioButtonsMap.TryGetValue(id, out var button)) return button;
             button = new RadioButton(id, XR.Editor.UserInterface.Styles.Colors.LightGray,
                 XR.Editor.UserInterface.Styles.Colors.Meta, "");
-            button.OnSelect = OnSelect; // Set the OnSelect callback to ensure radio button clicks update card selection
+            // Disable self-click handling since the parent card will handle clicks
+            button.HandleOwnClicks = false;
+            button.OnSelect = OnSelect; // Keep this for potential direct usage
             _radioButtonsMap[id] = button;
             return button;
         }
@@ -709,47 +910,49 @@ namespace Meta.XR.Guides.Editor.About
             TextureContent icon = null,
             TextureContent actionIcon = null)
         {
-            bool cardExists = _cardsMap.TryGetValue(id, out var card);
+            var cardExists = _cardsMap.TryGetValue(id, out var card);
             if (!cardExists)
             {
-                card = new Card(id, true, UIItemPlacementType.Horizontal)
-                {
-                    OnSelect = _id =>
-                    {
-                        if (requiresRadio)
-                        {
-                            OnSelect(_id);
-                        }
-                        onSelect?.Click();
-                    }
-                };
+                card = new Card(id, true, UIItemPlacementType.Horizontal);
                 _cardsMap[id] = card;
+            }
 
-                if (!requiresRadio)
+            // Rebuild the callback and update the colours if needed
+            card.OnSelect = _id =>
+            {
+                if (requiresRadio)
                 {
-                    card.BorderColor = XR.Editor.UserInterface.Styles.Colors.DarkBorder;
-                    card.BorderHoverColor = XR.Editor.UserInterface.Styles.Colors.DarkGrayHover;
+                    OnSelect(_id);
                 }
+
+                onSelect?.Click();
+            };
+
+            if (!requiresRadio)
+            {
+                card.BorderColor = XR.Editor.UserInterface.Styles.Colors.DarkBorder;
+                card.BorderHoverColor = XR.Editor.UserInterface.Styles.Colors.DarkGrayHover;
             }
 
             // Always rebuild the card content to ensure dynamic content is updated
-            var titleGroup = new GroupedItem(new List<IUserInterfaceItem>
-            {
-                new Label(title, GUIStyles.DynamicCardTitle)
-                    { FetchDynamicColor = card.FetchDynamicColor },
-            }, Styles.GUIStyles.DynamicCardTitleGroup, UIItemPlacementType.Horizontal);
+            var titleLabel = new Label(title, GUIStyles.DynamicCardTitle)
+            { FetchDynamicColor = card.FetchDynamicColor };
+            var titleGroup = new GroupedItem(new List<IUserInterfaceItem> { titleLabel },
+                Styles.GUIStyles.DynamicCardTitleGroup, UIItemPlacementType.Horizontal);
             if (dynamicContent != null)
             {
                 titleGroup.Items.Add(dynamicContent);
                 titleGroup.Items.Add(new AddSpace(true));
             }
 
-            var content = new GroupedItem(new List<IUserInterfaceItem>
+            var contentItems = new List<IUserInterfaceItem> { titleGroup };
+
+            // Only add description label if description is not null or empty
+            if (!string.IsNullOrEmpty(description))
             {
-                titleGroup,
-                new Label(description, GUIStyles.DynamicCardContent)
-                    { FetchDynamicColor = card.FetchDynamicColor },
-            }, Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardContentGroup, UIItemPlacementType.Vertical);
+                contentItems.Add(new Label(description, GUIStyles.DynamicCardContent)
+                { FetchDynamicColor = card.FetchDynamicColor });
+            }
 
             card.Items = new List<IUserInterfaceItem>();
             if (requiresRadio)
@@ -767,7 +970,18 @@ namespace Meta.XR.Guides.Editor.About
                     }, Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardIconGroup, UIItemPlacementType.Vertical);
                 card.Items.Add(iconGroup);
             }
-            card.Items.Add(content);
+
+            // If we have no description and no dynamic content, add title directly to avoid extra GroupedItem padding
+            if (string.IsNullOrEmpty(description) && dynamicContent == null)
+            {
+                card.Items.Add(titleLabel);
+            }
+            else
+            {
+                var content = new GroupedItem(contentItems,
+                    Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardContentGroup, UIItemPlacementType.Vertical);
+                card.Items.Add(content);
+            }
 
             if (showAction && onSelect != null)
             {
@@ -854,14 +1068,16 @@ namespace Meta.XR.Guides.Editor.About
 
             cardVeteranToXR.Disabled = id => _radioButtonsMap[CardIdNewToXR].State;
 
+            // Pre-select cards based on stored user preferences
+            OnSelect(SelectedDiscovery.Value);
+
             // Build the page
             return new List<IUserInterfaceItem>
             {
                 Header(WelcomeHeader),
                 ComputeVersionSubtitle(),
                 new AddSpace(DoubleMargin),
-                updateCard != null ? updateCard :
-                new Label(WelcomeIntro),
+                updateCard != null ? updateCard : new Label(WelcomeIntro),
                 new AddSpace(LargeMargin), // Bespoke margin
                 cardNewToXR,
                 cardVeteranToXR
@@ -896,7 +1112,29 @@ namespace Meta.XR.Guides.Editor.About
             });
         }
 
-        private List<IUserInterfaceItem> BuildResourcesPage()
+        private List<IUserInterfaceItem> BuildRolePage()
+        {
+            var roleConfigs = GetRoleConfigs();
+            var roleCards = roleConfigs.Select(CreateRoleCard).ToList();
+
+            var pageItems = new List<IUserInterfaceItem>
+            {
+                Header(RoleHeader),
+                ComputeVersionSubtitle(),
+                new AddSpace(DoubleMargin),
+                new Label(RoleIntro),
+                new AddSpace(DoubleMargin)
+            };
+
+            pageItems.AddRange(roleCards);
+
+            // Pre-select role card based on stored user preference
+            OnSelect(SelectedRole.Value);
+
+            return pageItems;
+        }
+
+        public List<IUserInterfaceItem> BuildResourcesPage()
         {
             if (!_radioButtonsMap.TryGetValue(CardIdNewToXR, out var radioButton))
             {
@@ -904,70 +1142,7 @@ namespace Meta.XR.Guides.Editor.About
             }
             var beginner = radioButton.State;
 
-            var cardBuild = GetCard(BuildTitle,
-                BuildContent,
-                CardIdBuild, false, true, null, new UrlLinkDescription()
-                {
-                    Id = CardIdBuild,
-                    OriginData = this,
-                    Origin = Origins.GuidedSetup,
-                    Content = new GUIContent(ResourceView),
-                    URL = UrlBuildingWithUnity,
-                    Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardActionWithIcon,
-                    Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
-                }, actionIcon: BuildingBlocks.Editor.Styles.Contents.SelectIcon);
-
-            var cardApi = GetCard(ApiReferenceTitle,
-                ApiReferenceContent,
-                CardIdAPI, false, true, null, new UrlLinkDescription()
-                {
-                    Id = CardIdAPI,
-                    OriginData = this,
-                    Origin = Origins.GuidedSetup,
-                    Content = new GUIContent(ResourceView),
-                    URL = UrlApi,
-                    Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardActionWithIcon,
-                    Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
-                }, actionIcon: BuildingBlocks.Editor.Styles.Contents.SelectIcon);
-
-            var cardMQDH = GetCard(MQDHTitle,
-                MQDHContent,
-                CardIdMQDH, false, true, null, new UrlLinkDescription()
-                {
-                    Id = CardIdMQDH,
-                    OriginData = this,
-                    Origin = Origins.GuidedSetup,
-                    Content = new GUIContent(ResourceView),
-                    URL = UrlMQDH,
-                    Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardActionWithIcon,
-                    Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
-                }, actionIcon: BuildingBlocks.Editor.Styles.Contents.SelectIcon);
-
-            var cardDeveloperDashboard = GetCard(DeveloperDashboardTitle,
-                DeveloperDashboardContent,
-                CardIdDevDashboard, false, true, null, new UrlLinkDescription()
-                {
-                    Id = CardIdDevDashboard,
-                    OriginData = this,
-                    Origin = Origins.GuidedSetup,
-                    Content = new GUIContent(ResourceView),
-                    URL = UrlDevDashboard,
-                    Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardActionWithIcon,
-                    Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
-                }, actionIcon: BuildingBlocks.Editor.Styles.Contents.SelectIcon);
-
-            var cardSamples = GetCard(SamplesTitle,
-                SamplesContent,
-                CardIdSamples, false, true, null, new UrlLinkDescription()
-                {
-                    Id = CardIdSamples,
-                    OriginData = this,
-                    Origin = Origins.GuidedSetup,
-                    Content = new GUIContent(ResourceView),
-                    URL = UrlSamples,
-                    Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardActionWithIcon,
-                    Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
-                }, actionIcon: BuildingBlocks.Editor.Styles.Contents.SelectIcon);
+            var allResourceCards = CreateAllResourceCards();
 
             return new List<IUserInterfaceItem>
             {
@@ -976,10 +1151,38 @@ namespace Meta.XR.Guides.Editor.About
                 new AddSpace(DoubleMargin),
                 new Label(ResourcesIntro),
                 new AddSpace(8),
-                beginner ? cardBuild : cardApi,
-                cardSamples,
-                beginner ? cardMQDH : cardDeveloperDashboard,
+                beginner ? allResourceCards[CardIdBuild] : allResourceCards[CardIdAPI],
+                allResourceCards[CardIdSamples],
+                beginner ? allResourceCards[CardIdMQDH] : allResourceCards[CardIdDevDashboard],
             };
+        }
+
+        public Card CreateResourceCard(ResourceConfig resourceConfig)
+        {
+            return GetCard(resourceConfig.Title,
+                resourceConfig.Content,
+                resourceConfig.Id, false, true, null, new UrlLinkDescription()
+                {
+                    Id = resourceConfig.Id,
+                    OriginData = this,
+                    Origin = Origins.GuidedSetup,
+                    Content = new GUIContent(ResourceView),
+                    URL = resourceConfig.GetUrl(), // Use GetUrl() to handle both static and dynamic URLs
+                    Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardActionWithIcon,
+                    Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
+                }, actionIcon: resourceConfig.ActionIcon);
+        }
+
+        public Dictionary<string, Card> CreateAllResourceCards()
+        {
+            var resourceConfigs = GetResourceConfigs();
+            return resourceConfigs.ToDictionary(config => config.Id, CreateResourceCard);
+        }
+
+        public List<Card> CreateAllResourceCardsList()
+        {
+            var resourceConfigs = GetResourceConfigs();
+            return resourceConfigs.Select(CreateResourceCard).ToList();
         }
 
         private List<IUserInterfaceItem> BuildReleaseNotesContent()
@@ -1027,36 +1230,9 @@ namespace Meta.XR.Guides.Editor.About
 
         private List<IUserInterfaceItem> BuildToolsPage()
         {
-            OVRProjectSetup.ProcessorQueue.OnProcessorCompleted -= UpstProcessQueueOnProcessorCompleted;
-            OVRProjectSetup.ProcessorQueue.OnProcessorCompleted += UpstProcessQueueOnProcessorCompleted;
-
-            var beginner = _radioButtonsMap[CardIdNewToXR].State ? true : false;
-            var subtitle = beginner ? ToolsNewToXRDescription : ToolsVeteranToXRDescription;
-
-            // Project Setup Tool Card
-            var actionUpst = new ActionLinkDescription
-            {
-                Id = CardIdUpst,
-                Action = () => OVRProjectSetupSettingsProvider.OpenSettingsWindow(Origins.GuidedSetup),
-                Content = new GUIContent(ProjectSetupToolOpen),
-                ActionData = OVRProjectSetup.ToolDescriptor,
-                OriginData = this,
-                Origin = Origins.GuidedSetup,
-                Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardAction,
-                Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
-            };
-            _upstStatus = new BulletedLabel(string.Empty, Styles.GUIStyles.DynamicCardDynamicContent)
-            {
-                HorizontalStyle = XR.Editor.UserInterface.Styles.GUIStyles.BulletedLabelHorizontal
-            };
-            _upstStatus.LabelItem.FetchDynamicColor = item => _upstStatus.Color;
-            var cardUpst = GetCard(ProjectSetupToolHeader,
-                ProjectSetupToolContent,
-                CardIdUpst, false, true, _upstStatus, actionUpst, OVRProjectSetup.ToolDescriptor.Icon);
-            ProcessSummary(OVRProjectSetup.LatestSummary);
-
             // Building Blocks Card
-            _bbStatus = new BulletedLabel(BuildingBlocksStatus, Styles.GUIStyles.DynamicCardDynamicContent, UIStyles.ContentStatusType.Success)
+            _bbStatus = new BulletedLabel(BuildingBlocksStatus, Styles.GUIStyles.DynamicCardDynamicContent,
+                UIStyles.ContentStatusType.Success)
             {
                 HorizontalStyle = XR.Editor.UserInterface.Styles.GUIStyles.BulletedLabelHorizontal
             };
@@ -1077,7 +1253,8 @@ namespace Meta.XR.Guides.Editor.About
                 CardIdBB, false, true, _bbStatus, actionBB, BuildingBlocks.Editor.Utils.ToolDescriptor.Icon);
 
             // Immersive Debugger Card
-            _idStatus = new BulletedLabel(string.Empty, Styles.GUIStyles.DynamicCardDynamicContent, UIStyles.ContentStatusType.Normal);
+            _idStatus = new BulletedLabel(string.Empty, Styles.GUIStyles.DynamicCardDynamicContent,
+                UIStyles.ContentStatusType.Normal);
             _idStatus.LabelItem.FetchDynamicColor = item => _idStatus.Color;
             var actionId = new ActionLinkDescription()
             {
@@ -1096,7 +1273,8 @@ namespace Meta.XR.Guides.Editor.About
                 CardIdID, false, true, _idStatus, actionId, Meta.XR.ImmersiveDebugger.Editor.Utils.ToolDescriptor.Icon);
 
             // Meta XR Simulator Card
-            _xrSimStatus = new BulletedLabel(XrSimulatorStatusDefault, Styles.GUIStyles.DynamicCardDynamicContent, UIStyles.ContentStatusType.Error)
+            _xrSimStatus = new BulletedLabel(XrSimulatorStatusDefault, Styles.GUIStyles.DynamicCardDynamicContent,
+                UIStyles.ContentStatusType.Error)
             {
                 HorizontalStyle = XR.Editor.UserInterface.Styles.GUIStyles.BulletedLabelHorizontal
             };
@@ -1105,10 +1283,7 @@ namespace Meta.XR.Guides.Editor.About
             {
                 Id = CardIdXrSim,
 #if USING_META_XR_SIMULATOR
-                Action = () =>
-                {
-                    Meta.XR.Simulator.Editor.Enabler.ActivateSimulator(false);
-                },
+                Action = () => { Meta.XR.Simulator.Editor.Enabler.ActivateSimulator(false); },
                 Content = new GUIContent(MetaXRSimulatorEnable),
 #else
                 Action = () => Application.OpenURL(UrlInstallXrSimulator),
@@ -1128,11 +1303,12 @@ namespace Meta.XR.Guides.Editor.About
             return new List<IUserInterfaceItem>
             {
                 Header(ToolsHeader),
-                HeaderSubtitle(subtitle),
+                HeaderSubtitle(ToolsDescription),
                 new AddSpace(DoubleMargin),
                 new Label(ToolsIntro),
-                cardUpst,
-                beginner ? cardBB : cardID,
+                new AddSpace(DoubleMargin),
+                cardBB,
+                cardID,
                 cardXrSim
             };
         }

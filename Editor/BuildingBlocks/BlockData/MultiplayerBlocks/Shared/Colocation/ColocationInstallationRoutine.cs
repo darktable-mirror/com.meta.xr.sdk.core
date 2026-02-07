@@ -65,7 +65,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
         }
 
 #if META_MR_UTILITY_KIT_DEFINED
-        public async override Task<List<GameObject>> InstallAsync(BlockData block, GameObject selectedGameObject)
+        public override async Task<List<GameObject>> InstallAsync(BlockData block, GameObject selectedGameObject)
         {
             var objs = await base.InstallAsync(block, selectedGameObject);
             if (objs.Count == 0)

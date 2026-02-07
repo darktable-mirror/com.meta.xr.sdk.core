@@ -36,6 +36,8 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.About")]
 [assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer.Editor")]
 [assembly: InternalsVisibleTo("meta.xr.mrutilitykit.editor")]
+[assembly: InternalsVisibleTo("MetaXRSimulatorCore.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.MetaWand.Editor")]
 
 
 [assembly: InternalsVisibleTo("Meta.XR.Editor.UPST.Notifications")]

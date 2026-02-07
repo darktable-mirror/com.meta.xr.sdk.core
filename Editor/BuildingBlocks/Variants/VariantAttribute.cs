@@ -74,5 +74,19 @@ namespace Meta.XR.BuildingBlocks.Editor
         /// Optional Description for this Variant Attribute
         /// </summary>
         public string Description { get; set; } = null;
+
+        /// <summary>
+        /// Optional method name that returns IEnumerable<T> to provide dropdown options for variants,
+        /// where T matches the type of the field this attribute is applied to.
+        /// When specified, fields will show a dropdown instead of the default field editor.
+        /// </summary>
+        public string OptionsMethod { get; set; } = null;
+
+        /// <summary>
+        /// Optional order value to control the display order of variant parameters.
+        /// Lower values appear first. If not specified, defaults to 0.
+        /// Parameters with the same order value will be sorted alphabetically.
+        /// </summary>
+        public int Order { get; set; } = 0;
     }
 }

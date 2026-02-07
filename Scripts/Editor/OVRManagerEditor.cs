@@ -22,6 +22,8 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using UnityEditor.SceneManagement;
+using System.Collections;
+using System.Collections.Generic;
 
 [CustomEditor(typeof(OVRManager))]
 public class OVRManagerEditor : Editor
@@ -36,6 +38,7 @@ public class OVRManagerEditor : Editor
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_ANDROID
     private bool _showFaceTrackingDataSources = false;
 #endif
+
 
     void OnEnable()
     {
@@ -54,6 +57,7 @@ public class OVRManagerEditor : Editor
 
         OVRManager manager = target as OVRManager;
         manager?.UpdateDynamicResolutionVersion();
+
 
         OVRRuntimeSettings runtimeSettings = OVRRuntimeSettings.GetRuntimeSettings();
         if (!runtimeSettings.QuestVisibilityMeshOverriden)
@@ -414,6 +418,7 @@ public class OVRManagerEditor : Editor
         }
 
         #endregion
+
 
         #region PermissionRequests
 

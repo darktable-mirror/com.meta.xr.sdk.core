@@ -18,6 +18,10 @@
  * limitations under the License.
  */
 
+#if META_MR_UTILITY_KIT_DEFINED
+using Meta.XR.MRUtilityKit;
+#endif // META_MR_UTILITY_KIT_DEFINED
+using Meta.XR.MultiplayerBlocks.Shared;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -45,6 +49,8 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
 
         private ulong _oculusIdToColocateTo;
         private SharedAnchorManager _sharedAnchorManager;
+
+        private static readonly Pose _alignmentAnchorPose = Pose.identity;
 
         public void Init(
             INetworkData networkData,
@@ -202,9 +208,13 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
         {
             Logger.Log($"{nameof(AutomaticColocationLauncher)} AlignPlayerToAnchor was called", LogLevel.Verbose);
 
+#if META_MR_UTILITY_KIT_DEFINED
+            MRUK.Instance.SetCustomWorldLockAnchor(_myAlignmentAnchor, ColocationConstants.AlignmentAnchorPose);
+#else
             AlignCameraToAnchor alignCamera = _cameraRig.AddComponent<AlignCameraToAnchor>();
             alignCamera.CameraAlignmentAnchor = _myAlignmentAnchor;
             alignCamera.RealignToAnchor();
+#endif
         }
 
         private List<Anchor> GetAllAlignmentAnchors()

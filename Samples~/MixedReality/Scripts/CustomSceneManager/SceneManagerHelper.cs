@@ -142,5 +142,34 @@ public class SceneManagerHelper
         CreateMesh(mesh);
     }
 
+    public void CreateRoomMesh(OVRRoomMesh roomMesh)
+    {
+        if (!roomMesh.TryGetRoomMeshCounts(out var vertexCount, out var faceCount)) return;
+        using var vertices = new NativeArray<Vector3>(vertexCount, Allocator.Temp);
+        using var faces = new NativeArray<OVRRoomMesh.Face>(faceCount, Allocator.Temp);
+        if (!roomMesh.TryGetRoomMesh(vertices, faces)) return;
+
+        foreach (var face in faces)
+        {
+            // fetch per-face index data
+            if (!roomMesh.TryGetRoomFaceIndexCount(face.Uuid, out var indexCount)) continue;
+            using var indices = new NativeArray<uint>(indexCount, Allocator.Temp);
+            if (!roomMesh.TryGetRoomFaceIndices(face.Uuid, indices)) continue;
+
+            // create a new mesh with the room mesh vertices and the face index subset
+            var mesh = new Mesh();
+            mesh.SetVertices(vertices);
+            mesh.SetIndices(indices, MeshTopology.Triangles, 0);
+            mesh.RecalculateNormals();
+
+            // create a game object per face, parenting it to the room
+            var faceGameObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            faceGameObject.name = face.SemanticLabel.ToString();
+            faceGameObject.transform.SetParent(AnchorGameObject.transform, false);
+            faceGameObject.GetComponent<MeshRenderer>().material = new Material(_material);
+            faceGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
+            faceGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
+        }
+    }
 
 }

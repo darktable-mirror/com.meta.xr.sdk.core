@@ -113,14 +113,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             public static readonly TextureContent UtilitiesIcon =
                 TextureContent.CreateContent("ovr_icon_utilities.png", Utils.BuildingBlocksIcons);
 
-            public static readonly TextureContent ImmersiveExperienceCollectionThumb =
-                TextureContent.CreateContent("Collections/bb_collection_vr_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
-            public static readonly TextureContent AllBlocksThumb =
-                TextureContent.CreateContent("Collections/bb_collection_all_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
-            public static readonly TextureContent TableTopCollectionThumb =
-                TextureContent.CreateContent("Collections/bb_collection_tabletop_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
-            public static readonly TextureContent MixedRealityCollectionThumb =
-                TextureContent.CreateContent("Collections/bb_collection_mr_thumbnail.jpg", Utils.BuildingBlocksThumbnails);
             public static readonly TextureContent DefaultCollectionThumb =
                 TextureContent.CreateContent("Collections/default.png", Utils.BuildingBlocksThumbnails);
 

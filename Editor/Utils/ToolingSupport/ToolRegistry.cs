@@ -20,6 +20,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEditor;
 
 namespace Meta.XR.Editor.ToolingSupport
@@ -27,33 +28,55 @@ namespace Meta.XR.Editor.ToolingSupport
     internal static class ToolRegistry
     {
         private static readonly List<ToolDescriptor> _registry = new();
-        private static readonly List<ToolDescriptor> _toInitialize = new();
+        private static readonly List<ToolDescriptor> ToInitialize = new();
+        private static bool _initializing = false;
 
-        public static IReadOnlyList<ToolDescriptor> Registry => _registry;
+        public static IEnumerable<ToolDescriptor> Registry => _registry;
 
         public static void Register(ToolDescriptor descriptor)
         {
             _registry.Add(descriptor);
 
             // Register a delayed callback to initialize descriptors
-            if (!_toInitialize.Any())
+            if (!ToInitialize.Any() && !_initializing)
             {
-                EditorApplication.update += InitializeDescriptors;
+                EditorApplication.update += InitializeDescriptorsAsync;
             }
 
-            _toInitialize.Add(descriptor);
+            ToInitialize.Add(descriptor);
         }
 
-        private static void InitializeDescriptors()
+        private static async void InitializeDescriptorsAsync()
         {
-            foreach (var descriptor in _toInitialize)
+            // Remove the callback immediately to prevent multiple calls
+            EditorApplication.update -= InitializeDescriptorsAsync;
+            _initializing = true;
+
+            // First, wait for all ramp-up checks to complete
+            var rampUpTasks = ToInitialize
+                .Where(d => d.EnableRampUp)
+                .Select(d => d.CheckRampUpAsync())
+                .ToArray();
+
+            if (rampUpTasks.Any())
+            {
+                await Task.WhenAll(rampUpTasks);
+            }
+
+            // For tools without ramp-up, just mark them as checked
+            foreach (var descriptor in ToInitialize.Where(d => !d.EnableRampUp))
+            {
+                await descriptor.CheckRampUpAsync();
+            }
+
+            // Now initialize all tools (only ramped-up ones will register menus)
+            foreach (var descriptor in ToInitialize)
             {
                 descriptor.Initialize();
             }
 
-            _toInitialize.Clear();
-            EditorApplication.update -= InitializeDescriptors;
+            ToInitialize.Clear();
+            _initializing = false;
         }
-
     }
 }

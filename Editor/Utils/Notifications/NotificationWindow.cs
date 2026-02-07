@@ -103,10 +103,30 @@ namespace Meta.XR.Editor.Notifications
             var rect = EditorGUILayout.BeginHorizontal(Styles.GUIStyles.NotificationBox);
 
             // Rounded border and background
-            GUI.DrawTexture(rect, DarkGray.ToTexture(), ScaleMode.ScaleAndCrop, false, 1f,
-                GUI.color, Vector4.zero, Styles.Constants.RoundedBorderVectors);
-            GUI.DrawTexture(rect, Styles.Contents.NotificationGradientNeutral.Image, ScaleMode.StretchToFill, false, 16f,
-                _notification.GradientColor, Vector4.zero, Styles.Constants.RoundedBorderVectors);
+            GUI.DrawTexture(rect, DarkGray.ToTexture(), ScaleMode.ScaleAndCrop, false,
+                1f, Color.white, Vector4.zero, Styles.Constants.RoundedBorderVectors);
+            GUI.DrawTexture(rect, Styles.Contents.NotificationGradientNeutral.Image, ScaleMode.StretchToFill, false,
+                16f, _notification.GradientColor, Vector4.zero, Styles.Constants.RoundedBorderVectors);
+
+            EditorGUILayout.BeginVertical();
+            if (_notification.HeaderImage != null)
+            {
+                // Header Image
+                var image = _notification.HeaderImage.Image;
+                if (image != null)
+                {
+                    var realImageRatio = image.width * 1f / image.height;
+                    var chosenImageRatio = _notification.HeaderImageRatio ?? realImageRatio;
+                    var invertedImageRatio = 1f / chosenImageRatio;
+                    var headerRect = GUILayoutUtility.GetRect(_notification.ExpectedWidth,
+                            _notification.ExpectedWidth * invertedImageRatio)
+                        .Contract(_notification.HeaderImageBorder);
+                    GUI.DrawTexture(headerRect, _notification.HeaderImage.Image, ScaleMode.ScaleAndCrop, false,
+                        realImageRatio, Color.white, Vector4.zero, Styles.Constants.TopRoundedBorderVectors);
+                }
+            }
+
+            EditorGUILayout.BeginHorizontal(Styles.GUIStyles.NotificationHorizontal);
 
             // Left Icon
             if (_notification.Icon != null)
@@ -119,6 +139,7 @@ namespace Meta.XR.Editor.Notifications
                 {
                     GUI.Button(iconRect, _notification.Icon, Styles.GUIStyles.NotificationIconStyle);
                 }
+
                 EditorGUILayout.EndVertical();
             }
 
@@ -131,6 +152,7 @@ namespace Meta.XR.Editor.Notifications
                     item.Draw();
                 }
             }
+
             EditorGUILayout.EndVertical();
 
             // Optional Close Button
@@ -141,9 +163,11 @@ namespace Meta.XR.Editor.Notifications
                 {
                     _notification.Remove(Origins.Self);
                 }
+
                 EditorGUILayout.EndVertical();
             }
 
+            EditorGUILayout.EndVertical();
             EditorGUILayout.EndHorizontal();
 
             UpdateHeight(rect);

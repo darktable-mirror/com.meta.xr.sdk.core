@@ -83,6 +83,7 @@ public class OVROverlayCanvas : OVRRayTransformer
     private bool _frameIsReady;
     private bool _useTempRT;
 
+    private static readonly int kAlphaWriteShaderProperty = Shader.PropertyToID("_AlphaWrite");
     [SerializeField] internal bool _enableMipmapping = false;
     [SerializeField] internal bool _dynamicResolution = true;
     [SerializeField] internal int _redrawResolutionThreshold = int.MaxValue;
@@ -110,7 +111,7 @@ public class OVROverlayCanvas : OVRRayTransformer
     private bool _nonUniformScaleWarningShown;
     private (int frameCount, float? score) _lastViewPriorityScore = (-1, null);
 
-    public bool IsCanvasPriority => OVROverlayCanvasManager.Instance?.IsCanvasPriority(this) is true;
+    public virtual bool IsCanvasPriority => OVROverlayCanvasManager.Instance?.IsCanvasPriority(this) is true;
     public bool ShouldShowImposter => !IsCanvasPriority || !overlayEnabled || overlayType is OVROverlay.OverlayType.Underlay;
 
     public bool overlayEnabled
@@ -118,13 +119,14 @@ public class OVROverlayCanvas : OVRRayTransformer
         get { return _overlayEnabled; }
         set
         {
+            _overlayEnabled = value;
             if (_overlay && Application.isPlaying)
             {
                 _overlay.enabled = value;
                 // Update our impostor color to switch between visible and punch-a-hole
-                _imposterMaterial.color = value ? Color.black : Color.white;
+                _imposterMaterial.color = CalcImposterColor();
+                _imposterMaterial.SetInt(kAlphaWriteShaderProperty, CalcImposterAlphaWrite());
             }
-            _overlayEnabled = value;
         }
     }
 
@@ -334,6 +336,7 @@ public class OVROverlayCanvas : OVRRayTransformer
 
         _imposterMaterial.mainTexture = _renderTexture;
         _imposterMaterial.color = CalcImposterColor();
+        _imposterMaterial.SetInt(kAlphaWriteShaderProperty, CalcImposterAlphaWrite());
         _imposterMaterial.mainTextureOffset = _imposterTextureOffset;
         _imposterMaterial.mainTextureScale = _imposterTextureScale;
 
@@ -369,9 +372,19 @@ public class OVROverlayCanvas : OVRRayTransformer
         OVROverlayCanvasSettings.Instance.ApplyGlobalSettings();
     }
 
+    private bool IsImposterHolePunch()
+    {
+        return overlayEnabled && IsCanvasPriority && overlayType is OVROverlay.OverlayType.Underlay;
+    }
+
     private Color CalcImposterColor()
     {
-        return overlayEnabled && IsCanvasPriority && overlayType is OVROverlay.OverlayType.Underlay ? Color.black : Color.white;
+        return IsImposterHolePunch() ? Color.black : Color.white;
+    }
+
+    private int CalcImposterAlphaWrite()
+    {
+        return IsImposterHolePunch() ? (int)BlendMode.Zero : (int)BlendMode.One;
     }
 
     private void OnDestroy()
@@ -516,6 +529,7 @@ public class OVROverlayCanvas : OVRRayTransformer
     {
         // Update our impostor color to switch between visible and punch-a-hole
         _imposterMaterial.color = CalcImposterColor();
+        _imposterMaterial.SetInt(kAlphaWriteShaderProperty, CalcImposterAlphaWrite());
         // Update the scale and offset each frame to avoid a bug where Unity likes to reset them for some reason
         _imposterMaterial.mainTextureScale = _imposterTextureScale;
         _imposterMaterial.mainTextureOffset = _imposterTextureOffset;

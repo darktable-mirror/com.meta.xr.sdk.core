@@ -31,6 +31,7 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly Color ExperimentalColor = HexToColor("#eba333");
             public static readonly Color NewColor = HexToColor("#ffc75d");
             public static readonly Color DarkBlue = HexToColor("#48484d");
+            public static readonly Color BrightBlue = new Color(0, 0.8922f, 2.0784f);
             public static readonly Color BrightGray = HexToColor("#c4c4c4");
             public static readonly Color LightGray = HexToColor("#aaaaaa");
             public static readonly Color DarkerGray = HexToColor("#2e2e2e");
@@ -67,10 +68,13 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly Color UtilityColor = HexToColor("#4ed998");
             public static readonly Color DisabledColor = HexToColor("#808080");
             public static readonly Color Grey60 = HexToColor("#606060");
+            public static readonly Color Grey6a = HexToColor("#6a6a6a");
             public static readonly Color Grey40 = HexToColor("#404040");
             public static readonly Color Grey44 = HexToColor("#444444");
             public static readonly Color DarkBorder = HexToColor("#232323");
             public static readonly Color DarkBorderHover = HexToColor("#292929");
+            public static readonly Color BlackSemiTransparent = HexToColor("#000000bb");
+            public static readonly Color Transparent = new Color(0, 0, 0, 0);
 
         }
 
@@ -134,7 +138,6 @@ namespace Meta.XR.Editor.UserInterface
 
             public readonly GUIStyle BulletedLabelHorizontal = new()
             {
-
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(0, 0, 0, 0),
                 stretchWidth = true,
@@ -465,6 +468,16 @@ namespace Meta.XR.Editor.UserInterface
                 }
             };
 
+            public readonly GUIStyle SeparatorAreaStyle = new()
+            {
+                fixedHeight = RLDS.Styles.Border.BorderWidth,
+                stretchHeight = false,
+                normal =
+                {
+                    background = new Color(0, 0, 0, 0.1f).ToTexture()
+                }
+            };
+
             public readonly GUIStyle OverviewBox = new GUIStyle()
             {
                 padding = new RectOffset(0, Constants.DoubleMargin, 0, 0),
@@ -519,8 +532,10 @@ namespace Meta.XR.Editor.UserInterface
 
             public readonly GUIStyle RoundedBox = new()
             {
-                margin = new RectOffset(Constants.TripleMargin, Constants.TripleMargin, Constants.Margin, Constants.Margin),
-                padding = new RectOffset(Constants.DoubleMargin, Constants.DoubleMargin, Constants.DoubleMargin, Constants.DoubleMargin),
+                margin = new RectOffset(Constants.TripleMargin, Constants.TripleMargin, Constants.Margin,
+                    Constants.Margin),
+                padding = new RectOffset(Constants.DoubleMargin, Constants.DoubleMargin, Constants.ButtonPadding,
+                    Constants.ButtonPadding),
                 stretchWidth = true,
                 stretchHeight = false,
             };
@@ -546,7 +561,8 @@ namespace Meta.XR.Editor.UserInterface
                 margin = new RectOffset(0, Constants.Margin, 0, 0),
                 padding = new RectOffset(0, 0, 0, 0),
                 stretchHeight = false,
-                stretchWidth = false
+                stretchWidth = false,
+                fixedWidth = 24,
             };
 
             public readonly GUIStyle CardAction = new(EditorStyles.label)
@@ -585,7 +601,8 @@ namespace Meta.XR.Editor.UserInterface
 
             public readonly GUIStyle ScrollViewBox = new()
             {
-                margin = new RectOffset(Constants.TripleMargin, Constants.TripleMargin, Constants.Margin, Constants.Margin),
+                margin = new RectOffset(Constants.TripleMargin, Constants.TripleMargin, Constants.Margin,
+                    Constants.Margin),
                 padding = new RectOffset(0, 0, 0, 0),
                 stretchWidth = true,
                 stretchHeight = false,
@@ -597,6 +614,14 @@ namespace Meta.XR.Editor.UserInterface
                 stretchWidth = true,
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(Constants.Margin, Constants.Margin, Constants.Margin, Constants.Margin)
+            };
+
+            public readonly GUIStyle Spinner = new()
+            {
+                stretchHeight = false,
+                stretchWidth = false,
+                fixedWidth = Constants.IconSize,
+                fixedHeight = Constants.IconSize
             };
         }
 
@@ -619,6 +644,9 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly TextureContent MetaWhiteIcon =
                 TextureContent.CreateContent("ovr_icon_meta_white.png", TextureContent.Categories.Generic);
 
+            public static readonly TextureContent MetaIconLarge =
+                TextureContent.CreateContent("meta_icon_large.png", TextureContent.Categories.Generic);
+
             public static readonly TextureContent InstructionsIcon =
                 TextureContent.CreateContent("ovr_icon_instructions.png", TextureContent.Categories.Generic, null);
 
@@ -637,6 +665,9 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly TextureContent UpdateIcon =
                 TextureContent.CreateContent("ovr_icon_update.png", TextureContent.Categories.Generic, null);
 
+            public static readonly TextureContent ReloadIcon =
+                TextureContent.CreateContent("ovr_icon_reload.png", TextureContent.Categories.Generic);
+
             internal static readonly TextureContent ExperimentalIcon =
                 TextureContent.CreateContent("ovr_icon_experimental.png", TextureContent.Categories.Generic, null);
 
@@ -646,6 +677,9 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly TextureContent FeedbackIcon =
                 TextureContent.CreateContent("ovr_icon_bug.png", TextureContent.Categories.Generic,
                     "Give feedback or report bugs");
+
+            public static readonly TextureContent PlusIcon =
+                TextureContent.CreateContent("plus.png", TextureContent.Categories.Generic);
 
             public static readonly TextureContent BulletIcon =
                 TextureContent.CreateContent("ovr_bullet.png", TextureContent.Categories.Generic);
@@ -662,6 +696,9 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly TextureContent CheckboxButtonSelectedIcon =
                 TextureContent.CreateContent("ovr_checkbox_selected.png", TextureContent.Categories.Generic);
 
+            public static readonly TextureContent SpinnerIcon =
+                TextureContent.CreateContent("spinner.png", TextureContent.Categories.Generic);
+
         }
 
         public static class Constants
@@ -669,6 +706,7 @@ namespace Meta.XR.Editor.UserInterface
             public const float ItemHeight = 48.0f;
             public const float MiniIconHeight = 18.0f;
             public const float SmallIconSize = 16.0f;
+            public const float IconSize = 24.0f;
             public const float LabelWidth = 192.0f;
             public const float LargeButtonHeight = 40.0f;
             public const int DefaultButtonWidth = 72;

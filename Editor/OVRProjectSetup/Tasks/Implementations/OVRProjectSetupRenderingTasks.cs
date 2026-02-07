@@ -159,11 +159,31 @@ internal static class OVRProjectSetupRenderingTasks
             message: "Manual selection of Graphic API, favoring Direct3D11",
             fix: buildTargetGroup =>
             {
-                var buildTarget = buildTargetGroup.GetBuildTarget();
-                PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
-                PlayerSettings.SetGraphicsAPIs(buildTarget, new[] { GraphicsDeviceType.Direct3D11 });
+                // Show dialog asking user to switch build target
+                var dialogResult = EditorUtility.DisplayDialog(
+                    "Switch Graphics API to Direct3D11",
+                    "This will change the Graphics API to Direct3D11 and restart the Unity Editor. " +
+                    "Any unsaved changes will be lost.\n\nDo you want to continue?",
+                    "Yes, Switch and Restart",
+                    "Cancel");
+
+                if (dialogResult)
+                {
+                    var buildTarget = buildTargetGroup.GetBuildTarget();
+                    PlayerSettings.SetUseDefaultGraphicsAPIs(buildTarget, false);
+                    PlayerSettings.SetGraphicsAPIs(buildTarget, new[] { GraphicsDeviceType.Direct3D11 });
+
+                    // Save the project to ensure settings are persisted
+                    AssetDatabase.SaveAssets();
+
+                    // Restart Unity Editor using delay call to ensure settings are saved first
+                    EditorApplication.delayCall += () =>
+                    {
+                        EditorApplication.OpenProject(System.IO.Directory.GetCurrentDirectory());
+                    };
+                }
             },
-            fixMessage: "Set Graphics APIs for this build target to Direct3D11"
+            fixMessage: "Set Graphics APIs for this build target to Direct3D11 and restart Unity Editor"
         );
 #endif
 

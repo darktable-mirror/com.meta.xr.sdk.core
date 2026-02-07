@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using Meta.XR.Editor.Callbacks;
 using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.Tags;
+using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
 
@@ -44,6 +45,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static readonly RemoteJsonContentDownloader Downloader;
 
         private static BlockData[] _contentFilter;
+        private static readonly Dictionary<string, int> BlockOrderDictionary = new();
 
         private static Dictionary<string, BlockModifiableProperty[]> _blockModifiableProperties;
 
@@ -57,7 +59,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             Downloader = new RemoteJsonContentDownloader("bb_content.json", DownloadPath)
                 .WithCacheDuration(TimeSpan.FromHours(CacheDurationInHours))
                 .WithMachineIdUrlParameter()
-                .WithSDKVersionUrlParameter();
+                .WithSDKVersionUrlParameter()
+                .WithCachePerSDKVersion();
 
             InitializeOnLoad.Register(Initialize);
         }
@@ -117,6 +120,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             public string id;
             public string blockName;
             public string description;
+            public ulong thumbnailContentId;
             public string[] tags;
             public BlockModifiableProperty[] modifiableProperties;
         }
@@ -164,6 +168,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             public string tag;
             public string description;
+            public ulong thumbnailContentId;
             public BlockData[] blocks;
         }
 
@@ -204,6 +209,12 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             _contentFilter = response.content;
 
+            ClearBlockOrder();
+            for (var i = 0; i < response.content.Length; i++)
+            {
+                SetBlockOrder(response.content[i].id, i);
+            }
+
             ParseModifiableProperties(response);
 
             ParseDocumentations(response);
@@ -213,7 +224,20 @@ namespace Meta.XR.BuildingBlocks.Editor
             var success = _contentFilter is { Length: > 0 };
             OnContentChanged?.Invoke();
 
+            if (success)
+            {
+                PreloadRemoteTextures(response);
+            }
+
             return success;
+        }
+
+        private static void PreloadRemoteTextures(BlockDataResponse response)
+        {
+            var blockContentIds = response.content.Select(block => block.thumbnailContentId);
+            var collectionContentIds =
+                response.tags.collections.Select(collection => collection.thumbnailContentId);
+            _ = RemoteTextureContent.PreloadRemoteTextures(blockContentIds.Concat(collectionContentIds));
         }
 
         private static void ParseModifiableProperties(BlockDataResponse response)
@@ -243,9 +267,27 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 var tag = new Tag(collection.tag);
 
-                // Currently we don't support any new Collection tag coming from remote
                 if (!CustomTagBehaviors.CollectionTags.Contains(tag))
+                {
+                    // Generate the tag, and its behavior if it is not a preexisting one
+                    CustomTagBehaviors.SetDefaultCollectionTagBehavior(tag);
+                }
+
+                tag.OnValidate();
+
+                // If the tag has not been properly setup with a behavior, ignore it
+                if (tag.Behavior is not CollectionTagBehavior behavior)
                     continue;
+
+                // Update with remote overrides, optional
+                if (!string.IsNullOrEmpty(collection.description))
+                {
+                    behavior.Description = collection.description;
+                }
+                if (collection.thumbnailContentId != 0)
+                {
+                    behavior.RemoteThumbnailContentId = collection.thumbnailContentId;
+                }
 
                 RemoteCollectionTags.Add(tag);
                 RemoteCollections.TryAdd(tag, new());
@@ -275,7 +317,23 @@ namespace Meta.XR.BuildingBlocks.Editor
                 block.BlockName.RemoveOverride();
                 block.Description.RemoveOverride();
                 block.OverridableTags.RemoveOverride();
+                block.RemoteThumbnailContentId.RemoveOverride();
             }
+        }
+
+        public static int GetBlockOrder(BlockBaseData blockBaseData)
+        {
+            return BlockOrderDictionary.GetValueOrDefault(blockBaseData.Id, int.MaxValue);
+        }
+
+        internal static void SetBlockOrder(string blockId, int order)
+        {
+            BlockOrderDictionary[blockId] = order;
+        }
+
+        internal static void ClearBlockOrder()
+        {
+            BlockOrderDictionary.Clear();
         }
 
         internal static IReadOnlyList<BlockBaseData> FilterBlockWindowContent(IReadOnlyList<BlockBaseData> content,
@@ -300,6 +358,11 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 blockBaseData.BlockName.SetOverride(contentFilterDictionary[blockBaseData.Id].value.blockName);
                 blockBaseData.Description.SetOverride(contentFilterDictionary[blockBaseData.Id].value.description);
+                var thumbnailContentId = contentFilterDictionary[blockBaseData.Id].value.thumbnailContentId;
+                if (thumbnailContentId != 0)
+                {
+                    blockBaseData.RemoteThumbnailContentId.SetOverride(thumbnailContentId);
+                }
                 blockBaseData.OverridableTags.SetOverride(
                     GenerateTagArrayFromTags(contentFilterDictionary[blockBaseData.Id].value.tags));
             }
@@ -322,8 +385,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static IReadOnlyCollection<BlockBaseData> GetCollection(CollectionTagBehavior collection)
         {
-            if (collection == null) return null;
-            return RemoteCollections.GetValueOrDefault(collection.Tag, null);
+            return collection == null ? null : RemoteCollections.GetValueOrDefault(collection.Tag, null);
         }
 
         #endregion

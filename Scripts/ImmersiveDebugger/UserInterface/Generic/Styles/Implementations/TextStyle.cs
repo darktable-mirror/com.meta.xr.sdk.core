@@ -44,9 +44,16 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// </summary>
         public int fontSize = 14;
         /// <summary>
+        /// Font style, to allow italic or bold.
+        /// </summary>
+        public FontStyle fontStyle = FontStyle.Normal;
+        /// <summary>
         /// The color for the text with Unity's builtin <see cref="Color"/> type. by default using white color.
         /// </summary>
         public Color color = Color.white;
+        /// <summary>
+        /// Wrapping modes for text that reaches the horizontal boundary.
+        /// </summary>
+        public HorizontalWrapMode horizontalOverflow = HorizontalWrapMode.Overflow;
     }
 }
-

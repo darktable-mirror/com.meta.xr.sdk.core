@@ -28,7 +28,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
     /// <summary>
     /// This is a <see cref="MonoBehaviour"/> for the Debug Bar UI panel (the bar on the bottom) of Immersive Debugger.
-    /// Containing UI elements of miniButtons, large buttons and the label for startup time. Allow registering buttons and callbacks.
+    /// Containing UI elements of miniButtons, large buttons and the title label. Allow registering buttons and callbacks.
     /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     public class DebugBar : OverlayCanvasPanel
@@ -37,7 +37,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Dictionary<DebugPanel, Toggle> _panelToggles = new Dictionary<DebugPanel, Toggle>();
         private Flex _buttonsAnchor;
         private Flex _miniButtonsAnchor;
-        private Label _time;
+        private Label _titleLabel;
+
+        private LayoutStyle _panelButtonStyle;
 
         protected override void Setup(Controller owner)
         {
@@ -51,15 +53,16 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             var leftButtons = Append<Controller>("leftbuttons");
             leftButtons.LayoutStyle = Style.Load<LayoutStyle>("FillWithMargin");
 
-            // Time Watch
-            _time = leftButtons.Append<Label>("time");
-            _time.LayoutStyle = Style.Load<LayoutStyle>("BarTime");
-            _time.TextStyle = Style.Load<TextStyle>("BarTime");
+            // Title Label
+            _titleLabel = leftButtons.Append<Label>("time");
+            _titleLabel.LayoutStyle = Style.Load<LayoutStyle>("BarTime");
+            _titleLabel.TextStyle = Style.Load<TextStyle>("BarTime");
 
             // Mini Buttons
             _miniButtonsAnchor = leftButtons.Append<Flex>("miniButtons");
             _miniButtonsAnchor.LayoutStyle = Style.Load<LayoutStyle>("MiniButtons");
 
+            _panelButtonStyle = Style.Load<LayoutStyle>("PanelButton");
             SetExpectedPixelsPerUnit(1000.0f, 10.0f, 2.24f);
 
             // Debug Bar is always shown by default
@@ -80,11 +83,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             var toggle = _buttonsAnchor.Append<Toggle>("PanelButton");
             toggle.Icon = panel.Icon;
-            toggle.LayoutStyle = Style.Load<LayoutStyle>("PanelButton");
+            toggle.LayoutStyle = _panelButtonStyle;
             toggle.BackgroundStyle = Style.Load<ImageStyle>("PanelButtonBackground");
             toggle.IconStyle = Style.Load<ImageStyle>("PanelButtonIcon");
             toggle.Callback = panel.ToggleVisibility;
             _panelToggles.Add(panel, toggle);
+
+            // Update debug bar width dynamically based on number of panels
+            UpdateDebugBarWidth();
         }
 
         /// <summary>
@@ -117,14 +123,25 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        private void Update()
+        private void UpdateDebugBarWidth()
         {
-            var elapsedTime = Time.realtimeSinceStartup;
-            var minutes = (int)(elapsedTime / 60);
-            var seconds = (int)(elapsedTime % 60);
-            var formattedTime = $"{minutes:00}:{seconds:00}";
-            _time.Content = formattedTime;
+            if (LayoutStyle == null) return;
+
+            // Calculate width based on number of panels
+            // Base width: 150px for left side (title + mini buttons)
+            const float baseWidth = 150f;
+            float buttonSpacing = _buttonsAnchor.LayoutStyle.spacing;
+            float totalMargins = _buttonsAnchor.LayoutStyle.margin.x + _buttonsAnchor.LayoutStyle.margin.y;
+
+            var totalPanelButtonsWidth = _panels.Count * _panelButtonStyle.size.x;
+            var totalSpacingWidth = Math.Max(0, (_panels.Count - 1) * buttonSpacing);
+            var calculatedWidth = baseWidth + totalPanelButtonsWidth + totalSpacingWidth + totalMargins;
+            LayoutStyle.size = new Vector2(calculatedWidth, LayoutStyle.size.y);
+        }
+
+        private void Start()
+        {
+            _titleLabel.Content = "Immersive Debugger";
         }
     }
 }
-

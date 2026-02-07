@@ -28,19 +28,26 @@ namespace Meta.XR.Editor.UserInterface
         public bool Hide { get; set; }
 
         private readonly GUILayoutOption[] _options;
-        private readonly TextureContent _content;
+        private readonly Texture _texture;
         private readonly GUIStyle _style;
 
         public Image(TextureContent content, GUIStyle style, params GUILayoutOption[] options)
         {
-            _content = content;
+            _texture = content.Image;
+            _style = style;
+            _options = options;
+        }
+
+        public Image(Texture texture, GUIStyle style, params GUILayoutOption[] options)
+        {
+            _texture = texture;
             _style = style;
             _options = options;
         }
 
         public void Draw()
         {
-            var ratio = (float)_content.Image.width / _content.Image.height;
+            var ratio = (float)_texture.width / _texture.height;
             var rect = EditorGUILayout.GetControlRect(false, _style.fixedHeight, _style, _options);
 
             // Border/Background
@@ -49,7 +56,7 @@ namespace Meta.XR.Editor.UserInterface
                 Vector4.zero, UIStyles.Constants.RoundedBorderVectors);
 
             // Actual Image
-            GUI.DrawTexture(rect, _content.Image, ScaleMode.ScaleAndCrop, false, ratio, GUI.color,
+            GUI.DrawTexture(rect, _texture, ScaleMode.ScaleAndCrop, false, ratio, GUI.color,
                 Vector4.zero, UIStyles.Constants.RoundedBorderVectors);
         }
 

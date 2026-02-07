@@ -247,7 +247,11 @@ namespace Meta.XR.Editor.PlayCompanion
 
             if (button.Item2.Children().FirstOrDefault() is not UnityEngine.UIElements.Image image) return;
 
-            image.tintColor = button.Item1.IsSelected ? UserInterface.Styles.Colors.SelectedWhite : UserInterface.Styles.Colors.UnselectedWhite;
+            image.tintColor =
+                button.Item1.TintColor?.Invoke() ??
+                (button.Item1.IsSelected ?
+                    UserInterface.Styles.Colors.SelectedWhite
+                    : UserInterface.Styles.Colors.UnselectedWhite);
         }
 
         private static void CreateButton(Item item)

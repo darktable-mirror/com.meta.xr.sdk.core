@@ -34,6 +34,10 @@
 #define OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
 #endif
 
+#if !(UNITY_EDITOR_WIN || UNITY_EDITOR_OSX)
+#define OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
+#endif
+
 
 #if UNITY_ANDROID && !UNITY_EDITOR
 #define OVRPLUGIN_INCLUDE_MRC_ANDROID
@@ -63,7 +67,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_113_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_115_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -1178,6 +1182,49 @@ public static partial class OVRPlugin
         public IntPtr SamplesConsumed;
     }
 
+    public enum HapticsParametricStreamFrameType : uint
+    {
+        None = 0x00000000,
+        FirstFrame = 0x00000001,
+        IntermediateFrame = 0x00000002,
+        LastFrame = 0x00000003,
+        MaxEnum = 0x7FFFFFFF
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct HapticsParametricVibration
+    {
+        public UInt32 AmplitudePointCount;
+        public IntPtr AmplitudePoints;
+        public UInt32 FrequencyPointCount;
+        public IntPtr FrequencyPoints;
+        public UInt32 TransientCount;
+        public IntPtr Transients;
+        public float MinFrequencyHz;
+        public float MaxFrequencyHz;
+        public HapticsParametricStreamFrameType StreamFrameType;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct HapticsParametricProperties
+    {
+        /// <summary> Ideal rate the application should
+        /// submit haptic frames with, in nanoseconds, for applications that generate
+        /// haptic data on the fly. </summary>
+        public Int64 IdealFrameSubmissionRate;
+
+        /// <summary> Minimum amount of haptic data, in nanoseconds,
+        /// the application should submit in the first haptic frame. </summary>
+        public Int64 MinimumFirstFrameDuration;
+
+        /// <summary> Minimum frequency, in Hertz, supported by the
+        /// device. </summary>
+        public float MinFrequencyHz;
+
+        /// <summary> Maximum frequency, in Hertz, supported by the
+        /// device. </summary>
+        public float MaxFrequencyHz;
+    }
 
     public enum HapticsConstants
     {
@@ -3129,6 +3176,7 @@ public static partial class OVRPlugin
 
 
         ReferenceSpaceChangePending = 1160,
+
     }
 
     private const int EventDataBufferSize = 4000;
@@ -3392,10 +3440,12 @@ public static partial class OVRPlugin
         SemanticLabels = 5,
         RoomLayout = 6,
         SpaceContainer = 7,
+        [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
         MarkerPayload = 1000576000,
         TriangleMesh = 1000269000,
         // XR_META_dynamic_object_tracker
         DynamicObject = 1000288007,
+        RoomMesh = 1000553000
     }
 
     public enum SpaceStorageLocation
@@ -4396,6 +4446,14 @@ public static partial class OVRPlugin
         return OVRP_1_1_0.ovrp_ShowSystemUI(ui) == Bool.True;
 #endif
     }
+    public static Result AcquireLayerSwapchain(int layerId, out int acquiredIndex)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return false;
+#else
+        return OVRP_1_113_0.ovrp_AcquireLayerSwapchain(layerId, out acquiredIndex);
+#endif
+    }
 
     public static bool EnqueueSubmitLayer(bool onTop, bool headLocked, bool noDepthBufferTesting, IntPtr leftTexture,
         IntPtr rightTexture, int layerId, int frameIndex, Posef pose, Vector3f scale, int layerIndex = 0,
@@ -5261,7 +5319,43 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public static bool SetControllerHapticsParametric(Controller controllerMask, HapticsParametricVibration hapticsVibration)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return false;
+#else
+        if (version >= OVRP_1_78_0.version)
+        {
+            Result result = OVRP_1_78_0.ovrp_SetControllerHapticsParametric(controllerMask, hapticsVibration);
+            if (result != Result.Success)
+            {
+                Debug.LogError($"Error calling SetControllerHapticsParametric: {result}");
+            }
+            return (result == Result.Success);
+        }
+        return false;
+#endif
+    }
 
+    public static bool GetControllerParametricProperties(Controller controllerMask, out HapticsParametricProperties hapticsProperties)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return false;
+#else
+        if (version >= OVRP_1_78_0.version)
+        {
+            Result result = OVRP_1_78_0.ovrp_GetControllerParametricProperties(controllerMask, out hapticsProperties);
+            if (result != Result.Success)
+            {
+                Debug.LogError($"Error calling GetControllerParametricProperties: {result}");
+            }
+            return (result == Result.Success);
+        }
+
+        hapticsProperties = new HapticsParametricProperties();
+        return false;
+#endif
+    }
 
     public static HapticsDesc GetControllerHapticsDesc(uint controllerMask)
     {
@@ -7768,36 +7862,115 @@ public static partial class OVRPlugin
 #endif
     }
 
-    public static Result SendUnifiedEvent(
-            Bool isEssential,
-            string productType,
-            string eventName,
-            string event_metadata_json,
-            string project_name = "",
-            string event_entrypoint = "",
-            string project_guid = "",
-            string event_type = "",
-            string event_target = "",
-            string error_msg = "",
-            string is_internal_build = "",
-            string batch_mode = "")
+    private static OptionalBool GetOptionalBoolFromString(string value)
+    {
+        OptionalBool result = OptionalBool.Unknown;
+
+        if (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            result = OptionalBool.True;
+        }
+        else if (string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
+        {
+            result = OptionalBool.False;
+        }
+
+        return result;
+    }
+
+    public struct UnifiedEventData
+    {
+        public Bool isEssential;
+        public string productType;
+        public string eventName;
+        public string metadata_json;
+        public string project_name;
+        public string entrypoint;
+        public string project_guid;
+        public string type;
+        public string target;
+        public string error_msg;
+        public OptionalBool is_internal_build;
+        public OptionalBool batch_mode;
+        public ulong machine_oculus_user_id;
+
+        public UnifiedEventData(string eventName)
+        {
+            isEssential = Bool.False;
+            productType = "";
+            this.eventName = eventName;
+            project_name = "";
+            entrypoint = "";
+            project_guid = "";
+            type = "";
+            target = "";
+            error_msg = "";
+            metadata_json = "";
+            is_internal_build = OptionalBool.Unknown;
+            batch_mode = OptionalBool.Unknown;
+            machine_oculus_user_id = 0;
+        }
+    }
+
+    public static Result SendUnifiedEvent(UnifiedEventData eventData)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version >= OVRP_1_110_0.version)
+        if (version >= OVRP_1_114_0.version)
         {
-            return OVRP_1_110_0.ovrp_SendUnifiedEventV2(isEssential, productType, eventName, event_metadata_json, project_name, event_entrypoint, project_guid, event_type, event_target, error_msg, is_internal_build, batch_mode);
-        }
-        else if (version == OVRP_1_109_0.version)
-        {
-            return OVRP_1_109_0.ovrp_SendUnifiedEvent(isEssential, productType, eventName, event_metadata_json, project_name, event_entrypoint, project_guid, event_type, event_target, error_msg, is_internal_build);
+            return OVRP_1_114_0.ovrp_SendUnifiedEventV3(eventData.isEssential, eventData.productType, eventData.eventName,
+                eventData.metadata_json, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build,
+                eventData.batch_mode, eventData.machine_oculus_user_id);
+        } else if (version >= OVRP_1_110_0.version) {
+            return OVRP_1_110_0.ovrp_SendUnifiedEventV2(eventData.isEssential, eventData.productType, eventData.eventName,
+                eventData.metadata_json, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build.ToString(),
+                eventData.batch_mode.ToString());
+        } else if (version == OVRP_1_109_0.version) {
+            return OVRP_1_109_0.ovrp_SendUnifiedEvent(eventData.isEssential, eventData.productType, eventData.eventName,
+                eventData.metadata_json, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build.ToString());
         }
         else // < OVRP_1_109_0.version
         {
             return Result.Failure_Unsupported;
         }
 #endif
+    }
+
+    public static Result SendUnifiedEvent(
+        Bool isEssential,
+        string productType,
+        string eventName,
+        string event_metadata_json,
+        string project_name = "",
+        string event_entrypoint = "",
+        string project_guid = "",
+        string event_type = "",
+        string event_target = "",
+        string error_msg = "",
+        string is_internal_build = "",
+        string batch_mode = "")
+    {
+        var eventData = new UnifiedEventData(eventName)
+        {
+            isEssential = isEssential,
+            productType = productType,
+            metadata_json = event_metadata_json,
+            project_name = project_name,
+            entrypoint = event_entrypoint,
+            project_guid = project_guid,
+            type = event_type,
+            target = event_target,
+            error_msg = error_msg,
+            is_internal_build = GetOptionalBoolFromString(is_internal_build),
+            batch_mode = GetOptionalBoolFromString(batch_mode),
+            machine_oculus_user_id = 0
+        };
+
+        return SendUnifiedEvent(eventData);
     }
 
     public static bool SetHeadPoseModifier(ref Quatf relativeRotation, ref Vector3f relativeTranslation)
@@ -10839,6 +11012,34 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public delegate void ShutdownEventDelegateType(IntPtr context);
+
+    internal static Result RegisterShutdownEventHandler(ShutdownEventDelegateType eventHandler)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_115_0.version)
+        {
+            return Result.Failure_Unsupported;
+        }
+        return OVRP_1_115_0.ovrp_RegisterShutdownEventHandler(eventHandler, IntPtr.Zero);
+#endif
+    }
+
+    internal static Result UnregisterShutdownEventHandler(ShutdownEventDelegateType eventHandler)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_115_0.version)
+        {
+            return Result.Failure_Unsupported;
+        }
+        return OVRP_1_115_0.ovrp_UnregisterShutdownEventHandler(eventHandler);
+#endif
+    }
+
     internal static UInt64 GetAppSpace()
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -12244,7 +12445,95 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public enum SemanticLabel
+    {
+        // the values are aligned with ones previously chosen for
+        // SemanticLabels, but are currently only used for the room polygon
+        Floor = 0,
+        Ceiling = 1,
+        WallFace = 2,
+        DoorFrame = 5,
+        WindowFrame = 6,
+        InvisibleWallFace = 15,
+        Unknown = 17,
+        InnerWallFace = 18,
+    }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RoomFace
+    {
+        public Guid uuid;
+        public Guid parentUuid;
+        public SemanticLabel semanticLabel;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private unsafe struct RoomFaceIndicesInternal
+    {
+        public uint indexCapacityInput;
+        public uint indexCountOutput;
+        public uint* indices;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private unsafe struct RoomMeshInternal
+    {
+        public uint vertexCapacityInput;
+        public uint vertexCountOutput;
+        public Vector3f* vertices;
+        public uint faceCapacityInput;
+        public uint faceCountOutput;
+        public RoomFace* faces;
+    }
+
+
+
+
+    public static unsafe Result GetSpaceRoomMesh(ulong space, uint vertexCapacityInput, out uint vertexCountOutput,
+        Vector3f* vertices, uint faceCapacityInput, out uint faceCountOutput, RoomFace* faces)
+    {
+        vertexCountOutput = 0;
+        faceCountOutput = 0;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_114_0.version)
+            return Result.Failure_NotYetImplemented;
+
+        var roomMesh = new RoomMeshInternal
+        {
+            vertexCapacityInput = vertexCapacityInput,
+            vertices = vertices,
+            faceCapacityInput = faceCapacityInput,
+            faces = faces
+        };
+        var result = OVRP_1_114_0.ovrp_GetSpaceRoomMesh(space, ref roomMesh);
+        vertexCountOutput = roomMesh.vertexCountOutput;
+        faceCountOutput = roomMesh.faceCountOutput;
+        return result;
+#endif
+    }
+
+    public static unsafe Result GetSpaceRoomFaceIndices(ulong space, Guid faceUuid, uint indexCapacityInput, out uint indexCountOutput, uint* indices)
+    {
+        indexCountOutput = 0;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_114_0.version)
+            return Result.Failure_NotYetImplemented;
+
+        var faceIndicesInternal = new RoomFaceIndicesInternal
+        {
+            indexCapacityInput = indexCapacityInput,
+            indices = indices
+        };
+        var result = OVRP_1_114_0.ovrp_GetSpaceRoomFaceIndices(
+            space, faceUuid, ref faceIndicesInternal);
+        indexCountOutput = faceIndicesInternal.indexCountOutput;
+        return result;
+#endif
+    }
 
     public enum DynamicObjectClass
     {
@@ -12582,11 +12871,13 @@ public static partial class OVRPlugin
 
 
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public enum MarkerType
     {
         QRCode = 1
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public enum SpaceMarkerPayloadType
     {
         InvalidQRCode = 1,
@@ -12594,18 +12885,21 @@ public static partial class OVRPlugin
         BinaryQRCode = 3,
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public struct MarkerTrackerCreateInfo
     {
         public uint MarkerTypeCount;
         public unsafe MarkerType* MarkerTypes;
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public struct MarkerTrackerCreateCompletion
     {
         public Result FutureResult;
         public ulong MarkerTracker;
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public struct SpaceMarkerPayload
     {
         public uint BufferCapacityInput;
@@ -12614,6 +12908,7 @@ public static partial class OVRPlugin
         public SpaceMarkerPayloadType PayloadType;
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public static unsafe Result CreateMarkerTrackerAsync(ReadOnlySpan<MarkerType> markerTypes, out ulong future)
     {
         future = default;
@@ -12633,6 +12928,7 @@ public static partial class OVRPlugin
 #endif
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public static Result CreateMarkerTrackerComplete(ulong future, out MarkerTrackerCreateCompletion completion)
     {
         completion = default;
@@ -12645,6 +12941,7 @@ public static partial class OVRPlugin
 #endif
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public static Result DestroyMarkerTracker(ulong markerTracker)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -12656,6 +12953,7 @@ public static partial class OVRPlugin
 #endif
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public static Result GetSpaceMarkerPayload(ulong space, ref SpaceMarkerPayload payload)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -12667,6 +12965,7 @@ public static partial class OVRPlugin
 #endif
     }
 
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public static Result GetMarkerTrackingSupported(out bool markerTrackingSupported)
     {
         markerTrackingSupported = false;
@@ -13397,6 +13696,94 @@ public static partial class OVRPlugin
         }
     }
 
+
+
+    public static class MetaWandAuth
+    {
+        public static Result GetAccessToken(IntPtr accessToken, int bufferSize)
+        {
+#if OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_114_0.version)
+            {
+                return Result.Failure_Unsupported;
+            }
+
+            return OVRP_1_114_0.ovrp_MetaWandAuth_GetAccessToken(accessToken, bufferSize);
+#endif
+        }
+
+        public static Result Authenticate()
+        {
+#if OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_114_0.version)
+            {
+                return Result.Failure_Unsupported;
+            }
+
+            return OVRP_1_114_0.ovrp_MetaWandAuth_Authenticate() == Bool.True ? Result.Success : Result.Failure;
+#endif
+        }
+
+        public static Result Logout()
+        {
+#if OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_114_0.version)
+            {
+                return Result.Failure_Unsupported;
+            }
+
+            return OVRP_1_114_0.ovrp_MetaWandAuth_Logout() == Bool.True ? Result.Success : Result.Failure;
+#endif
+        }
+
+        public static Result HasAccessToken()
+        {
+#if OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_114_0.version)
+            {
+                return Result.Failure_Unsupported;
+            }
+
+            return OVRP_1_114_0.ovrp_MetaWandAuth_HasAccessToken() == Bool.True ? Result.Success : Result.Failure;
+#endif
+        }
+
+        public static Result IsAuthenticating()
+        {
+#if OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_114_0.version)
+            {
+                return Result.Failure_Unsupported;
+            }
+
+            return OVRP_1_114_0.ovrp_MetaWandAuth_IsAuthenticating() == Bool.True ? Result.Success : Result.Failure;
+#endif
+        }
+
+        public static Result Stop()
+        {
+#if OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
+            return Result.Failure_Unsupported;
+#else
+            if (version < OVRP_1_114_0.version)
+            {
+                return Result.Failure_Unsupported;
+            }
+
+            return OVRP_1_114_0.ovrp_MetaWandAuth_Stop() == Bool.True ? Result.Success : Result.Failure;
+#endif
+        }
+    }
 
     private const string pluginName = "OVRPlugin";
     private static System.Version _versionZero = new System.Version(0, 0, 0);
@@ -14868,6 +15255,15 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetControllerSampleRateHz(Controller controller, out float sampleRateHz);
 
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SetControllerHapticsParametric(
+            Controller controllerMask,
+            HapticsParametricVibration hapticsVibration);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetControllerParametricProperties(
+            Controller controllerMask,
+            out HapticsParametricProperties hapticsProperties);
     }
 
     private static class OVRP_1_79_0
@@ -15215,7 +15611,6 @@ public static partial class OVRPlugin
 
 
 
-
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetCurrentInteractionProfileName(Hand hand, IntPtr interactionProfile);
 
@@ -15445,18 +15840,23 @@ public static partial class OVRPlugin
             string is_internal_build,
             string batch_mode);
 
+        [Obsolete]
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_CreateMarkerTrackerAsync(in MarkerTrackerCreateInfo createInfo, out ulong future);
 
+        [Obsolete]
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_CreateMarkerTrackerComplete(ulong future, out MarkerTrackerCreateCompletion completion);
 
+        [Obsolete]
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_DestroyMarkerTracker(ulong tracker);
 
+        [Obsolete]
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetSpaceMarkerPayload(ulong space, ref SpaceMarkerPayload payload);
 
+        [Obsolete]
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetMarkerTrackingSupported(out Bool value);
 
@@ -15502,16 +15902,67 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetMachineID(IntPtr machineId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_AcquireLayerSwapchain(int layerId, out int swapchainIndex);
     }
 
     private static class OVRP_1_114_0
     {
         public static readonly System.Version version = new System.Version(1, 114, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe Result ovrp_GetSpaceRoomMesh(ulong space, ref RoomMeshInternal roomMeshOutput);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe Result ovrp_GetSpaceRoomFaceIndices(ulong space, Guid faceUuid, ref RoomFaceIndicesInternal roomFaceIndicesOutput);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_MetaWandAuth_GetAccessToken(System.IntPtr accessToken, int bufferSize);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_MetaWandAuth_Authenticate();
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_MetaWandAuth_Logout();
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_MetaWandAuth_HasAccessToken();
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_MetaWandAuth_IsAuthenticating();
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Bool ovrp_MetaWandAuth_Stop();
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SendUnifiedEventV3(
+            Bool isEssential,
+            string productType,
+            string eventName,
+            string event_metadata_json,
+            string project_name,
+            string event_entrypoint,
+            string project_guid,
+            string event_type,
+            string event_target,
+            string error_msg,
+            OptionalBool is_internal_build,
+            OptionalBool batch_mode,
+            ulong machine_oculus_user_id);
+
     }
 
     private static class OVRP_1_115_0
     {
         public static readonly System.Version version = new System.Version(1, 115, 0);
+
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_RegisterShutdownEventHandler(ShutdownEventDelegateType eventHandler, IntPtr context);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_UnregisterShutdownEventHandler(ShutdownEventDelegateType eventHandler);
     }
 
     private static class OVRP_1_116_0

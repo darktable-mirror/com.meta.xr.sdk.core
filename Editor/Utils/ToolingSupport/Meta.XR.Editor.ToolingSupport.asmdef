@@ -8,7 +8,8 @@
         "Meta.XR.Editor.Reflection",
         "Meta.XR.Editor.Id",
         "Oculus.VR",
-        "Meta.XR.ReportBug"
+        "Meta.XR.ReportBug",
+        "Meta.XR.Editor.RemoteContent"
     ],
     "includePlatforms": [
         "Editor"

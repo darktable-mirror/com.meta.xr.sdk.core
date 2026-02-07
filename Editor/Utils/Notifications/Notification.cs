@@ -131,12 +131,17 @@ namespace Meta.XR.Editor.Notifications
         }
         public string Id { get; }
 
-        public TextureContent Icon { get; set; }
+        public TextureContent Icon { get; set; } = UserInterface.Styles.Contents.MetaIconLarge;
+
+        public TextureContent HeaderImage { get; set; }
+        public float? HeaderImageRatio { get; set; }
+        public int HeaderImageBorder { get; set; }
+
         public IEnumerable<IUserInterfaceItem> Items { get; set; }
         public bool ShowCloseButton { get; set; }
         public float Duration { get; set; } = -1;
         public event System.Action OnShow;
-        public Color GradientColor { get; set; } = UserInterface.Styles.Colors.Meta;
+        public Color GradientColor { get; set; } = UserInterface.Styles.Colors.Grey6a;
         public float ExpectedWidth { get; set; } = Styles.Constants.Width;
 
         private double _timestamp;

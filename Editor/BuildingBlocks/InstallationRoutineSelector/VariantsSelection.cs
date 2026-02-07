@@ -34,6 +34,8 @@ namespace Meta.XR.BuildingBlocks.Editor
     internal class VariantsSelection : IReadOnlyList<VariantHandle>
     {
         private List<VariantHandle> _variants = new();
+        public List<InstallationRoutine> RoutinesToChooseFrom { get; } = new();
+        public InstallationRoutine FavouriteRoutine = null;
         public BlockData BlockData { get; private set; }
         public bool Completed { get; set; }
         public bool Canceled { get; set; }
@@ -110,6 +112,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             UpdateDependencies();
             UpdateMissingDependencies();
             ApplyConditionToVariants();
+
+            // For Leaf blocks, we want to know all the "ideal" routines (all those fits)
+            // as we may need to manually pick from them
+            var possibleRoutines = _possibleRoutines[BlockData];
+            RoutinesToChooseFrom.Clear();
+            RoutinesToChooseFrom.AddRange(possibleRoutines.Where(routine => routine.Fits(this)));
         }
 
         private void UpdateDependencies()
@@ -223,6 +231,9 @@ namespace Meta.XR.BuildingBlocks.Editor
                     }
                 }
             }
+
+            // Apply the restored values back to the installation routine's actual fields
+            routine.ApplySelection(this);
         }
 
         public void Release(BlockData blockData, bool force = false)
@@ -240,6 +251,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             Canceled = false;
             _variants.Clear();
             _variantConditionStatus.Clear();
+            FavouriteRoutine = null;
         }
 
         private IEnumerable<VariantHandle> GetVariantsRecursive(BlockData blockData)
@@ -318,9 +330,10 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             if (Canceled) return null;
 
-            var selectedRoutine = routines.Count() <= 1 ? routines.FirstOrDefault()
-                : routines.FirstOrDefault(routine => routine.Fits(this));
-
+            // There is a shortcut for variants that is being taken whenever there is only one possible routine
+            // in this case, the VariantSelection is never setup properly, and should not be used to test the fit.
+            var fittingRoutines = routines.Count > 1 ? routines.Where(routine => routine.Fits(this)).ToArray() : routines;
+            var selectedRoutine = fittingRoutines.Contains(FavouriteRoutine) ? FavouriteRoutine : fittingRoutines.FirstOrDefault();
             if (selectedRoutine != null)
             {
                 selectedRoutine.ApplySelection(this);

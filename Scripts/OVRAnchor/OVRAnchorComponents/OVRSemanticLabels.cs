@@ -58,6 +58,8 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
         WallArt = 13,
         SceneMesh = 14,
         InvisibleWallFace = 15,
+        Unknown = 17,
+        InnerWallFace = 18,
     }
 
     internal const string DeprecationMessage = "String-based labels are deprecated (v65). Please use the equivalent enum-based methods.";
@@ -123,6 +125,8 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
         if (singleLabel.SequenceEqual("WALL_ART")) return Classification.WallArt;
         if (singleLabel.SequenceEqual("INVISIBLE_WALL_FACE")) return Classification.InvisibleWallFace;
         if (singleLabel.SequenceEqual("GLOBAL_MESH")) return Classification.SceneMesh;
+        if (singleLabel.SequenceEqual("UNKNOWN")) return Classification.Unknown;
+        if (singleLabel.SequenceEqual("INNER_WALL_FACE")) return Classification.InnerWallFace;
 
         Debug.LogWarning($"Unknown classification: {singleLabel.ToString()}");
         return Classification.Other;

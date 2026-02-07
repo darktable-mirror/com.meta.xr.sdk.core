@@ -326,7 +326,7 @@ public class OVRManifestPreprocessor
             // Add Horizon OS SDK namespace
             var horizonOsSdkNamespaceURI = "http://schemas.horizonos/sdk";
             OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
-            if (projectConfig.horizonOsSdkEnabled)
+            if (!projectConfig.horizonOsSdkDisabled)
             {
                 var namespaceAttribute = element.GetAttribute("xmlns:horizonos");
                 if (string.IsNullOrEmpty(namespaceAttribute))
@@ -336,19 +336,33 @@ public class OVRManifestPreprocessor
             }
 
 #if UNITY_2023_2_OR_NEWER
-            // replace UnityPlayerActivity to UnityPlayerGameActivity
-            XmlElement activityNode = doc.SelectSingleNode("/manifest/application/activity") as XmlElement;
-            string activityName = activityNode.GetAttribute("name", androidNamespaceURI);
-            if (activityName == "com.unity3d.player.UnityPlayerActivity")
+            // replace UnityPlayerActivity to UnityPlayerGameActivity if GameActivity is selected in setting
+            bool isUsingGameActivity = false;
+            try
             {
-                activityNode.SetAttribute("name", androidNamespaceURI, "com.unity3d.player.UnityPlayerGameActivity");
+                isUsingGameActivity = UnityEditor.PlayerSettings.Android.applicationEntry == UnityEditor.AndroidApplicationEntry.GameActivity;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Failed to check PlayerSettings.Android.applicationEntry. Android Build Support may not be installed. Error: {e.Message}");
+                isUsingGameActivity = false;
             }
 
-            // use a Theme.AppCompat theme for the compatbility with UnityPlayerGameActivity
-            string activityTheme = activityNode.GetAttribute("theme", androidNamespaceURI);
-            if (activityTheme == "@android:style/Theme.Black.NoTitleBar.Fullscreen")
+            if (isUsingGameActivity)
             {
-                activityNode.SetAttribute("theme", androidNamespaceURI, "@style/Theme.AppCompat.DayNight.NoActionBar");
+                XmlElement activityNode = doc.SelectSingleNode("/manifest/application/activity") as XmlElement;
+                string activityName = activityNode.GetAttribute("name", androidNamespaceURI);
+                if (activityName == "com.unity3d.player.UnityPlayerActivity")
+                {
+                    activityNode.SetAttribute("name", androidNamespaceURI, "com.unity3d.player.UnityPlayerGameActivity");
+                }
+
+                // use a Theme.AppCompat theme for the compatbility with UnityPlayerGameActivity
+                string activityTheme = activityNode.GetAttribute("theme", androidNamespaceURI);
+                if (activityTheme == "@android:style/Theme.Black.NoTitleBar.Fullscreen")
+                {
+                    activityNode.SetAttribute("theme", androidNamespaceURI, "@style/Theme.AppCompat.DayNight.NoActionBar");
+                }
             }
 #endif
 
@@ -887,7 +901,7 @@ public class OVRManifestPreprocessor
         // If the store-compatible or any manifest override already has the horizon os sdk tag we need to re-add it with the proper
         // prefix and namespace because the prefix get stripped out during the Unity build process which then kills the gradle build.
         ApplyPrefixTag(doc, horizonOsSdkNamespaceURI, "", "uses-horizonos-sdk", "horizonos");
-        if (projectConfig.horizonOsSdkEnabled)
+        if (!projectConfig.horizonOsSdkDisabled)
         {
             AddOrRemoveTag(doc,
                 horizonOsSdkNamespaceURI,

@@ -51,6 +51,7 @@ namespace Meta.XR.Guides.Editor
         public Func<OVRTelemetryMarker, OVRTelemetryMarker> AddAdditionalTelemetryAnnotations;
 
         private CustomBool _dontShowAgain;
+
         public CustomBool DontShowAgain => _dontShowAgain ??= new UserBool()
         {
             Owner = this,
@@ -61,6 +62,7 @@ namespace Meta.XR.Guides.Editor
         };
 
         private Button _closeButton;
+
         public Button CloseButton => _closeButton ??= new Button(new ActionLinkDescription()
         {
             Content = new GUIContent("Close"),
@@ -207,7 +209,8 @@ namespace Meta.XR.Guides.Editor
             DrawBefore?.Invoke();
 
             // Scroll View
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, Styles.GUIStyles.NoMargin);
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, false, false, GUIStyle.none,
+                GUI.skin.verticalScrollbar, Styles.GUIStyles.NoMargin);
 
             // Header
             DrawHeader?.Invoke();
@@ -273,6 +276,7 @@ namespace Meta.XR.Guides.Editor
 
         private void OnFocus() => OnWindowFocus?.Invoke();
         private void OnLostFocus() => OnWindowLostFocus?.Invoke();
+
         private void OnDestroy()
         {
             OnClose();
@@ -313,14 +317,14 @@ namespace Meta.XR.Guides.Editor
             return marker;
         }
 
-        private void DrawDefaultHeader()
+        internal void DrawDefaultHeader()
         {
             DrawHeaderImage();
             DrawHeaderTitle();
             DrawNotice();
         }
 
-        private void DrawHeaderImage()
+        internal void DrawHeaderImage()
         {
             var headerImage = _guideOptions.HeaderImage;
             var isHeaderImageValid = headerImage?.Valid ?? false;
@@ -339,11 +343,12 @@ namespace Meta.XR.Guides.Editor
             }
 
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(_description, UIStyles.GUIStyles.SubtitleLabel, GUILayout.Width(position.width - LargeMargin));
+            EditorGUILayout.LabelField(_description, UIStyles.GUIStyles.SubtitleLabel,
+                GUILayout.Width(position.width - LargeMargin));
             EditorGUILayout.EndHorizontal();
         }
 
-        private void DrawHeaderTitle()
+        internal void DrawHeaderTitle()
         {
             var expectedHeight = _guideOptions.HeaderHeight;
             var headerTitleRect = new Rect(0, 0, EditorGUIUtility.currentViewWidth,
@@ -363,7 +368,8 @@ namespace Meta.XR.Guides.Editor
             EditorGUILayout.BeginHorizontal(UIStyles.GUIStyles.Header);
             using (new ColorScope(ColorScope.Scope.Content, OffWhite))
             {
-                EditorGUILayout.LabelField(GuideStyles.Contents.HeaderIcon, UIStyles.GUIStyles.HeaderIconStyle, GUILayout.Width(32.0f),
+                EditorGUILayout.LabelField(GuideStyles.Contents.HeaderIcon, UIStyles.GUIStyles.HeaderIconStyle,
+                    GUILayout.Width(32.0f),
                     GUILayout.ExpandWidth(false));
             }
 
@@ -390,7 +396,9 @@ namespace Meta.XR.Guides.Editor
                     callback = null,
                     OnLeft = true,
                     Inverted = _guideOptions.InvertDontShowAgain,
-                    Content = string.IsNullOrEmpty(_guideOptions.OverrideDontShowAgainContent?.text) ? DontShowAgain.Content : _guideOptions.OverrideDontShowAgainContent,
+                    Content = string.IsNullOrEmpty(_guideOptions.OverrideDontShowAgainContent?.text)
+                        ? DontShowAgain.Content
+                        : _guideOptions.OverrideDontShowAgainContent,
                 });
             }
 
@@ -400,6 +408,7 @@ namespace Meta.XR.Guides.Editor
             {
                 CloseButton.Draw();
             }
+
             EditorGUILayout.EndHorizontal();
             XRGuideEndVertical();
         }

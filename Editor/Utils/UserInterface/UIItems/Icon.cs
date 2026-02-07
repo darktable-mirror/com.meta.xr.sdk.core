@@ -33,6 +33,7 @@ namespace Meta.XR.Editor.UserInterface
         public string LabelText { get; set; }
         public GUIStyle Style { get; set; }
         public Color Color { get; set; }
+        public GUIStyle LabelStyle { get; set; } = UIStyles.GUIStyles.Label;
 
         private readonly GUILayoutOption[] _options;
         private readonly TextureContent _icon;
@@ -79,7 +80,7 @@ namespace Meta.XR.Editor.UserInterface
 
             if (LabelTextAvailable)
             {
-                new Label(LabelText).Draw();
+                new Label(LabelText, LabelStyle).Draw();
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
             }

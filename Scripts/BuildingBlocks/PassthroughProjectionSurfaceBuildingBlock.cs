@@ -24,7 +24,7 @@ using UnityEngine;
 namespace Meta.XR.BuildingBlocks
 {
     /// <summary>
-    /// Projects passthrough over a surface when using the Surface Projected Passthrough Building Block.
+    /// \deprecated Projects passthrough over a surface when using the Surface Projected Passthrough Building Block.
     /// </summary>
     /// <remarks>
     /// The surface geometries provided by the app should match real-world surfaces as closely as possible.
@@ -38,6 +38,8 @@ namespace Meta.XR.BuildingBlocks
     /// Find out more about [passthrough and its features](https://developer.oculus.com/documentation/unity/unity-passthrough/)
     /// or follow along with these [tutorials](https://developer.oculus.com/documentation/unity/unity-passthrough-tutorial).
     /// </remarks>
+    [Obsolete("Surface projected passthrough is being deprecated and support for it will be removed in a future release." +
+        "Consider using the Passthrough Window Block.")]
     public class PassthroughProjectionSurfaceBuildingBlock : MonoBehaviour
     {
         /// <summary>

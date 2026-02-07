@@ -29,17 +29,43 @@ namespace Meta.XR.Editor.UserInterface
         public string Text { get; set; }
         protected GUILayoutOption[] _options;
         private readonly string _label;
+        private readonly string _placeholder;
 
-        public TextField(string label = "", string text = "", params GUILayoutOption[] options)
+        public TextField(string label = "", string text = "", params GUILayoutOption[] options) : this(label, text, "",
+            options)
+        {
+        }
+
+        public TextField(string label = "", string text = "", string placeholder = "", params GUILayoutOption[] options)
         {
             Text = text;
             _label = label;
             _options = options;
+            _placeholder = placeholder;
         }
 
         public virtual void Draw()
         {
             Text = EditorGUILayout.TextField(_label, Text, _options);
+            DrawPlaceholder();
+        }
+
+        protected void DrawPlaceholder()
+        {
+            if (!string.IsNullOrEmpty(Text)) return;
+            var pos = new Rect(GUILayoutUtility.GetLastRect());
+            var style = new GUIStyle
+            {
+                alignment = TextAnchor.UpperLeft,
+                padding = new RectOffset(8, 0, 4, 0),
+                fontStyle = FontStyle.Italic,
+                normal =
+                {
+                    textColor = Color.grey
+                },
+                wordWrap = true
+            };
+            EditorGUI.LabelField(pos, _placeholder, style);
         }
     }
 }

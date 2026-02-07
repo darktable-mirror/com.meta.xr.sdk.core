@@ -129,6 +129,9 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             var anchors = await _sharedAnchorManager.RetrieveAnchorsFromGroup(groupUuid);
             if (anchors.Count != 0)
             {
+#if META_MR_UTILITY_KIT_DEFINED
+                MRUK.Instance.SetCustomWorldLockAnchor(anchors[0], ColocationConstants.AlignmentAnchorPose);
+#else
                 // align camera to anchors
                 var alignCamera = _cameraRig.gameObject.AddComponent<AlignCameraToAnchor>();
                 alignCamera.CameraAlignmentAnchor = anchors[0];
@@ -136,6 +139,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 _colocationController.ColocationReadyCallbacks?.Invoke();
                 Logger.Log("Guest has retrieved and aligned with the alignment anchor, " +
                            "and is ready for colocation", LogLevel.Info);
+#endif
             }
         }
         #endregion
@@ -183,7 +187,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             MRUK.Instance.RegisterSceneLoadedCallback(() =>
             {
                 var currentRoom = MRUK.Instance.GetCurrentRoom();
-                var roomAnchorTransform = currentRoom.FloorAnchor.transform;
+                var roomAnchorTransform = currentRoom.FloorAnchors[0].transform;
                 var spaceSharingInfo = new SpaceSharingInfo
                 {
                     RoomId = currentRoom.Anchor.Uuid,
@@ -218,7 +222,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             {
                 if (_colocationController.DebuggingOptions.visualizeAlignmentAnchor)
                 {
-                    Instantiate(AnchorPrefab, currentRoom.FloorAnchor.transform);
+                    Instantiate(AnchorPrefab, currentRoom.FloorAnchors[0].transform);
                 }
                 Logger.Log($"Host successfully shared rooms with group {groupUuid}", LogLevel.Info);
             }
@@ -254,7 +258,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 Logger.Log("Guest has successfully loaded the shared room and is ready for colocation", LogLevel.Info);
                 if (_colocationController.DebuggingOptions.visualizeAlignmentAnchor)
                 {
-                    Instantiate(AnchorPrefab, MRUK.Instance.GetCurrentRoom().FloorAnchor.transform);
+                    Instantiate(AnchorPrefab, MRUK.Instance.GetCurrentRoom().FloorAnchors[0].transform);
                 }
             }
         }

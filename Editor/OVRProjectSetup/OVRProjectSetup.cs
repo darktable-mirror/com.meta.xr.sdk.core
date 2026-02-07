@@ -91,7 +91,7 @@ public static class OVRProjectSetup
     private const string DocumentationUrl = "https://developer.oculus.com/documentation/unity/unity-upst-overview";
 
 
-    internal static ToolDescriptor ToolDescriptor = new ToolDescriptor
+    internal static readonly ToolDescriptor ToolDescriptor = new()
     {
         Name = PublicName,
         MenuDescription = "Setup your project",
@@ -151,7 +151,8 @@ public static class OVRProjectSetup
             Owner = ToolDescriptor,
             Uid = "NotificationsScheduler.EnableNotifications",
             Label = "Enable Notifications",
-            Default = true
+            Default = true,
+            SendTelemetry = true
         };
 
     private static string _statusMenuSubText;
@@ -294,8 +295,67 @@ public static class OVRProjectSetup
         var optionalValidity = OptionalLambdaType<BuildTargetGroup, bool>.Create(validity, conditionalValidity, true);
         var optionalManualSetup =
             OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup>.Create(manualSetup, conditionalManualSetup, true);
-        var rule = new OVRConfigurationTask(group, tags, platform, isDone, fix, optionalLevel, optionalMessage,
-            optionalFixMessage, optionalUrl, optionalManualSetup, optionalValidity, fixAutomatic);
+        var rule = new OVRConfigurationTask(
+            group: group,
+            tags: tags,
+            platform: platform,
+            isDone: isDone,
+            fix: fix,
+            asyncFix: null,
+            level: optionalLevel,
+            message: optionalMessage,
+            fixMessage: optionalFixMessage,
+            url: optionalUrl,
+            manualSetup: optionalManualSetup,
+            valid: optionalValidity,
+            fixAutomatic: fixAutomatic);
+        RegisterTask(rule);
+        return rule;
+    }
+
+    internal static OVRConfigurationTask RegisterAsyncTask(TaskGroup group,
+        Func<BuildTargetGroup, bool> isDone,
+        Func<BuildTargetGroup, Task> asyncFix,
+        BuildTargetGroup platform = BuildTargetGroup.Unknown,
+        TaskTags tags = TaskTags.None,
+        TaskLevel level = TaskLevel.Recommended,
+        Func<BuildTargetGroup, TaskLevel> conditionalLevel = null,
+        string message = null,
+        Func<BuildTargetGroup, string> conditionalMessage = null,
+        string fixMessage = null,
+        Func<BuildTargetGroup, string> conditionalFixMessage = null,
+        string url = null,
+        Func<BuildTargetGroup, string> conditionalUrl = null,
+        UPSTGuidedSetup manualSetup = null,
+        Func<BuildTargetGroup, UPSTGuidedSetup> conditionalManualSetup = null,
+        bool validity = true,
+        Func<BuildTargetGroup, bool> conditionalValidity = null,
+        bool fixAutomatic = true
+    )
+    {
+        var optionalLevel =
+            OptionalLambdaType<BuildTargetGroup, TaskLevel>.Create(level, conditionalLevel, true);
+        var optionalMessage = OptionalLambdaType<BuildTargetGroup, string>.Create(message, conditionalMessage, true);
+        var optionalFixMessage =
+            OptionalLambdaType<BuildTargetGroup, string>.Create(fixMessage, conditionalFixMessage, true);
+        var optionalUrl = OptionalLambdaType<BuildTargetGroup, string>.Create(url, conditionalUrl, true);
+        var optionalValidity = OptionalLambdaType<BuildTargetGroup, bool>.Create(validity, conditionalValidity, true);
+        var optionalManualSetup =
+            OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup>.Create(manualSetup, conditionalManualSetup, true);
+        var rule = new OVRConfigurationTask(
+            group: group,
+            tags: tags,
+            platform: platform,
+            isDone: isDone,
+            fix: null,
+            asyncFix: asyncFix,
+            level: optionalLevel,
+            message: optionalMessage,
+            fixMessage: optionalFixMessage,
+            url: optionalUrl,
+            manualSetup: optionalManualSetup,
+            valid: optionalValidity,
+            fixAutomatic: fixAutomatic);
         RegisterTask(rule);
         return rule;
     }
@@ -354,6 +414,63 @@ public static class OVRProjectSetup
         bool fixAutomatic = true
     )
         => RegisterTask(group, isDone, platform, tags, fix, level, conditionalLevel, message, conditionalMessage,
+            fixMessage, conditionalFixMessage, url, conditionalUrl, manualSetup, conditionalManualSetup,
+            validity, conditionalValidity, fixAutomatic);
+
+    /// <summary>
+    /// Add an <see cref="OVRConfigurationTask"/> with async fix to the Setup Tool.
+    /// </summary>
+    /// <remarks>
+    /// This methods creates, adds and registers an <see cref="OVRConfigurationTask"/> with async fix support to the SetupTool.
+    /// Please note that the Message or ConditionalMessage parameters have to be unique since they are being hashed to generate a Unique ID for the task.
+    /// Those tasks, once added, are not meant to be removed from the Setup Tool, and will get checked at some key points.
+    /// This method allows you to provide an async fix action that will be awaited during task processing.
+    /// You can use the conditional parameters that accepts lambdas or delegates for more complex behaviours if needed.
+    /// </remarks>
+    /// <param name="group">Category that fits the task. Feel free to add more to the enum if relevant. Do not use "All".</param>
+    /// <param name="isDone">Delegate that checks if the Configuration Task is validated or not.</param>
+    /// <param name="platform">Platform for which this Configuration Task applies. Use "Unknown" for any.</param>
+    /// <param name="asyncFix">Async delegate that validates the Configuration Task.</param>
+    /// <param name="level">Severity (or behaviour) of the Configuration Task.</param>
+    /// <param name="tags">Tags provide additional metadata about the task. They may adjust the way the task is being processed..</param>
+    /// <param name="conditionalLevel">Use this delegate for more control or complex behaviours over the level parameter.</param>
+    /// <param name="message">Description of the Configuration Task.</param>
+    /// <param name="conditionalMessage">Use this delegate for more control or complex behaviours over the message parameter.</param>
+    /// <param name="fixMessage">Description of the actual fix for the Task.</param>
+    /// <param name="conditionalFixMessage">Use this delegate for more control or complex behaviours over the fixMessage parameter.</param>
+    /// <param name="url">Url to more information about the Configuration Task.</param>
+    /// <param name="conditionalUrl">Use this delegate for more control or complex behaviours over the url parameter.</param>
+    /// <param name="validity">Checks if the task is valid. If not, it will be ignored by the Setup Tool.</param>
+    /// <param name="conditionalValidity">Use this delegate for more control or complex behaviours over the validity parameter.</param>
+    /// <param name="fixAutomatic"></param>
+    /// <exception cref="ArgumentNullException">Possible causes :
+    /// - If either message or conditionalMessage do not provide a valid non null string
+    /// - isDone is null
+    /// - asyncFix is null</exception>
+    /// <exception cref="ArgumentException">Possible causes :
+    /// - group is set to "All". This category is not meant to be used to describe a task.
+    /// - a task with the same unique ID already has been registered (conflict in hash generated from description message).</exception>
+    public static void AddTask(
+        TaskGroup group,
+        Func<BuildTargetGroup, bool> isDone,
+        Func<BuildTargetGroup, Task> asyncFix,
+        BuildTargetGroup platform = BuildTargetGroup.Unknown,
+        TaskTags tags = TaskTags.None,
+        TaskLevel level = TaskLevel.Recommended,
+        Func<BuildTargetGroup, TaskLevel> conditionalLevel = null,
+        string message = null,
+        Func<BuildTargetGroup, string> conditionalMessage = null,
+        string fixMessage = null,
+        Func<BuildTargetGroup, string> conditionalFixMessage = null,
+        string url = null,
+        Func<BuildTargetGroup, string> conditionalUrl = null,
+        UPSTGuidedSetup manualSetup = null,
+        Func<BuildTargetGroup, UPSTGuidedSetup> conditionalManualSetup = null,
+        bool validity = true,
+        Func<BuildTargetGroup, bool> conditionalValidity = null,
+        bool fixAutomatic = true
+    )
+        => RegisterAsyncTask(group, isDone, asyncFix, platform, tags, level, conditionalLevel, message, conditionalMessage,
             fixMessage, conditionalFixMessage, url, conditionalUrl, manualSetup, conditionalManualSetup,
             validity, conditionalValidity, fixAutomatic);
 

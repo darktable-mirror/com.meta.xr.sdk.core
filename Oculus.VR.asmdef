@@ -10,7 +10,8 @@
         "Unity.InputSystem",
         "Unity.XR.OpenXR.Features.MetaQuestSupport",
         "Unity.XR.Oculus",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.XR.Hands"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -109,6 +110,11 @@
             "name": "com.unity.textmeshpro",
             "expression": "",
             "define": "UNITY_TEXTMESHPRO"
+        },
+        {
+            "name": "com.unity.xr.hands",
+            "expression": "",
+            "define": "USING_XR_HANDS"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

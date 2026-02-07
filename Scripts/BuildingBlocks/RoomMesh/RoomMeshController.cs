@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,6 +26,7 @@ using UnityEngine.Rendering;
 
 namespace Meta.XR.BuildingBlocks
 {
+    [Obsolete("The scene mesh Building Block is obsolete. Use the Effect Mesh building block (Global Mesh variant) located in the MRUK package.")]
     public class RoomMeshController : MonoBehaviour
     {
         [SerializeField] private GameObject _meshPrefab;

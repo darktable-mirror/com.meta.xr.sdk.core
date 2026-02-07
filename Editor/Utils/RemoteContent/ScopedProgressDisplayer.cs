@@ -33,7 +33,9 @@ namespace Meta.XR.Editor.RemoteContent
     {
         public static readonly NullScopedScopedProgressDisplayer Instance = new();
 
-        private NullScopedScopedProgressDisplayer() { }
+        private NullScopedScopedProgressDisplayer()
+        {
+        }
 
         public void Dispose()
         {
@@ -48,11 +50,11 @@ namespace Meta.XR.Editor.RemoteContent
         }
     }
 
-    internal class ScopedScopedProgressDisplayer : IScopedProgressDisplayer
+    internal class UnityScopedProgressDisplayer : IScopedProgressDisplayer
     {
         private readonly int _progressId;
 
-        public ScopedScopedProgressDisplayer(string msg)
+        public UnityScopedProgressDisplayer(string msg)
         {
             _progressId = Progress.Start(msg);
             Progress.SetTimeDisplayMode(_progressId, Progress.TimeDisplayMode.ShowRemainingTime);
@@ -72,6 +74,28 @@ namespace Meta.XR.Editor.RemoteContent
         public void SetDescription(string description)
         {
             Progress.SetDescription(_progressId, description);
+        }
+    }
+
+    internal class ScopedProgressDisplayer : IScopedProgressDisplayer
+    {
+        public Action<float, long> OnProgressUpdate;
+        public float Progress { get; private set; }
+        public float RemainingTime { get; private set; }
+
+        public void Dispose()
+        {
+        }
+
+        public void Update(float progress, long seconds)
+        {
+            this.Progress = progress;
+            this.RemainingTime = seconds;
+            OnProgressUpdate?.Invoke(progress, seconds);
+        }
+
+        public void SetDescription(string description)
+        {
         }
     }
 }

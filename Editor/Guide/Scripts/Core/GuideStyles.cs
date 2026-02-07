@@ -57,18 +57,21 @@ namespace Meta.XR.Guides.Editor
             public static readonly TextureContent MetaQuestDeveloperHub =
                 TextureContent.CreateContent("ovr_develop_03.jpg", Utils.GuidedAccountSetupTextures);
 
+            public static readonly TextureContent LearnIcon =
+                TextureContent.CreateContent("ovr_learn_icon.png", Utils.GuidedAccountSetupIcons);
+
             // Remote images
             public static readonly TextureContent ObWelcome =
-                new RemoteTextureContent("ob_welcome.jpeg", 23879511181667769, Utils.GuidedAccountSetupTextures);
+                RemoteTextureContent.CreateWithAutoDownload(23879511181667769, Utils.GuidedAccountSetupTextures);
 
             public static readonly TextureContent ObTools =
-                new RemoteTextureContent("ob_tools.jpeg", 23909742932048545, Utils.GuidedAccountSetupTextures);
+                RemoteTextureContent.CreateWithAutoDownload(23909742932048545, Utils.GuidedAccountSetupTextures);
 
             public static readonly TextureContent ObRelease =
-                new RemoteTextureContent("ob_release.jpeg", 10094379697281995, Utils.GuidedAccountSetupTextures);
+                RemoteTextureContent.CreateWithAutoDownload(10094379697281995, Utils.GuidedAccountSetupTextures);
 
             public static readonly TextureContent ObResources =
-                new RemoteTextureContent("ob_resources.jpeg", 9937139393065108, Utils.GuidedAccountSetupTextures);
+                RemoteTextureContent.CreateWithAutoDownload(9937139393065108, Utils.GuidedAccountSetupTextures);
         }
 
         public static class Constants

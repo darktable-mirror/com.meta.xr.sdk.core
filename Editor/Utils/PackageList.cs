@@ -297,5 +297,31 @@ namespace Meta.XR.Editor.Utils
             var dashIndex = version.IndexOf('-');
             return dashIndex >= 0 ? version[..dashIndex] : version;
         }
+
+        internal static int? ComputePackageVersion(string packageName)
+            => ComputePackageVersion(packageName, packageInfo => packageInfo.version);
+
+        internal static int? ComputeLatestPackageVersion(string packageName)
+            => ComputePackageVersion(packageName, packageInfo => packageInfo.versions.latest);
+
+        private static int? ComputePackageVersion(string packageName,
+            Func<PackageInfo, string> extractVersionFromPackageInfo)
+        {
+            // Returning null as an indicator that it has not been retrieved yet
+            if (!PackageManagerListAvailable) return null;
+
+            var version = 0;
+            var package = GetPackage(packageName);
+
+            if (package == null) return version;
+
+            var versionParts = extractVersionFromPackageInfo.Invoke(package).Split('.');
+            if (versionParts.Length > 0)
+            {
+                int.TryParse(versionParts[0], out version);
+            }
+
+            return version;
+        }
     }
 }

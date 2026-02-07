@@ -322,7 +322,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             return inspector;
         }
 
-        private CategoryButton GetCategoryButton(Category category, bool create = false)
+        internal CategoryButton GetCategoryButton(Category category, bool create = false)
         {
             // Search for it if already created
             if (_categories.TryGetValue(category, out var button) || !create) return button;
@@ -399,7 +399,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             HierarchyFlex.Remove(button, true);
         }
 
-        private void SelectCategoryButton(CategoryButton categoryButton)
+        internal void SelectCategoryButton(CategoryButton categoryButton)
         {
             if (_selectedCategory == categoryButton) return;
 
@@ -503,26 +503,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             item.BuildContent();
 
             SelectCategory(item.Category);
-        }
-
-        internal void SetPanelPosition(RuntimeSettings.DistanceOption distanceOption, bool skipAnimation = false)
-        {
-            var inspectorPanelPositions = ValueContainer<Vector3>.Load("InspectorsPanelPositions");
-            _targetPosition = distanceOption switch
-            {
-                RuntimeSettings.DistanceOption.Close => inspectorPanelPositions["Close"],
-                RuntimeSettings.DistanceOption.Far => inspectorPanelPositions["Far"],
-                _ => inspectorPanelPositions["Default"]
-            };
-
-            if (skipAnimation)
-            {
-                SphericalCoordinates = _targetPosition;
-                _currentPosition = _targetPosition;
-                return;
-            }
-
-            _lerpCompleted = false;
         }
 
         private void Update()

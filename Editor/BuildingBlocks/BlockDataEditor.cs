@@ -81,8 +81,12 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             DrawHeader("Information");
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.blockName)));
+            DrawOverride(BlockData.BlockName);
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.description)));
+            DrawOverride(BlockData.Description);
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.thumbnail)));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.remoteThumbnailContentId)));
+            DrawOverride(BlockData.RemoteThumbnailContentId);
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.tags)));
             UIHelpers.DrawBlockRow(Data, null, Origins.BlockInspector, Data, false);
 
@@ -112,6 +116,18 @@ namespace Meta.XR.BuildingBlocks.Editor
                 BlockData.GuidedSetupName = GuideProcessor.GuidedSetupClasses[BlockData.selectedGuidedSetupIndex];
                 EditorUtility.SetDirty(BlockData);
             }
+        }
+
+        private void DrawOverride<T>(Overridable<T> overridable)
+        {
+            if (!overridable.IsOverriden) return;
+
+            EditorGUI.BeginDisabledGroup(true);
+            using (new ColorScope(ColorScope.Scope.All, Colors.SuccessColor))
+            {
+                EditorGUILayout.TextField("Remote Override", overridable.ToString());
+            }
+            EditorGUI.EndDisabledGroup();
         }
 
 

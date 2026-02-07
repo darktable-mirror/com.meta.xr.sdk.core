@@ -19,6 +19,7 @@
  */
 
 using Meta.XR.Editor.Settings;
+using Meta.XR.Samples.Editor;
 using UnityEditor;
 
 [InitializeOnLoad]
@@ -50,6 +51,8 @@ internal class OVREditorStart
         {
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.Start)
                 .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.UsesProSkin, EditorGUIUtility.isProSkin)
+                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.Samples,
+                    SampleMetadataTelemetry.GetSamplesListJson())
                 .Send();
             OVRPlugin.SendEvent("editor_start");
         }

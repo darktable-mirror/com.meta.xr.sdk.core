@@ -27,6 +27,10 @@ using static OVRPlugin;
 
 partial struct OVRAnchor
 {
+    internal const string QRCodeObsoleteMessage = "The QR Code Detection API has moved to MRUK: " +
+                                                  "https://developers.meta.com/horizon/documentation/unity/unity-mr-utility-kit-overview " +
+                                                  "This version of the API is no longer supported.";
+
     /// <summary>
     /// Represents a configuration for a <see cref="Tracker"/>.
     /// </summary>
@@ -83,26 +87,24 @@ partial struct OVRAnchor
         }
 
         /// <summary>
-        /// The <see cref="Tracker"/> should track QR Codes.
+        /// Whether QR code tracking should be enabled.
         /// </summary>
-        /// <remarks>
-        /// When `true`, a <see cref="Tracker"/> should attempt to track QR Codes in the real environment.
-        ///
-        /// Not all devices support QR Code tracking. You can test for QR Code tracking support with
-        /// <see cref="QRCodeTrackingSupported"/>.
-        /// </remarks>
         [field: SerializeField, Tooltip("When enabled, attempts to track QR Codes in the environment.")]
         public bool QRCodeTrackingEnabled { get; set; }
 
         /// <summary>
-        /// Whether the QR Code tracking is supported by the runtime.
+        /// (Obsolete) Whether the QR Code tracking is supported by the runtime.
         /// </summary>
         /// <remarks>
+        /// \deprecated The QR Code Detection API has moved to MRUK: https://developers.meta.com/horizon/documentation/unity/unity-mr-utility-kit-overview
+        ///
         /// Use this to test for QR Code tracking support before calling <see cref="Tracker.ConfigureAsync"/> with
         /// <see cref="QRCodeTrackingEnabled"/> set to `true`.
         /// </remarks>
+        [Obsolete(QRCodeObsoleteMessage)]
         public static bool QRCodeTrackingSupported => GetMarkerTrackingSupported(out var value).IsSuccess() && value;
 
+        [Obsolete(QRCodeObsoleteMessage)]
         internal OVRNativeList<MarkerType> ToMarkerTypes(Allocator allocator)
         {
             var list = new OVRNativeList<MarkerType>(allocator);
@@ -146,10 +148,12 @@ partial struct OVRAnchor
                 trackableTypes.Add(TrackableType.Keyboard);
             }
 
+#pragma warning disable 0618
             if (QRCodeTrackingEnabled)
             {
                 trackableTypes.Add(TrackableType.QRCode);
             }
+#pragma warning restore 0618
         }
 
         /// <summary>
@@ -300,6 +304,7 @@ partial struct OVRAnchor
 
         private ulong _markerTracker;
 
+        [Obsolete]
         private async OVRTask<Result> SetupMarkerTracker(TrackerConfiguration config)
         {
             // Is the current mode the same as the requested?
@@ -464,11 +469,18 @@ partial struct OVRAnchor
         /// <returns>Returns an async task representing the state and eventual result of the operation.</returns>
         public async OVRTask<OVRResult<ConfigureTrackerResult>> ConfigureAsync(TrackerConfiguration configuration)
         {
+            if (configuration.RequiresMarkerTracker)
+            {
+                Debug.LogWarning(QRCodeObsoleteMessage);
+            }
+
 #if UNITY_EDITOR
             unsafe
             {
                 using (var classes = configuration.ToDynamicObjectClasses(Allocator.Temp))
+#pragma warning disable 0618
                 using (var markerTypes = configuration.ToMarkerTypes(Allocator.Temp))
+#pragma warning restore 0618
                 {
                     OVRTelemetry.Start((int)Telemetry.MarkerId.ConfigureTracker)
                         .AddAnnotation(Telemetry.Annotation.DynamicObjectClasses, classes.AsReadOnlySpan())
@@ -481,7 +493,9 @@ partial struct OVRAnchor
             using (new OVRObjectPool.TaskScope<Result>(out var tasks, out var results))
             {
                 tasks.Add(SetupDynamicObjectTracker(configuration));
+#pragma warning disable 0612
                 tasks.Add(SetupMarkerTracker(configuration));
+#pragma warning restore 0612
 
                 await OVRTask.WhenAll(tasks, results);
 
@@ -570,12 +584,14 @@ partial struct OVRAnchor
 
                 _dynamicObjectTracker = 0;
 
+#pragma warning disable 0618
                 if (_markerTracker != 0)
                 {
                     DestroyMarkerTracker(_markerTracker);
                 }
 
                 _markerTracker = 0;
+#pragma warning restore 0618
 
                 _configuration = default;
             }

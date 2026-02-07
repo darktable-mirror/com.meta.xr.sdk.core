@@ -51,6 +51,13 @@ namespace Meta.XR.BuildingBlocks.Editor
         [SerializeField] internal string targetBlockDataId;
         public string TargetBlockDataId => targetBlockDataId;
 
+        [SerializeField] internal string displayName;
+        public string DisplayName => displayName;
+
+        [TextArea(5, 40)]
+        [SerializeField] internal string description;
+        public string Description => description;
+
         public BlockData TargetBlockData => Utils.GetBlockData(TargetBlockDataId);
 
         protected virtual bool UsesPrefab => true;

@@ -14,8 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: 5fa4d807-dad5-45f9-8d2a-fd910366fd35
   targetBlockDataId: 97a7e1ae-ac65-4ee6-9167-10b3b94782f6
+  displayName: 
+  description: 
   prefab: {fileID: 5057102743009461225, guid: 66c21044f15572b41b910814d22a02ec, type: 3}
   packageDependencies:
-  - com.unity.netcode.gameobjects@^1.7.1
+  - com.unity.netcode.gameobjects@>=1.7.1
+  selectedGuidedSetupIndex: 0
+  guidedSetupName: 
   implementation: 0
   installMatchmaking: 0

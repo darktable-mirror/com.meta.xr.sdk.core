@@ -31,6 +31,9 @@ namespace Meta.XR.Editor.UserInterface
         {
             public static readonly TextureContent DefaultIcon =
                 TextureContent.CreateContent("ovr_bullet.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent CopyIcon =
+                TextureContent.CreateContent("copy.png", TextureContent.Categories.Generic, "Copy text");
         }
 
         public static class Constants

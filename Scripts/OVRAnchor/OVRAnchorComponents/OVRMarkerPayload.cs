@@ -24,14 +24,17 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
 /// <summary>
-/// The payload type of an <see cref="OVRMarkerPayload"/>.
+/// (Obsolete) The payload type of an <see cref="OVRMarkerPayload"/>.
 /// </summary>
 /// <remarks>
+/// \deprecated The QR Code Detection API has moved to MRUK: https://developers.meta.com/horizon/documentation/unity/unity-mr-utility-kit-overview
+///
 /// For an <see cref="OVRAnchor"/> that supports the <see cref="OVRMarkerPayload"/> component, this enum is used to
 /// indicate how you should interpret the payload's data.
 ///
 /// See the <see cref="OVRMarkerPayload.PayloadType"/> property.
 /// </remarks>
+[Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
 public enum OVRMarkerPayloadType
 {
     /// <summary>
@@ -61,10 +64,14 @@ public enum OVRMarkerPayloadType
 partial class OVRExtensions
 {
     /// <summary>
-    /// Determines whether a <see cref="OVRMarkerPayloadType"/> refers to a QR Code.
+    /// (Obsolete) Determines whether a <see cref="OVRMarkerPayloadType"/> refers to a QR Code.
     /// </summary>
+    /// <remarks>
+    /// \deprecated The QR Code Detection API has moved to MRUK: https://developers.meta.com/horizon/documentation/unity/unity-mr-utility-kit-overview
+    /// </remarks>
     /// <param name="value">The <see cref="OVRMarkerPayloadType"/> to test.</param>
     /// <returns>Returns `true` if <paramref name="value"/> is a QR Code; otherwise, `false`.</returns>
+    [Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
     public static bool IsQRCode(this OVRMarkerPayloadType value) => value switch
     {
         OVRMarkerPayloadType.InvalidQRCode => true,
@@ -75,9 +82,11 @@ partial class OVRExtensions
 }
 
 /// <summary>
-/// Represents a marker payload (QR Code) associated with an <see cref="OVRAnchor"/>.
+/// (Obsolete) Represents a marker payload (QR Code) associated with an <see cref="OVRAnchor"/>.
 /// </summary>
 /// <remarks>
+/// \deprecated The QR Code Detection API has moved to MRUK: https://developers.meta.com/horizon/documentation/unity/unity-mr-utility-kit-overview
+///
 /// Anchors with a payload support this component type. In order to access an anchor's payload, first get this component
 /// from the <see cref="OVRAnchor"/>, as in the following example:
 ///
@@ -99,8 +108,12 @@ partial class OVRExtensions
 ///
 /// You can access the raw bytes with the <see cref="GetBytes"/> method or <see cref="Bytes"/> property.
 /// </remarks>
+[Obsolete(OVRAnchor.QRCodeObsoleteMessage)]
 partial struct OVRMarkerPayload
 {
+    /// <summary>
+    /// The payload type, e.g., string vs binary.
+    /// </summary>
     public OVRMarkerPayloadType PayloadType
     {
         get
