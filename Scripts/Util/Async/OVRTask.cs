@@ -302,7 +302,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// <remarks>
     /// This is called by the testing framework and to handle Play in Editor when domain reload is disabled.
     /// </remarks>
-    internal static void Clear()
+    internal static readonly Action Clear = () =>
     {
         Results.Clear();
         Continuations.Clear();
@@ -345,7 +345,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
             OVRObjectPool.Return(source);
         }
         AwaitableSources.Clear();
-    }
+    };
 
     #endregion
 
@@ -1327,36 +1327,119 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
 /// a task-like object, that is, you can await on it from an awaitable function.
 /// </remarks>
 /// <typeparam name="T">The type of the result of an asynchronous operation.</typeparam>
-public class OVRTaskBuilder<T>
+public struct OVRTaskBuilder<T>
 {
+    interface IPooledStateMachine : IDisposable
+    {
+        OVRTask<T>? Task { get; set; }
+        Action MoveNext { get; }
+    }
+
+    class PooledStateMachine<TStateMachine> : IPooledStateMachine, OVRObjectPool.IPoolObject
+        where TStateMachine : IAsyncStateMachine
+    {
+        public TStateMachine StateMachine;
+
+        public OVRTask<T>? Task { get; set; }
+
+        public Action MoveNext { get; }
+
+        public static PooledStateMachine<TStateMachine> Get() => OVRObjectPool.Get<PooledStateMachine<TStateMachine>>();
+
+        public void Dispose() => OVRObjectPool.Return(this);
+
+        public PooledStateMachine() => MoveNext = ExecuteMoveNext;
+
+        void ExecuteMoveNext() => StateMachine.MoveNext();
+
+        void OVRObjectPool.IPoolObject.OnGet()
+        {
+            StateMachine = default;
+            Task = null;
+        }
+
+        void OVRObjectPool.IPoolObject.OnReturn()
+        {
+            StateMachine = default;
+            Task = null;
+        }
+    }
+
+    IPooledStateMachine _pooledStateMachine;
+
     OVRTask<T>? _task;
 
-    public OVRTask<T> Task => _task ??= OVRTask.FromGuid<T>(Guid.NewGuid());
+    public OVRTask<T> Task
+    {
+        get
+        {
+            if (_task.HasValue)
+            {
+                return _task.Value;
+            }
 
-    public void AwaitOnCompleted<TAwaiter, TStateMachine>(
-        ref TAwaiter awaiter,
-        ref TStateMachine stateMachine)
+            if (_pooledStateMachine != null)
+            {
+                return (_task = _pooledStateMachine.Task ??= OVRTask.FromGuid<T>(Guid.NewGuid())).Value;
+            }
+
+            return (_task = OVRTask.FromGuid<T>(Guid.NewGuid())).Value;
+        }
+    }
+
+    public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
         where TAwaiter : INotifyCompletion
-        where TStateMachine : IAsyncStateMachine =>
-        awaiter.OnCompleted(stateMachine.MoveNext);
+        where TStateMachine : IAsyncStateMachine
+    {
+        var pooledStateMachine = GetPooledStateMachine<TStateMachine>();
+        ((PooledStateMachine<TStateMachine>)pooledStateMachine).StateMachine = stateMachine;
+        awaiter.OnCompleted(pooledStateMachine.MoveNext);
+    }
 
-    public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(
-        ref TAwaiter awaiter,
-        ref TStateMachine stateMachine)
+    public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
         where TAwaiter : ICriticalNotifyCompletion
-        where TStateMachine : IAsyncStateMachine =>
-        awaiter.UnsafeOnCompleted(stateMachine.MoveNext);
+        where TStateMachine : IAsyncStateMachine
+    {
+        var pooledStateMachine = GetPooledStateMachine<TStateMachine>();
+        ((PooledStateMachine<TStateMachine>)pooledStateMachine).StateMachine = stateMachine;
+        awaiter.UnsafeOnCompleted(pooledStateMachine.MoveNext);
+    }
 
-    public static OVRTaskBuilder<T> Create() => new();
+    public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+    {
+        var pooledStateMachine = GetPooledStateMachine<TStateMachine>();
+        ((PooledStateMachine<TStateMachine>)pooledStateMachine).StateMachine = stateMachine;
+        stateMachine.MoveNext();
+    }
 
-    public void SetException(Exception exception) => Task.SetException(exception);
+    public static OVRTaskBuilder<T> Create() => default;
 
-    public void SetResult(T result) => Task.SetResult(result);
+    IPooledStateMachine GetPooledStateMachine<TStateMachine>() where TStateMachine : IAsyncStateMachine
+    {
+        if (_pooledStateMachine == null)
+        {
+            _pooledStateMachine = PooledStateMachine<TStateMachine>.Get();
+            _pooledStateMachine.Task = _task;
+        }
+
+        return _pooledStateMachine;
+    }
+
+    public void SetException(Exception exception)
+    {
+        Task.SetException(exception);
+        _pooledStateMachine?.Dispose();
+        _pooledStateMachine = null;
+    }
+
+    public void SetResult(T result)
+    {
+        Task.SetResult(result);
+        _pooledStateMachine?.Dispose();
+        _pooledStateMachine = null;
+    }
 
     public void SetStateMachine(IAsyncStateMachine stateMachine)
     { }
-
-    public void Start<TStateMachine>(ref TStateMachine stateMachine)
-        where TStateMachine : IAsyncStateMachine => stateMachine.MoveNext();
 }
 #endregion

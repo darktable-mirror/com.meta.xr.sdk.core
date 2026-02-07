@@ -59,7 +59,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_98_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_99_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -320,6 +320,14 @@ public static partial class OVRPlugin
         ControllerLeft = 12,
         ControllerRight = 13,
         Count,
+    }
+
+    public enum ActionTypes
+    {
+        Boolean = 1,
+        Float = 2,
+        Pose = 3,
+        Vector2 = 4,
     }
 
     public enum Controller
@@ -4332,8 +4340,8 @@ public static partial class OVRPlugin
         return true;
 #else
         Bool enabled = Bool.True;
-        if (version >= OVRP_1_98_0.version)
-            OVRP_1_98_0.ovrp_GetTrackingPoseEnabledForInvisibleSession(out enabled);
+        if (version >= OVRP_1_99_0.version)
+            OVRP_1_99_0.ovrp_GetTrackingPoseEnabledForInvisibleSession(out enabled);
         return enabled == Bool.True;
 #endif
     }
@@ -4343,8 +4351,8 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return;
 #else
-        if (version >= OVRP_1_98_0.version)
-            OVRP_1_98_0.ovrp_SetTrackingPoseEnabledForInvisibleSession(enabled ? Bool.True : Bool.False);
+        if (version >= OVRP_1_99_0.version)
+            OVRP_1_99_0.ovrp_SetTrackingPoseEnabledForInvisibleSession(enabled ? Bool.True : Bool.False);
 #endif
     }
 #endif
@@ -13491,12 +13499,17 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetBoundaryVisibility(out BoundaryVisibility boundaryVisibility);
 
+    }
+
+    private static class OVRP_1_99_0
+    {
+        public static readonly System.Version version = new System.Version(1, 99, 0);
+
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetTrackingPoseEnabledForInvisibleSession(out Bool trackingPoseEnabled);
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetTrackingPoseEnabledForInvisibleSession(Bool trackingPoseEnabled);
-
     }
 
 }

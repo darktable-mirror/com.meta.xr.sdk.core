@@ -83,7 +83,7 @@ public static class OVRProjectSetup
     internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_icon_upst.png",
         OVRProjectSetupUtils.ProjectSetupToolIcons, $"Open {PublicName}");
 
-    private const string DocumentationUrl ="https://developer.oculus.com/documentation/unity/unity-upst-overview";
+    private const string DocumentationUrl = "https://developer.oculus.com/documentation/unity/unity-upst-overview";
 
 
     internal static Item Item = new Item()

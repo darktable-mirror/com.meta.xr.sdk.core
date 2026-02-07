@@ -22,12 +22,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Meta.XR.Util;
+using System.Threading.Tasks;
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
 #pragma warning disable OVR004
 using System.Linq;
 #pragma warning restore
 #endif
-using Unity.Collections;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -53,12 +53,41 @@ public partial class OVRSpatialAnchor : MonoBehaviour
 
     private ulong _requestId;
 
+    private bool _creationFailed;
+
+    private event Action<OperationResult> _onLocalize;
+
     internal OVRAnchor _anchor { get; private set; }
 
     /// <summary>
-    /// Event that is dispatched when the localization process finishes.
+    /// Event that is dispatched when the anchor is localized.
     /// </summary>
-    public event Action<OperationResult> OnLocalize;
+    /// <remarks>
+    /// If the anchor is already localized when a subscriber is added, the subscriber is invoked immediately.
+    ///
+    /// Consider <see cref="WhenLocalizedAsync"/> for a more flexible way to await anchor localization.
+    /// </remarks>
+    /// <seealso cref="Localized"/>
+    /// <seealso cref="WhenLocalizedAsync"/>
+    public event Action<OperationResult> OnLocalize
+    {
+        add
+        {
+            if (Created && OVRPlugin.GetSpaceComponentStatus(_anchor.Handle, OVRPlugin.SpaceComponentType.Locatable,
+                    out var isEnabled, out var isPending) && !isPending)
+            {
+                // Since we always try to localize upon creation, if isPending is false, then it means the attempt to
+                // localize has completed, and isEnabled determines whether it was successful.
+                value(isEnabled ? OperationResult.Success : OperationResult.Failure);
+            }
+            else
+            {
+                _onLocalize += value;
+            }
+        }
+
+        remove => _onLocalize -= value;
+    }
 
     /// <summary>
     /// The UUID associated with the spatial anchor.
@@ -70,20 +99,50 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     public Guid Uuid => _anchor.Uuid;
 
     /// <summary>
-    ///  Checks whether the spatial anchor is created.
+    /// Whether the spatial anchor is created.
     /// </summary>
     /// <remarks>
     /// Creation is asynchronous and may take several frames. If creation fails, the component is destroyed.
     /// </remarks>
-    public bool Created => _anchor != OVRAnchor.Null;
+    public bool Created => this && _anchor != OVRAnchor.Null;
 
     /// <summary>
     /// Checks whether the spatial anchor is pending creation.
     /// </summary>
-    public bool PendingCreation => _requestId != 0;
+    public bool PendingCreation => this && _requestId != 0;
 
     /// <summary>
-    /// Checks whether the spatial anchor is localized.
+    /// Creates an async task that completes when <see cref="Created"/> becomes `True`.
+    /// </summary>
+    /// <remarks>
+    /// Anchor creation is asynchronous, and adding this component to a `GameObject` will start the creation operation.
+    /// You can use this async method to `await` the creation from another `async` method.
+    ///
+    /// <example>
+    /// This allows you to write code like this:
+    /// <code><![CDATA[
+    /// async Task<OVRSpatialAnchor> CreateAnchor(GameObject gameObject) {
+    ///   var anchor = gameObject.AddComponent<OVRSpatialAnchor>();
+    ///   await anchor.WhenCreatedAsync();
+    ///   return anchor;
+    /// }
+    /// ]]></code>
+    /// </example>
+    /// </remarks>
+    /// <returns>A task-like object that can be used to track the completion of the creation. If creation succeeds,
+    /// the result of the task is `True`, otherwise `False`.</returns>
+    public async OVRTask<bool> WhenCreatedAsync()
+    {
+        while (this && !Created && !_creationFailed)
+        {
+            await Task.Yield();
+        }
+
+        return this && Created;
+    }
+
+    /// <summary>
+    /// Whether the spatial anchor is localized.
     /// </summary>
     /// <remarks>
     /// When you create a new spatial anchor, it may take a few frames before it is localized. Once localized,
@@ -92,6 +151,51 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     public bool Localized => Created &&
                              OVRPlugin.GetSpaceComponentStatus(_anchor.Handle, OVRPlugin.SpaceComponentType.Locatable,
                                  out var isEnabled, out _) && isEnabled;
+
+    /// <summary>
+    /// Async method that completes when localization completes.
+    /// </summary>
+    /// <remarks>
+    /// Localization occurs automatically, but the process may take some time. After creating a new
+    /// <see cref="OVRSpatialAnchor"/>, you can `await` this method from within another `async` method to pause
+    /// execution until the anchor has been localized.
+    ///
+    /// If the localization operation has already completed, this method returns immediately.
+    ///
+    /// The `bool` result of the returned <see cref="OVRTask{TResult}"/> indicates whether localization was successful.
+    ///
+    /// <example>
+    /// To create a new spatial anchor and wait until it is both created and localized, you can use code like this:
+    /// <code><![CDATA[
+    /// async Task<OVRSpatialAnchor> CreateAnchor(GameObject gameObject) {
+    ///   var anchor = gameObject.AddComponent<OVRSpatialAnchor>();
+    ///   await anchor.WhenLocalizedAsync();
+    ///   return anchor; // anchor is localized and ready to use
+    /// }
+    /// ]]></code>
+    /// </example>
+    /// </remarks>
+    /// <returns>A task-like object that can be used to track the completion of the asynchronous localization operation.</returns>
+    public async OVRTask<bool> WhenLocalizedAsync()
+    {
+        if (!await WhenCreatedAsync())
+        {
+            return false;
+        }
+
+        while (OVRPlugin.GetSpaceComponentStatus(_anchor.Handle, OVRPlugin.SpaceComponentType.Locatable,
+                   out var isEnabled, out var changePending))
+        {
+            if (!changePending)
+            {
+                return isEnabled;
+            }
+
+            await Task.Yield();
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Shares the anchor to an <see cref="OVRSpaceUser"/>.
@@ -667,6 +771,11 @@ public partial class OVRSpatialAnchor : MonoBehaviour
 
         if (!CreationRequests.Remove(requestId, out var anchor)) return;
 
+        if (anchor)
+        {
+            anchor._creationFailed = !success;
+        }
+
         if (success && anchor)
         {
             // All good; complete setup of OVRSpatialAnchor component.
@@ -708,7 +817,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         /// <remarks>
         /// Prior to localization, the anchor's <see cref="Pose"/> cannot be determined.
         /// </remarks>
-        /// <seealso cref="Localized"/>
+        /// <seealso cref="WhenLocalizedAsync"/>
         /// <seealso cref="Localizing"/>
         public bool Localized => OVRPlugin.GetSpaceComponentStatus(_space, OVRPlugin.SpaceComponentType.Locatable,
             out var enabled, out _) && enabled;
@@ -716,24 +825,46 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         /// <summary>
         /// Whether the anchor is in the process of being localized.
         /// </summary>
+        /// <seealso cref="WhenLocalizedAsync"/>
         /// <seealso cref="Localized"/>
-        /// <seealso cref="Localize"/>
         public bool Localizing => OVRPlugin.GetSpaceComponentStatus(_space, OVRPlugin.SpaceComponentType.Locatable,
             out var enabled, out var pending) && !enabled && pending;
 
         /// <summary>
         /// The world space pose of the spatial anchor.
         /// </summary>
-        public Pose Pose
+        /// <remarks>
+        /// Use this method to get the pose of the anchor after it has been localized with <see cref="LocalizeAsync"/>.
+        ///
+        /// If the anchor is not localized, this method throws `InvalidOperationException`. If the anchor has been
+        /// localized, but the pose cannot be retrieved (for example, because of a temporary tracking issue), then this
+        /// method returns `False`, and you should try again later.
+        /// </remarks>
+        /// <param name="pose">If this method returns `True`, then <paramref name="pose"/> will contain the world space
+        /// pose of the anchor. If this method returns `False`, <paramref name="pose"/> is set to identity.</param>
+        /// <returns>Returns `True` if the pose could be obtained, otherwise `False`.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the anchor is invalid, e.g., because it has been destroyed.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the anchor has not been localized.</exception>
+        public bool TryGetPose(out Pose pose)
         {
-            get
-            {
-                if (!TryGetPose(_space, out var pose))
-                    throw new InvalidOperationException(
-                        $"[{Uuid}] Anchor must be localized before obtaining its pose.");
+            var anchor = new OVRAnchor(_space, Uuid);
+            if (anchor == OVRAnchor.Null)
+                throw new InvalidOperationException($"The {nameof(UnboundAnchor)} is not valid. Was it default (zero) initialized?");
 
-                return new Pose(pose.position, pose.orientation);
+            if (!anchor.TryGetComponent<OVRLocatable>(out var locatable))
+                throw new InvalidOperationException($"Anchor {Uuid} is not localizable.");
+
+            if (!locatable.IsEnabled)
+                throw new InvalidOperationException($"The anchor {Uuid} is not localized. An anchor must be localized before getting the pose.");
+
+            if (OVRSpatialAnchor.TryGetPose(_space, out var ovrPose))
+            {
+                pose = new Pose(ovrPose.position, ovrPose.orientation);
+                return true;
             }
+
+            pose = Pose.identity;
+            return false;
         }
 
         /// <summary>
@@ -1052,7 +1183,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
 
         if (componentType == OVRPlugin.SpaceComponentType.Locatable && SpatialAnchors.TryGetValue(uuid, out var anchor))
         {
-            anchor.OnLocalize?.Invoke(enabled ? OperationResult.Success : OperationResult.Failure);
+            anchor._onLocalize?.Invoke(enabled ? OperationResult.Success : OperationResult.Failure);
         }
     }
 

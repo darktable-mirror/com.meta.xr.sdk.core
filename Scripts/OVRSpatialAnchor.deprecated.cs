@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using UnityEngine;
 
 partial class OVRSpatialAnchor
 {
@@ -392,6 +393,26 @@ partial class OVRSpatialAnchor
             if (onComplete != null)
             {
                 InvertedCapture<bool, UnboundAnchor>.ContinueTaskWith(task, onComplete, this);
+            }
+        }
+
+        /// <summary>
+        /// (Obsolete) The world space pose of the spatial anchor.
+        /// </summary>
+        /// <remarks>
+        /// \deprecated This method is obsolete. Acquiring the pose can fail; consider <see cref="TryGetPose"/> instead.
+        /// </remarks>
+        /// <seealso cref="TryGetPose"/>
+        [Obsolete("Use TryGetPose instead.")]
+        public Pose Pose
+        {
+            get
+            {
+                if (!TryGetPose(out var pose))
+                    throw new InvalidOperationException(
+                        $"[{Uuid}] Anchor must be localized before obtaining its pose.");
+
+                return pose;
             }
         }
     }

@@ -160,6 +160,12 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         PC_Placeholder_4107 = OVRPlugin.SystemHeadset.PC_Placeholder_4107
     }
 
+    public enum SystemHeadsetTheme
+    {
+        Dark,
+        Light
+    }
+
     public enum XRDevice
     {
         Unknown = 0,
@@ -1626,6 +1632,39 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     public static SystemHeadsetType systemHeadsetType
     {
         get { return (SystemHeadsetType)OVRPlugin.GetSystemHeadsetType(); }
+    }
+
+    /// <summary>
+    /// Get the system headset theme.
+    /// This feature is only supported on Android-based devices.
+    /// It will return dark (the default theme) on other devices.
+    /// </summary>
+    public static SystemHeadsetTheme systemHeadsetTheme
+    {
+        get { return GetSystemHeadsetTheme(); }
+    }
+
+    private static bool _isSystemHeadsetThemeCached = false;
+    private static SystemHeadsetTheme _cachedSystemHeadsetTheme = SystemHeadsetTheme.Dark;
+
+    static private SystemHeadsetTheme GetSystemHeadsetTheme()
+    {
+#if UNITY_ANDROID
+        if (!_isSystemHeadsetThemeCached)
+        {
+            const int UI_MODE_NIGHT_MASK = 0x30;
+            const int UI_MODE_NIGHT_NO = 0x10;
+            AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+            AndroidJavaObject currentResources = currentActivity.Call<AndroidJavaObject>("getResources");
+            AndroidJavaObject currentConfiguration = currentResources.Call<AndroidJavaObject>("getConfiguration");
+            int uiMode = currentConfiguration.Get<int>("uiMode");
+            int currentUIMode = uiMode & UI_MODE_NIGHT_MASK;
+            _cachedSystemHeadsetTheme = currentUIMode == UI_MODE_NIGHT_NO ? SystemHeadsetTheme.Light : SystemHeadsetTheme.Dark;
+            _isSystemHeadsetThemeCached = true;
+        }
+#endif // UNITY_ANDROID
+        return _cachedSystemHeadsetTheme;
     }
 
     /// <summary>

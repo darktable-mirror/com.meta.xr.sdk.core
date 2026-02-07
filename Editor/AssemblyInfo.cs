@@ -28,3 +28,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.Guides.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.PlayCompanion")]
 [assembly: InternalsVisibleTo("MetaXrSimulator.Editor")]
+

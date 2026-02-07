@@ -52,7 +52,7 @@ public class OVRManagerEditor : Editor
     {
         serializedObject.ApplyModifiedProperties();
         OVRRuntimeSettings runtimeSettings = OVRRuntimeSettings.GetRuntimeSettings();
-        OVRProjectConfig projectConfig = OVRProjectConfig.GetProjectConfig();
+        OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
 
 #if UNITY_ANDROID
         OVRProjectConfigEditor.DrawTargetDeviceInspector(projectConfig);

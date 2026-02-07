@@ -113,6 +113,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
             catch (Exception e)
             {
+                Debug.LogError($"Error installing Building Block {BlockName}: {e.Message}");
                 installException = e;
                 throw;
             }
@@ -160,7 +161,11 @@ namespace Meta.XR.BuildingBlocks.Editor
             UpdateTasks(processor.BuildTargetGroup);
         }
 
-        internal override bool CanBeAdded => !HasMissingDependencies && !IsSingletonAndAlreadyPresent && !HasMissingPackageDependencies;
+        internal override bool CanBeAdded =>
+            base.CanBeAdded
+            && !HasMissingDependencies
+            && !IsSingletonAndAlreadyPresent
+            && !HasMissingPackageDependencies;
 
         internal bool HasMissingPackageDependencies => GetMissingPackageDependencies.Any();
 

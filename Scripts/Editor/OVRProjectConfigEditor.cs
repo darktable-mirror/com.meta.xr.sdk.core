@@ -428,10 +428,19 @@ public class OVRProjectConfigEditor : Editor
 
             case eProjectConfigTab.BuildSettings:
 
-                OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Skip Unneeded Shaders",
-                        "If checked, prevent building shaders that are not used by default to reduce time spent when building."),
-                    ref projectConfig.skipUnneededShaders, ref hasModified,
-                    "https://developer.oculus.com/documentation/unity/unity-strip-shaders/");
+                var usingSRP = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+                if (usingSRP && projectConfig.skipUnneededShaders)
+                {
+                    projectConfig.skipUnneededShaders = false;
+                }
+
+                using (new EditorGUI.DisabledScope(usingSRP))
+                {
+                    OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Skip Unneeded Shaders",
+                        "If checked, prevent building shaders (BiRP only) that are not used by default to reduce time spent when building."),
+                        ref projectConfig.skipUnneededShaders, ref hasModified,
+                        "https://developer.oculus.com/documentation/unity/unity-strip-shaders/");
+                }
 
                 OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("IL2CPP Link Time Optimization",
                         "If checked, IL2CPP will compile code with link time optimization in release build."),

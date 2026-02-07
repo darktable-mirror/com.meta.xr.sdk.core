@@ -55,11 +55,26 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             var handednessName = handedness == OVRInput.Hand.HandLeft ? "Left" : "Right";
             controller.name = $"{Utils.BlockPublicTag} {BlockName} {handednessName}";
+            AssignControllerType(controller, controllerType);
             Undo.RegisterCreatedObjectUndo(controller, $"Create {BlockName} {handednessName}");
             Undo.SetTransformParent(controller.transform, idealParent, true, "Parent to camera rig");
-            controller.GetComponent<OVRControllerHelper>().m_controller = controllerType;
+
+            EditorApplication.delayCall += () =>
+            {
+                AssignControllerType(controller, controllerType);
+            };
 
             return controller;
+        }
+
+        private static void AssignControllerType(GameObject controller, OVRInput.Controller controllerType)
+        {
+            if (controller == null)
+            {
+                return;
+            }
+
+            controller.GetComponent<OVRControllerHelper>().m_controller = controllerType;
         }
 
         private bool TryGetPreexistingNonBlock(Transform root, OVRInput.Controller controllerType, Transform idealParent, out GameObject nonBlockObject)

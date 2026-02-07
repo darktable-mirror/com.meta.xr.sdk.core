@@ -81,6 +81,7 @@ namespace Meta.XR
             "XR_META_body_tracking_calibration " +
             "XR_META_body_tracking_fidelity " +
             "XR_FB_keyboard_tracking " +
+            "XR_META_virtual_keyboard " +
             "XR_FB_passthrough " +
             "XR_FB_triangle_mesh " +
             "XR_FB_passthrough_keyboard_hands " +
@@ -94,6 +95,9 @@ namespace Meta.XR
             "XR_FB_composition_layer_depth_test " +
             "XR_FB_haptic_amplitude_envelope " +
             "XR_FB_haptic_pcm " +
+            "XR_META_local_dimming " +
+            "XR_META_hand_tracking_wide_motion_mode " +
+            "XR_EXT_hand_tracking_data_source " +
             "XR_META_spatial_entity_persistence " +
             "XR_META_spatial_entity_discovery " +
             "XR_META_boundary_visibility " +
