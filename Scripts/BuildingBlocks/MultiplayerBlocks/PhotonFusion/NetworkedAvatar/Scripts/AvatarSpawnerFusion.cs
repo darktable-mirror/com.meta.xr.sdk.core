@@ -23,9 +23,10 @@ using UnityEngine;
 #if META_AVATAR_SDK_DEFINED
 using Fusion;
 using Oculus.Avatar2;
+#endif // META_AVATAR_SDK_DEFINED
+
 using Meta.XR.MultiplayerBlocks.Shared;
 using System.Collections;
-#endif // META_AVATAR_SDK_DEFINED
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {

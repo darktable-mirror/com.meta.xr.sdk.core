@@ -24,6 +24,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 /// <summary>
@@ -216,17 +217,25 @@ public static partial class OVRTask
     private const ulong HashModifier1 = 0x319642b2d24d8ec3;
     private const ulong HashModifier2 = 0x96de1b173f119089;
 
-    internal static unsafe Guid GetId(ulong value)
+    internal static unsafe Guid GetId(ulong part1, ulong part2)
     {
-        var guid = default(Guid);
-        *(ulong*)&guid = unchecked(value + HashModifier1);
-        *((ulong*)&guid + 1) = HashModifier2;
-        return guid;
+        var values = stackalloc ulong[2];
+        values[0] = unchecked(part1 + HashModifier1);
+        values[1] = unchecked(part2 + HashModifier2);
+        return *(Guid*)values;
     }
 
-    internal static unsafe ulong GetId(Guid value)
+    internal static Guid GetId(ulong handle, OVRPlugin.EventType eventType) => GetId(handle, (ulong)eventType);
+
+    internal static Guid GetId(ulong value) => GetId(value, 0ul);
+
+    internal static ulong GetId(Guid value) => GetIdParts(value).Item1;
+
+    internal static unsafe (ulong, ulong) GetIdParts(Guid id)
     {
-        return unchecked(*(ulong*)&value - HashModifier1);
+        var values = stackalloc ulong[2];
+        UnsafeUtility.MemCpy(values, &id, sizeof(Guid));
+        return (unchecked(values[0] - HashModifier1), unchecked(values[1] - HashModifier2));
     }
 
     internal static void RegisterType<TResult>()

@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Meta.XR.Util;
 using System.Threading.Tasks;
+using Unity.Collections;
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
 #pragma warning disable OVR004
 using System.Linq;
@@ -45,7 +46,7 @@ using Debug = UnityEngine.Debug;
 /// <see cref="LoadUnboundAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor},Action{List{UnboundAnchor},int})"/>.
 /// </remarks>
 [DisallowMultipleComponent]
-[HelpURL("https://developer.oculus.com/documentation/unity/unity-colocation-deep-dive/#using-the-alignmentanchormanager-class")]
+[HelpURL("https://developer.oculus.com/documentation/unity/unity-spatial-anchors-persist-content/#ovrspatialanchor-component")]
 [Feature(Feature.Anchors)]
 public partial class OVRSpatialAnchor : MonoBehaviour
 {
@@ -325,30 +326,25 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         if (users == null)
             throw new ArgumentNullException(nameof(users));
 
-        var anchorCollection = anchors.ToNonAlloc();
-        var userCollection = users.ToNonAlloc();
-
         unsafe
         {
-            var spaces = stackalloc ulong[anchorCollection.GetCount()];
-            uint spaceCount = 0;
-            foreach (var anchor in anchorCollection)
+            using var spaces = new OVRNativeList<ulong>(anchors.ToNonAlloc().Count, Allocator.Temp);
+            foreach (var anchor in anchors.ToNonAlloc())
             {
-                spaces[spaceCount++] = anchor._anchor.Handle;
+                spaces.Add(anchor._anchor.Handle);
             }
 
-            var userHandles = stackalloc ulong[userCollection.GetCount()];
-            uint userCount = 0;
-            foreach (var user in userCollection)
+            using var userHandles = new OVRNativeList<ulong>(users.ToNonAlloc().Count, Allocator.Temp);
+            foreach (var user in users.ToNonAlloc())
             {
-                userHandles[userCount++] = user._handle;
+                userHandles.Add(user._handle);
             }
 
-            var result = OVRPlugin.ShareSpaces(spaces, spaceCount, userHandles, userCount,
-                out var requestId);
+            var result = OVRPlugin.ShareSpaces(spaces, (uint)spaces.Count, userHandles,
+                (uint)userHandles.Count, out var requestId);
 
             Development.LogRequestOrError(requestId, result,
-                $"Sharing {spaceCount} spatial anchors with {userCount} users.",
+                $"Sharing {spaces.Count} spatial anchors with {userHandles.Count} users.",
                 $"xrShareSpacesFB failed with error {result}.");
 
             return result.IsSuccess()
@@ -427,26 +423,16 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         if (anchors == null)
             throw new ArgumentNullException(nameof(anchors));
 
-        var collection = anchors.ToNonAlloc();
-        var collectionCount = collection.GetCount();
-        if (collectionCount > OVRAnchor.MaxPersistentAnchorBatchSize)
-            throw new ArgumentException($"Cannot save more than {OVRAnchor.MaxPersistentAnchorBatchSize} anchors at once ({collectionCount} were provided).", nameof(anchors));
-
-        unsafe
+        using var spaces = new OVRNativeList<ulong>(Allocator.Temp);
+        foreach (var anchor in anchors.ToNonAlloc())
         {
-            var spaces = stackalloc ulong[collectionCount];
-
-            var count = 0;
-            foreach (var anchor in collection)
-            {
-                if (anchor)
-                {
-                    spaces[count++] = anchor._anchor.Handle;
-                }
-            }
-
-            return OVRAnchor.SaveSpacesAsync(spaces, count);
+            spaces.Add(anchor._anchor.Handle);
         }
+
+        if (spaces.Count > OVRAnchor.MaxPersistentAnchorBatchSize)
+            throw new ArgumentException($"Cannot save more than {OVRAnchor.MaxPersistentAnchorBatchSize} anchors at once ({spaces.Count} were provided).", nameof(anchors));
+
+        return OVRAnchor.SaveSpacesAsync(spaces);
     }
 
     /// <summary>
@@ -1119,14 +1105,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     }
 
     /// <summary>
-    /// Create an unbound spatial anchor from an <seealso cref="OVRAnchor"/>.
+    /// Create an unbound spatial anchor from an <see cref="OVRAnchor"/>.
     /// </summary>
     /// <remarks>
-    /// Only spatial anchors retrieved as <seealso cref="OVRAnchor"/>s should use
+    /// Only spatial anchors retrieved as <see cref="OVRAnchor"/>s should use
     /// this method. Using this function on system-managed scene anchors will
     /// succeed, but certain functions will not work.
     /// </remarks>
-    /// <param name="anchor">The <seealso cref="OVRAnchor"/> to create the unbound anchor for.</param>
+    /// <param name="anchor">The <see cref="OVRAnchor"/> to create the unbound anchor for.</param>
     /// <param name="unboundAnchor">The created unboundAnchor.</param>
     /// <returns>True if <paramref name="anchor"/> is localizable and is not already bound to an
     /// <see cref="OVRSpatialAnchor"/>, otherwise false.</returns>

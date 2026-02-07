@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -28,12 +27,39 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class ControllerTrackingBlockData : BlockData
     {
+        protected override bool IsBlockPresentInScene()
+        {
+            var blocksInScene =
+                FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None)
+                    .Where(block => block.BlockId == Id)
+                    .Select(block => block.GetComponent<OVRControllerHelper>())
+                    .Where(controller => controller != null)
+                    .ToList();
+
+            return blocksInScene.Any(controller => controller.m_controller == OVRInput.Controller.LTouch)
+                   && blocksInScene.Any(controller => controller.m_controller == OVRInput.Controller.RTouch);
+        }
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
-            => new List<GameObject>
+        {
+            var installedObjects = new List<GameObject>();
+
+            var leftController = InstantiateController(OVRInput.Hand.HandLeft);
+            var rightController = InstantiateController(OVRInput.Hand.HandRight);
+
+            if (leftController != null)
             {
-                InstantiateController(OVRInput.Hand.HandLeft),
-                InstantiateController(OVRInput.Hand.HandRight)
-            };
+                installedObjects.Add(leftController);
+            }
+
+            if (rightController != null)
+            {
+                installedObjects.Add(rightController);
+            }
+
+            return installedObjects;
+
+        }
 
         private GameObject InstantiateController(OVRInput.Hand handedness)
         {
@@ -48,7 +74,10 @@ namespace Meta.XR.BuildingBlocks.Editor
                 : cameraRigBB.rightControllerAnchor;
 
             // Early out if we can find a pre-existing non block version. It will get blockified
-            if (TryGetPreexistingNonBlock(cameraRigBB.transform, controllerType, idealParent, out var nonBlockObject)) return nonBlockObject;
+            if (TryGetPreexistingController(cameraRigBB.transform, controllerType, idealParent, out var existingController))
+            {
+                return existingController.GetComponent<BuildingBlock>() ? null : existingController;
+            }
 
             var controller = Instantiate(Prefab, Vector3.zero, Quaternion.identity);
             controller.SetActive(true);
@@ -77,19 +106,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             controller.GetComponent<OVRControllerHelper>().m_controller = controllerType;
         }
 
-        private bool TryGetPreexistingNonBlock(Transform root, OVRInput.Controller controllerType, Transform idealParent, out GameObject nonBlockObject)
+        private static bool TryGetPreexistingController(Transform root, OVRInput.Controller controllerType, Transform idealParent, out GameObject existingController)
         {
-            nonBlockObject = root.GetComponentsInChildren<OVRControllerHelper>()
-                .FirstOrDefault(controller => IsCorrectHandedness(controller, controllerType)
-                && HasCorrectParent(controller, idealParent))?.gameObject;
-            return nonBlockObject != null;
+            existingController = root.GetComponentsInChildren<OVRControllerHelper>()
+                .FirstOrDefault(controller => controller.m_controller == controllerType
+                && controller.transform.parent == idealParent)?.gameObject;
+            return existingController != null;
         }
-
-        private bool IsCorrectHandedness(OVRControllerHelper controller, OVRInput.Controller controllerType)
-            => controller.m_controller == controllerType;
-
-        private bool HasCorrectParent(OVRControllerHelper controller, Transform idealParent)
-            => controller.transform.parent == idealParent;
-
     }
 }

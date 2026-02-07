@@ -57,7 +57,11 @@ namespace Meta.XR.MultiplayerBlocks.NGO
 
                 _data = value;
                 _isDataDirty = true;
+#if UNITY_NETCODE_1_7_1_OR_NEWER
                 MarkNetworkBehaviourDirty();
+#else
+                throw new InvalidOperationException("This script is only supported when using the Netcode for Game Objects package version 1.7.1 or newer");
+#endif
             }
         }
 

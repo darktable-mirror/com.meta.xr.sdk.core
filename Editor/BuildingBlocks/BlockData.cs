@@ -291,7 +291,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             return FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None).Any(x => x.BlockId == blockId);
         }
 
-        private bool IsBlockPresentInScene()
+        protected virtual bool IsBlockPresentInScene()
         {
             return IsBlockPresentInScene(Id);
         }

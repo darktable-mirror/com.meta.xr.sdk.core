@@ -196,7 +196,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             Behavior =
             {
-                CanFilterBy = true
+                CanFilterBy = false
             }
         };
 
@@ -305,14 +305,14 @@ namespace Meta.XR.BuildingBlocks.Editor
                 null);
         }
 
-        private static (TextureContent, Color?) GetPillIcon()
+        private static (TextureContent, Color?, bool) GetPillIcon()
         {
             if (ComputeNumberOfNewBlocks() > 0)
             {
-                return (NewTag.Behavior.Icon, NewColor);
+                return (NewTag.Behavior.Icon, NewColor, true);
             }
 
-            return (null, null);
+            return (null, null, false);
         }
 
         private static void OnStatusMenuClick(Item.Origins origin)

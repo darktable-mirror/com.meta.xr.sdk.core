@@ -1729,21 +1729,34 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         Camera mainCamera = FindMainCamera();
         if (enabled)
         {
-            m_CachedDepthTextureMode = mainCamera.depthTextureMode;
-            mainCamera.depthTextureMode |= (DepthTextureMode.MotionVectors | DepthTextureMode.Depth);
-
-            m_AppSpaceTransform = mainCamera.transform.parent;
+            PrepareCameraForSpaceWarp(mainCamera);
+            m_lastSpaceWarpCamera = new WeakReference<Camera>(mainCamera);
         }
         else
         {
-            mainCamera.depthTextureMode = m_CachedDepthTextureMode;
+            Camera lastSpaceWarpCamera;
+            if (mainCamera != null && m_lastSpaceWarpCamera.TryGetTarget(out lastSpaceWarpCamera) && lastSpaceWarpCamera == mainCamera)
+            {
+                // Restore the depth texture mode only if we're disabling space warp on the same camera we enabled it on.
+                mainCamera.depthTextureMode = m_CachedDepthTextureMode;
+            }
+
             m_AppSpaceTransform = null;
+            m_lastSpaceWarpCamera = null;
         }
 
         SetSpaceWarp_Internal(enabled);
         m_SpaceWarpEnabled = enabled;
     }
 
+    private static void PrepareCameraForSpaceWarp(Camera camera)
+    {
+        m_CachedDepthTextureMode = camera.depthTextureMode;
+        camera.depthTextureMode |= (DepthTextureMode.MotionVectors | DepthTextureMode.Depth);
+        m_AppSpaceTransform = camera.transform.parent;
+    }
+
+    protected static WeakReference<Camera> m_lastSpaceWarpCamera;
     protected static bool m_SpaceWarpEnabled;
     protected static Transform m_AppSpaceTransform;
     protected static DepthTextureMode m_CachedDepthTextureMode;
@@ -3119,10 +3132,25 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
         if (m_SpaceWarpEnabled)
         {
-            if (m_AppSpaceTransform != null)
+            Camera currentMainCamera = FindMainCamera();
+
+            if (currentMainCamera != null)
             {
+                Camera lastSpaceWarpCamera;
+                m_lastSpaceWarpCamera.TryGetTarget(out lastSpaceWarpCamera);
+                if (currentMainCamera != lastSpaceWarpCamera)
+                {
+                    Debug.Log("Main camera changed. Updating new camera for space warp.");
+
+                    // If a camera is changed while space warp is still enabled, there is some setup we have to do
+                    // to make sure space warp works properly such as setting the depth texture mode.
+                    PrepareCameraForSpaceWarp(currentMainCamera);
+                    m_lastSpaceWarpCamera = new WeakReference<Camera>(currentMainCamera);
+                }
+
                 var pos = m_AppSpaceTransform.position;
                 var rot = m_AppSpaceTransform.rotation;
+
                 // Strange behavior may occur with non-uniform scale
                 var scale = m_AppSpaceTransform.lossyScale;
                 SetAppSpacePosition(pos.x / scale.x, pos.y / scale.y, pos.z / scale.z);

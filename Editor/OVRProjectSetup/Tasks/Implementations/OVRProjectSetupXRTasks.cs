@@ -98,7 +98,7 @@ internal static class OVRProjectSetupXRTasks
             isDone: buildTargetGroup =>
             {
                 var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, false);
-                return settings != null && settings.Manager.activeLoaders.Any(loader => loader is OculusLoader);
+                return settings != null && settings.Manager != null && settings.Manager.activeLoaders.Any(loader => loader is OculusLoader);
             },
             message: "Oculus must be added to the XR Plugin active loaders",
             fix: buildTargetGroup =>

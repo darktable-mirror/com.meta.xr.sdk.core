@@ -670,22 +670,19 @@ partial class OVRSpatialAnchor
         if (anchors == null)
             throw new ArgumentNullException(nameof(anchors));
 
-        var anchorCollection = anchors.ToNonAlloc();
         unsafe
         {
-            var spaces = stackalloc ulong[anchorCollection.GetCount()];
-            uint spaceCount = 0;
-
-            foreach (var anchor in anchorCollection)
+            using var spaces = new OVRNativeList<ulong>(anchors.ToNonAlloc().Count, Allocator.Temp);
+            foreach (var anchor in anchors.ToNonAlloc())
             {
-                spaces[spaceCount++] = anchor._anchor.Handle;
+                spaces.Add(anchor._anchor.Handle);
             }
 
-            var result = OVRAnchor.SaveSpaceList(spaces, spaceCount, saveOptions.Storage.ToSpaceStorageLocation(),
-                out var requestId);
+            var result = OVRAnchor.SaveSpaceList(spaces, (uint)spaces.Count,
+                saveOptions.Storage.ToSpaceStorageLocation(), out var requestId);
 
             Development.LogRequestOrError(requestId, result,
-                $"Saving {spaceCount} spatial anchors.",
+                $"Saving {spaces.Count} spatial anchors.",
                 $"xrSaveSpaceListFB failed with error {result}.");
 
             return result.IsSuccess()

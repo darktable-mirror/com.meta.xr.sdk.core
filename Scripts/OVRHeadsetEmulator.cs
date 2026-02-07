@@ -263,15 +263,25 @@ public class OVRHeadsetEmulator : MonoBehaviour
     void OnDestroy()
     {
 #if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
-        foreach (var action in activeKeyActions) {
-            action.Disable();
+        if (activeKeyActions != null)
+        {
+            foreach (var action in activeKeyActions)
+            {
+                action.Disable();
+            }
         }
-        foreach (var action in pitchKeyActions) {
-            action.Disable();
+
+        if (pitchKeyActions != null)
+        {
+            foreach (var action in pitchKeyActions)
+            {
+                action.Disable();
+            }
         }
-        middleMouseButtonAction.Disable();
-        mouseScrollAction.Disable();
-        mouseMoveAction.Disable();
+
+        middleMouseButtonAction?.Disable();
+        mouseScrollAction?.Disable();
+        mouseMoveAction?.Disable();
 #endif
     }
 }
