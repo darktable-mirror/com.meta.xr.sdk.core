@@ -18,7 +18,8 @@
  * limitations under the License.
  */
 
-#if OPEN_XR_META_2_1_OR_NEWER
+// The Open XR Meta package does not compile for anything other than Android and Editor
+#if OPEN_XR_META_2_1_OR_NEWER && (UNITY_ANDROID || UNITY_EDITOR)
 using System;
 using System.Collections.Generic;
 using Unity.Collections;

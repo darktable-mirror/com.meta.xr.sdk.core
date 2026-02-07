@@ -56,7 +56,6 @@ namespace Oculus.VR.Editor
     [InitializeOnLoad]
     public class OVRPluginInfoOpenXR : IOVRPluginInfoSupplier
     {
-        private static bool _unityRunningInBatchMode;
         private static readonly string _isRestartPendingKey = "OVRPluginInfoOpenXR_IsRestartPending";
 
         public static readonly IReadOnlyDictionary<PluginPlatform, PluginPlatformInfo> _pluginInfos =
@@ -76,11 +75,6 @@ namespace Oculus.VR.Editor
 
         private static void DelayCall()
         {
-            if (Environment.CommandLine.Contains("-batchmode"))
-            {
-                _unityRunningInBatchMode = true;
-            }
-
             if (GetIsRestartPending())
             {
                 return;
@@ -128,7 +122,7 @@ namespace Oculus.VR.Editor
             OVRLocalProjectSettings.Instance.OVRPluginMd5Win64 = md5Win64Actual;
             OVRLocalProjectSettings.Instance.OVRPluginMd5Android = md5AndroidActual;
 
-            bool userAgreedToRestart = !_unityRunningInBatchMode && EditorUtility.DisplayDialog(
+            bool userAgreedToRestart = !Application.isBatchMode && EditorUtility.DisplayDialog(
                 "Restart Unity",
                 "Changes to OVRPlugin detected. Plugin updates require a restart. Please restart Unity to complete the update.",
                 "Restart Editor",
@@ -175,7 +169,7 @@ namespace Oculus.VR.Editor
 
         private static void RestartUnityEditor()
         {
-            if (_unityRunningInBatchMode)
+            if (Application.isBatchMode)
             {
                 UnityEngine.Debug.LogWarning("Restarting editor is not supported in batch mode");
                 return;

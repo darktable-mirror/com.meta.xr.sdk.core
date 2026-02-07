@@ -45,6 +45,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
+            var skeletonVersion = OVRRuntimeSettings.Instance.HandSkeletonVersion;
+
             var cameraRigBB = Utils.GetBlocksWithType<OVRCameraRig>().First();
 
             var leftHand = Instantiate(Prefab, Vector3.zero, Quaternion.identity);
@@ -54,8 +56,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             Undo.SetTransformParent(leftHand.transform, cameraRigBB.leftHandAnchor, false, "Parent to camera rig.");
 
             leftHand.GetComponent<OVRHand>().HandType = OVRHand.Hand.HandLeft;
-            leftHand.GetComponent<OVRSkeleton>().SetSkeletonType(OVRSkeleton.SkeletonType.HandLeft);
-            leftHand.GetComponent<OVRMesh>().SetMeshType(OVRMesh.MeshType.HandLeft);
+            leftHand.GetComponent<OVRSkeleton>().SetSkeletonType(OVRHand.Hand.HandLeft.AsSkeletonType(skeletonVersion));
+            leftHand.GetComponent<OVRMesh>().SetMeshType(OVRHand.Hand.HandLeft.AsMeshType(skeletonVersion));
 
             var rightHand = Instantiate(Prefab, Vector3.zero, Quaternion.identity);
             rightHand.SetActive(true);
@@ -64,8 +66,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             Undo.SetTransformParent(rightHand.transform, cameraRigBB.rightHandAnchor, false, "Parent to camera rig.");
 
             rightHand.GetComponent<OVRHand>().HandType = OVRHand.Hand.HandRight;
-            rightHand.GetComponent<OVRSkeleton>().SetSkeletonType(OVRSkeleton.SkeletonType.HandRight);
-            rightHand.GetComponent<OVRMesh>().SetMeshType(OVRMesh.MeshType.HandRight);
+            rightHand.GetComponent<OVRSkeleton>().SetSkeletonType(OVRHand.Hand.HandRight.AsSkeletonType(skeletonVersion));
+            rightHand.GetComponent<OVRMesh>().SetMeshType(OVRHand.Hand.HandRight.AsMeshType(skeletonVersion));
 
             return new List<GameObject> { leftHand, rightHand };
         }

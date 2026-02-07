@@ -23,6 +23,7 @@
 #endif
 
 using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -173,6 +174,49 @@ public class OVROverlayCanvas : OVRRayTransformer
         _useTempRT = Application.isMobilePlatform;
 
         InitializeRenderTexture();
+
+#if UNITY_EDITOR
+        if (Application.IsPlaying(this))
+        {
+            OVRPlugin.SendEvent("canvas_initialized", ToSimpleJson(new
+            {
+                manualRedraw,
+                renderInterval,
+                expensive,
+                opacity,
+                shape,
+                overlapMask,
+                overlayType,
+                maxTextureSize,
+                enableMipmapping = _enableMipmapping,
+                dynamicResolution = _dynamicResolution,
+                redrawResolutionThreshold = _redrawResolutionThreshold,
+            }));
+        }
+#endif
+    }
+
+    private static string ToSimpleJson<T>(T value)
+    {
+        var type = value?.GetType();
+        if (type?.IsValueType ?? true)
+        {
+            return value switch
+            {
+                bool b => b ? "true" : "false",
+                Enum or string => $"\"{value}\"",
+                _ => value?.ToString(),
+            };
+        }
+
+        var props = value.GetType().GetProperties();
+        if (props.Length == 0)
+        {
+            return "{}";
+        }
+
+        var members = props.Select(p => $"\"{p.Name}\":{ToSimpleJson(p.GetValue(value))}");
+        return $"{{{string.Join(",", members)}}}";
     }
 
     public void UpdateOverlaySettings()

@@ -36,7 +36,7 @@ public class OVRTextEditor : TMPro.EditorUtilities.TMP_EditorPanel
         {
             OVRCanvasEditor.SetTextDefaults(c);
             Undo.AddComponent<OVROverlayCanvas_TMPChanged>(c.gameObject).TargetCanvas = c;
-        }, null);
+        }, null, nameof(TMPro.TextMeshPro));
         base.OnInspectorGUI();
     }
 }
@@ -76,7 +76,8 @@ public class OVRCanvasEditor : Editor
             using var verticalScope = new EditorGUILayout.VerticalScope(_presetAreaStyle, GUILayout.Width(120));
             GUILayout.Label("Preset", Styles.GUIStyles.BoldLabel);
             _presetSelection = GUILayout.SelectionGrid(_presetSelection, new[] { " Animated UI", " Static Text" }, 1, EditorStyles.radioButton);
-        });
+        },
+        $"{nameof(Canvas)}/{(_presetSelection == 0 ? "UI" : "Text")}");
         base.OnInspectorGUI();
     }
 
@@ -89,7 +90,7 @@ public class OVRCanvasEditor : Editor
         return (RenderMode)serializedObject.FindProperty("m_RenderMode").intValue;
     }
 
-    internal static void UpgradeDialog(string noun, Component[] components, System.Action<OVROverlayCanvas> onUpgrade, System.Action onPresetArea)
+    internal static void UpgradeDialog(string noun, Component[] components, System.Action<OVROverlayCanvas> onUpgrade, System.Action onPresetArea, string telemetryParam)
     {
         if (components.Length == 0)
             return;
@@ -117,6 +118,7 @@ public class OVRCanvasEditor : Editor
                                 onUpgrade?.Invoke(overlay);
                                 EditorUtility.SetDirty(overlay);
                                 Debug.Log($"Added {nameof(OVROverlayCanvas)} to {canvas.gameObject}", overlay);
+                                OVRPlugin.SendEvent("canvas_upgrade_clicked", telemetryParam);
                             }
                         }
 

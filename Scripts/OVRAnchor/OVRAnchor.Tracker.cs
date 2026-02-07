@@ -82,6 +82,46 @@ partial struct OVRAnchor
             KeyboardTrackingEnabled = other.KeyboardTrackingEnabled;
         }
 
+        /// <summary>
+        /// The <see cref="Tracker"/> should track QR Codes.
+        /// </summary>
+        /// <remarks>
+        /// When `true`, a <see cref="Tracker"/> should attempt to track QR Codes in the real environment.
+        ///
+        /// Not all devices support QR Code tracking. You can test for QR Code tracking support with
+        /// <see cref="QRCodeTrackingSupported"/>.
+        /// </remarks>
+        [field: SerializeField, Tooltip("When enabled, attempts to track QR Codes in the environment.")]
+        public bool QRCodeTrackingEnabled { get; set; }
+
+        /// <summary>
+        /// Whether the QR Code tracking is supported by the runtime.
+        /// </summary>
+        /// <remarks>
+        /// Use this to test for QR Code tracking support before calling <see cref="Tracker.ConfigureAsync"/> with
+        /// <see cref="QRCodeTrackingEnabled"/> set to `true`.
+        /// </remarks>
+        public static bool QRCodeTrackingSupported => GetMarkerTrackingSupported(out var value).IsSuccess() && value;
+
+        internal OVRNativeList<MarkerType> ToMarkerTypes(Allocator allocator)
+        {
+            var list = new OVRNativeList<MarkerType>(allocator);
+            if (QRCodeTrackingEnabled)
+            {
+                list.Add(MarkerType.QRCode);
+            }
+
+            return list;
+        }
+
+        internal bool RequiresMarkerTracker => QRCodeTrackingEnabled;
+
+        internal void ResetMarkers() => SetMarkerState(default);
+
+        internal void SetMarkerState(in TrackerConfiguration other)
+        {
+            QRCodeTrackingEnabled = other.QRCodeTrackingEnabled;
+        }
 
         /// <summary>
         /// Gets the collection of <see cref="TrackableType"/>s implied by this configuration.
@@ -106,6 +146,10 @@ partial struct OVRAnchor
                 trackableTypes.Add(TrackableType.Keyboard);
             }
 
+            if (QRCodeTrackingEnabled)
+            {
+                trackableTypes.Add(TrackableType.QRCode);
+            }
         }
 
         /// <summary>
@@ -124,6 +168,7 @@ partial struct OVRAnchor
             using (new OVRObjectPool.ListScope<string>(out var fields))
             {
                 fields.Add($"{nameof(KeyboardTrackingEnabled)}={KeyboardTrackingEnabled}");
+                fields.Add($"{nameof(QRCodeTrackingEnabled)}={QRCodeTrackingEnabled}");
                 return $"{nameof(TrackerConfiguration)}<{string.Join(", ", fields)}>";
             }
         }
@@ -136,6 +181,7 @@ partial struct OVRAnchor
         public bool Equals(TrackerConfiguration other)
         {
             if (KeyboardTrackingEnabled != other.KeyboardTrackingEnabled) return false;
+            if (QRCodeTrackingEnabled != other.QRCodeTrackingEnabled) return false;
             return true;
         }
 
@@ -159,6 +205,7 @@ partial struct OVRAnchor
         {
             var hashCode = 0;
             hashCode = HashCode.Combine(hashCode, KeyboardTrackingEnabled);
+            hashCode = HashCode.Combine(hashCode, QRCodeTrackingEnabled);
             return hashCode;
         }
 
@@ -251,6 +298,59 @@ partial struct OVRAnchor
         // Internal note: see AsyncLock
         private int _asyncOperationCount;
 
+        private ulong _markerTracker;
+
+        private async OVRTask<Result> SetupMarkerTracker(TrackerConfiguration config)
+        {
+            // Is the current mode the same as the requested?
+            if (config.QRCodeTrackingEnabled == _configuration.QRCodeTrackingEnabled)
+            {
+                // Nothing to do
+                return Result.Success;
+            }
+
+            // This version of the tracker requires us to recreate it.
+            if (_markerTracker != 0)
+            {
+                DestroyMarkerTracker(_markerTracker);
+                _markerTracker = 0;
+            }
+
+            _configuration.ResetMarkers();
+
+            if (config.RequiresMarkerTracker)
+            {
+                var result = await CreateTrackerAsync(config);
+                if (result.Success)
+                {
+                    _markerTracker = result.Value;
+                    _configuration.SetMarkerState(config);
+                }
+
+                return result.Status;
+            }
+
+            return Result.Success;
+
+            static async OVRTask<OVRResult<ulong, Result>> CreateTrackerAsync(TrackerConfiguration config)
+            {
+                Result result;
+                ulong future;
+                using (var markerTypes = config.ToMarkerTypes(Allocator.Temp))
+                {
+                    result = CreateMarkerTrackerAsync(markerTypes, out future);
+                }
+                if (!result.IsSuccess()) return result;
+
+                result = await OVRFuture.When(future);
+                if (!result.IsSuccess()) return result;
+
+                result = CreateMarkerTrackerComplete(future, out var completion);
+                if (!result.IsSuccess()) return result;
+
+                return OVRResult<ulong, Result>.From(completion.MarkerTracker, completion.FutureResult);
+            }
+        }
 
         private ulong _dynamicObjectTracker;
 
@@ -368,9 +468,11 @@ partial struct OVRAnchor
             unsafe
             {
                 using (var classes = configuration.ToDynamicObjectClasses(Allocator.Temp))
+                using (var markerTypes = configuration.ToMarkerTypes(Allocator.Temp))
                 {
                     OVRTelemetry.Start((int)Telemetry.MarkerId.ConfigureTracker)
                         .AddAnnotation(Telemetry.Annotation.DynamicObjectClasses, classes.AsReadOnlySpan())
+                        .AddAnnotation(Telemetry.Annotation.MarkerTypes, markerTypes.AsReadOnlySpan())
                         .Send();
                 }
             }
@@ -379,6 +481,7 @@ partial struct OVRAnchor
             using (new OVRObjectPool.TaskScope<Result>(out var tasks, out var results))
             {
                 tasks.Add(SetupDynamicObjectTracker(configuration));
+                tasks.Add(SetupMarkerTracker(configuration));
 
                 await OVRTask.WhenAll(tasks, results);
 
@@ -441,8 +544,7 @@ partial struct OVRAnchor
         /// \cond
         ~Tracker()
         {
-            if (
-                _dynamicObjectTracker != 0)
+            if (_markerTracker != 0 || _dynamicObjectTracker != 0)
             {
                 Debug.LogError($"{nameof(Tracker)} was not disposed of while one or more trackers were active, " +
                                $"which leaks resources. Call Dispose() when no longer needed.");
@@ -467,6 +569,14 @@ partial struct OVRAnchor
                 }
 
                 _dynamicObjectTracker = 0;
+
+                if (_markerTracker != 0)
+                {
+                    DestroyMarkerTracker(_markerTracker);
+                }
+
+                _markerTracker = 0;
+
                 _configuration = default;
             }
         }

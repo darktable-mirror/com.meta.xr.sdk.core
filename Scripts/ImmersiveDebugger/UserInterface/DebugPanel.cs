@@ -72,8 +72,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _closeIcon.Callback = Hide;
 
             SetExpectedPixelsPerUnit(1000.0f, DynamicPixelsPerUnit, 2.24f);
-
-            Hide();
         }
     }
 }

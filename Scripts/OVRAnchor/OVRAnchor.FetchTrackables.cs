@@ -44,6 +44,10 @@ partial struct OVRAnchor
         /// </summary>
         Keyboard,
 
+        /// <summary>
+        /// The anchor is a QR Code.
+        /// </summary>
+        QRCode,
     }
 
     /// <summary>
@@ -69,6 +73,16 @@ partial struct OVRAnchor
                         if (!component.IsEnabled) continue;
                         return component.TrackableType;
                     }
+                    case SpaceComponentType.MarkerPayload:
+                    {
+                        var component = GetComponent<OVRMarkerPayload>();
+                        if (component.IsEnabled && component.PayloadType.IsQRCode())
+                        {
+                            return TrackableType.QRCode;
+                        }
+
+                        break;
+                    }
                 }
             }
         }
@@ -89,6 +103,11 @@ partial struct OVRAnchor
                 case TrackableType.Keyboard:
                 {
                     requiredComponentsOut.Add(SpaceComponentType.DynamicObject);
+                    break;
+                }
+                case TrackableType.QRCode:
+                {
+                    requiredComponentsOut.Add(SpaceComponentType.MarkerPayload);
                     break;
                 }
             }
@@ -192,6 +211,15 @@ partial struct OVRAnchor
                 case SpaceComponentType.DynamicObject:
                 {
                     return trackableTypes.Contains(anchor.GetComponent<OVRDynamicObject>().TrackableType);
+                }
+                case SpaceComponentType.MarkerPayload:
+                {
+                    var component = anchor.GetComponent<OVRMarkerPayload>();
+                    if (component.PayloadType.IsQRCode())
+                    {
+                        return trackableTypes.Contains(TrackableType.QRCode);
+                    }
+                    break;
                 }
             }
 

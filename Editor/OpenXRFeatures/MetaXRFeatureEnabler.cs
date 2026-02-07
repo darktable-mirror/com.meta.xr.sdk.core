@@ -44,12 +44,6 @@ namespace Meta.XR
         private static void EnableMetaXRFeature()
         {
             EditorApplication.update -= EnableMetaXRFeature;
-            bool unityRunningInBatchmode = false;
-
-            if (System.Environment.CommandLine.Contains("-batchmode"))
-            {
-                unityRunningInBatchmode = true;
-            }
 
             bool needEnable = false;
             var featureSetStandalone =
@@ -67,7 +61,7 @@ namespace Meta.XR
             if (promptDeclined)
                 return;
 
-            if (needEnable && !unityRunningInBatchmode)
+            if (needEnable && !Application.isBatchMode)
             {
                 bool result =
                     EditorUtility.DisplayDialog("Enable Meta XR Feature Set",

@@ -91,8 +91,8 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         private void ShowHeaderGUI()
         {
             var currentWidth = EditorGUIUtility.currentViewWidth;
+            var expectedButtonHeight = Meta.XR.Editor.ToolingSupport.Styles.Constants.Height;
 
-            var expectedButtonHeight = ItemHeight;
             GUILayout.BeginArea(new Rect(0, 0, currentWidth, expectedButtonHeight));
             EditorGUILayout.BeginHorizontal();
             Utils.ToolDescriptor.DrawButton(null, false, true, Origins.Component);

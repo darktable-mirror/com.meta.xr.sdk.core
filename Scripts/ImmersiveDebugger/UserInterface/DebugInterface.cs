@@ -91,6 +91,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             base.Awake();
 
+            // Hide by default early on during initialization
+            Hide();
+
             _inspectorPanel = Append<InspectorPanel>("inspectors");
             _inspectorPanel.LayoutStyle = Style.Load<LayoutStyle>("InspectorPanel");
             _inspectorPanel.BackgroundStyle = Style.Load<ImageStyle>("PanelBackground");
@@ -121,7 +124,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _distanceButton.State = true;
 
             var runtimeSettings = RuntimeSettings.Instance;
-
             FollowOverride = runtimeSettings.FollowOverride;
             RotateOverride = runtimeSettings.RotateOverride;
             OpacityOverride = true;
@@ -139,10 +141,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (runtimeSettings.ImmersiveDebuggerDisplayAtStartup)
             {
                 Show();
-            }
-            else
-            {
-                Hide();
             }
 
             var debugManager = DebugManager.Instance;

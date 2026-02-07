@@ -61,6 +61,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _miniButtonsAnchor.LayoutStyle = Style.Load<LayoutStyle>("MiniButtons");
 
             SetExpectedPixelsPerUnit(1000.0f, 10.0f, 2.24f);
+
+            // Debug Bar is always shown by default
+            Show();
         }
 
         /// <summary>

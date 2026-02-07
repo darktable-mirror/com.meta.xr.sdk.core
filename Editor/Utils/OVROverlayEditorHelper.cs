@@ -126,6 +126,7 @@ public static class OVROverlayEditorHelper
             {
                 setCanvasLayer(CanvasLayer);
                 setMask(~LayerMask.GetMask(layerName));
+                OVRPlugin.SendEvent("canvas_set_layer_clicked");
             }
         }
         else if (FindUnusedLayer() is not { } unusedLayer)
@@ -137,6 +138,7 @@ public static class OVROverlayEditorHelper
             SetLayerName(unusedLayer, DefaultCanvasLayerName);
             setCanvasLayer(unusedLayer);
             setMask(~(1 << unusedLayer));
+            OVRPlugin.SendEvent("canvas_set_default_layer_clicked");
         }
     }
 

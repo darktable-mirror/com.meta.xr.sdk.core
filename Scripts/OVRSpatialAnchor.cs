@@ -342,8 +342,12 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The <paramref name="groupUuid"/> parameter can be any valid Guid, which excludes the default value Guid, AKA
     /// <see cref="Guid.Empty"/>.
     /// </remarks>
+    /// <exception cref="ArgumentException"> Thrown if <paramref name="groupUuid"/> is <see cref="Guid.Empty"/>. </exception>
     public OVRTask<OVRResult<OVRAnchor.ShareResult>> ShareAsync(Guid groupUuid)
     {
+        if (groupUuid == Guid.Empty)
+            throw new ArgumentException(message: "groupUuid must not be a 0 uuid", paramName: nameof(groupUuid));
+
         ulong handle = _anchor.Handle;
         unsafe
         {
@@ -434,11 +438,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The <paramref name="groupUuid"/> parameter can be any valid Guid, which excludes the default value Guid, AKA
     /// <see cref="Guid.Empty"/>.
     /// </remarks>
+    /// <exception cref="ArgumentException"> Thrown if <paramref name="groupUuid"/> is <see cref="Guid.Empty"/></exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> is null.</exception>
     public static OVRTask<OVRResult<OVRAnchor.ShareResult>> ShareAsync(IEnumerable<OVRSpatialAnchor> anchors, Guid groupUuid)
     {
         if (anchors is null)
             throw new ArgumentNullException(nameof(anchors));
+        if (groupUuid == Guid.Empty)
+            throw new ArgumentException(message: "groupUuid must not be a 0 uuid", paramName: nameof(groupUuid));
 
         var anchorIter = anchors.ToNonAlloc();
         using var anchorNativeList = new OVRNativeList<ulong>(anchorIter.Count, Allocator.Temp);
@@ -484,6 +491,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The <paramref name="groupUuids"/> parameter can consist of any valid Guids, which excludes the default value
     /// Guid, AKA <see cref="Guid.Empty"/>.
     /// </remarks>
+    /// <exception cref="ArgumentException"> Thrown if <paramref name="groupUuids"/> contains at least 1 <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> or <paramref name="groupUuids"/> is null.</exception>
     public static OVRTask<OVRResult<OVRAnchor.ShareResult>> ShareAsync(IEnumerable<OVRSpatialAnchor> anchors, IEnumerable<Guid> groupUuids)
     {
@@ -500,6 +508,11 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         }
 
         using var groupUuidList = groupUuids.ToNativeList(Allocator.Temp);
+        foreach (var uuid in groupUuidList)
+        {
+            if (uuid == Guid.Empty)
+                throw new ArgumentException(message: "groupUuids must not contain a 0 uuid", paramName: nameof(groupUuids));
+        }
         return OVRAnchor.ShareAsyncInternal(anchorNativeList, groupUuidList);
     }
 
@@ -1232,6 +1245,9 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// Already-bound anchors will not appear in the resulting <paramref name="unboundAnchors"/> list until subsequent
     /// app launches.
     /// </remarks>
+    /// <exception cref="ArgumentException">
+    ///     Thrown if <paramref name="groupUuid"/> is <see cref="Guid.Empty"/>.
+    /// </exception>
     /// <exception cref="ArgumentNullException">
     ///     Thrown if <paramref name="unboundAnchors"/> is `null`.
     /// </exception>
@@ -1239,6 +1255,8 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         Guid groupUuid,
         List<UnboundAnchor> unboundAnchors)
     {
+        if (groupUuid == Guid.Empty)
+            throw new ArgumentException(message: "groupUuid must not be a 0 uuid", paramName: nameof(groupUuid));
         if (unboundAnchors is null)
             throw new ArgumentNullException(nameof(unboundAnchors));
 
@@ -1314,6 +1332,9 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// Already-bound anchors will not appear in the resulting <paramref name="unboundAnchors"/> list until subsequent
     /// app launches.
     /// </remarks>
+    /// <exception cref="ArgumentException">
+    ///     Thrown if <paramref name="groupUuid"/> is <see cref="Guid.Empty"/>.
+    /// </exception>
     /// <exception cref="ArgumentNullException">
     ///     Thrown if either <paramref name="allowedAnchorUuids"/> or <paramref name="unboundAnchors"/> is null.
     /// </exception>
@@ -1322,6 +1343,8 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         IEnumerable<Guid> allowedAnchorUuids,
         List<UnboundAnchor> unboundAnchors)
     {
+        if (groupUuid == Guid.Empty)
+            throw new ArgumentException(message: "groupUuid must not be a 0 uuid", paramName: nameof(groupUuid));
         if (allowedAnchorUuids is null)
             throw new ArgumentNullException(nameof(allowedAnchorUuids));
         if (unboundAnchors is null)

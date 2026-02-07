@@ -80,6 +80,7 @@ public class OVROverlayCanvasEditor : Editor
             if (GUILayout.Button("Fix Canvas Layers"))
             {
                 canvas.SetCanvasLayer(canvas.gameObject.layer, true);
+                OVRPlugin.SendEvent("canvas_fix_canvas_layers_clicked");
             }
         }
 
@@ -89,6 +90,7 @@ public class OVROverlayCanvasEditor : Editor
             if (GUILayout.Button("Set Canvas Layer Name"))
             {
                 SetLayerName(canvas.gameObject.layer, DefaultCanvasLayerName);
+                OVRPlugin.SendEvent("canvas_set_canvas_layer_name_clicked");
             }
         }
 
@@ -115,6 +117,7 @@ public class OVROverlayCanvasEditor : Editor
                 if (GUILayout.Button($"Remove {LayerMask.LayerToName(canvas.gameObject.layer)} from Camera cullingMask"))
                 {
                     mainCamera.cullingMask &= ~(1 << canvas.gameObject.layer);
+                    OVRPlugin.SendEvent("canvas_remove_from_culling_mask_clicked");
                 }
             }
 
@@ -127,6 +130,7 @@ public class OVROverlayCanvasEditor : Editor
                 if (GUILayout.Button($"Add {LayerMask.LayerToName(canvas.layer)} to Camera cullingMask"))
                 {
                     mainCamera.cullingMask |= 1 << canvas.layer;
+                    OVRPlugin.SendEvent("canvas_add_to_culling_mask_clicked");
                 }
             }
         }
@@ -166,6 +170,7 @@ public class OVROverlayCanvasEditor : Editor
                     settings.CanvasRenderLayer = newLayer;
                     SetLayerName(settings.CanvasRenderLayer, DefaultCanvasRenderLayerName);
                 }
+                OVRPlugin.SendEvent("canvas_create_render_layer_clicked");
             }
         }
     }
@@ -226,6 +231,7 @@ public class OVROverlayCanvasEditor : Editor
                     if (GUILayout.Button($"Set up rendering triggers for {text}"))
                     {
                         Undo.AddComponent<OVROverlayCanvas_TMPChanged>(text.gameObject).TargetCanvas = canvas;
+                        OVRPlugin.SendEvent("canvas_add_tmpchanged_clicked");
                     }
                 }
             }

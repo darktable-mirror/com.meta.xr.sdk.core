@@ -201,8 +201,8 @@ namespace Meta.XR.ImmersiveDebugger
 
         public static void OnPanelActiveStateChanged(Panel panel)
         {
-            // Panel is not initialized yet. We'll hijack this PixelsPerUnit property to test this
-            if (panel.PixelsPerUnit == 0.0f) return;
+            // Ignore any state change that happens before the panel is initialized
+            if (!panel.Initialised) return;
 
             var markerId = panel.isActiveAndEnabled ? MarkerId.PanelOpen : MarkerId.PanelClose;
 

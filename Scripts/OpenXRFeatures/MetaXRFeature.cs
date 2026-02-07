@@ -119,10 +119,11 @@ namespace Meta.XR
             "XR_META_spatial_entity_persistence " +
             "XR_META_spatial_entity_discovery " +
             "XR_META_boundary_visibility " +
-            "XR_METAX1_face_tracking_visemes " +
+            "XR_META_face_tracking_visemes " +
             "XR_META_headset_id " +
             "XR_FB_composition_layer_settings " +
             "XR_META_automatic_layer_filter " +
+            "XR_METAX1_spatial_entity_marker " +
             "XR_EXT_future " +
             "XR_EXTX2_stationary_reference_space " +
             "XR_META_recommended_layer_resolution " +

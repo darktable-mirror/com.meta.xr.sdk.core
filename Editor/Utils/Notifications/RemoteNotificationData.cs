@@ -37,6 +37,7 @@ namespace Meta.XR.Editor.Notifications
         public bool hideCloseButton;
         public int timesShown;
         public float duration;
+        public NotificationUrlButton urlButton;
         public NotificationFilter[] filters;
     }
 
@@ -46,5 +47,14 @@ namespace Meta.XR.Editor.Notifications
         public string field;
         public string @operator;
         public string value;
+    }
+
+    [Serializable]
+    internal struct NotificationUrlButton
+    {
+        public string label;
+        public string url;
+
+        public bool IsValid => !string.IsNullOrEmpty(label) && !string.IsNullOrEmpty(url);
     }
 }

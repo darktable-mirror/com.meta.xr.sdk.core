@@ -45,7 +45,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         [SerializeField] internal GameObject avatarPrefab;
         [SerializeField] internal GameObject avatarPrefabSdk28Plus;
 
-        [Tooltip("Specify the number of available avatars. This value depends on the SDK version.")]
+        [Tooltip("Specify the number of preset avatars available in the project. The maximum size depends on the SDK version.")]
         // Developers might want to delete some avatars from the sample asset zip
         // e.g. the game has a maximum player count, they won't need more unique sample avatars
         [SerializeField] private int preloadedSampleAvatarSize = 6;
@@ -70,16 +70,6 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         private void OnDisable()
         {
             AvatarEntity.OnSpawned -= HandleAvatarSpawned;
-        }
-
-private void OnValidate()
-        {
-#if META_AVATAR_SDK_28_OR_NEWER
-            const int maxAllowedValue = 17;
-#else
-            const int maxAllowedValue = 32;
-#endif
-            preloadedSampleAvatarSize = Mathf.Clamp(preloadedSampleAvatarSize, 1, maxAllowedValue);
         }
 
         private void HandleAvatarSpawned(IAvatarStreamConfig streamConfig)
@@ -155,7 +145,7 @@ private void OnValidate()
 #endif
 
             go.GetComponent<NetworkObject>().SpawnWithOwnership(serverRpcParams.Receive.SenderClientId);
-            go.GetComponent<AvatarBehaviourNGO>().LocalAvatarIndex = Random.Range(0, preloadedSampleAvatarSize - 1);
+            go.GetComponent<AvatarBehaviourNGO>().LocalAvatarIndex = Random.Range(0, preloadedSampleAvatarSize);
             go.GetComponent<AvatarBehaviourNGO>().OculusId = oculusId;
         }
 #endif // META_AVATAR_SDK_DEFINED

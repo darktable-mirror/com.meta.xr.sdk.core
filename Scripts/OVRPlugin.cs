@@ -63,7 +63,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_109_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_110_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -3391,6 +3391,7 @@ public static partial class OVRPlugin
         SemanticLabels = 5,
         RoomLayout = 6,
         SpaceContainer = 7,
+        MarkerPayload = 1000576000,
         TriangleMesh = 1000269000,
         // XR_META_dynamic_object_tracker
         DynamicObject = 1000288007,
@@ -3493,7 +3494,6 @@ public static partial class OVRPlugin
         public UInt64 space;
         public Guid uuid;
     }
-
 
 
     [StructLayout(LayoutKind.Sequential)]
@@ -7746,16 +7746,24 @@ public static partial class OVRPlugin
             string event_type = "",
             string event_target = "",
             string error_msg = "",
-            string is_internal = "")
+            string is_internal_build = "",
+            string batch_mode = "")
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version < OVRP_1_109_0.version)
+        if (version >= OVRP_1_110_0.version)
+        {
+            return OVRP_1_110_0.ovrp_SendUnifiedEventV2(isEssential, productType, eventName, event_metadata_json, project_name, event_entrypoint, project_guid, event_type, event_target, error_msg, is_internal_build, batch_mode);
+        }
+        else if (version == OVRP_1_109_0.version)
+        {
+            return OVRP_1_109_0.ovrp_SendUnifiedEvent(isEssential, productType, eventName, event_metadata_json, project_name, event_entrypoint, project_guid, event_type, event_target, error_msg, is_internal_build);
+        }
+        else // < OVRP_1_109_0.version
         {
             return Result.Failure_Unsupported;
         }
-        return OVRP_1_109_0.ovrp_SendUnifiedEvent(isEssential, productType, eventName, event_metadata_json, project_name, event_entrypoint, project_guid, event_type, event_target, error_msg, is_internal);
 #endif
     }
 
@@ -12381,7 +12389,107 @@ public static partial class OVRPlugin
 
 
 
+    public enum MarkerType
+    {
+        QRCode = 1
+    }
 
+    public enum SpaceMarkerPayloadType
+    {
+        InvalidQRCode = 1,
+        StringQRCode = 2,
+        BinaryQRCode = 3,
+    }
+
+    public struct MarkerTrackerCreateInfo
+    {
+        public uint MarkerTypeCount;
+        public unsafe MarkerType* MarkerTypes;
+    }
+
+    public struct MarkerTrackerCreateCompletion
+    {
+        public Result FutureResult;
+        public ulong MarkerTracker;
+    }
+
+    public struct SpaceMarkerPayload
+    {
+        public uint BufferCapacityInput;
+        public uint BufferCountOutput;
+        public unsafe byte* Buffer;
+        public SpaceMarkerPayloadType PayloadType;
+    }
+
+    public static unsafe Result CreateMarkerTrackerAsync(ReadOnlySpan<MarkerType> markerTypes, out ulong future)
+    {
+        future = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        fixed (MarkerType* ptr = markerTypes)
+        {
+            return version >= OVRP_1_110_0.version
+                ? OVRP_1_110_0.ovrp_CreateMarkerTrackerAsync(new MarkerTrackerCreateInfo
+                    {
+                        MarkerTypes = ptr,
+                        MarkerTypeCount = (uint)markerTypes.Length,
+                    }, out future)
+                : Result.Failure_NotYetImplemented;
+        }
+#endif
+    }
+
+    public static Result CreateMarkerTrackerComplete(ulong future, out MarkerTrackerCreateCompletion completion)
+    {
+        completion = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_110_0.version
+            ? OVRP_1_110_0.ovrp_CreateMarkerTrackerComplete(future, out completion)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result DestroyMarkerTracker(ulong markerTracker)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_110_0.version
+            ? OVRP_1_110_0.ovrp_DestroyMarkerTracker(markerTracker)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result GetSpaceMarkerPayload(ulong space, ref SpaceMarkerPayload payload)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_110_0.version
+            ? OVRP_1_110_0.ovrp_GetSpaceMarkerPayload(space, ref payload)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result GetMarkerTrackingSupported(out bool markerTrackingSupported)
+    {
+        markerTrackingSupported = false;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_110_0.version)
+        {
+            var result = OVRP_1_110_0.ovrp_GetMarkerTrackingSupported(out var value);
+            markerTrackingSupported = value == Bool.True;
+            return result;
+        }
+
+        return Result.Failure_NotYetImplemented;
+#endif
+    }
 
 
     public enum FutureState
@@ -12441,6 +12549,16 @@ public static partial class OVRPlugin
 
 
 
+    public static bool BeginProfilingRegion(string regionName)
+    {
+        return OVRP_1_104_0.ovrp_BeginProfilingRegion(regionName) == Result.Success;
+    }
+
+    public static bool EndProfilingRegion()
+    {
+        return OVRP_1_104_0.ovrp_EndProfilingRegion() == Result.Success;
+    }
+
 
 
     public static Result SendMicrogestureHint()
@@ -12470,6 +12588,9 @@ public static partial class OVRPlugin
 
 #endif
     }
+
+
+
 
     public static class Qpl
     {
@@ -14807,7 +14928,6 @@ public static partial class OVRPlugin
     private static class OVRP_1_102_0
     {
         public static readonly System.Version version = new System.Version(1, 102, 0);
-
     }
 
     private static class OVRP_1_103_0
@@ -14887,6 +15007,12 @@ public static partial class OVRPlugin
 
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_BeginProfilingRegion(string regionName);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_EndProfilingRegion();
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetExternalLayerDynresEnabled(Bool enabled);
     }
 
@@ -14911,7 +15037,6 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetHandTrackingState(Step stepId, int frameIndex, Hand hand,
             out HandTrackingStateInternal handState);
-
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SaveUnifiedConsent(int toolId, Bool consentValue);
@@ -14997,6 +15122,39 @@ public static partial class OVRPlugin
     private static class OVRP_1_110_0
     {
         public static readonly System.Version version = new System.Version(1, 110, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SendUnifiedEventV2(
+            Bool isEssential,
+            string productType,
+            string eventName,
+            string event_metadata_json,
+            string project_name,
+            string event_entrypoint,
+            string project_guid,
+            string event_type,
+            string event_target,
+            string error_msg,
+            string is_internal_build,
+            string batch_mode);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_CreateMarkerTrackerAsync(in MarkerTrackerCreateInfo createInfo, out ulong future);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_CreateMarkerTrackerComplete(ulong future, out MarkerTrackerCreateCompletion completion);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_DestroyMarkerTracker(ulong tracker);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetSpaceMarkerPayload(ulong space, ref SpaceMarkerPayload payload);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetMarkerTrackingSupported(out Bool value);
+
+
+
 
     }
 

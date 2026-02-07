@@ -53,9 +53,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _proxyInputModule = new ProxyInputModule(GameObject, Cursor);
         }
 
-        private void UpdateTransform()
+        private void UpdateTransform(bool updatePosition, bool updateRotation)
         {
-            if (FollowOverride || !_positionHasBeenInitialized)
+            if (updatePosition)
             {
                 var expectedPosition = _proxyCameraRig.CameraTransform.position;
                 if (expectedPosition != Vector3.zero)
@@ -66,13 +66,22 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 Transform.position = expectedPosition;
             }
 
-            if (RotateOverride)
+            if (updateRotation)
             {
                 var euler = _proxyCameraRig.CameraTransform.eulerAngles;
                 // Only rotating around up axis (means the dashboard cannot roll, and stays parallel to the ground)
                 euler.x = 0.0f;
                 euler.z = 0.0f;
                 Transform.rotation = Quaternion.Euler(euler);
+            }
+        }
+
+        protected override void OnVisibilityChanged()
+        {
+            base.OnVisibilityChanged();
+            if (Visibility && _proxyCameraRig.Refresh())
+            {
+                UpdateTransform(true, true);
             }
         }
 
@@ -117,7 +126,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             UpdateRefreshLayout(false);
 
             if (!_proxyCameraRig.Refresh()) return;
-            UpdateTransform();
+            UpdateTransform(FollowOverride || !_positionHasBeenInitialized, RotateOverride || !_positionHasBeenInitialized);
             UpdateCulling();
 
             _proxyInputModule.Refresh();

@@ -274,7 +274,6 @@ internal static class OVRDeserialize
 
 
 
-
     public struct EventDataReferenceSpaceChangePending
     {
         public EventType EventType;

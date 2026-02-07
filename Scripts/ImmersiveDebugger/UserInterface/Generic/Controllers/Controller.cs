@@ -283,7 +283,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Visibility = !GameObject.activeSelf;
         }
 
-        private void OnVisibilityChanged()
+        protected virtual void OnVisibilityChanged()
         {
             GameObject.SetActive(Visibility);
             OnVisibilityChangedEvent?.Invoke(this);

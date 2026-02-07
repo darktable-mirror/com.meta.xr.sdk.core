@@ -1060,7 +1060,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// <param name="groupUuid">
     /// A UUID of a group to share the anchor with.
     /// Anchors shared to this <see cref="groupUuid"/> can be loaded by other clients via
-    /// <see cref="LoadUnboundSharedAnchorsAsync(Guid,List{UnboundAnchor})"/>.
+    /// <see cref="OVRSpatialAnchor.LoadUnboundSharedAnchorsAsync(Guid,List{OVRSpatialAnchor.UnboundAnchor})"/>.
     /// <br/>
     /// NOTE: You may arbitrarily generate your own UUIDs (e.g. with <see cref="System.Guid.NewGuid"/>), or you may use
     /// UUIDs provided by colocation APIs such as in <see cref="OVRColocationSession"/>.
@@ -1074,8 +1074,9 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// <remarks>
     /// This method is asynchronous; use the returned <see cref="OVRTask"/> wrapper to be notified of completion.
     ///
-    /// The <paramref name="groupUuid"/> parameter can be any valid Guid, which excludes the default value Guid, AKA
+    /// The <paramref name="groupUuid"/> parameter can be any valid Guid, which excludes the default value Guid, that is,
     /// <see cref="Guid.Empty"/>.
+    /// </remarks>
     public OVRTask<OVRResult<ShareResult>> ShareAsync(Guid groupUuid)
     {
         ulong handle = Handle;

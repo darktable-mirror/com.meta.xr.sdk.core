@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
+using UnityEngine;
 
 namespace Meta.XR.Editor.Notifications
 {
@@ -31,6 +32,30 @@ namespace Meta.XR.Editor.Notifications
         {
             yield return new Label(data.title, UIStyles.GUIStyles.Title);
             yield return new Label(data.message, UIStyles.GUIStyles.Label);
+
+            if (data.urlButton.IsValid)
+            {
+                yield return new GroupedItem(data.GetNotificationButtons());
+            }
+        }
+
+        private static IEnumerable<IUserInterfaceItem> GetNotificationButtons(this NotificationData data)
+        {
+            var buttonLayout = new[] { GUILayout.Height(20f), GUILayout.MinWidth(80f) };
+            var highlightedButtonColor = Meta.XR.Editor.UserInterface.Styles.Colors.LightMeta;
+
+            yield return new AddSpace(flexibleSpace: true);
+            yield return new Button(
+                new ActionLinkDescription
+                {
+                    Content = new GUIContent(data.urlButton.label),
+                    Action = () =>
+                    {
+                        Application.OpenURL(data.urlButton.url);
+                    },
+                    BackgroundColor = highlightedButtonColor
+                },
+                buttonLayout);
         }
 
         public static Notification BuildNotificationFromData(this NotificationData data)

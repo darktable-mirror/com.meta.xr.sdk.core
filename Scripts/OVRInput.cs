@@ -322,6 +322,8 @@ public static class OVRInput
         ControllerNotInHand,
     }
 
+
+
     public struct HapticsAmplitudeEnvelopeVibration
     {
         public int SamplesCount;

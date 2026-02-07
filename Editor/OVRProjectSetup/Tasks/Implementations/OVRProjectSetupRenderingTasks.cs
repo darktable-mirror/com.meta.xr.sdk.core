@@ -537,7 +537,7 @@ internal static class OVRProjectSetupRenderingTasks
                return QualitySettings.antiAliasing == OVRPlugin.recommendedMSAALevel;
 #endif
            },
-           message: "Use recommaned MSAA level for Android",
+           message: "Use recommended MSAA level for Android",
            fix: buildTargetGroup =>
            {
 #if USING_URP

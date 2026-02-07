@@ -134,6 +134,7 @@ partial struct OVRAnchor
             public const string MaxResults = "max_results";
             public const string GroupCount = "group_count";
             public const string DynamicObjectClasses = "dynamic_object_classes";
+            public const string MarkerTypes = "marker_types";
         }
     }
 }

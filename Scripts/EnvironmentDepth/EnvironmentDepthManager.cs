@@ -141,7 +141,8 @@ namespace Meta.XR.EnvironmentDepth
                 var loader = XRGeneralSettings.Instance.Manager.activeLoader;
                 var displaySubsystem = loader.GetLoadedSubsystem<XRDisplaySubsystem>();
                 Assert.IsNotNull(displaySubsystem, nameof(displaySubsystem));
-#if OPEN_XR_META_2_1_OR_NEWER
+// The Open XR Meta package does not compile for anything other than Android and Editor
+#if OPEN_XR_META_2_1_OR_NEWER && (UNITY_ANDROID || UNITY_EDITOR)
                 if (loader is UnityEngine.XR.OpenXR.OpenXRLoader openXRLoader)
                 {
                     return new DepthProviderOpenXR(displaySubsystem, openXRLoader);

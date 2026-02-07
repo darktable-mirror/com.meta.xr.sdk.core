@@ -55,6 +55,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         private CanvasScaler _canvasScaler;
         private PanelRaycaster _ovrRaycaster;
         internal float PixelsPerUnit { get; private set; }
+        internal bool Initialised { get; private set; }
 
         protected Background Background;
         protected ImageStyle _backgroundStyle;
@@ -94,6 +95,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             base.Setup(owner);
 
+            // Enforce all panels to be hidden by default, and before they're fully initialised
+            Hide();
+
             // Canvas
             _canvas = GameObject.AddComponent<Canvas>();
             _canvasScaler = GameObject.AddComponent<CanvasScaler>();
@@ -102,6 +106,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Background = Append<Background>("background");
             Background.LayoutStyle = Style.Load<LayoutStyle>("Fill");
             Background.RaycastTarget = true;
+
+            Initialised = true;
         }
 
         protected void SetExpectedPixelsPerUnit(float pixelsPerUnit, float dynamicPixelsPerUnit, float referencePixelsPerUnit)

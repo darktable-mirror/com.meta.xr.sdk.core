@@ -34,7 +34,7 @@ public class OVRRuntimeSettings : OVRRuntimeAssetsBase
     private const string _assetName = "OculusRuntimeSettings";
     private static OVRRuntimeSettings _instance;
 
-    private static readonly OVRHandSkeletonVersion NewProjectDefaultSkeletonVersion = OVRHandSkeletonVersion.OVR;
+    private static readonly OVRHandSkeletonVersion NewProjectDefaultSkeletonVersion = OVRHandSkeletonVersion.OpenXR;
 
     [SerializeField]
     private OVRHandSkeletonVersion handSkeletonVersion = NewProjectDefaultSkeletonVersion;
