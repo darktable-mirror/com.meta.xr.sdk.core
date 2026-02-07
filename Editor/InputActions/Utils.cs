@@ -67,7 +67,7 @@ namespace Meta.XR.InputActions.Editor
 
         static Utils()
         {
-            StatusMenu.RegisterItem(Item);
+            //StatusMenu.RegisterItem(Item);
         }
 
         public static (string, Color?) ComputeInfoText()

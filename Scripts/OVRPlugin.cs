@@ -328,6 +328,7 @@ public static partial class OVRPlugin
         Float = 2,
         Vector2 = 3,
         Pose = 4,
+        Vibration = 100,
     }
 
     public enum Controller
@@ -5328,51 +5329,135 @@ public static partial class OVRPlugin
 
     public static bool GetActionStateBoolean(string actionName, out bool result)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        result = false;
+        return false;
+#else
         Bool ovrResult = Bool.False;
         result = false;
 
-        var outcome = OVRP_1_95_0.ovrp_GetActionStateBoolean(actionName, ref ovrResult);
-        if (outcome == Result.Success)
+        if (version >= OVRP_1_95_0.version)
         {
-            result = ovrResult == Bool.True;
-            return true;
-        }
-        else
+            var outcome = OVRP_1_95_0.ovrp_GetActionStateBoolean(actionName, ref ovrResult);
+            if (outcome == Result.Success)
+            {
+                result = ovrResult == Bool.True;
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStateBoolean: {outcome}");
+                return false;
+            }
+        } else
         {
-            Debug.LogError($"Error calling GetActionStateBoolean: {outcome}");
             return false;
         }
+#endif
     }
 
     public static bool GetActionStateFloat(string actionName, out float result)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        result = 0;
+        return false;
+#else
         result = 0f;
 
-        var outcome = OVRP_1_95_0.ovrp_GetActionStateFloat(actionName, ref result);
-        if (outcome == Result.Success)
+        if (version >= OVRP_1_95_0.version)
         {
-            return true;
-        }
-        else
+            var outcome = OVRP_1_95_0.ovrp_GetActionStateFloat(actionName, ref result);
+            if (outcome == Result.Success)
+            {
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStateFloat: {outcome}");
+                return false;
+            }
+        } else
         {
-            Debug.LogError($"Error calling GetActionStateFloat: {outcome}");
             return false;
         }
+#endif
     }
 
     public static bool GetActionStatePose(string actionName, out Posef result)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        pose = default(Posef);
+        return false;
+#else
         result = new Posef();
-        var outcome = OVRP_1_95_0.ovrp_GetActionStatePose(actionName, ref result);
-        if (outcome == Result.Success)
+        if (version >= OVRP_1_95_0.version)
         {
-            return true;
-        }
-        else
+            var outcome = OVRP_1_95_0.ovrp_GetActionStatePose(actionName, ref result);
+            if (outcome == Result.Success)
+            {
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStatePose: {outcome}");
+                return false;
+            }
+        } else
         {
-            Debug.LogError($"Error calling GetActionStatePose: {outcome}");
             return false;
         }
+#endif
+    }
+
+    public static bool GetActionStatePose(string actionName, Hand hand, out Posef result)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        result = default(Posef);
+        return false;
+#else
+        result = new Posef();
+
+        if (version >= OVRP_1_100_0.version)
+        {
+            var outcome = OVRP_1_100_0.ovrp_GetActionStatePose2(actionName, hand, ref result);
+            if (outcome == Result.Success)
+            {
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStatePose2: {outcome}");
+                return false;
+            }
+        } else
+        {
+            return false;
+        }
+#endif
+    }
+
+    public static bool TriggerVibrationAction(string actionName, Hand hand, float duration, float amplitude)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return false;
+#else
+        if (version >= OVRP_1_100_0.version)
+        {
+            var outcome = OVRP_1_100_0.ovrp_TriggerVibrationAction(actionName, hand, duration, amplitude);
+            if (outcome == Result.Success)
+            {
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling TriggerVibrationAction: {outcome}");
+                return false;
+            }
+        } else
+        {
+            return false;
+        }
+#endif
     }
 
     public static bool SetWideMotionModeHandPoses(bool wideMotionModeFusionHandPoses)
@@ -13612,6 +13697,12 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetCurrentInteractionProfileName(Hand hand, IntPtr interactionProfile);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetActionStatePose2(string path, Hand hand, ref Posef value);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TriggerVibrationAction(string actionName, Hand hand, float duration, float amplitude);
     }
 
     private static class OVRP_1_101_0
