@@ -2617,7 +2617,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 #endif
 
-#if !USING_XR_SDK_OPENXR && (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_OR_NEWER)
+#if !USING_XR_SDK_OPENXR && (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_1_OR_NEWER)
         if (enableDynamicResolution && SystemInfo.graphicsDeviceType == GraphicsDeviceType.Vulkan)
         {
             Debug.LogError("Vulkan Dynamic Resolution is not supported on your current build version. Ensure you are on Unity 2021+ with the Oculus XR plugin v3.3.0+ or the Unity OpenXR plugin v1.12.1+");

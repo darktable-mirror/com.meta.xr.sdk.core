@@ -423,7 +423,7 @@ public class OVRManagerEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_ANDROID
-#if (!OCULUS_XR_3_3_0_OR_NEWER || UNITY_2020) && !UNITY_6000_0_OR_NEWER
+#if !USING_XR_SDK_OPENXR && (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_1_OR_NEWER)
         if (manager.enableDynamicResolution && !PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android))
         {
             UnityEngine.Rendering.GraphicsDeviceType[] apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.Android);
