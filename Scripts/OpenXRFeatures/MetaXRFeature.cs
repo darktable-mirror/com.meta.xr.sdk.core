@@ -124,7 +124,8 @@ namespace Meta.XR
             "XR_FB_composition_layer_settings " +
             "XR_META_automatic_layer_filter " +
             "XR_EXT_future " +
-            "XR_META_recommended_layer_resolution" +
+            "XR_META_recommended_layer_resolution " +
+            "XR_EXT_local_floor " +
             ""
             ;
     }
@@ -238,7 +239,14 @@ namespace Meta.XR
         protected override void OnAppSpaceChange(ulong xrSpace)
         {
             Debug.Log($"[MetaXRFeature] OnAppSpaceChange: {xrSpace}");
+#if !UNITY_OPENXR_1_9_0
             OVRPlugin.UnityOpenXR.OnAppSpaceChange(xrSpace);
+#else
+            int spaceFlags = 0;
+            if (OpenXRSettings.AllowRecentering)
+                spaceFlags |= (int)OVRPlugin.SpaceFlags.AllowRecentering;
+            OVRPlugin.UnityOpenXR.OnAppSpaceChange2(xrSpace, spaceFlags);
+#endif
         }
 
         /// <inheritdoc />

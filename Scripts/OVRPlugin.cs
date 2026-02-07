@@ -394,6 +394,12 @@ public static partial class OVRPlugin
         Count,
     }
 
+    public enum SpaceFlags
+    {
+        None = 0,
+        AllowRecentering = 1,
+    }
+
     public enum RecenterFlags
     {
         Default = 0,
@@ -12225,6 +12231,17 @@ public static partial class OVRPlugin
 #endif
         }
 
+        public static void OnAppSpaceChange2(UInt64 xrSpace, int spaceFlags)
+        {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+#else
+            if (version >= OVRP_1_106_0.version)
+            {
+                OVRP_1_106_0.ovrp_UnityOpenXR_OnAppSpaceChange2(xrSpace, spaceFlags);
+            }
+#endif
+        }
+
         public static void OnSessionStateChange(int oldState, int newState)
         {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -14879,6 +14896,9 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetConsentSettingsChangeText(IntPtr consentSettingsChangeText);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void ovrp_UnityOpenXR_OnAppSpaceChange2(UInt64 xrSpace, int spaceFlags);
 
 
     }

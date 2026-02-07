@@ -86,7 +86,7 @@ namespace Meta.XR.Editor.Rules
             OVRProjectSetup.AddTask(
                 conditionalValidity: buildTargetGroup => GetSettings(buildTargetGroup) != null &&
                     PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.XRPluginManagementPackageName),
-                level: OVRProjectSetup.TaskLevel.Recommended,
+                level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Packages,
                 isDone: buildTargetGroup =>
                 {
@@ -105,7 +105,7 @@ namespace Meta.XR.Editor.Rules
                     }
                     return touchFeatureEnabled;
                 },
-                message: "When using OpenXR Plugin, Oculus Touch Interaction Profile should be included for full OVRInput support.",
+                message: "When using OpenXR Plugin, at least the Oculus Touch Interaction Profile should be included for full OVRInput support.",
                 fix: buildTargetGroup =>
                 {
                     var settings = GetSettings(buildTargetGroup);
@@ -116,7 +116,8 @@ namespace Meta.XR.Editor.Rules
                         throw new OVRConfigurationTaskException("Could not find Oculus Touch Interaction Profile in OpenXR settings");
                     }
                     touchFeature.enabled = true;
-                }
+                },
+                fixMessage: "Add Oculus Touch Controller Interaction Profile"
             );
         }
 

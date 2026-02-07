@@ -52,7 +52,6 @@ namespace Meta.XR
         public const string featureId = "com.meta.openxr.feature.eyetrackedfoveation";
 
         private static ulong _xrSession;
-        private static bool _eyeTrackedFoveatedRenderingEnabled = false;
 
         protected override void OnSessionCreate(ulong xrSession)
         {

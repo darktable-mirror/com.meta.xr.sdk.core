@@ -2725,6 +2725,13 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             OVRManager.display.RecenterPose();
         }
 
+#if !UNITY_OPENXR_1_9_0
+        if (OVRPlugin.UnityOpenXR.Enabled && _trackingOriginType == OVRManager.TrackingOrigin.FloorLevel)
+        {
+            Debug.LogWarning("Floor Level tracking origin is unsupported on this OpenXR Plugin version. Falling back to Stage tracking origin. Please update the OpenXR Plugin to use Floor tracking origin.");
+            _trackingOriginType = OVRManager.TrackingOrigin.Stage;
+        }
+#endif
         if (trackingOriginType != _trackingOriginType)
             trackingOriginType = _trackingOriginType;
 
