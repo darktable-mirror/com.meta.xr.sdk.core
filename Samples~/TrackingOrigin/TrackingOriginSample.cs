@@ -44,6 +44,7 @@ public class TrackingOriginSample : MonoBehaviour
     Transform _eyeOrigin;
     Transform _floorOrigin;
     Transform _stageOrigin;
+    Transform _stationaryOrigin;
 
     OVRManager.TrackingOrigin _currentTrackingOrigin;
 
@@ -59,8 +60,19 @@ public class TrackingOriginSample : MonoBehaviour
         _eyeOrigin = SpawnOrigin(OVRManager.TrackingOrigin.EyeLevel);
         _floorOrigin = SpawnOrigin(OVRManager.TrackingOrigin.FloorLevel);
         _stageOrigin = SpawnOrigin(OVRManager.TrackingOrigin.Stage);
+        _stationaryOrigin = SpawnOrigin(OVRManager.TrackingOrigin.Stationary);
 
         Axes.SetActive(false);
+    }
+
+    void OnEnable()
+    {
+        OVRManager.TrackingOriginChangePending += TrackingOriginChangePending;
+    }
+
+    void OnDisable()
+    {
+        OVRManager.TrackingOriginChangePending -= TrackingOriginChangePending;
     }
 
     void Update()
@@ -98,6 +110,9 @@ public class TrackingOriginSample : MonoBehaviour
                 _currentTrackingOrigin = OVRManager.TrackingOrigin.Stage;
                 break;
             case OVRManager.TrackingOrigin.Stage:
+                _currentTrackingOrigin = OVRManager.TrackingOrigin.Stationary;
+                break;
+            case OVRManager.TrackingOrigin.Stationary:
                 _currentTrackingOrigin = OVRManager.TrackingOrigin.EyeLevel;
                 break;
             default:
@@ -113,8 +128,17 @@ public class TrackingOriginSample : MonoBehaviour
 
     Transform SpawnOrigin(OVRManager.TrackingOrigin trackingOrigin)
     {
+        var trackingOriginName = trackingOrigin.ToString().ToUpper();
+        if (trackingOrigin == OVRManager.TrackingOrigin.Stationary)
+        {
+            if (OVRPlugin.GetStationaryReferenceSpaceId(out var uuid) == OVRPlugin.Result.Success)
+            {
+                trackingOriginName += $"\n{uuid}";
+            }
+        }
+
         var origin = Instantiate(Axes).transform;
-        origin.GetChild(3).GetChild(1).GetComponent<Text>().text = trackingOrigin.ToString().ToUpper();
+        origin.GetChild(3).GetChild(1).GetComponent<Text>().text = trackingOriginName;
         origin.GetChild(3).GetChild(2).gameObject.SetActive(ovrManager.trackingOriginType == trackingOrigin);
         return origin;
     }
@@ -127,6 +151,8 @@ public class TrackingOriginSample : MonoBehaviour
             .SetActive(ovrManager.trackingOriginType == OVRManager.TrackingOrigin.FloorLevel);
         _stageOrigin.GetChild(3).GetChild(2).gameObject
             .SetActive(ovrManager.trackingOriginType == OVRManager.TrackingOrigin.Stage);
+        _stationaryOrigin.GetChild(3).GetChild(2).gameObject
+            .SetActive(ovrManager.trackingOriginType == OVRManager.TrackingOrigin.Stationary);
     }
 
     void UpdateAllSpaces()
@@ -140,5 +166,25 @@ public class TrackingOriginSample : MonoBehaviour
         var stagePose = OVRPlugin.GetTrackingTransformRelativePose(OVRPlugin.TrackingOrigin.Stage).ToOVRPose();
         _stageOrigin.SetPositionAndRotation(stagePose.position, stagePose.orientation);
 
+        var stationaryPose = OVRPlugin.GetTrackingTransformRelativePose(OVRPlugin.TrackingOrigin.Stationary).ToOVRPose();
+        _stationaryOrigin.SetPositionAndRotation(stationaryPose.position, stationaryPose.orientation);
+    }
+
+    void TrackingOriginChangePending(OVRManager.TrackingOrigin trackingOrigin, OVRPose? poseInPreviousSpace)
+    {
+        var pose = poseInPreviousSpace.GetValueOrDefault();
+        var poseText = poseInPreviousSpace.HasValue ?
+            $"Pos: {pose.position} | Rotation: {pose.orientation}" : "undefined";
+
+        Debug.Log($"Tracking Origin {trackingOrigin.ToString().ToUpper()} change pending to: {poseText}.");
+
+        if (trackingOrigin == OVRManager.TrackingOrigin.Stationary)
+        {
+            if (OVRPlugin.GetStationaryReferenceSpaceId(out var uuid) == OVRPlugin.Result.Success)
+            {
+                var trackingOriginName = $"{trackingOrigin.ToString().ToUpper()}\n{uuid}";
+                _stationaryOrigin.GetChild(3).GetChild(1).GetComponent<Text>().text = trackingOriginName;
+            }
+        }
     }
 }

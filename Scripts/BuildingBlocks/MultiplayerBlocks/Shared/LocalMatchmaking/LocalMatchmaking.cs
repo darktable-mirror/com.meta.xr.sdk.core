@@ -81,6 +81,10 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         /// </summary>
         public static readonly UnityEvent<string> OnSessionDiscoverFailed = new();
 
+        internal static Func<Task<bool>> BeforeStartHost;
+        // Should be only set in BeforeStartHost, used for broadcasting, guest can fetch this ExtraData and decode.
+        internal static string ExtraData = null;
+
         private CustomMatchmaking _customMatchmaking;
         private bool _discoveredLocalSessionAsGuest;
 
@@ -134,6 +138,14 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         {
             if (_customMatchmaking != null)
             {
+                if (BeforeStartHost != null)
+                {
+                    if (!await BeforeStartHost.Invoke())
+                    {
+                        Debug.LogError("Failed to start Colocation Session as BeforeStartHost task execution failed.");
+                        return;
+                    }
+                }
                 await _customMatchmaking.CreateRoom();
             }
         }
@@ -175,7 +187,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         {
             if (result.IsSuccess)
             {
-                byte[] roomInfo = Encoding.UTF8.GetBytes(CustomMatchmakingUtils.EncodeMatchInfoWithStruct(result.RoomToken, result.RoomPassword));
+                byte[] roomInfo = Encoding.UTF8.GetBytes(CustomMatchmakingUtils.EncodeMatchInfoWithStruct(result.RoomToken, result.RoomPassword, ExtraData));
                 StartAdvertisingColocationSession(roomInfo);
             }
         }
@@ -193,6 +205,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             }
             _discoveredLocalSessionAsGuest = true;
             await _customMatchmaking.JoinRoom(matchInfo.RoomId, matchInfo.RoomPassword);
+            ExtraData = matchInfo.Extra;
             ReportDiscoverEvent(data);
             // stop when session found
             StopDiscoveringColocationSessions(OnColocationSessionFound);

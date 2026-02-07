@@ -25,6 +25,7 @@ using System.IO;
 using System;
 using Oculus.VR.Editor;
 using UnityEngine.Serialization;
+using System.Linq;
 
 
 [System.Serializable]
@@ -98,7 +99,12 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         Required = 2
     }
 
-    public static readonly int[] horizonOsSdkVersions = { 68, 69, 71, 72, 74 };
+    public static readonly int minSdkVersion = 68;
+    public static readonly int[] skippedSdkVersions = { 70, 73, 75 };
+    public static int currentSdkVersion = OVRPlugin.wrapperVersion.Minor - 32;
+    public static int[] horizonOsSdkVersions = Enumerable.Range(minSdkVersion, currentSdkVersion - minSdkVersion + 1)
+    .Except(skippedSdkVersions)
+    .ToArray();
 
     public List<DeviceType> targetDeviceTypes = new()
         { DeviceType.Quest, DeviceType.Quest2, DeviceType.QuestPro, DeviceType.Quest3, DeviceType.Quest3S };
@@ -126,8 +132,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool enableNSCConfig = true;
     public string securityXmlPath;
     public bool horizonOsSdkEnabled = false;
-    public int minHorizonOsSdkVersion = horizonOsSdkVersions[0];
-    public int targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
+    public int minHorizonOsSdkVersion = minSdkVersion;
+    public int targetHorizonOsSdkVersion = currentSdkVersion;
 
     public bool skipUnneededShaders = false;
 

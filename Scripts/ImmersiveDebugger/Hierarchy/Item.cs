@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using Meta.XR.ImmersiveDebugger.Manager;
 using Meta.XR.ImmersiveDebugger.Utils;
@@ -268,7 +269,7 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
         public override bool Valid => _owner.isLoaded;
         protected override InstanceHandle BuildHandle() => new(_owner);
 
-        protected override GameObject[] FetchExpectedChildren() => _owner.GetRootGameObjects();
+        protected override GameObject[] FetchExpectedChildren() => _owner.isLoaded ? _owner.GetRootGameObjects() : Array.Empty<GameObject>();
     }
 
     internal class SceneRegistry : ItemWithChildren<object, SceneItem, Scene>

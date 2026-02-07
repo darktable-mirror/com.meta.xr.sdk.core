@@ -35,16 +35,22 @@ namespace Meta.XR.ImmersiveDebugger
         [RuntimeInitializeOnLoadMethod]
         private static void OnLoad()
         {
-            if (RuntimeSettings.Instance.ImmersiveDebuggerEnabled)
+            if (!RuntimeSettings.Instance.ImmersiveDebuggerEnabled)
             {
-                SetupImmersiveDebugger();
+                return;
             }
+            if (RuntimeSettings.Instance.EnableOnlyInDebugBuild)
+            {
+#if !DEBUG
+                return;
+#endif // DEBUG
+            }
+            SetupImmersiveDebugger();
         }
 
         /// <summary>
         ///  Setup the scene with canvas and ImmersiveDebuggerManager, if not existed
         /// </summary>
-        [Conditional("UNITY_EDITOR"), Conditional("DEBUG"), Conditional("IMMERSIVE_DEBUGGER_ALLOW_USE_IN_PROD")]
         internal static void SetupImmersiveDebugger()
         {
             GizmoTypesRegistry.InitGizmos();

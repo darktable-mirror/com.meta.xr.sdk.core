@@ -125,6 +125,13 @@ namespace Meta.XR.ImmersiveDebugger
             set => immersiveDebuggerDisplayAtStartup = value;
         }
 
+        [SerializeField] private bool enableOnlyInDebugBuild = false;
+        internal bool EnableOnlyInDebugBuild
+        {
+            get => enableOnlyInDebugBuild;
+            set => enableOnlyInDebugBuild = value;
+        }
+
         [SerializeField] private bool showInspectors = false;
         internal bool ShowInspectors
         {

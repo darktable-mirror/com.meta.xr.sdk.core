@@ -63,7 +63,7 @@ namespace Meta.XR.Guides.Editor
             };
         }
 
-        protected override GuideWindow CreateWindow()
+        internal override GuideWindow CreateWindow()
         {
             if (_window != null) return _window;
 

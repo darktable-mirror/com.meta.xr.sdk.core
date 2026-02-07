@@ -33,6 +33,8 @@ namespace Meta.XR.Editor.StatusMenu
         private static StatusMenu _instance;
         private static IReadOnlyList<ToolDescriptor> _registeredItems;
 
+        public static bool Visible => _instance != null;
+
         private static void PrepareItems()
         {
             var registeredItems = ToolRegistry.Registry.Where(item => item.AddToStatusMenu).ToList();
@@ -89,9 +91,8 @@ namespace Meta.XR.Editor.StatusMenu
         private float ComputeHeight()
         {
             var count = _registeredItems.Count;
-            return ItemHeight * count // Item Heights
-                   + (Styles.GUIStyles.DescriptionAreaStyle.margin.top
-                      + Styles.GUIStyles.DescriptionAreaStyle.margin.bottom) * count // Margins
+            return (ToolingSupport.Styles.GUIStyles.ItemDiv.fixedHeight + ToolingSupport.Styles.GUIStyles.ItemDiv.margin.top
+                       + ToolingSupport.Styles.GUIStyles.ItemDiv.margin.bottom) * count // Item Heights
                    + (Styles.GUIStyles.BackgroundAreaStyle.padding.bottom
                       + Styles.GUIStyles.BackgroundAreaStyle.padding.top); // Main Area Padding
         }
@@ -113,6 +114,13 @@ namespace Meta.XR.Editor.StatusMenu
             {
                 Repaint();
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance != this) return;
+
+            _instance = null;
         }
     }
 }

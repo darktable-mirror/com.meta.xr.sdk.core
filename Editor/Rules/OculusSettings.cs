@@ -130,7 +130,11 @@ namespace Meta.XR.Editor.Rules
                     && OVRProjectSetupRenderingTasks.GetGraphicsAPIs(buildTargetGroup).Any(item => item == GraphicsDeviceType.Vulkan),
                 isDone: _ => Settings.SubsampledLayout,
                 message: "Subsampled Layout should be enabled (in Oculus Settings) to improve GPU performance when foveation is enabled.",
-                fix: _ => Settings.SubsampledLayout = true,
+                fix: _ =>
+                {
+                    Settings.SubsampledLayout = true;
+                    EditorUtility.SetDirty(Settings);
+                },
                 fixMessage: "OculusSettings.SubsampledLayout = true"
             );
 

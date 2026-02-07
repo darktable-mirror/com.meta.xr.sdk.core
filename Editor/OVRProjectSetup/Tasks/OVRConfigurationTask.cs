@@ -32,6 +32,7 @@ using static OVRProjectSetupDrawer.Styles;
 using static OVRProjectSetupDrawer.Styles.Contents;
 using Styles = Meta.XR.Editor.UserInterface.Styles;
 using Utils = Meta.XR.Editor.UserInterface.Utils;
+using Meta.XR.Guides.Editor;
 
 internal class OVRConfigurationTask : IIdentified
 {
@@ -42,6 +43,10 @@ internal class OVRConfigurationTask : IIdentified
         new GUIContent("Mark as Fixed", "Mark this as fixed. It will no longer be reported as a problem.");
     private static readonly GUIContent UnmarkAsFixedButtonContent =
         new GUIContent("Unmark as Fixed", "Unmark this as fixed. It will go back under open items.");
+    private static readonly GUIContent ShowGuidedSetupButtonContent =
+        new GUIContent("How to setup", "Show how to manually set this up.");
+    private static readonly GUIContent DocumentationButtonContent =
+        new GUIContent("Documentation", "Open documentation for this feature");
 
     public Hash128 Uid { get; }
     public string Id => Uid.ToString();
@@ -56,6 +61,7 @@ internal class OVRConfigurationTask : IIdentified
     public OptionalLambdaType<BuildTargetGroup, string> Message { get; }
     public OptionalLambdaType<BuildTargetGroup, string> FixMessage { get; }
     public OptionalLambdaType<BuildTargetGroup, string> URL { get; }
+    public OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup> ManualSetup { get; }
     public OVRConfigurationTaskSourceCode SourceCode { get; set; }
 
     private Func<BuildTargetGroup, bool> _isDone;
@@ -88,10 +94,11 @@ internal class OVRConfigurationTask : IIdentified
         OptionalLambdaType<BuildTargetGroup, string> message,
         OptionalLambdaType<BuildTargetGroup, string> fixMessage,
         OptionalLambdaType<BuildTargetGroup, string> url,
+        OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup> manualSetup,
         OptionalLambdaType<BuildTargetGroup, bool> valid,
         bool fixAutomatic)
         :
-        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, fix, level, message, fixMessage, url, valid, fixAutomatic)
+        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, fix, level, message, fixMessage, url, manualSetup, valid, fixAutomatic)
     {
     }
 
@@ -105,6 +112,7 @@ internal class OVRConfigurationTask : IIdentified
         OptionalLambdaType<BuildTargetGroup, string> message,
         OptionalLambdaType<BuildTargetGroup, string> fixMessage,
         OptionalLambdaType<BuildTargetGroup, string> url,
+        OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup> manualSetup,
         OptionalLambdaType<BuildTargetGroup, bool> valid,
         bool fixAutomatic)
     {
@@ -122,6 +130,7 @@ internal class OVRConfigurationTask : IIdentified
         // For the URL for instance
         // Mandatory parameters will be checked on the Validate method down below
         URL = url ?? new OptionalLambdaTypeWithoutLambda<BuildTargetGroup, string>(null);
+        ManualSetup = manualSetup ?? new OptionalLambdaTypeWithoutLambda<BuildTargetGroup, UPSTGuidedSetup>(null);
         FixMessage = fixMessage ?? new OptionalLambdaTypeWithoutLambda<BuildTargetGroup, string>(null);
         Valid = valid ?? new OptionalLambdaTypeWithoutLambda<BuildTargetGroup, bool>(true);
 
@@ -387,6 +396,11 @@ internal class OVRConfigurationTask : IIdentified
         }
         else if (Tags.HasFlag(OVRProjectSetup.TaskTags.ManuallyFixable))
         {
+            var manualSetup = ManualSetup?.GetValue(buildTargetGroup);
+            if (manualSetup != null && GUILayout.Button(ShowGuidedSetupButtonContent, GUIStyles.MarkAsFixedButton))
+            {
+                manualSetup.ShowWindow(Origins.Component, true);
+            }
             if (!IsMarkedAsFixed(buildTargetGroup) && GUILayout.Button(MarkAsFixedButtonContent, GUIStyles.MarkAsFixedButton))
             {
                 SetMarkedAsFixed(buildTargetGroup, true);

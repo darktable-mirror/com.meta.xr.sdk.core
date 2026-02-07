@@ -72,6 +72,18 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             SendTelemetry = true
         };
 
+        private static readonly Setting EnableOnlyInDebugBuild = new CustomBool()
+        {
+            Uid = nameof(EnableOnlyInDebugBuild),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.EnableOnlyInDebugBuild,
+            Set = (val) => RuntimeSettings.Instance.EnableOnlyInDebugBuild = val,
+            Label = "Enable Only In Debug Build",
+            Tooltip = "On top of enabling Immersive Debugger tool, this option allows to enable it only in " +
+                      "Debug Build so the tool doesn't get shown in production build.",
+            SendTelemetry = true
+        };
+
         private static readonly Setting FollowOverride = new CustomBool()
         {
             Uid = nameof(FollowOverride),
@@ -396,6 +408,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             {
                 using (new IndentScope(EditorGUI.indentLevel + 1))
                 {
+                    EnableOnlyInDebugBuild.Draw(origin);
                     CreateEventSystem.Draw(origin);
                     UseCustomIntegrationConfig.Draw(origin);
 

@@ -20,8 +20,16 @@
 
 using System;
 
+/// <summary>
+/// Extension methods for Core SDK Enums, including helpers
+/// to translate between enum types and <see cref="OVRHandSkeletonVersion"/>s
+/// </summary>
 public static class OVREnumExtensions
 {
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRSkeleton.SkeletonType"/>
+    /// corresponds to any type of Hand skeleton.
+    /// </summary>
     public static bool IsHand(this OVRSkeleton.SkeletonType skeletonType)
     {
         if (skeletonType == OVRSkeleton.SkeletonType.HandLeft || skeletonType == OVRSkeleton.SkeletonType.HandRight)
@@ -35,18 +43,32 @@ public static class OVREnumExtensions
         return false;
     }
 
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRSkeleton.SkeletonType"/>
+    /// is a hand skeleton corresponding to the <see cref="OVRHandSkeletonVersion.OpenXR"/>
+    /// skeleton version.
+    /// </summary>
     public static bool IsOpenXRHandSkeleton(this OVRSkeleton.SkeletonType skeletonType)
     {
         return skeletonType == OVRSkeleton.SkeletonType.XRHandLeft ||
                skeletonType == OVRSkeleton.SkeletonType.XRHandRight;
     }
 
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRSkeleton.SkeletonType"/>
+    /// is a hand skeleton corresponding to the <see cref="OVRHandSkeletonVersion.OVR"/>
+    /// skeleton version.
+    /// </summary>
     public static bool IsOVRHandSkeleton(this OVRSkeleton.SkeletonType skeletonType)
     {
         return skeletonType == OVRSkeleton.SkeletonType.HandLeft ||
                skeletonType == OVRSkeleton.SkeletonType.HandRight;
     }
 
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRSkeleton.SkeletonType"/>
+    /// is a left hand skeleton.
+    /// </summary>
     public static bool IsLeft(this OVRSkeleton.SkeletonType type)
     {
         if (type == OVRSkeleton.SkeletonType.HandLeft)
@@ -60,6 +82,10 @@ public static class OVREnumExtensions
         return false;
     }
 
+    /// <summary>
+    /// Translates an <see cref="OVRSkeleton.SkeletonType"/> to an
+    /// <see cref="OVRHand.Hand"/> type.
+    /// </summary>
     public static OVRHand.Hand AsHandType(this OVRSkeleton.SkeletonType skeletonType)
     {
         switch (skeletonType)
@@ -90,6 +116,11 @@ public static class OVREnumExtensions
         }
     }
 
+    /// <summary>
+    /// Translates an <see cref="OVRHand.Hand"/> of the provided
+    /// <see cref="OVRHandSkeletonVersion"/> version to an
+    /// <see cref="OVRSkeleton.SkeletonType"/> type.
+    /// </summary>
     public static OVRSkeleton.SkeletonType AsSkeletonType(this OVRHand.Hand hand,
         OVRHandSkeletonVersion version)
     {
@@ -121,18 +152,33 @@ public static class OVREnumExtensions
     }
 
 
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRMesh.MeshType"/>
+    /// is a hand mesh corresponding to the <see cref="OVRHandSkeletonVersion.OpenXR"/>
+    /// skeleton version.
+    /// </summary>
     public static bool IsOpenXRHandMesh(this OVRMesh.MeshType meshType)
     {
         return meshType == OVRMesh.MeshType.XRHandLeft ||
                meshType == OVRMesh.MeshType.XRHandRight;
     }
 
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRMesh.MeshType"/>
+    /// is a hand mesh corresponding to the <see cref="OVRHandSkeletonVersion.OVR"/>
+    /// skeleton version.
+    /// </summary>
     public static bool IsOVRHandMesh(this OVRMesh.MeshType meshType)
     {
         return meshType == OVRMesh.MeshType.HandLeft ||
                meshType == OVRMesh.MeshType.HandRight;
     }
 
+    /// <summary>
+    /// Translates an <see cref="OVRHand.Hand"/> of the provided
+    /// <see cref="OVRHandSkeletonVersion"/> version to an
+    /// <see cref="OVRMesh.MeshType"/> type.
+    /// </summary>
     public static OVRMesh.MeshType AsMeshType(this OVRHand.Hand hand,
     OVRHandSkeletonVersion version)
     {
@@ -149,6 +195,10 @@ public static class OVREnumExtensions
         }
     }
 
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRMesh.MeshType"/>
+    /// is a left hand mesh.
+    /// </summary>
     public static bool IsLeft(this OVRMesh.MeshType type)
     {
         if (type == OVRMesh.MeshType.HandLeft)
@@ -164,6 +214,10 @@ public static class OVREnumExtensions
         return false;
     }
 
+    /// <summary>
+    /// Returns true if the provided <see cref="OVRMesh.MeshType"/>
+    /// corresponds to any type of Hand skeleton.
+    /// </summary>
     public static bool IsHand(this OVRMesh.MeshType meshType)
     {
         if (meshType == OVRMesh.MeshType.HandLeft || meshType == OVRMesh.MeshType.HandRight)
@@ -178,6 +232,10 @@ public static class OVREnumExtensions
         return false;
     }
 
+    /// <summary>
+    /// Translates an <see cref="OVRMesh.MeshType"/> to an
+    /// <see cref="OVRHand.Hand"/> type.
+    /// </summary>
     public static OVRHand.Hand AsHandType(this OVRMesh.MeshType meshType)
     {
         switch (meshType)

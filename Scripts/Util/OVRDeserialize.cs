@@ -275,4 +275,12 @@ internal static class OVRDeserialize
 
 
 
+    public struct EventDataReferenceSpaceChangePending
+    {
+        public EventType EventType;
+        public TrackingOrigin ReferenceSpaceType;
+        public double ChangeTime;
+        public Bool PoseValid;
+        public Posef PoseInPreviousSpace;
+    }
 }

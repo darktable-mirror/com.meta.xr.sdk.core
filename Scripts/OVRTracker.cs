@@ -18,19 +18,36 @@
  * limitations under the License.
  */
 
-using System;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 /// <summary>
-/// An infrared camera that tracks the position of a head-mounted display.
+/// Represents an infrared camera that tracks the position of a head-mounted display.
 /// </summary>
+/// <remarks>
+/// The <see cref="OVRTracker"/> object is stateless and provides a convenient accessor to the tracker properties.
+/// Instead of new'ing an <see cref="OVRTracker"/>, consider using the global <see cref="OVRTracker"/> accessible
+/// via <see cref="OVRManager.tracker"/>.
+/// </remarks>
 [HelpURL("https://developer.oculus.com/reference/unity/latest/class_o_v_r_tracker")]
 public class OVRTracker
 {
     /// <summary>
-    /// The (symmetric) visible area in front of the sensor.
+    /// The (symmetric) visible area in front of a sensor.
     /// </summary>
+    /// <remarks>
+    /// You can obtain the frustum of different trackers using <see cref="OVRTracker.GetFrustum"/>.
+    /// <example>
+    /// This example uses the global <see cref="OVRTracker"/> instance on the <see cref="OVRManager"/>
+    /// to query for the sensor's frustum and then logs the sensor's visible area:
+    /// <code><![CDATA[
+    /// void LogFrustum()
+    /// {
+    ///     var frustum = OVRManager.tracker.GetFrustum();
+    ///     Debug.Log($"Frustum has near plane={frustum.nearZ} and far plane={frustum.farZ}");
+    /// }
+    /// ]]></code>
+    /// </example>
+    /// </remarks>
     public struct Frustum
     {
         /// <summary>
@@ -115,6 +132,8 @@ public class OVRTracker
     /// <summary>
     /// Gets the sensor's viewing frustum.
     /// </summary>
+    /// <param name="tracker">The index of the tracker.</param>
+    /// <returns>Returns the <see cref="Frustum"/> associated with <paramref name="tracker"/>.</returns>
     public Frustum GetFrustum(int tracker = 0)
     {
         if (!OVRManager.isHmdPresent)
@@ -126,6 +145,11 @@ public class OVRTracker
     /// <summary>
     /// Gets the sensor's pose, relative to the head's pose at the time of the last pose recentering.
     /// </summary>
+    /// <remarks>
+    /// If the HMD is not present (<see cref="OVRManager.isHmdPresent"/>), this method returns the identity pose.
+    /// </remarks>
+    /// <param name="tracker">The index of the tracker.</param>
+    /// <returns>The pose of the <paramref name="tracker"/> in tracking space, or identity if the HMD is not present.</returns>
     public OVRPose GetPose(int tracker = 0)
     {
         if (!OVRManager.isHmdPresent)
@@ -158,8 +182,10 @@ public class OVRTracker
     }
 
     /// <summary>
-    /// If true, the pose of the sensor is valid and is ready to be queried.
+    /// Gets whether the pose of the specified sensor is valid and is ready to be queried.
     /// </summary>
+    /// <param name="tracker">The index of the sensor.</param>
+    /// <returns>Returns `true` if the pose of the specified sensor is valid; otherwise `false`.</returns>
     public bool GetPoseValid(int tracker = 0)
     {
         if (!OVRManager.isHmdPresent)
@@ -180,6 +206,11 @@ public class OVRTracker
         }
     }
 
+    /// <summary>
+    /// Gets whether the specified sensor is currently present.
+    /// </summary>
+    /// <param name="tracker">The index of the sensor.</param>
+    /// <returns>Returns `true` if <paramref name="tracker"/> is present; otherwise, `false`.</returns>
     public bool GetPresent(int tracker = 0)
     {
         if (!OVRManager.isHmdPresent)

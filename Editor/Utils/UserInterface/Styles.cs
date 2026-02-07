@@ -57,7 +57,8 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly Color InstallationStepBackground = HexToColor("#474747");
             public static readonly Color PanelBackground = HexToColor("#383838");
             public static readonly Color DebugColor = HexToColor("#4ed998");
-            public static readonly Color UtilityColor = HexToColor("4ed998");
+            public static readonly Color UtilityColor = HexToColor("#4ed998");
+            public static readonly Color DisabledColor = HexToColor("#808080");
 
         }
 

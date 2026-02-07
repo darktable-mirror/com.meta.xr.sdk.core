@@ -18,6 +18,10 @@
  * limitations under the License.
  */
 
+#if META_MR_UTILITY_KIT_DEFINED
+using Meta.XR.MRUtilityKit;
+#endif // META_MR_UTILITY_KIT_DEFINED
+using Meta.XR.MultiplayerBlocks.Shared;
 using UnityEditor;
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -49,6 +53,47 @@ namespace Meta.XR.BuildingBlocks.Editor
                 },
                 fixMessage: "Enable Colocation Session support in the project config"
             );
+
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Required,
+                group: OVRProjectSetup.TaskGroup.Features,
+                isDone: _ =>
+                {
+                    var eventHandler = OVRProjectSetupUtils.FindComponentInScene<ColocationSessionEventHandler>();
+                    return eventHandler == null || eventHandler.basis == ColocationSessionEventHandler.Basis.SharedSpatialAnchor ||
+                           OVRProjectConfig.CachedProjectConfig.sharedAnchorSupport == OVRProjectConfig.FeatureSupport.Required;
+                },
+                message:
+                "When using Space Sharing in your project it's required to enable the Anchor And Space Sharing Support in the project config",
+                fix: _ =>
+                {
+                    var projectConfig = OVRProjectConfig.CachedProjectConfig;
+                    projectConfig.sharedAnchorSupport = OVRProjectConfig.FeatureSupport.Required;
+                    OVRProjectConfig.CommitProjectConfig(projectConfig);
+                },
+                fixMessage: "Enable Anchor And Space Sharing Support in the project config"
+            );
+#if META_MR_UTILITY_KIT_DEFINED
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Required,
+                group: OVRProjectSetup.TaskGroup.Features,
+                isDone: _ =>
+                {
+                    var eventHandler = OVRProjectSetupUtils.FindComponentInScene<ColocationSessionEventHandler>();
+                    var mruk = OVRProjectSetupUtils.FindComponentInScene<MRUK>();
+                    return eventHandler == null  || eventHandler.basis == ColocationSessionEventHandler.Basis.SharedSpatialAnchor ||
+                           mruk == null || mruk.SceneSettings.LoadSceneOnStartup == false;
+                },
+                message:
+                "When using Space Sharing in your project it's required to disable LoadSceneOnStartup for MRUK",
+                fix: _ =>
+                {
+                    var mruk = OVRProjectSetupUtils.FindComponentInScene<MRUK>();
+                    mruk.SceneSettings.LoadSceneOnStartup = false;
+                },
+                fixMessage: "Disable Load Scene On Startup for MRUK component"
+            );
+#endif // META_MR_UTILITY_KIT_DEFINED
         }
 
         private static bool LocalMatchmakingBlockExists => Utils.GetBlock(BlockDataIds.LocalMatchmaking) != null;

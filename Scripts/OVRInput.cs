@@ -337,6 +337,7 @@ public static class OVRInput
         public bool Append;
     }
 
+
     public static readonly float AXIS_AS_BUTTON_THRESHOLD = 0.5f;
     public static readonly float AXIS_DEADZONE_THRESHOLD = 0.2f;
     public static List<OVRControllerBase> controllers;
@@ -2111,6 +2112,7 @@ public static class OVRInput
         return samplesConsumed;
     }
 
+
     public static float GetControllerSampleRateHz(Controller controllerMask = Controller.Active)
     {
         if ((controllerMask & Controller.Active) != 0)
@@ -3355,6 +3357,9 @@ public static class OVRInput
 
             return samplesConsumed;
         }
+
+
+
 
         /// <summary>
         /// Retrieves the hardware sampling rate of the physical controller represented by this instance.

@@ -189,6 +189,15 @@ internal class OVRProjectSetupDrawer
             SendTelemetry = false
         };
 
+    private readonly CustomBool _showManuallyFixableOutstandingItems =
+        new UserBool()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = "ShowManuallyFixableOutstandingItems",
+            Default = true,
+            SendTelemetry = false
+        };
+
     private readonly CustomBool _showRecommendedItems =
         new UserBool()
         {
@@ -253,6 +262,8 @@ internal class OVRProjectSetupDrawer
     private const string OutstandingItems = "Outstanding Issues";
     private const string RecommendedItems = "Recommended Items";
     private const string VerifiedItems = "Verified Items";
+
+    private const string ManuallyFixableItems = "Manually Fixable Items";
     private const string ManuallyFixedItems = "Manually Fixed Items";
     private const string IgnoredItems = "Ignored Items";
     private const string OutFolderTitle = "Select output folder";
@@ -453,49 +464,55 @@ internal class OVRProjectSetupDrawer
             _scrollViewPos = EditorGUILayout.BeginScrollView(_scrollViewPos, Styles.GUIStyles.IssuesBackground,
                 GUILayout.ExpandHeight(true));
 
+            bool IsRequired(OVRConfigurationTask task) =>
+                task.Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required;
+
+            bool IsOutstanding(OVRConfigurationTask task) =>
+                !task.IsDone(buildTargetGroup) && !task.IsIgnored(buildTargetGroup);
+
+            bool IsManuallyFixable(OVRConfigurationTask task) =>
+                task.Tags.HasFlag(OVRProjectSetup.TaskTags.ManuallyFixable);
+
             DrawCategory(_showOutstandingItems, tasks => tasks
                     .Where(task =>
-                        (_selectedTaskGroup == OVRProjectSetup.TaskGroup.All || task.Group == _selectedTaskGroup)
-                        && !task.IsDone(buildTargetGroup)
-                        && !task.IsIgnored(buildTargetGroup)
-                        && (task.Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required))
+                        IsOutstanding(task)
+                        && !IsManuallyFixable(task)
+                        && IsRequired(task))
                     .OrderByDescending(task => task.FixAction == null)
                     .ToList(),
                 buildTargetGroup, OutstandingItems, true);
 
             DrawCategory(_showRecommendedItems, tasks => tasks
                     .Where(task =>
-                        (_selectedTaskGroup == OVRProjectSetup.TaskGroup.All || task.Group == _selectedTaskGroup)
-                        && !task.IsDone(buildTargetGroup)
-                        && !task.IsIgnored(buildTargetGroup)
-                        && (task.Level.GetValue(buildTargetGroup) != OVRProjectSetup.TaskLevel.Required))
+                        IsOutstanding(task)
+                        && !IsManuallyFixable(task)
+                        && !IsRequired(task))
                     .OrderByDescending(task => task.Level.GetValue(buildTargetGroup))
                     .ThenBy(task => task.FixAction == null)
                     .ToList(),
                 buildTargetGroup, RecommendedItems, true);
 
+            DrawCategory(_showManuallyFixableOutstandingItems, tasks => tasks
+                    .Where(task => IsOutstanding(task) && IsManuallyFixable(task))
+                    .OrderByDescending(task => task.FixAction == null)
+                    .ToList(),
+                buildTargetGroup, ManuallyFixableItems, false);
+
             DrawCategory(_showVerifiedItems, tasks => tasks
-                    .Where(task =>
-                        (_selectedTaskGroup == OVRProjectSetup.TaskGroup.All || task.Group == _selectedTaskGroup)
-                        && task.IsDone(buildTargetGroup)
-                        && !task.IsIgnored(buildTargetGroup))
+                    .Where(task => task.IsDone(buildTargetGroup) && !task.IsIgnored(buildTargetGroup))
                     .OrderByDescending(task => task.FixAction == null)
                     .ThenBy(task => task.Level.GetValue(buildTargetGroup))
                     .ToList(),
                 buildTargetGroup, VerifiedItems, false);
 
             DrawCategory(_showManuallyFixedItems, tasks => tasks
-                    .Where(task =>
-                        (_selectedTaskGroup == OVRProjectSetup.TaskGroup.All || task.Group == _selectedTaskGroup)
-                        && task.IsMarkedAsFixed(buildTargetGroup))
+                    .Where(task => task.IsMarkedAsFixed(buildTargetGroup))
                     .OrderByDescending(task => task.Level.GetValue(buildTargetGroup))
                     .ToList(),
                 buildTargetGroup, ManuallyFixedItems, false);
 
             DrawCategory(_showIgnoredItems, tasks => tasks
-                    .Where(task =>
-                        (_selectedTaskGroup == OVRProjectSetup.TaskGroup.All || task.Group == _selectedTaskGroup)
-                        && task.IsIgnored(buildTargetGroup))
+                    .Where(task => task.IsIgnored(buildTargetGroup))
                     .OrderByDescending(task => task.Level.GetValue(buildTargetGroup))
                     .ThenBy(task => task.FixAction != null)
                     .ToList(),
@@ -508,7 +525,8 @@ internal class OVRProjectSetupDrawer
     private void DrawCategory(CustomBool key, Func<IEnumerable<OVRConfigurationTask>,
         List<OVRConfigurationTask>> filter, BuildTargetGroup buildTargetGroup, string title, bool fixAllButton)
     {
-        var tasks = filter(OVRProjectSetup.GetTasks(buildTargetGroup));
+        var tasks = filter(OVRProjectSetup.GetTasks(buildTargetGroup).Where(
+            task => _selectedTaskGroup == OVRProjectSetup.TaskGroup.All || task.Group == _selectedTaskGroup));
 
         if (key == null || tasks == null || tasks.Count == 0)
         {

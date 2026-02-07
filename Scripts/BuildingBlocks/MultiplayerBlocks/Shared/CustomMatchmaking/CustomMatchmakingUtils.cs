@@ -20,6 +20,7 @@
 
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.Serialization;
 using UnityEngine;
 
@@ -50,20 +51,44 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             using (var ms = new MemoryStream())
             {
                 serializer.WriteObject(ms, obj);
-                return Convert.ToBase64String(ms.ToArray());
+                var compressed = Compress(ms.ToArray());
+                return Convert.ToBase64String(compressed);
             }
         }
 
         internal static T DeserializeFromString<T>(string base64)
         {
             var bytes = Convert.FromBase64String(base64);
+            var decompressed = Decompress(bytes);
             using (var memStream = new MemoryStream())
             {
                 var serializer = new DataContractSerializer(typeof(T));
-                memStream.Write(bytes, 0, bytes.Length);
+                memStream.Write(decompressed, 0, decompressed.Length);
                 memStream.Seek(0, SeekOrigin.Begin);
                 var obj = serializer.ReadObject(memStream);
                 return (T)obj;
+            }
+        }
+        private static byte[] Compress(byte[] data)
+        {
+            using (var ms = new MemoryStream())
+            {
+                using (var deflate = new DeflateStream(ms, CompressionMode.Compress))
+                {
+                    deflate.Write(data, 0, data.Length);
+                }
+                return ms.ToArray();
+            }
+        }
+        private static byte[] Decompress(byte[] data)
+        {
+            using (var ms = new MemoryStream())
+            {
+                using (var deflate = new DeflateStream(new MemoryStream(data), CompressionMode.Decompress))
+                {
+                    deflate.CopyTo(ms);
+                }
+                return ms.ToArray();
             }
         }
     }

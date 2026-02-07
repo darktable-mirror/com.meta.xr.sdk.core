@@ -38,6 +38,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         public const string ControllerButtonsMapper = "80aa2eb2-af2f-40a9-ad9e-18044ce65bee";
         public const string RoomMesh = "6b8a377d-05de-449b-a9c4-8ed22606f71c";
         public const string Occlusion = "c1dbe32c-fed2-4835-8e6a-3fbb4f4f4315";
+        public const string MRUK = "d4413f4f-542f-451f-92ee-4801f27d676a";
 
         // Utilities
         public const string Cube = "7358e191-33b7-43ca-b066-b2f00531ac66";

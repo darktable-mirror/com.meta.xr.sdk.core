@@ -46,6 +46,10 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
+#if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
+using UnityEngine.XR.OpenXR.Features.Extensions.PerformanceSettings;
+#endif
+
 // Internal C# wrapper for OVRPlugin.
 
 public static partial class OVRPlugin
@@ -59,7 +63,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_108_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_109_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -244,7 +248,6 @@ public static partial class OVRPlugin
         // XR_META_boundary_visibility
         Warning_BoundaryVisibilitySuppressionNotAllowed = 9030,
 
-
         // XR_EXT_future
         Failure_FuturePending = -10000,
         Failure_FutureInvalid = -10001,
@@ -390,6 +393,7 @@ public static partial class OVRPlugin
         FloorLevel = 1,
         Stage = 2,
         View = 4,
+        Stationary = 6,
         Count,
     }
 
@@ -1173,8 +1177,10 @@ public static partial class OVRPlugin
         public IntPtr SamplesConsumed;
     }
 
+
     public enum HapticsConstants
     {
+        ParametricHapticsUnspecifiedFrequency = 0,
         MaxSamples = 4000,
     }
 
@@ -3120,6 +3126,8 @@ public static partial class OVRPlugin
         CreateDynamicObjectTrackerResult = 650,
         SetDynamicObjectTrackedClassesResult = 651,
 
+
+        ReferenceSpaceChangePending = 1160,
     }
 
     private const int EventDataBufferSize = 4000;
@@ -4088,13 +4096,34 @@ public static partial class OVRPlugin
         }
     }
 
+#if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
+    private static PerformanceLevelHint ProcessorPerformanceLevelToPerformanceLevelHint(ProcessorPerformanceLevel level)
+    {
+        switch (level)
+        {
+            case ProcessorPerformanceLevel.PowerSavings:
+                return PerformanceLevelHint.PowerSavings;
+            case ProcessorPerformanceLevel.SustainedLow:
+                return PerformanceLevelHint.SustainedLow;
+            case ProcessorPerformanceLevel.SustainedHigh:
+                return PerformanceLevelHint.SustainedHigh;
+            case ProcessorPerformanceLevel.Boost:
+                return PerformanceLevelHint.Boost;
+            default:
+                return PerformanceLevelHint.SustainedHigh;
+        }
+    }
+
+    private static ProcessorPerformanceLevel m_suggestedCpuPerfLevelOpenXR = ProcessorPerformanceLevel.SustainedHigh;
+#endif
+
     public static ProcessorPerformanceLevel suggestedCpuPerfLevel
     {
         get
         {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
             return ProcessorPerformanceLevel.SustainedHigh;
-#else
+#elif !UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
             if (version >= OVRP_1_71_0.version)
             {
                 ProcessorPerformanceLevel level;
@@ -4105,20 +4134,29 @@ public static partial class OVRPlugin
             }
 
             return ProcessorPerformanceLevel.SustainedHigh;
+#else
+            return m_suggestedCpuPerfLevelOpenXR;
 #endif
         }
         set
         {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
             return;
-#else
+#elif !UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
             if (version >= OVRP_1_71_0.version)
             {
                 OVRP_1_71_0.ovrp_SetSuggestedCpuPerformanceLevel(value);
             }
+#else
+            m_suggestedCpuPerfLevelOpenXR = value;
+            XrPerformanceSettingsFeature.SetPerformanceLevelHint(PerformanceDomain.Cpu, ProcessorPerformanceLevelToPerformanceLevelHint(value));
 #endif
         }
     }
+
+#if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
+    private static ProcessorPerformanceLevel m_suggestedGpuPerfLevelOpenXR = ProcessorPerformanceLevel.SustainedHigh;
+#endif
 
     public static ProcessorPerformanceLevel suggestedGpuPerfLevel
     {
@@ -4126,7 +4164,7 @@ public static partial class OVRPlugin
         {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
             return ProcessorPerformanceLevel.SustainedHigh;
-#else
+#elif !UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
             if (version >= OVRP_1_71_0.version)
             {
                 ProcessorPerformanceLevel level;
@@ -4137,17 +4175,22 @@ public static partial class OVRPlugin
             }
 
             return ProcessorPerformanceLevel.SustainedHigh;
+#else
+            return m_suggestedGpuPerfLevelOpenXR;
 #endif
         }
         set
         {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
             return;
-#else
+#elif !UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
             if (version >= OVRP_1_71_0.version)
             {
                 OVRP_1_71_0.ovrp_SetSuggestedGpuPerformanceLevel(value);
             }
+#else
+            m_suggestedGpuPerfLevelOpenXR = value;
+            XrPerformanceSettingsFeature.SetPerformanceLevelHint(PerformanceDomain.Gpu, ProcessorPerformanceLevelToPerformanceLevelHint(value));
 #endif
         }
     }
@@ -5206,6 +5249,8 @@ public static partial class OVRPlugin
         return false;
 #endif
     }
+
+
 
     public static HapticsDesc GetControllerHapticsDesc(uint controllerMask)
     {
@@ -7687,6 +7732,30 @@ public static partial class OVRPlugin
         {
             return false;
         }
+#endif
+    }
+
+    public static Result SendUnifiedEvent(
+            Bool isEssential,
+            string productType,
+            string eventName,
+            string event_metadata_json,
+            string project_name = "",
+            string event_entrypoint = "",
+            string project_guid = "",
+            string event_type = "",
+            string event_target = "",
+            string error_msg = "",
+            string is_internal = "")
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_109_0.version)
+        {
+            return Result.Failure_Unsupported;
+        }
+        return OVRP_1_109_0.ovrp_SendUnifiedEvent(isEssential, productType, eventName, event_metadata_json, project_name, event_entrypoint, project_guid, event_type, event_target, error_msg, is_internal);
 #endif
     }
 
@@ -12203,9 +12272,9 @@ public static partial class OVRPlugin
         {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
 #else
-            if (version >= OVRP_1_108_0.version)
+            if (version >= OVRP_1_109_0.version)
             {
-                OVRP_1_108_0.ovrp_AllowVisibilityMask(enabled ? Bool.True : Bool.False);
+                OVRP_1_109_0.ovrp_AllowVisibilityMask(enabled ? Bool.True : Bool.False);
             }
 #endif
         }
@@ -12372,6 +12441,8 @@ public static partial class OVRPlugin
 
 
 
+
+
     public static Result SendMicrogestureHint()
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -12384,6 +12455,19 @@ public static partial class OVRPlugin
 
         OVRP_1_106_0.ovrp_SendMicrogestureHint();
         return Result.Success;
+#endif
+    }
+
+    public static Result GetStationaryReferenceSpaceId(out Guid generationId)
+    {
+        generationId = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_109_0.version
+            ? OVRP_1_109_0.ovrp_GetStationaryReferenceSpaceId(out generationId)
+            : Result.Failure_NotYetImplemented;
+
 #endif
     }
 
@@ -14355,6 +14439,7 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetControllerSampleRateHz(Controller controller, out float sampleRateHz);
+
     }
 
     private static class OVRP_1_79_0
@@ -14782,7 +14867,6 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetFaceTrackingVisemesEnabled(Bool enabled);
 
-
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_CreateDynamicObjectTracker(out ulong tracker);
 
@@ -14883,19 +14967,37 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void ovrp_UnityOpenXR_OnAppSpaceChange2(UInt64 xrSpace, int spaceFlags);
-
-        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void ovrp_AllowVisibilityMask(Bool enabled);
     }
 
     private static class OVRP_1_109_0
     {
         public static readonly System.Version version = new System.Version(1, 109, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetStationaryReferenceSpaceId(out Guid generationId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SendUnifiedEvent(
+            Bool isEssential,
+            string productType,
+            string eventName,
+            string event_metadata_json,
+            string project_name,
+            string event_entrypoint,
+            string project_guid,
+            string event_type,
+            string event_target,
+            string error_msg,
+            string is_internal);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void ovrp_AllowVisibilityMask(Bool enabled);
     }
 
     private static class OVRP_1_110_0
     {
         public static readonly System.Version version = new System.Version(1, 110, 0);
+
     }
 
     private static class OVRP_1_111_0

@@ -32,7 +32,7 @@ using static Meta.XR.Editor.UserInterface.Utils;
 internal static class OVREditorUtils
 {
     internal const string MetaXRPublicName = "Meta XR";
-    internal static readonly string MetaXRSettingsName = $"{MetaXRPublicName} Settings";
+    internal static readonly string MetaXRSettingsName = $"Preferences";
 
     internal static double LastUpdateTime;
     internal static float DeltaTime { get; private set; }
@@ -40,12 +40,12 @@ internal static class OVREditorUtils
     internal static readonly ToolDescriptor SettingsToolDescriptor = new ToolDescriptor()
     {
         Name = MetaXRSettingsName,
+        MenuDescription = "Customize your tools",
         MqdhCategoryId = "1046393670222453",
         Color = HexToColor("#c4c4c4"),
         Icon = TextureContent.CreateContent("ovr_icon_settings.png", TextureContent.Categories.Generic),
-        InfoTextDelegate = ComputeInfoText,
         OnClickDelegate = OnStatusMenuClick,
-        Order = 100,
+        Order = 99,
         AddToStatusMenu = true,
         AddToMenu = false,
         ShowHeader = false
@@ -66,9 +66,6 @@ internal static class OVREditorUtils
         DeltaTime = Mathf.Min(deltaTimeThreshold, (float)(timeSinceStartup - LastUpdateTime));
         LastUpdateTime = timeSinceStartup;
     }
-
-    private static (string, Color?) ComputeInfoText() => ("Open settings menu.", null);
-
 
     private static void OnStatusMenuClick(Origins origins)
     {

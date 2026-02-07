@@ -30,6 +30,11 @@ using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using Styles = Meta.XR.Editor.UserInterface.Styles;
+using Meta.XR.Guides.Editor;
+
+public abstract class UPSTGuidedSetup : GuidedSetup
+{
+}
 
 /// <summary>
 /// Core System for the OVRProjectSetup Tool
@@ -89,6 +94,7 @@ public static class OVRProjectSetup
     internal static ToolDescriptor ToolDescriptor = new ToolDescriptor
     {
         Name = PublicName,
+        MenuDescription = "Setup your project",
         MqdhCategoryId = "482296384788650",
         Color = BrightGray,
         Icon = StatusIcon,
@@ -155,11 +161,17 @@ public static class OVRProjectSetup
     {
         var updater = processor as OVRConfigurationTaskUpdater;
         var summary = updater?.Summary;
-        _statusMenuSubText = summary?.ComputeNoticeMessage();
+        _statusMenuSubText = summary?.ComputeInfoMessage();
         _latestSummary = summary;
     }
 
-    private static (string, Color?) ComputeInfoText() => (_statusMenuSubText, null);
+    private static (string, Color?) ComputeInfoText() => _latestSummary?.HighestFixLevel switch
+    {
+        TaskLevel.Optional => (_statusMenuSubText, InfoColor),
+        TaskLevel.Recommended => (_statusMenuSubText, WarningColor),
+        TaskLevel.Required => (_statusMenuSubText, ErrorColor),
+        _ => (null, null)
+    };
 
     private static (TextureContent, Color?, bool) ComputePillIcon()
     {
@@ -256,6 +268,7 @@ public static class OVRProjectSetup
     internal static OVRConfigurationTask RegisterTask(TaskGroup group,
         Func<BuildTargetGroup, bool> isDone,
         BuildTargetGroup platform = BuildTargetGroup.Unknown,
+        TaskTags tags = TaskTags.None,
         Action<BuildTargetGroup> fix = null,
         TaskLevel level = TaskLevel.Recommended,
         Func<BuildTargetGroup, TaskLevel> conditionalLevel = null,
@@ -265,9 +278,10 @@ public static class OVRProjectSetup
         Func<BuildTargetGroup, string> conditionalFixMessage = null,
         string url = null,
         Func<BuildTargetGroup, string> conditionalUrl = null,
+        UPSTGuidedSetup manualSetup = null,
+        Func<BuildTargetGroup, UPSTGuidedSetup> conditionalManualSetup = null,
         bool validity = true,
         Func<BuildTargetGroup, bool> conditionalValidity = null,
-        TaskTags tags = TaskTags.None,
         bool fixAutomatic = true
     )
     {
@@ -278,8 +292,9 @@ public static class OVRProjectSetup
             OptionalLambdaType<BuildTargetGroup, string>.Create(fixMessage, conditionalFixMessage, true);
         var optionalUrl = OptionalLambdaType<BuildTargetGroup, string>.Create(url, conditionalUrl, true);
         var optionalValidity = OptionalLambdaType<BuildTargetGroup, bool>.Create(validity, conditionalValidity, true);
+        var optionalManualSetup = OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup>.Create(manualSetup, conditionalManualSetup, true);
         var rule = new OVRConfigurationTask(group, tags, platform, isDone, fix, optionalLevel, optionalMessage,
-            optionalFixMessage, optionalUrl, optionalValidity, fixAutomatic);
+            optionalFixMessage, optionalUrl, optionalManualSetup, optionalValidity, fixAutomatic);
         RegisterTask(rule);
         return rule;
     }
@@ -321,6 +336,7 @@ public static class OVRProjectSetup
         TaskGroup group,
         Func<BuildTargetGroup, bool> isDone = null,
         BuildTargetGroup platform = BuildTargetGroup.Unknown,
+        TaskTags tags = TaskTags.None,
         Action<BuildTargetGroup> fix = null,
         TaskLevel level = TaskLevel.Recommended,
         Func<BuildTargetGroup, TaskLevel> conditionalLevel = null,
@@ -330,14 +346,15 @@ public static class OVRProjectSetup
         Func<BuildTargetGroup, string> conditionalFixMessage = null,
         string url = null,
         Func<BuildTargetGroup, string> conditionalUrl = null,
+        UPSTGuidedSetup manualSetup = null,
+        Func<BuildTargetGroup, UPSTGuidedSetup> conditionalManualSetup = null,
         bool validity = true,
         Func<BuildTargetGroup, bool> conditionalValidity = null,
-        TaskTags tags = TaskTags.None,
         bool fixAutomatic = true
     )
-        => RegisterTask(group, isDone, platform, fix, level, conditionalLevel, message, conditionalMessage,
-            fixMessage,
-            conditionalFixMessage, url, conditionalUrl, validity, conditionalValidity, tags, fixAutomatic);
+        => RegisterTask(group, isDone, platform, tags, fix, level, conditionalLevel, message, conditionalMessage,
+            fixMessage, conditionalFixMessage, url, conditionalUrl, manualSetup, conditionalManualSetup,
+            validity, conditionalValidity, fixAutomatic);
 
     internal static bool IsPlatformSupported(BuildTargetGroup buildTargetGroup)
     {

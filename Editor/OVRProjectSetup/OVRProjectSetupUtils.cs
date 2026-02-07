@@ -36,6 +36,8 @@ internal static class OVRProjectSetupUtils
         for (int i = 0; i < SceneManager.sceneCount; ++i)
         {
             var scene = SceneManager.GetSceneAt(i);
+            if (!scene.isLoaded) continue;
+
             var rootGameObjects = scene.GetRootGameObjects();
             foreach (var rootObject in rootGameObjects)
             {
@@ -56,6 +58,8 @@ internal static class OVRProjectSetupUtils
         for (int i = 0; i < SceneManager.sceneCount; ++i)
         {
             var scene = SceneManager.GetSceneAt(i);
+            if (!scene.isLoaded) continue;
+
             var rootObjects = scene.GetRootGameObjects();
             foreach (var rootObject in rootObjects)
             {

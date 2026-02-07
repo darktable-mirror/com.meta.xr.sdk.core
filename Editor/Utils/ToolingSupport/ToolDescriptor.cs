@@ -46,6 +46,7 @@ namespace Meta.XR.Editor.ToolingSupport
         public string Id => Name;
         public string MqdhCategoryId;
         public string Description;
+        public string MenuDescription;
         public Color Color;
         public bool IsStatusMenuItemDarker;
         public int Order;
@@ -119,19 +120,19 @@ namespace Meta.XR.Editor.ToolingSupport
         public void DrawButton(Action onClick, bool showHeaderIcons, bool prependOpen, Origins origin)
         {
             using var indentScope = new IndentScope(0);
-            var buttonRect = EditorGUILayout.BeginVertical(IsStatusMenuItemDarker ? Styles.GUIStyles.DescriptionDarkerAreaStyle : Styles.GUIStyles.DescriptionAreaStyle);
+            var buttonRect = EditorGUILayout.BeginVertical(Styles.GUIStyles.ItemDiv);
             var hover = buttonRect.Contains(Event.current.mousePosition);
             {
-                var rect = EditorGUILayout.BeginHorizontal();
-                {
-                    ShowIcon(rect);
-                    ShowLabel(hover, prependOpen);
+                EditorGUILayout.BeginHorizontal(GUIStyle.none);
 
-                    if (showHeaderIcons)
-                    {
-                        ShowHeaderIcons(origin);
-                    }
+                DrawIcon(hover);
+                DrawLabel(hover, prependOpen);
+
+                if (showHeaderIcons)
+                {
+                    ShowHeaderIcons(origin);
                 }
+
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndVertical();
@@ -245,59 +246,91 @@ namespace Meta.XR.Editor.ToolingSupport
             }
         }
 
-        private void ShowLabel(bool hover, bool prependOpen)
+        private void DrawLabel(bool hover, bool prependOpen)
         {
-            EditorGUILayout.BeginVertical();
+            EditorGUILayout.BeginVertical(GUIStyle.none);
             {
-                EditorGUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.BeginHorizontal(GUIStyle.none);
                 var label = prependOpen ? $"Open {Name}" : Name;
-                var width = Styles.GUIStyles.BoldLabel.CalcSize(new GUIContent(label));
-                EditorGUILayout.LabelField(label, hover ? Styles.GUIStyles.BoldLabelHover : Styles.GUIStyles.BoldLabel, GUILayout.Width(width.x));
+                var width = Styles.GUIStyles.Title.CalcSize(new GUIContent(label));
+                EditorGUILayout.LabelField(label, hover ? Styles.GUIStyles.TitleHover : Styles.GUIStyles.Title, GUILayout.Width(width.x));
                 if (New.Value)
                 {
                     var tag = new Tag("New");
-                    tag.Draw(true);
+                    tag.Draw();
                 }
 
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
                 ShowInfoText();
+                GUILayout.FlexibleSpace();
             }
             EditorGUILayout.EndVertical();
         }
 
         private void ShowInfoText()
         {
-            if (InfoTextDelegate == null) return;
+            EditorGUILayout.BeginHorizontal();
 
-            var (content, color) = InfoTextDelegate();
-            var style = new GUIStyle(Styles.GUIStyles.SubtitleStyle);
-            style.normal.textColor = color ?? LightGray;
-            EditorGUILayout.LabelField(content, style);
+            // Menu Description
+            DrawMenuDescription();
+
+            // Dynamic Information
+            DrawInfo();
+
+            EditorGUILayout.EndHorizontal();
         }
 
-        private void ShowIcon(Rect rect)
+        private void DrawMenuDescription()
         {
-            EditorGUILayout.LabelField(Icon, Styles.GUIStyles.IconStyle, GUILayout.Width(ItemHeight));
-            ShowPill(rect);
+            var content = new GUIContent(MenuDescription);
+            var width = Styles.GUIStyles.Subtitle.CalcSize(content);
+            EditorGUILayout.LabelField(content, Styles.GUIStyles.Subtitle, GUILayout.Width(width.x));
         }
 
-        private void ShowPill(Rect rect)
+        private void DrawPill()
         {
             if (PillIcon == null) return;
 
-            var (content, color, _) = PillIcon();
+            var (_, pillColor, _) = PillIcon();
 
+            var pillStyle = new GUIStyle(Styles.GUIStyles.Pill)
+            {
+                normal =
+                {
+                    textColor = pillColor ?? LightGray
+                }
+            };
+            var content = new GUIContent("●");
+            var width = pillStyle.CalcSize(content);
+            EditorGUILayout.LabelField(content, pillStyle, GUILayout.Width(width.x));
+        }
+
+        private void DrawInfo()
+        {
+            if (InfoTextDelegate == null) return;
+            var (content, color) = InfoTextDelegate();
             if (content == null) return;
 
-            rect.x += 16;
-            rect.y += 2;
-            rect.width = Styles.GUIStyles.PillIconStyle.fixedWidth;
-            rect.height = Styles.GUIStyles.PillIconStyle.fixedHeight;
-            using (new ColorScope(ColorScope.Scope.Content, color ?? Color.white))
+            var style = new GUIStyle(Styles.GUIStyles.Subtitle);
+            var pillStyle = new GUIStyle(Styles.GUIStyles.Pill);
+            if (color.HasValue)
             {
-                GUI.Label(rect, content, Styles.GUIStyles.PillIconStyle);
+                style.normal.textColor = color.Value;
+                pillStyle.normal.textColor = color.Value;
             }
+
+            var pill = new GUIContent("●");
+            var width = pillStyle.CalcSize(pill);
+            EditorGUILayout.LabelField(pill, pillStyle, GUILayout.Width(width.x));
+            EditorGUILayout.LabelField(content, style);
+        }
+
+        private void DrawIcon(bool hover)
+        {
+            using var _ = new ColorScope(ColorScope.Scope.Content, hover ? UnityEngine.Color.white : LightGray);
+            EditorGUILayout.LabelField(Icon, Styles.GUIStyles.IconStyle, GUILayout.Width(Styles.GUIStyles.IconStyle.fixedWidth));
         }
 
         private void UpdateCurrentWidth()

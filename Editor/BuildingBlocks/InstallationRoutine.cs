@@ -88,6 +88,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private IReadOnlyList<VariantHandle> _definitionVariants;
         internal IEnumerable<VariantHandle> DefinitionVariants =>
             _definitionVariants ??= VariantHandle.FetchVariants(this, VariantBehavior.Definition);
+        internal IEnumerable<VariantHandle> ValidDefinitionVariants => DefinitionVariants.Where(handle => handle.Condition());
 
         private IReadOnlyList<VariantHandle> _parameterVariants;
         internal IEnumerable<VariantHandle> ParameterVariants =>

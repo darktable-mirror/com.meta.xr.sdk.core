@@ -132,7 +132,7 @@ public class OVRGradleGeneration
         // OpenXR Plugin will remove all native plugins if they are not under the Feature folder. Include OVRPlugin to the build if MetaXRFeature is enabled.
         var metaXRFeature =
             FeatureHelpers.GetFeatureWithIdForBuildTarget(report.summary.platformGroup, Meta.XR.MetaXRFeature.featureId);
-        if (metaXRFeature.enabled && !useOpenXR)
+        if (metaXRFeature != null && metaXRFeature.enabled && !useOpenXR)
         {
             throw new BuildFailedException("OpenXR backend for Oculus Plugin is disabled, which is required to support Unity OpenXR Plugin. Please enable OpenXR backend for Oculus Plugin through the 'Oculus -> Tools -> OpenXR' menu.");
         }
@@ -168,15 +168,15 @@ public class OVRGradleGeneration
             // Use the libraries from OVRPlugin that come from the integration sdk or the upm version
             if (isUtilitiesAsset && assetPath.Contains("OVRPlugin"))
             {
-                if (metaXRFeature.enabled)
+                if (metaXRFeature != null && metaXRFeature.enabled)
                     UnityEngine.Debug.LogFormat("[Meta] Native plugin included in build because of enabled MetaXRFeature: {0}", importer.assetPath);
                 else
                     UnityEngine.Debug.LogWarning("MetaXRFeature is not enabled in OpenXR Settings. Oculus Integration scripts will not be functional.");
-                importer.SetIncludeInBuildDelegate(path => metaXRFeature.enabled);
+                importer.SetIncludeInBuildDelegate(path => metaXRFeature != null && metaXRFeature.enabled);
             }
 
             // Only disable other OpenXR Loaders if the Meta XR feature is enabled
-            if (metaXRFeature.enabled)
+            if (metaXRFeature != null && metaXRFeature.enabled)
             {
                 if (!isUtilitiesAsset && (assetPath.Contains("libopenxr_loader.so") || assetPath.Contains("openxr_loader.aar")))
                 {
@@ -316,6 +316,11 @@ public class OVRGradleGeneration
             UnityEngine.Debug.LogFormat("Copy splash screen asset from {0} to {1}", sourcePath, targetPath);
             try
             {
+                // In many common cases such as P4, files can be read-only so when they are copied from a previous build it can fail
+                if (File.Exists(targetPath))
+                {
+                    File.SetAttributes(targetPath, File.GetAttributes(targetPath) & ~FileAttributes.ReadOnly);
+                }
                 File.Copy(sourcePath, targetPath, true);
             }
             catch (Exception e)
@@ -361,7 +366,13 @@ public class OVRGradleGeneration
                         Directory.CreateDirectory(xmlDirectory);
                     }
 
-                    File.Copy(securityConfigFile, Path.Combine(xmlDirectory, "network_sec_config.xml"), true);
+                    string targetPath = Path.Combine(xmlDirectory, "network_sec_config.xml");
+                    // In many common cases such as P4, files can be read-only so when they are copied from a previous build it can fail
+                    if (File.Exists(targetPath))
+                    {
+                        File.SetAttributes(targetPath, File.GetAttributes(targetPath) & ~FileAttributes.ReadOnly);
+                    }
+                    File.Copy(securityConfigFile, targetPath, true);
                     patchedSecurityConfig = true;
                 }
                 catch (Exception e)

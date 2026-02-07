@@ -60,7 +60,7 @@ namespace Meta.XR.Guides.Editor
             new MetaAvatarsSetupGuide().ShowWindow(Origins.Menu, true);
         }
 
-        protected override GuideWindow CreateWindow()
+        internal override GuideWindow CreateWindow()
         {
             if (_window != null) return _window;
 

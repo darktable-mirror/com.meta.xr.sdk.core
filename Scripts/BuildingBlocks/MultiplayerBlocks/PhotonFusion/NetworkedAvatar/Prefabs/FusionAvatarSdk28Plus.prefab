@@ -182,4 +182,4 @@ MonoBehaviour:
   _enableRemoteScaling: 0
   _remoteScaleFactor: 1
   _mixedRealityAnimationOptions:
-    anchoringState: 1
+    anchoringState: 0

@@ -108,6 +108,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         EyeLevel = OVRPlugin.TrackingOrigin.EyeLevel,
         FloorLevel = OVRPlugin.TrackingOrigin.FloorLevel,
         Stage = OVRPlugin.TrackingOrigin.Stage,
+        Stationary = OVRPlugin.TrackingOrigin.Stationary,
     }
 
     public enum EyeTextureFormat
@@ -421,6 +422,16 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// </remarks>
     public static event Action<OVRPlugin.BoundaryVisibility> BoundaryVisibilityChanged;
 
+
+    /// <summary>
+    /// Occurs when there is a change happening to a tracking origin, such as a recenter.
+    /// @params (TrackingOrigin trackingOrigin, OVRPose? poseInPreviousSpace)
+    /// </summary>
+    /// <remarks>
+    /// The new pose of the tracking origin is provided with respect to the previous space.
+    /// This can be null when no previous space/tracking origin was defined.
+    /// </remarks>
+    public static event Action<TrackingOrigin, OVRPose?> TrackingOriginChangePending;
 
     /// <summary>
     /// Occurs when Health & Safety Warning is dismissed.
@@ -3253,6 +3264,14 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     OVRTask.SetResult(
                         OVRTask.GetId(data.Tracker, data.EventType),
                         OVRResult<OVRPlugin.Result>.From(data.Result));
+                    break;
+                }
+                case OVRPlugin.EventType.ReferenceSpaceChangePending:
+                {
+                    var data = eventDataBuffer.MarshalEntireStructAs<OVRDeserialize.EventDataReferenceSpaceChangePending>();
+                    TrackingOriginChangePending?.Invoke(
+                        (TrackingOrigin)data.ReferenceSpaceType,
+                        data.PoseValid == OVRPlugin.Bool.True ? data.PoseInPreviousSpace.ToOVRPose() : null);
                     break;
                 }
                 default:

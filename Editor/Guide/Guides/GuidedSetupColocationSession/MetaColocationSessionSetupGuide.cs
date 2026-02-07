@@ -40,7 +40,7 @@ namespace Meta.XR.Guides.Editor
         private const int ContentHeight = 600;
         private const int SubcontentMargin = 20;
 
-        protected override GuideWindow CreateWindow()
+        internal override GuideWindow CreateWindow()
         {
             if (_window != null) return _window;
 

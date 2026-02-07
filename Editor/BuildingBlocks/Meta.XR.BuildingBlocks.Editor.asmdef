@@ -24,7 +24,8 @@
         "Oculus.Haptics",
         "Meta.XR.Editor.Settings",
         "Meta.XR.Editor.Id",
-        "Meta.XR.Editor.ToolingSupport"
+        "Meta.XR.Editor.ToolingSupport",
+        "Meta.XR.Editor.UPST.Notifications"
     ],
     "includePlatforms": [
         "Editor"

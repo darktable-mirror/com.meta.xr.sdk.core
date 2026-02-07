@@ -25,7 +25,7 @@ namespace Meta.XR.Editor.UPST.Notifications
     [InitializeOnLoad]
     internal static class NotificationsScheduler
     {
-        private static readonly double TargetStartTime;
+        private static double _pausedUntilTime;
 
         static NotificationsScheduler()
         {
@@ -39,24 +39,24 @@ namespace Meta.XR.Editor.UPST.Notifications
                 return;
             }
 
-            const float startDelayTimeInS = 10;
-            TargetStartTime = EditorApplication.timeSinceStartup + startDelayTimeInS;
+            PauseForSeconds(10);
+
             EditorApplication.update += Update;
         }
 
         private static void Update()
         {
-            if (EditorApplication.timeSinceStartup < TargetStartTime)
-            {
-                return;
-            }
-
             OVRProjectSetup.ProcessorQueue.OnProcessorCompleted += OnProcessorCompleted;
             EditorApplication.update -= Update;
         }
 
         private static void OnProcessorCompleted(OVRConfigurationTaskProcessor processor)
         {
+            if (IsInTimeout)
+            {
+                return;
+            }
+
             var notificationData = processor.GetNotificationDataToShow();
 
             if (!notificationData.ShouldShow)
@@ -67,5 +67,12 @@ namespace Meta.XR.Editor.UPST.Notifications
             notificationData.ShowNotification();
             notificationData.MarkNotificationShown();
         }
+
+        public static void PauseForSeconds(float timeout)
+        {
+            _pausedUntilTime = EditorApplication.timeSinceStartup + timeout;
+        }
+
+        private static bool IsInTimeout => EditorApplication.timeSinceStartup < _pausedUntilTime;
     }
 }

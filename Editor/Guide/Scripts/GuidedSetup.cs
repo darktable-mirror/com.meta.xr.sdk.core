@@ -23,14 +23,14 @@ using Meta.XR.Editor.ToolingSupport;
 
 namespace Meta.XR.Guides.Editor
 {
-    internal abstract class GuidedSetup : IIdentified
+    public abstract class GuidedSetup : IIdentified
     {
         public void ShowWindow(Origins origin, bool forceShow = false)
         {
             CreateWindow().Show(origin, forceShow);
         }
 
-        protected abstract GuideWindow CreateWindow();
+        internal abstract GuideWindow CreateWindow();
 
         public string Id => GetType().ToString();
     }

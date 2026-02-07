@@ -86,6 +86,14 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             {
                 throw new InvalidOperationException("Using AvatarEntity without an IAvatarBehaviour");
             }
+#if META_AVATAR_SDK_28_OR_NEWER
+            // Disable OvrAvatarAnimationBehavior on Awake to avoid creation of animation rig
+            var animationBehavior = GetComponent<OvrAvatarAnimationBehavior>();
+            if (animationBehavior != null)
+            {
+                animationBehavior.enabled = false;
+            }
+#endif
 
             OnSpawned?.Invoke(this);
         }
@@ -159,6 +167,10 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
                 AvatarLODManager.Instance.firstPersonAvatarLod = AvatarLOD;
                 AdjustAvatarLOD(_streamLevel);
+
+                // Re-enable animation behavior for local avatar
+                var animationBehavior = GetComponent<OvrAvatarAnimationBehavior>();
+                animationBehavior.enabled = true;
 #else
                 _creationInfo.features = CAPI.ovrAvatar2EntityFeatures.Preset_Default;
                 var entityInputManager = OvrAvatarManager.Instance.gameObject.GetComponent<EntityInputManager>();
@@ -178,13 +190,6 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 SetFacePoseProvider(null);
                 SetEyePoseProvider(null);
                 SetLipSync(null);
-
-                // ReSharper disable once Unity.PreferGenericMethodOverload
-                var animationBehavior = GetComponent("OvrAvatarAnimationBehavior");
-                if (animationBehavior != null)
-                {
-                    Destroy(animationBehavior);
-                }
 #else
                 _creationInfo.features = CAPI.ovrAvatar2EntityFeatures.Preset_Remote;
 #endif

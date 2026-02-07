@@ -87,6 +87,7 @@ namespace Meta.XR.Guides.Editor
             public int MaxWindowHeight;
             public TextureContent HeaderImage;
             public int HeaderHeight;
+            public int BottomMargin;
 
             public GuideOptions(GuideOptions options)
             {
@@ -100,6 +101,7 @@ namespace Meta.XR.Guides.Editor
                 MaxWindowHeight = options.MaxWindowHeight;
                 HeaderImage = options.HeaderImage;
                 HeaderHeight = options.HeaderHeight;
+                BottomMargin = options.BottomMargin;
             }
         }
 
@@ -114,6 +116,7 @@ namespace Meta.XR.Guides.Editor
             MinWindowHeight = GuideStyles.Constants.DefaultHeight,
             MaxWindowHeight = GuideStyles.Constants.DefaultHeight,
             HeaderHeight = GuideStyles.Constants.DefaultHeaderHeight,
+            BottomMargin = LargeMargin - Margin,
         };
 
         public void Setup(string title, string description, IIdentified populator, GuideOptions guideOptions)
@@ -182,7 +185,7 @@ namespace Meta.XR.Guides.Editor
             XRGuideEndVertical();
 
             DrawFooters();
-            EditorGUILayout.Space(LargeMargin - Margin);
+            EditorGUILayout.Space(_guideOptions.BottomMargin);
             OnWindowDraw?.Invoke();
 
             EditorGUILayout.EndScrollView();
@@ -349,8 +352,9 @@ namespace Meta.XR.Guides.Editor
                     Inverted = _guideOptions.InvertDontShowAgain,
                     Content = string.IsNullOrEmpty(_guideOptions.OverrideDontShowAgainContent?.text) ? DontShowAgain.Content : _guideOptions.OverrideDontShowAgainContent,
                 });
-                GUILayout.FlexibleSpace();
             }
+
+            GUILayout.FlexibleSpace();
 
             if (_guideOptions.ShowCloseButton)
             {

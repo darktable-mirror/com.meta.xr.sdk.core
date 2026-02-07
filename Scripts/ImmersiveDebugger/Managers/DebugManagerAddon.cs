@@ -28,8 +28,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
     internal abstract class DebugManagerAddon<Type>
         where Type : DebugManagerAddon<Type>, new()
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void Init() // reset static fields in case of domain reload disabled
+        static DebugManagerAddon() // reset static fields in case of domain reload disabled
         {
             _instance = null;
             _uiPanel = null;

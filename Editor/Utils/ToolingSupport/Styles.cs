@@ -23,7 +23,6 @@ using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
-using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.ToolingSupport
 {
@@ -31,21 +30,10 @@ namespace Meta.XR.Editor.ToolingSupport
     {
         public class GUIStylesContainer
         {
-            internal readonly GUIStyle BackgroundAreaStyle = new GUIStyle()
+            internal readonly GUIStyle ItemDiv = new GUIStyle()
             {
-                stretchHeight = true,
-                padding = new RectOffset(Border, Border, Border, 0),
-                normal =
-                {
-                    background = CharcoalGray.ToTexture()
-                }
-            };
-
-            internal readonly GUIStyle DescriptionAreaStyle = new GUIStyle()
-            {
-                stretchHeight = true,
-                fixedHeight = ItemHeight,
-                padding = new RectOffset(MiniMargin + Padding, Padding, Padding, Padding),
+                fixedHeight = Constants.Height,
+                padding = new RectOffset(0, 0, 0, 0),
                 margin = new RectOffset(0, 0, 0, Border),
 
                 normal =
@@ -58,81 +46,53 @@ namespace Meta.XR.Editor.ToolingSupport
                 }
             };
 
-            internal readonly GUIStyle DescriptionDarkerAreaStyle = new GUIStyle()
+            public readonly GUIStyle Title = new GUIStyle(UserInterface.Styles.GUIStyles.BoldLabel)
             {
-                stretchHeight = true,
-                fixedHeight = ItemHeight,
-                padding = new RectOffset(MiniMargin + Padding, Padding, Padding, Padding),
-                margin = new RectOffset(0, 0, 0, Border),
-                normal =
-                {
-                    background = DarkerGray.ToTexture()
-                },
-                hover =
-                {
-                    background = DarkGray.ToTexture()
-                }
+                alignment = TextAnchor.UpperLeft,
+                fontSize = 13,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0)
             };
 
-            public readonly GUIStyle BoldLabel = new GUIStyle(UserInterface.Styles.GUIStyles.BoldLabel)
+            public readonly GUIStyle TitleHover = new GUIStyle(UserInterface.Styles.GUIStyles.BoldLabel)
             {
-                alignment = TextAnchor.LowerLeft,
-            };
-
-            public readonly GUIStyle BoldLabelHover = new GUIStyle(UserInterface.Styles.GUIStyles.BoldLabel)
-            {
-                alignment = TextAnchor.LowerLeft,
+                alignment = TextAnchor.UpperLeft,
+                fontSize = 13,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
                 normal = { textColor = Color.white },
             };
-
-            internal readonly GUIStyle SubtitleStyle = new GUIStyle(EditorStyles.label)
+            internal readonly GUIStyle Pill = new GUIStyle(EditorStyles.label)
             {
-                fontStyle = FontStyle.Italic,
-                alignment = TextAnchor.UpperLeft,
+                alignment = TextAnchor.LowerLeft,
+                fontSize = 8,
+                padding = new RectOffset(0, 0, 0, 2),
+                margin = new RectOffset(0, 0, 0, 0),
+                normal = { textColor = UserInterface.Styles.Colors.LightGray }
+            };
+
+            internal readonly GUIStyle Subtitle = new GUIStyle(EditorStyles.label)
+            {
+                alignment = TextAnchor.LowerLeft,
+                fontSize = 11,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                normal = { textColor = UserInterface.Styles.Colors.LightGray }
             };
 
             internal readonly GUIStyle IconStyle = new GUIStyle(EditorStyles.label)
             {
-                fixedWidth = ItemHeight - Padding * 2,
-                fixedHeight = ItemHeight - Padding * 2,
-                stretchHeight = true,
-                padding = new RectOffset(Margin, Margin, Margin, Margin),
+                // There are unexpected offsets that we are trying to compensate here
+                fixedWidth = Constants.Height - 6,
+                fixedHeight = Constants.Height - 4,
+                padding = new RectOffset(22, 22, 22, 22),
+                margin = new RectOffset(0, 0, 0, 0)
             };
-
-            internal readonly GUIStyle PillIconStyle = new GUIStyle(EditorStyles.label)
-            {
-                fixedWidth = 22,
-                fixedHeight = 22,
-                stretchHeight = true,
-                padding = new RectOffset(0, 0, 0, 0),
-            };
-
-            internal readonly GUIStyle StatusIconStyle = new GUIStyle("StatusBarIcon");
-
-            internal readonly GUIStyle StatusPillIconStyle = new GUIStyle(EditorStyles.label)
-            {
-                fixedWidth = 10,
-                fixedHeight = 10,
-                stretchHeight = true,
-                padding = new RectOffset(0, 0, 0, 0),
-            };
-        }
-
-        public static class Contents
-        {
-            internal static readonly TextureContent StatusIcon =
-                TextureContent.CreateContent("ovr_icon_meta.png", TextureContent.Categories.Generic, null);
-
-            internal static readonly TextureContent StatusPillIcon =
-                TextureContent.CreateContent("ovr_icon_pill.png", TextureContent.Categories.Generic, null);
-
-            public static readonly TextureContent MetaIcon =
-                TextureContent.CreateContent("ovr_icon_meta_white.png", TextureContent.Categories.Generic);
         }
 
         public static class Constants
         {
-            internal const float Width = 360;
+            internal const float Height = 72f;
         }
 
         private static GUIStylesContainer _guiStyles;

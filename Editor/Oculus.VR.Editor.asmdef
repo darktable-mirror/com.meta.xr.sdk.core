@@ -20,7 +20,8 @@
         "Meta.XR.Editor.Settings",
         "Meta.XR.Editor.Id",
         "Unity.TextMeshPro.Editor",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Meta.XR.Guides.Editor"
     ],
     "includePlatforms": [
         "Editor"

@@ -166,6 +166,23 @@ internal class OVRConfigurationTaskUpdaterSummary
         }
     }
 
+    public string ComputeInfoMessage()
+    {
+        var highestLevel = HighestFixLevel;
+        var level = highestLevel ?? OVRProjectSetup.TaskLevel.Optional;
+        var count = GetNumberOfFixes(level);
+        if (count == 0)
+        {
+            return $"XR Ready for {_buildTargetGroup}";
+        }
+        else
+        {
+            var message = GetInfoMessage(level, count);
+            return message;
+        }
+    }
+
+
     public string ComputeLogMessage()
     {
         var highestLevel = HighestFixLevel;
@@ -238,6 +255,21 @@ internal class OVRConfigurationTaskUpdaterSummary
 
             default:
                 return $"There are {count} outstanding {level.ToString()} fixes.";
+        }
+    }
+
+    private static string GetInfoMessage(OVRProjectSetup.TaskLevel level, int count)
+    {
+        switch (count)
+        {
+            case 0:
+                return $"No {level.ToString()} fixes available";
+
+            case 1:
+                return $"1 {level.ToString()} fix available";
+
+            default:
+                return $"{count} {level.ToString()} fixes available";
         }
     }
 

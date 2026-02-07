@@ -80,25 +80,6 @@ internal static class OVRProjectSetupPassthrough
             fixMessage: "PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64"
         );
 
-        // This rule is partially backed by the OVRProjectConfigEditor logic, which auto-corrects the project configuration
-        // once a developer tries to break away from the rule. However, on project start OVRProjectConfigEditor is powerless,
-        // and then this rule steps in. In other words, this rule is useful only on project start.
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Required,
-            group: Group,
-            isDone: _ =>
-                OVRProjectConfig.CachedProjectConfig.insightPassthroughSupport == OVRProjectConfig.FeatureSupport.None ||
-                OVRProjectConfig.CachedProjectConfig.systemLoadingScreenBackground == OVRProjectConfig.SystemLoadingScreenBackground.ContextualPassthrough,
-            message: "Black System Splash Screen background is prohibited for MR apps",
-            fix: _ =>
-            {
-                var projectConfig = OVRProjectConfig.CachedProjectConfig;
-                projectConfig.systemLoadingScreenBackground = OVRProjectConfig.SystemLoadingScreenBackground.ContextualPassthrough;
-                OVRProjectConfig.CommitProjectConfig(projectConfig);
-            },
-            fixMessage: "Set System Splash Screen background to \"Passthrough (Contextual)\""
-        );
-
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Required,
             group: Group,
@@ -130,6 +111,7 @@ internal static class OVRProjectSetupPassthrough
             fixMessage: "Clear background of OVRCameraRig"
         );
 
+#if UNITY_PRO_LICENSE || UNITY_6000_0_OR_NEWER // Users can't remove the unity splash screen unless they have a license OR are on Unity 6+
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Recommended,
             group: Group,
@@ -159,5 +141,26 @@ internal static class OVRProjectSetupPassthrough
             },
             fixMessage: "Disable Show Splash Screen (in Player Settings)"
         );
+
+        // This rule is partially backed by the OVRProjectConfigEditor logic, which auto-corrects the project configuration
+        // once a developer tries to break away from the rule. However, on project start OVRProjectConfigEditor is powerless,
+        // and then this rule steps in. In other words, this rule is useful only on project start.
+        OVRProjectSetup.AddTask(
+            level: OVRProjectSetup.TaskLevel.Required,
+            group: Group,
+            isDone: _ =>
+                OVRProjectConfig.CachedProjectConfig.insightPassthroughSupport == OVRProjectConfig.FeatureSupport.None ||
+                OVRProjectConfig.CachedProjectConfig.systemLoadingScreenBackground == OVRProjectConfig.SystemLoadingScreenBackground.ContextualPassthrough,
+            message: "Black System Splash Screen background is prohibited for MR apps",
+            fix: _ =>
+            {
+                var projectConfig = OVRProjectConfig.CachedProjectConfig;
+                projectConfig.systemLoadingScreenBackground = OVRProjectConfig.SystemLoadingScreenBackground.ContextualPassthrough;
+                OVRProjectConfig.CommitProjectConfig(projectConfig);
+            },
+            fixMessage: "Set System Splash Screen background to \"Passthrough (Contextual)\""
+        );
+#endif
+
     }
 }

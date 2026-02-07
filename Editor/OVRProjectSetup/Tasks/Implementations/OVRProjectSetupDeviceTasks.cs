@@ -22,9 +22,13 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEngine;
 
 using System.IO;
 using Meta.XR.Editor.Callbacks;
+using Meta.XR.Editor.UserInterface;
+using IUserInterfaceItem = Meta.XR.Editor.UserInterface.IUserInterfaceItem;
+using Meta.XR.Guides.Editor;
 #if UNITY_EDITOR_WIN
 using Microsoft.Win32;
 using Object = System.Object;
@@ -96,8 +100,22 @@ internal static class OVRProjectSetupDeviceTasks
             "The app uses anchors but the Link installed on the machine does not have spatial data enabled. Enable it in Settings > Beta > Spatial Data over Meta Quest Link."
         );
 #endif
-#if UNITY_EDITOR_WIN
-#endif //UNITY_EDITOR_WIN
+        OVRProjectSetup.AddTask(
+            level: OVRProjectSetup.TaskLevel.Recommended,
+            group: Group,
+            conditionalValidity: _ => GetEyeTrackingProjectFeatureSupport() != OVRProjectConfig.FeatureSupport.None,
+            tags: OVRProjectSetup.TaskTags.ManuallyFixable,
+            message: "Your project has eye tracking enabled, make sure you enable it on your Quest Pro headest.",
+            manualSetup: new EyeTrackingManualSetupInfo()
+        );
+        OVRProjectSetup.AddTask(
+            level: OVRProjectSetup.TaskLevel.Recommended,
+            group: Group,
+            conditionalValidity: _ => GetFaceTrackingProjectFeatureSupport() != OVRProjectConfig.FeatureSupport.None,
+            tags: OVRProjectSetup.TaskTags.ManuallyFixable,
+            message: "Your project has face tracking enabled, make sure you enable it on your Quest Pro headest.",
+            manualSetup: new FaceTrackingManualSetupInfo()
+        );
     }
 
 
@@ -152,6 +170,7 @@ internal static class OVRProjectSetupDeviceTasks
     {
         return File.Exists("C:\\Program Files\\Oculus\\Support\\oculus-runtime\\OVRServer_x64.exe");
     }
+#endif
 
     private static OVRProjectConfig.FeatureSupport GetFaceTrackingProjectFeatureSupport()
     {
@@ -184,7 +203,6 @@ internal static class OVRProjectSetupDeviceTasks
 
         return config.insightPassthroughSupport;
     }
-#endif
 
     private static void EnableExperimentalFeaturesOnDevices()
     {

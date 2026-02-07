@@ -31,6 +31,7 @@ namespace Meta.XR.Util
         EyeTracking,
         FaceTracking,
         Hands,
+        Haptics,
         Interaction,
         Passthrough,
         Scene,

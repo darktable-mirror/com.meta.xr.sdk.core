@@ -11,9 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: IColocation
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: f308c8f0-7a4b-4cd5-88be-c15b6399f823
-  version: 2
+  version: 3
   blockName: Colocation
   description: Allows all players share the same frame of reference with Shared Spatial
     Anchor in mixed reality at the same physical location.
@@ -29,7 +29,6 @@ MonoBehaviour:
   externalBlockDependencies: []
   dependencies:
   - f0540b20-dfd6-420e-b20d-c270f88dc77e
-  - 975428dc-db04-4e43-be4a-232f192cd3eb
   - 1d8db162-54f6-43df-b4ef-b499df1f6769
   guidedSetupName: Meta.XR.Guides.Editor.MetaAccountSetupGuide, Meta.XR.Guides.Editor,
     Version=0.0.0.0, Culture=neutral, PublicKeyToken=null

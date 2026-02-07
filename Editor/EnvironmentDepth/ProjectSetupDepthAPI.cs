@@ -95,7 +95,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
 #if !XR_OCULUS_4_2_0_OR_NEWER && !OPEN_XR_META_2_1_OR_NEWER // We've got neither package. Instruct user to get OpenXR or OculusXR if in Unity6. If in older version, instruct to get OculusXR only.
             const string xrOculusRequiredVersion = "com.unity.xr.oculus@4.2.0";
 #if UNITY_6000_0_OR_NEWER
-            const string openXrMetaRequiredVersion = "com.unity.xr.meta-openxr@2.1.0";
+            const string openXrMetaRequiredVersion = "com.unity.xr.meta-openxr@2.1.0-pre1";
 #endif
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,

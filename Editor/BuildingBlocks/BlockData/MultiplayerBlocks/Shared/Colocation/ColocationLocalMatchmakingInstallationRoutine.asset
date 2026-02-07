@@ -22,3 +22,4 @@ MonoBehaviour:
   implementation: 0
   installMatchmaking: 0
   useColocationSession: 1
+  shareSpaceToGuests: 1

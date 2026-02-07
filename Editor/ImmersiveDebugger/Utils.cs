@@ -57,16 +57,14 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         {
             Name = PublicName,
             MqdhCategoryId = "1062327272563816",
+            MenuDescription = "Debug in headset",
             Description = Description,
             Color = Styles.Colors.AccentColor,
             Icon = StatusIcon,
             InfoTextDelegate = ComputeInfoText,
-            PillIcon = () =>
-                RuntimeSettings.Instance.ImmersiveDebuggerEnabled
-                    ? (CheckIcon, Styles.Colors.AccentColor, false)
-                    : (null, null, false),
+            PillIcon = ComputePillIcon,
             OnClickDelegate = OnStatusMenuClick,
-            Order = 2,
+            Order = 11,
             Experimental = false,
             CanBeNew = true,
             AddToStatusMenu = true,
@@ -81,11 +79,15 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             }
         };
 
-        public static (string, Color?) ComputeInfoText()
-        {
-            var enabled = RuntimeSettings.Instance.ImmersiveDebuggerEnabled;
-            return (enabled ? "Enabled" : "Disabled", null);
-        }
+        public static (TextureContent, Color?, bool) ComputePillIcon() =>
+            RuntimeSettings.Instance.ImmersiveDebuggerEnabled
+                ? (CheckIcon, XR.Editor.UserInterface.Styles.Colors.SuccessColor, false)
+                : (null, XR.Editor.UserInterface.Styles.Colors.DisabledColor, false);
+
+        public static (string, Color?) ComputeInfoText() =>
+            RuntimeSettings.Instance.ImmersiveDebuggerEnabled
+                ? ("Enabled", XR.Editor.UserInterface.Styles.Colors.SuccessColor)
+                : ("Disabled", XR.Editor.UserInterface.Styles.Colors.DisabledColor);
 
         private static void OnStatusMenuClick(Origins origin)
         {

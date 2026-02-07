@@ -53,9 +53,10 @@ namespace Meta.XR.Guides.Editor
 
         public static ToolDescriptor ToolDescriptor = new()
         {
-            Order = 100,
+            Order = -1,
             Icon = Styles.Contents.MetaWhiteIcon,
             Name = "Welcome to Meta XR SDK",
+            MenuDescription = "Get Started",
             AddToStatusMenu = true,
             AddToMenu = false,
             OnClickDelegate = (origin) => Guide.ShowWindow(origin, true),
@@ -95,7 +96,7 @@ namespace Meta.XR.Guides.Editor
             }
             else
             {
-                return ($"Version {Version}", null);
+                return ($"Version {Version}", Styles.Colors.DisabledColor);
             }
         }
 
@@ -155,7 +156,7 @@ namespace Meta.XR.Guides.Editor
             About.Guide.ShowWindow(Origins.Menu, true);
         }
 
-        protected override GuideWindow CreateWindow()
+        internal override GuideWindow CreateWindow()
         {
             if (_window != null) return _window;
 

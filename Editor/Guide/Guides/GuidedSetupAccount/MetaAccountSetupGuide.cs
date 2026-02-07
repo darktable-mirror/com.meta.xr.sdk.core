@@ -49,7 +49,7 @@ namespace Meta.XR.Guides.Editor
         private static Icon _appIdStatusLabel;
         private static GuideWindow _window;
 
-        protected override GuideWindow CreateWindow()
+        internal override GuideWindow CreateWindow()
         {
             if (_window != null) return _window;
 

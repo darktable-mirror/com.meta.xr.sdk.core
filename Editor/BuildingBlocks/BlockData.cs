@@ -32,6 +32,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
+using Meta.XR.Editor.UPST.Notifications;
 
 
 namespace Meta.XR.BuildingBlocks.Editor
@@ -107,6 +108,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal override async Task AddToProject(GameObject selectedGameObject = null, Action onInstall = null)
         {
+            NotificationsScheduler.PauseForSeconds(30);
+
             UsageSettings.UsesBuildingBlocks.SetValue(true);
 
             using (new OVREditorUtils.UndoScope($"Install {Utils.BlockPublicTag} {BlockName}"))

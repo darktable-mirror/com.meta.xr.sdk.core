@@ -344,7 +344,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             var foundDefinitionVariants = Utils.GetBlocksInScene()
                 .Where(block => block.GetBlockData() is InterfaceBlockData)
                 .Select(block => block.GetInstallationRoutine())
-                .SelectMany(installationRoutine => installationRoutine?.DefinitionVariants ?? Enumerable.Empty<VariantHandle>())
+                .SelectMany(installationRoutine => installationRoutine?.ValidDefinitionVariants ?? Enumerable.Empty<VariantHandle>())
                 .Where(otherDefinitionVariant =>
                     definitionVariants.Any(definitionVariant => definitionVariant.Matches(otherDefinitionVariant)))
                 .GroupBy(definitionVariant => definitionVariant.MemberInfo.Name)

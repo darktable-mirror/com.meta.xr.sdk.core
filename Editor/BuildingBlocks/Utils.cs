@@ -206,6 +206,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static readonly ToolDescriptor ToolDescriptor = new()
         {
             Name = BlocksPublicName,
+            MenuDescription = "Explore XR Features",
             MqdhCategoryId = "509819301803627",
             Color = Styles.Colors.AccentColor,
             Icon = StatusIcon,
@@ -241,14 +242,11 @@ namespace Meta.XR.BuildingBlocks.Editor
             if (numberOfNewBlocks > 0)
             {
                 return (
-                    $"There {OVREditorUtils.ChoosePlural(numberOfNewBlocks, "is", "are")} {numberOfNewBlocks} new {OVREditorUtils.ChoosePlural(numberOfNewBlocks, "block", "blocks")} available!",
+                    $"{numberOfNewBlocks} new {OVREditorUtils.ChoosePlural(numberOfNewBlocks, "block", "blocks")} available",
                     NewColor);
             }
 
-            var numberOfBlocks = GetBlocksInScene().Count;
-            return (
-                $"{numberOfBlocks} {OVREditorUtils.ChoosePlural(numberOfBlocks, "block", "blocks")} in current scene.",
-                null);
+            return (null, null);
         }
 
         private static (TextureContent, Color?, bool) GetPillIcon()
