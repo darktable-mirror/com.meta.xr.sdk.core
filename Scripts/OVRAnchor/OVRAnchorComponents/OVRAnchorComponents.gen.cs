@@ -24,11 +24,15 @@ using static OVRPlugin;
 
 public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>, IEquatable<OVRLocatable>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRLocatable>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRLocatable>.Handle => Handle;
 
     OVRLocatable IOVRAnchorComponent<OVRLocatable>.FromAnchor(OVRAnchor anchor) => new OVRLocatable(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRLocatable.
@@ -61,11 +65,11 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
     /// indicates whether the operation was successful.
     ///
     /// If the current enabled state matches <paramref name="enabled"/>, then the returned task completes immediately
-    /// with a `True` result. If there is already a pending change to the enabled state, the new request is queued.
+    /// with a `true` result. If there is already a pending change to the enabled state, the new request is queued.
     /// </remarks>
     /// <param name="enabled">The desired state of the component.</param>
     /// <param name="timeout">The timeout, in seconds, for the operation. Use zero to indicate an infinite timeout.</param>
-    /// <returns>Returns an <see cref="OVRTask{T}" /> whose result indicates the result of the operation.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; whose result indicates the result of the operation.</returns>
     public OVRTask<bool> SetEnabledAsync(bool enabled, double timeout = 0)
     {
         if (!GetSpaceComponentStatus(Handle, Type, out var isEnabled, out var changePending))
@@ -93,7 +97,7 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
     /// </remarks>
     /// <param name="enabled">The desired state of the component.</param>
     /// <param name="timeout">The timeout, in seconds, for the operation. Use zero to indicate an infinite timeout.</param>
-    /// <returns>Returns an <see cref="OVRTask{T}" /> whose result indicates the result of the operation.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; whose result indicates the result of the operation.</returns>
     [Obsolete("Use SetEnabledAsync instead.")]
     public OVRTask<bool> SetEnabledSafeAsync(bool enabled, double timeout = 0) => SetEnabledAsync(enabled, timeout);
 
@@ -148,11 +152,15 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
 
 public readonly partial struct OVRStorable : IOVRAnchorComponent<OVRStorable>, IEquatable<OVRStorable>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRStorable>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRStorable>.Handle => Handle;
 
     OVRStorable IOVRAnchorComponent<OVRStorable>.FromAnchor(OVRAnchor anchor) => new OVRStorable(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRStorable.
@@ -185,11 +193,11 @@ public readonly partial struct OVRStorable : IOVRAnchorComponent<OVRStorable>, I
     /// indicates whether the operation was successful.
     ///
     /// If the current enabled state matches <paramref name="enabled"/>, then the returned task completes immediately
-    /// with a `True` result. If there is already a pending change to the enabled state, the new request is queued.
+    /// with a `true` result. If there is already a pending change to the enabled state, the new request is queued.
     /// </remarks>
     /// <param name="enabled">The desired state of the component.</param>
     /// <param name="timeout">The timeout, in seconds, for the operation. Use zero to indicate an infinite timeout.</param>
-    /// <returns>Returns an <see cref="OVRTask{T}" /> whose result indicates the result of the operation.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; whose result indicates the result of the operation.</returns>
     public OVRTask<bool> SetEnabledAsync(bool enabled, double timeout = 0)
     {
         if (!GetSpaceComponentStatus(Handle, Type, out var isEnabled, out var changePending))
@@ -217,7 +225,7 @@ public readonly partial struct OVRStorable : IOVRAnchorComponent<OVRStorable>, I
     /// </remarks>
     /// <param name="enabled">The desired state of the component.</param>
     /// <param name="timeout">The timeout, in seconds, for the operation. Use zero to indicate an infinite timeout.</param>
-    /// <returns>Returns an <see cref="OVRTask{T}" /> whose result indicates the result of the operation.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; whose result indicates the result of the operation.</returns>
     [Obsolete("Use SetEnabledAsync instead.")]
     public OVRTask<bool> SetEnabledSafeAsync(bool enabled, double timeout = 0) => SetEnabledAsync(enabled, timeout);
 
@@ -272,11 +280,15 @@ public readonly partial struct OVRStorable : IOVRAnchorComponent<OVRStorable>, I
 
 public readonly partial struct OVRSharable : IOVRAnchorComponent<OVRSharable>, IEquatable<OVRSharable>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRSharable>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRSharable>.Handle => Handle;
 
     OVRSharable IOVRAnchorComponent<OVRSharable>.FromAnchor(OVRAnchor anchor) => new OVRSharable(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRSharable.
@@ -309,11 +321,11 @@ public readonly partial struct OVRSharable : IOVRAnchorComponent<OVRSharable>, I
     /// indicates whether the operation was successful.
     ///
     /// If the current enabled state matches <paramref name="enabled"/>, then the returned task completes immediately
-    /// with a `True` result. If there is already a pending change to the enabled state, the new request is queued.
+    /// with a `true` result. If there is already a pending change to the enabled state, the new request is queued.
     /// </remarks>
     /// <param name="enabled">The desired state of the component.</param>
     /// <param name="timeout">The timeout, in seconds, for the operation. Use zero to indicate an infinite timeout.</param>
-    /// <returns>Returns an <see cref="OVRTask{T}" /> whose result indicates the result of the operation.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; whose result indicates the result of the operation.</returns>
     public OVRTask<bool> SetEnabledAsync(bool enabled, double timeout = 0)
     {
         if (!GetSpaceComponentStatus(Handle, Type, out var isEnabled, out var changePending))
@@ -341,7 +353,7 @@ public readonly partial struct OVRSharable : IOVRAnchorComponent<OVRSharable>, I
     /// </remarks>
     /// <param name="enabled">The desired state of the component.</param>
     /// <param name="timeout">The timeout, in seconds, for the operation. Use zero to indicate an infinite timeout.</param>
-    /// <returns>Returns an <see cref="OVRTask{T}" /> whose result indicates the result of the operation.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; whose result indicates the result of the operation.</returns>
     [Obsolete("Use SetEnabledAsync instead.")]
     public OVRTask<bool> SetEnabledSafeAsync(bool enabled, double timeout = 0) => SetEnabledAsync(enabled, timeout);
 
@@ -396,11 +408,15 @@ public readonly partial struct OVRSharable : IOVRAnchorComponent<OVRSharable>, I
 
 public readonly partial struct OVRBounded2D : IOVRAnchorComponent<OVRBounded2D>, IEquatable<OVRBounded2D>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRBounded2D>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRBounded2D>.Handle => Handle;
 
     OVRBounded2D IOVRAnchorComponent<OVRBounded2D>.FromAnchor(OVRAnchor anchor) => new OVRBounded2D(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRBounded2D.
@@ -423,8 +439,11 @@ public readonly partial struct OVRBounded2D : IOVRAnchorComponent<OVRBounded2D>,
 
 
 
+    /// @cond
     OVRTask<bool> IOVRAnchorComponent<OVRBounded2D>.SetEnabledAsync(bool enabled, double timeout)
         => throw new NotSupportedException("The Bounded2D component cannot be enabled or disabled.");
+    /// @endcond
+
 
     /// <summary>
     /// Compares this component for equality with <paramref name="other" />.
@@ -477,11 +496,15 @@ public readonly partial struct OVRBounded2D : IOVRAnchorComponent<OVRBounded2D>,
 
 public readonly partial struct OVRBounded3D : IOVRAnchorComponent<OVRBounded3D>, IEquatable<OVRBounded3D>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRBounded3D>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRBounded3D>.Handle => Handle;
 
     OVRBounded3D IOVRAnchorComponent<OVRBounded3D>.FromAnchor(OVRAnchor anchor) => new OVRBounded3D(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRBounded3D.
@@ -504,8 +527,11 @@ public readonly partial struct OVRBounded3D : IOVRAnchorComponent<OVRBounded3D>,
 
 
 
+    /// @cond
     OVRTask<bool> IOVRAnchorComponent<OVRBounded3D>.SetEnabledAsync(bool enabled, double timeout)
         => throw new NotSupportedException("The Bounded3D component cannot be enabled or disabled.");
+    /// @endcond
+
 
     /// <summary>
     /// Compares this component for equality with <paramref name="other" />.
@@ -558,11 +584,15 @@ public readonly partial struct OVRBounded3D : IOVRAnchorComponent<OVRBounded3D>,
 
 public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemanticLabels>, IEquatable<OVRSemanticLabels>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRSemanticLabels>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRSemanticLabels>.Handle => Handle;
 
     OVRSemanticLabels IOVRAnchorComponent<OVRSemanticLabels>.FromAnchor(OVRAnchor anchor) => new OVRSemanticLabels(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRSemanticLabels.
@@ -585,8 +615,11 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
 
 
 
+    /// @cond
     OVRTask<bool> IOVRAnchorComponent<OVRSemanticLabels>.SetEnabledAsync(bool enabled, double timeout)
         => throw new NotSupportedException("The SemanticLabels component cannot be enabled or disabled.");
+    /// @endcond
+
 
     /// <summary>
     /// Compares this component for equality with <paramref name="other" />.
@@ -639,11 +672,15 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
 
 public readonly partial struct OVRRoomLayout : IOVRAnchorComponent<OVRRoomLayout>, IEquatable<OVRRoomLayout>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRRoomLayout>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRRoomLayout>.Handle => Handle;
 
     OVRRoomLayout IOVRAnchorComponent<OVRRoomLayout>.FromAnchor(OVRAnchor anchor) => new OVRRoomLayout(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRRoomLayout.
@@ -666,8 +703,11 @@ public readonly partial struct OVRRoomLayout : IOVRAnchorComponent<OVRRoomLayout
 
 
 
+    /// @cond
     OVRTask<bool> IOVRAnchorComponent<OVRRoomLayout>.SetEnabledAsync(bool enabled, double timeout)
         => throw new NotSupportedException("The RoomLayout component cannot be enabled or disabled.");
+    /// @endcond
+
 
     /// <summary>
     /// Compares this component for equality with <paramref name="other" />.
@@ -720,11 +760,15 @@ public readonly partial struct OVRRoomLayout : IOVRAnchorComponent<OVRRoomLayout
 
 public readonly partial struct OVRAnchorContainer : IOVRAnchorComponent<OVRAnchorContainer>, IEquatable<OVRAnchorContainer>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRAnchorContainer>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRAnchorContainer>.Handle => Handle;
 
     OVRAnchorContainer IOVRAnchorComponent<OVRAnchorContainer>.FromAnchor(OVRAnchor anchor) => new OVRAnchorContainer(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRAnchorContainer.
@@ -747,8 +791,11 @@ public readonly partial struct OVRAnchorContainer : IOVRAnchorComponent<OVRAncho
 
 
 
+    /// @cond
     OVRTask<bool> IOVRAnchorComponent<OVRAnchorContainer>.SetEnabledAsync(bool enabled, double timeout)
         => throw new NotSupportedException("The AnchorContainer component cannot be enabled or disabled.");
+    /// @endcond
+
 
     /// <summary>
     /// Compares this component for equality with <paramref name="other" />.
@@ -801,11 +848,15 @@ public readonly partial struct OVRAnchorContainer : IOVRAnchorComponent<OVRAncho
 
 public readonly partial struct OVRTriangleMesh : IOVRAnchorComponent<OVRTriangleMesh>, IEquatable<OVRTriangleMesh>
 {
+    /// @cond
+
     SpaceComponentType IOVRAnchorComponent<OVRTriangleMesh>.Type => Type;
 
     ulong IOVRAnchorComponent<OVRTriangleMesh>.Handle => Handle;
 
     OVRTriangleMesh IOVRAnchorComponent<OVRTriangleMesh>.FromAnchor(OVRAnchor anchor) => new OVRTriangleMesh(anchor);
+
+    /// @endcond
 
     /// <summary>
     /// A null representation of an OVRTriangleMesh.
@@ -828,8 +879,11 @@ public readonly partial struct OVRTriangleMesh : IOVRAnchorComponent<OVRTriangle
 
 
 
+    /// @cond
     OVRTask<bool> IOVRAnchorComponent<OVRTriangleMesh>.SetEnabledAsync(bool enabled, double timeout)
         => throw new NotSupportedException("The TriangleMesh component cannot be enabled or disabled.");
+    /// @endcond
+
 
     /// <summary>
     /// Compares this component for equality with <paramref name="other" />.

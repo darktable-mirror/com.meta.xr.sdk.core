@@ -28,6 +28,11 @@ using UnityEngine.Android;
 /// Utility for loading a scene model. Derive from this class to customize the scene loading behavior and respond to
 /// events.
 /// </summary>
+/// <remarks>
+/// This class and subclasses typically call <see cref="OVRSceneManager.LoadSceneModel"/> as part of its operation.
+///
+///  "OVRSceneModelLoader and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+/// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/#what-does-ovrscenemanager-do")]
 [RequireComponent(typeof(OVRSceneManager))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
@@ -43,6 +48,10 @@ public class OVRSceneModelLoader : MonoBehaviour
 
     private bool _sceneCaptureRequested;
 
+    /// <summary>
+    /// Override of the Unity MonoBehaviour Start() method. Start() is called on the frame when a script is enabled, just before
+    /// any of the Update() methods are called for the first time.
+    /// </summary>
     protected virtual void Start()
     {
         OVRTelemetry.SendEvent(OVRTelemetryConstants.Scene.MarkerId.UseDefaultSceneModelLoader);

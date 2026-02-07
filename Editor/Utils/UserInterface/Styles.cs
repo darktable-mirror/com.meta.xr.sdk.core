@@ -300,6 +300,9 @@ namespace Meta.XR.Editor.UserInterface
             internal static readonly TextureContent ExperimentalIcon =
                 TextureContent.CreateContent("ovr_icon_experimental.png", TextureContent.Categories.Generic, null);
 
+            internal static readonly TextureContent InputActionsIcon =
+                TextureContent.CreateContent("ovr_icon_stylus.png", TextureContent.Categories.Generic, null);
+
         }
 
         public static class Constants

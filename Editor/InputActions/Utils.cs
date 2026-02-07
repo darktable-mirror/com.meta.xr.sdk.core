@@ -35,9 +35,10 @@ namespace Meta.XR.InputActions.Editor
         internal const string PublicName = "Input Actions";
         internal const string PublicTag = "[IA]";
 
-        internal static readonly TextureContent.Category ImmersiveDebuggerIcons = new("ImmersiveDebugger/Icons");
-        internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_icon_idf.png", ImmersiveDebuggerIcons, $"Open {PublicName}");
+        internal static readonly TextureContent.Category InputActionIcons = new("InputActions/Icons");
+        internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_icon_stylus.png", InputActionIcons, $"Open {PublicName}");
 
+        private const string DocumentationURL = "https://developer.oculus.com/documentation/unity/unity-inputactions/";
 
         internal static Item Item = new Item()
         {
@@ -60,7 +61,7 @@ namespace Meta.XR.InputActions.Editor
                 {
                     TextureContent = DocumentationIcon,
                     Color = LightGray,
-                    Action = null
+                    Action = () => Application.OpenURL(DocumentationURL)
                 },
             }
         };

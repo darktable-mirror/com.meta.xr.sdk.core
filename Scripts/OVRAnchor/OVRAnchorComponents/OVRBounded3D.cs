@@ -27,15 +27,18 @@ using UnityEngine;
 /// <remarks>
 /// This component can be accessed from an <see cref="OVRAnchor"/> that supports it by calling
 /// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.
+///
+/// The bounded 3D component is part of the Meta Quest Scene Model. Read more at
+/// [Scene Overview](https://developer.oculus.com/documentation/unity/unity-scene-overview/).
 /// </remarks>
 /// <seealso cref="BoundingBox"/>
 public readonly partial struct OVRBounded3D : IOVRAnchorComponent<OVRBounded3D>, IEquatable<OVRBounded3D>
 {
     /// <summary>
-    /// Bounding Box
+    /// The 3D bounding box of the volume
     /// </summary>
     /// <returns>
-    /// <see cref="Bounds"/> representing the 3D Bounding Box of the Anchor this component is attached to.
+    /// Returns the bounds representing the 3D Bounding Box of the Anchor this component is attached to.
     /// </returns>
     /// <exception cref="InvalidOperationException">If it fails to retrieve the Bounding Box.</exception>
     public Bounds BoundingBox => OVRPlugin.GetSpaceBoundingBox3D(Handle, out var boundsf)

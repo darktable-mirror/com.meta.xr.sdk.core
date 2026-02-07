@@ -26,7 +26,7 @@ using System.Runtime.CompilerServices;
 /// <summary>
 /// Helper class to handle generic class object pools and avoid allocations in the SDK that would lead to garbage collection.
 /// </summary>
-static class OVRObjectPool
+internal static class OVRObjectPool
 {
     public interface IPoolObject
     {

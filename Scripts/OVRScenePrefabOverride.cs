@@ -32,6 +32,9 @@ using UnityEditor;
 /// Represents a prefab that overrides the <see cref="OVRSceneManager.PlanePrefab"/> or
 /// <see cref="OVRSceneManager.VolumePrefab"/> based on a semantic <see cref="OVRSceneManager.Classification"/>.
 /// </summary>
+/// <remarks>
+/// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+/// </remarks>
 [System.Serializable]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/")]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
@@ -114,11 +117,13 @@ internal class OVRSceneManagerEditor : PropertyDrawer
 {
     private static readonly string[] ClassificationList = OVRSceneManager.Classification.List.ToArray();
 
+    /// <summary>This is an internal member.</summary>
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         return base.GetPropertyHeight(property, label) * 2.2f;
     }
 
+    /// <summary>This is an internal member.</summary>
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         SerializedProperty labelProperty =

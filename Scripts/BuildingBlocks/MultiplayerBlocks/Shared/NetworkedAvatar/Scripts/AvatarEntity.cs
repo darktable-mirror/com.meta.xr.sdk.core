@@ -29,17 +29,39 @@ using Oculus.Avatar2;
 
 namespace Meta.XR.MultiplayerBlocks.Shared
 {
+    /// <summary>
+    /// Interface for serializing the Avatar state.
+    /// </summary>
+    /// <remarks>Currently there are implementations for Photon Fusion and Unity Netcode for Gameobjects
+    /// for networking the Avatar state, but more may be added using this interface.</remarks>
     public interface IAvatarBehaviour
     {
-        // synced to network, can be 0 if user not entitled
+        /// <summary>
+        /// Represents the id of the Oculus account logged in the current headset. Defaults to 0 if it could not be fetched.
+        /// </summary>
         public ulong OculusId { get; }
-        // synced to network, indicating which avatar from sample assets is used
-        // this should be initialized randomly for each user before entity spawned
+
+        /// <summary>
+        /// Index of the Avatar type used when the user defined one could not be loaded.
+        /// </summary>
+        /// <remarks>Usually this is chosen randomly between 0 and the number of Sample Assets available for Avatars.</remarks>
         public int LocalAvatarIndex { get; }
+
+        /// <summary>
+        /// Boolean indicating whether the user has input authority over this Avatar.
+        /// </summary>
         public bool HasInputAuthority { get; }
+
+        /// <summary>
+        /// Method to load a serialized avatar state and update it in the local client.
+        /// </summary>
+        /// <param name="bytes">Byte stream containing the serialized avatar state.</param>
         public void ReceiveStreamData(byte[] bytes);
     }
 
+    /// <summary>
+    /// Enum indicating the level of detail (quality) used when serializing the Avatar state.
+    /// </summary>
     public enum AvatarStreamLOD
     {
         Low,
@@ -47,20 +69,36 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         High
     }
 
+    /// <summary>
+    /// Interface used for adjusting the parameters for serializing the Avatar state.
+    /// </summary>
     public interface IAvatarStreamConfig
     {
+        /// <summary>
+        /// Sets the quality level to be used when serializing the Avatar state.
+        /// </summary>
+        /// <param name="lod">Indicates the new <see cref="AvatarStreamLOD"/> to be used.</param>
         public void SetAvatarStreamLOD(AvatarStreamLOD lod);
+
+        /// <summary>
+        /// Sets the interval at which the Avatar state is synchronized.
+        /// </summary>
+        /// <param name="interval">Interval value to be used (in seconds).</param>
         public void SetAvatarUpdateIntervalInS(float interval);
     }
 
 #if META_AVATAR_SDK_DEFINED
     /// <summary>
-    /// Avatar Entity implementation for Networked Avatar, loads remote/local avatar according to IAvatarBehaviour
-    /// and also provide fallback solution to local zip avatar with a randomized preloaded avatar from sample assets
-    /// when the user is not entitled (no Oculus Id) or has no avatar setup
+    /// The Avatar Entity implementation for Networked Avatar, which loads a remote/local avatar according to <see cref="IAvatarBehaviour"/>.
+    /// It also provides a fallback solution to a local zip avatar with a randomized preloaded avatar from sample assets
+    /// when the user is not entitled (no Meta Id) or has no avatar setup.
+    /// For more information on the Meta Avatars SDK, see https://developer.oculus.com/documentation/unity/meta-avatars-overview/.
     /// </summary>
     public class AvatarEntity : OvrAvatarEntity, IAvatarStreamConfig
     {
+        /// <summary>
+        /// Event triggered when the <see cref="AvatarEntity"/> is spawned.
+        /// </summary>
         public static event Action<AvatarEntity> OnSpawned;
 
         private byte[] _streamedData;
@@ -241,6 +279,10 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             _avatarBehaviour.ReceiveStreamData(bytes);
         }
 
+        /// <summary>
+        /// Syncs the current Avatar with the one passed in <paramref name="bytes"/>.
+        /// </summary>
+        /// <param name="bytes">Byte stream containing the serialized avatar state.</param>
         public void SetStreamData(byte[] bytes)
         {
             _streamedData = bytes;
@@ -248,6 +290,10 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
 #region IAvatarStreamLOD
 
+        /// <summary>
+        /// Sets the quality level to be used when serializing the Avatar state.
+        /// An implementation of the <see cref="IAvatarStreamConfig"/> interface.
+        /// </summary>
         public void SetAvatarStreamLOD(AvatarStreamLOD lod)
         {
             _streamLevel = lod switch
@@ -259,6 +305,10 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             };
         }
 
+        /// <summary>
+        /// Sets the interval at which the Avatar state is synchronized.
+        /// An implementation of the <see cref="IAvatarStreamConfig"/> interface.
+        /// </summary>
         public void SetAvatarUpdateIntervalInS(float interval)
         {
             _intervalToSendDataInSec = interval;

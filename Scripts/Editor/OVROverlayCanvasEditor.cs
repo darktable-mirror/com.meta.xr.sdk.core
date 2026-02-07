@@ -26,14 +26,6 @@ using UnityEngine.Rendering;
 [CustomEditor(typeof(OVROverlayCanvas))]
 public class OVROverlayCanvasEditor : Editor
 {
-    private static string kOverrideUiShaderName = "UI/Default Correct";
-
-    private static string kBuiltInOpaqueShaderName = "UI/Prerendered Opaque";
-    private static string kUrpOpaqueShaderName = "URP/UI/Prerendered Opaque";
-    private static string kBuiltInTransparentShaderName = "UI/Prerendered";
-    private static string kUrpTransparentShaderName = "URP/UI/Prerendered";
-
-
     GUIStyle mWarningBoxStyle;
 
     private bool mShowControlObjects;
@@ -44,11 +36,6 @@ public class OVROverlayCanvasEditor : Editor
         Canvas = 1,
         Imposter = 2,
         Both = 3
-    }
-
-    private static bool UseUrp()
-    {
-        return GraphicsSettings.currentRenderPipeline != default;
     }
 
     void OnEnable()
@@ -65,25 +52,6 @@ public class OVROverlayCanvasEditor : Editor
     public override void OnInspectorGUI()
     {
         var settingsObject = new SerializedObject(OVROverlayCanvasSettings.Instance);
-        var prop = settingsObject.FindProperty("_overrideCanvasShader");
-        if (prop.objectReferenceValue == null)
-        {
-            prop.objectReferenceValue = Shader.Find(kOverrideUiShaderName);
-        }
-
-        prop = settingsObject.FindProperty("_opaqueImposterShader");
-        string opaqueShaderName = UseUrp() ? kUrpOpaqueShaderName : kBuiltInOpaqueShaderName;
-        if (!(prop.objectReferenceValue is Shader os) || os == null || os.name != opaqueShaderName)
-        {
-            prop.objectReferenceValue = Shader.Find(opaqueShaderName);
-        }
-        string transparentShaderName = UseUrp() ? kUrpTransparentShaderName : kBuiltInTransparentShaderName;
-        prop = settingsObject.FindProperty("_transparentImposterShader");
-        if (!(prop.objectReferenceValue is Shader ts) || ts == null || ts.name != transparentShaderName)
-        {
-            prop.objectReferenceValue = Shader.Find(transparentShaderName);
-        }
-
         OVROverlayCanvas canvas = target as OVROverlayCanvas;
         EditorGUI.BeginChangeCheck();
 

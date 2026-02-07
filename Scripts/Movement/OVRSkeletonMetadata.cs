@@ -23,29 +23,59 @@ using System.Collections.Generic;
 using UnityEngine;
 using BoneId = OVRPlugin.BoneId;
 
+/// <summary>
+/// A partial class definition of the class responsible for retargeting from
+/// <see cref="OVRSkeleton"/> body tracking bones to a third party
+/// humanoid skeleton. Unlike <see cref="OVRCustomSkeleton"/>, the skeleton
+/// retargeted to does not need to use bones that match body tracking names, or
+/// have a hierarchy that matches what body tracking expects. Instead, you
+/// can use this class to apply [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/)
+/// to characters that have been imported as Unity Humanoids.
+///
+/// This partial definition is responsible for meta data applicable for
+/// retargeting, such as bone-to-bone pairs in body tracking and Humanoid skeletons.
+/// These bone-to-bone pairs are used to align the Humanoid (target) skeleton
+/// to the body tracking (source) skeleton, so that a Humanoid can be driven by
+/// body tracking movements.
+/// </summary>
 public partial class OVRUnityHumanoidSkeletonRetargeter
 {
     /// <summary>
-    /// Skeleton meta data class, associated with each HumanyBodyBone enum.
+    /// Skeleton metadata class. It generates and stores information about the source and target
+    /// skeletons, such as joint pairs that are used during retargeting.
+    /// <remarks>
+    /// At runtime, the humanoid retargeter class uses these joint pair directions to orient
+    /// target skeletons to match the source body tracking skeleton.
+    /// </remarks>
     /// </summary>
     protected class OVRSkeletonMetadata
     {
         /// <summary>
-        /// Data associated per bone.
+        /// Data associated per bone. This includes the original joint transform, as well
+        /// as start and end transforms that are used to create a joint direction and orientation.
+        /// The retargeting system uses the orientations to align the target to the source
+        /// (body tracking) skeleton.
+        /// <remarks>
+        /// An example can be see in <see cref="OVRUnityHumanoidSkeletonRetargeter"/>,
+        /// which retargets [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/)
+        /// to Unity humanoids.
+        /// </remarks>
         /// </summary>
         public class BoneData
         {
             /// <summary>
-            /// Default, no-argument constructor.
+            /// Default, no-argument constructor, that leaves fields such as the original
+            /// joint, start transform, end transform, and orientation uninitialized.
             /// </summary>
             public BoneData()
             {
             }
 
             /// <summary>
-            /// Copy constructor.
+            /// Copy constructor that copies fields such as the original joint, start
+            /// transform, end transform, orientation from another joint onto this one.
             /// </summary>
-            /// <param name="otherBoneData">Other bone data to copy from.</param>
+            /// <param name="otherBoneData">Other <see cref="BoneData"> instance to copy from.</param>
             public BoneData(BoneData otherBoneData)
             {
                 OriginalJoint = otherBoneData.OriginalJoint;
@@ -60,55 +90,68 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
             }
 
             /// <summary>
-            /// Transform associated with joint.
+            /// The original transform associated with joint data. Use this to track
+            /// the joint's movements.
             /// </summary>
             public Transform OriginalJoint;
 
             /// <summary>
-            /// From position for joint pair, for debugging.
+            /// From position for joint pair, created during data generation. You may use this field
+            /// for visual debugging.
             /// </summary>
             public Vector3 FromPosition;
 
             /// <summary>
-            /// To position for joint pair, for debugging.
+            /// To or end position for joint pair, created during data generation. You may use this field
+            /// for visual debugging.
             /// </summary>
             public Vector3 ToPosition;
 
             /// <summary>
-            /// Start of joint pair (usually the original joint).
+            /// Start of joint pair, usually the original joint transform, used to
+            /// create the joint orientation value. The joint that follows this one is
+            /// <see cref="JointPairStart"/>.
             /// </summary>
             public Transform JointPairStart;
 
             /// <summary>
-            /// End of joint pair.
+            /// End of joint pair, which is usually the joint following the original one.
+            /// Together with <see cref="JointPairStart"/>, this is used to create the
+            /// joint's orientation.
             /// </summary>
             public Transform JointPairEnd;
 
             /// <summary>
-            /// Orientation or rotation corresponding to joint pair.
-            /// If multiplied by forward, produces a coordinate axis.
+            /// The orientation or rotation corresponding to joint pair. Multiply this
+            /// by the <see cref="Vector3.forward"/> vector to derive the forward direction.
             /// </summary>
             public Quaternion JointPairOrientation;
 
             /// <summary>
-            /// Offset quaternion, used for retargeting rotations.
+            /// The offset quaternion necessary for retargeting by classes such as <see cref="OVRUnityHumanoidSkeletonRetargeter"/>.
+            /// Use this to affect a target character's joint rotation by the source's rotation during retargeting.
             /// </summary>
             public Quaternion? CorrectionQuaternion;
 
             /// <summary>
-            /// Parent transform of joint. This is defined in a special way for OVRSkeleton,
-            /// so we have to cache it ahead of time.
+            /// Parent transform of joint. Use this for edge cases where the original bone
+            /// cannot have a joint pair created because it has no children, and its orientation
+            /// cannot be derived. The parent transform is used to derive the orientation as a backup.
             /// </summary>
             public Transform ParentTransform;
 
             /// <summary>
-            /// Some joints made have bad orientations due to faulty joint pairs.
+            /// Some joints made have bad orientations due to faulty joint pairs. This can
+            /// happen if the joint pair start end position have the same value.
             /// </summary>
             public bool DegenerateJoint = false;
         }
 
         /// <summary>
-        /// Human body bone enum to bone data mapping.
+        /// Maps from <see cref="HumanBodyBones"/> to associated <see cref="BoneData"/>.
+        /// Use this field to query the original transform, orientation,
+        /// and correction (i.e. retargeting) quaternion associated with the
+        /// <see cref="HumanBodyBones"/>.
         /// </summary>
         public Dictionary<HumanBodyBones, BoneData> BodyToBoneData { get; } =
             new Dictionary<HumanBodyBones, BoneData>();
@@ -117,7 +160,11 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
             (HumanBodyBones[])Enum.GetValues(typeof(HumanBodyBones));
 
         /// <summary>
-        /// Constructor that copies another meta data class.
+        /// Copy constructor that copies from another instance of
+        /// <see cref="OVRSkeletonMetadata"/> to this instance. Since each instance
+        /// tracks data per <see cref="HumanBodyBones"/> and possibly modifies,
+        /// that should be copied from the other <see cref="OVRSkeletonMetadata"/>
+        /// instance.
         /// </summary>
         /// <param name="otherSkeletonMetaData">Other meta data to copy from.</param>
         public OVRSkeletonMetadata(OVRSkeletonMetadata otherSkeletonMetaData)
@@ -131,7 +178,14 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         }
 
         /// <summary>
-        /// Main constructor.
+        /// Constructor that builds an instance from an <see cref="Animator"/>
+        /// reference, along with an optional <see cref="OVRHumanBodyBonesMappingsInterface"/>
+        /// argument. Use this constructor for third-party characters imported
+        /// as a Humanoid.
+        ///<remarks>
+        /// Provide the <see cref="OVRHumanBodyBonesMappingsInterface"/>
+        /// argument in order to influence the creation of each joint's bone pair.
+        /// </remarks>
         /// </summary>
         /// <param name="animator">Animator to build meta data from.</param>
         /// <param name="bodyBonesMappingInterface">Optional bone map interface.</param>
@@ -142,7 +196,14 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         }
 
         /// <summary>
-        /// Constructor for OVRSkeleton.
+        /// Constructor that builds an instance from a <see cref="OVRSkeleton"/>
+        /// reference, intended for upper body characters. Use the <see cref="OVRHumanBodyBonesMappingsInterface"/>
+        /// reference in order to the influence hte creation each joint's bone pair.
+        /// <remarks>
+        /// Use the <see cref="BoneId"/> to <see cref="HumanBodyBones"/> mapping in order
+        /// influence the mapping between the two, because the body tracking bones must be
+        /// associated with Humanoid bones.
+        /// </remarks>
         /// </summary>
         /// <param name="skeleton">Skeleton to build meta data from.</param>
         /// <param name="useBindPose">Whether to use bind pose (T-pose) or not.</param>
@@ -156,7 +217,14 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         }
 
         /// <summary>
-        /// Constructor for OVRSkeleton.
+        /// Constructor that builds an instance from a <see cref="OVRSkeleton"/>
+        /// reference, intended for upper or full body characters. Use the <see cref="OVRHumanBodyBonesMappingsInterface"/>
+        /// reference in order to the influence hte creation each joint's bone pair.
+        /// <remarks>
+        /// Use the <see cref="BoneId"/> to <see cref="HumanBodyBones"/> mapping in order
+        /// influence the mapping between the two, because the body tracking bones must be
+        /// associated with Humanoid bones.
+        /// </remarks>
         /// </summary>
         /// <param name="skeleton">Skeleton to build meta data from.</param>
         /// <param name="useBindPose">Whether to use bind pose (T-pose) or not.</param>
@@ -179,7 +247,13 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         }
 
         /// <summary>
-        /// Builds body to bone data with the OVRSkeleton.
+        /// Builds the metadata necessary for retargeting to function properly. While this
+        /// function is called during the construction of the instance, it is necessary
+        /// before the retargeter computes its offsets. Call this function during skeletal update
+        /// events before computing retargeting offsets.
+        /// <remarks>
+        /// Intended for upper body characters, and used by <see cref="OVRUnityHumanoidSkeletonRetargeter"/>.
+        /// </remarks>
         /// </summary>
         /// <param name="skeleton">The OVRSkeleton.</param>
         /// <param name="useBindPose">If true, use the bind pose.</param>
@@ -194,7 +268,13 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         }
 
         /// <summary>
-        /// Builds full body to bone data with the OVRSkeleton.
+        /// Builds the metadata necessary for retargeting to function properly. While this
+        /// function is called during the construction of the instance, it is necessary
+        /// before the retargeter computes its offsets. Call this function during skeletal update
+        /// events before computing retargeting offsets.
+        /// <remarks>
+        /// Intended for full body characters, and used by <see cref="OVRUnityHumanoidSkeletonRetargeter"/>.
+        /// </remarks>
         /// </summary>
         /// <param name="skeleton">The OVRSkeleton.</param>
         /// <param name="useBindPose">If true, use the bind pose.</param>
@@ -294,7 +374,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         }
 
         /// <summary>
-        /// Builds body to bone data with an Animator.
+        /// Builds body to bone data using <see cref="Animator"/> and
+        /// <see cref="OVRHumanBodyBonesMappingsInterface"/> references. Since retargeting
+        /// requires the orientation per joint, this function finds the start and end
+        /// transforms necessary to compute that orientation.
         /// </summary>
         /// <param name="animator">Animator component.</param>
         /// <param name="bodyBonesMappingInterface">Bone map interface.</param>
@@ -365,7 +448,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         }
 
         /// <summary>
-        /// Builds coordinate axes for all bones.
+        /// Builds an orientation per each bone of a character, using each joint's start
+        /// and end transform. It handles edge cases related to degenerate joints
+        /// that may or may not exist, and also handles the character's palms differently
+        /// relative to standard bones.
         /// </summary>
         public void BuildCoordinateAxesForAllBones()
         {

@@ -31,9 +31,23 @@ using System.Reflection;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
+    /// <summary>
+    /// The class responsible for setting up the <see cref="Speaker"/> game object, with the requirements for having
+    /// networked player voice over Photon Fusion and also lip sync for the Meta Avatars.
+    /// For the full documentation of Voice Network over Photon Fusion, see https://doc.photonengine.com/voice/current/getting-started/voice-for-fusion#.
+    /// </summary>
     public class VoiceSetup : MonoBehaviour
     {
+        /// <summary>
+        /// The transform of the center eye anchor of player, usually present in the player's <see cref="OVRCameraRig"/>.
+        /// </summary>
+        /// <remarks>Must be set before the game object's <c>Awake()</c> method is called.</remarks>
         public Transform centerEyeAnchor;
+
+        /// <summary>
+        /// The GameObject that will be set up and hold the speaker behaviours.
+        /// </summary>
+        /// <remarks>Must be set before the game object's <c>Awake()</c> method is called.</remarks>
         public GameObject Speaker { get; private set; }
 
 #if PHOTON_VOICE_DEFINED

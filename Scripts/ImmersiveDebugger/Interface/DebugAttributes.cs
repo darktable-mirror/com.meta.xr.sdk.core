@@ -40,10 +40,12 @@ namespace Meta.XR.ImmersiveDebugger
     [Serializable]
     public class DebugMember : Attribute
     {
-        private static readonly Dictionary<DebugColor, Color> ParsedColors = new Dictionary<DebugColor, Color>()
+        public const string DisplayNameTooltip = "Optional name override to be used in the Inspector Panel";
+
+        private static readonly Dictionary<DebugColor, Color> ParsedColors = new()
         {
-            { DebugColor.Red, UnityEngine.Color.red },
-            { DebugColor.Gray, UnityEngine.Color.gray }
+            { DebugColor.Red, Color.red },
+            { DebugColor.Gray, Color.gray }
         };
 
         /// <summary>
@@ -51,18 +53,22 @@ namespace Meta.XR.ImmersiveDebugger
         /// </summary>
         public DebugGizmoType GizmoType = DebugGizmoType.None;
         /// <summary>
+        /// Whether or not the gizmo will be turned on by default at startup.
+        /// </summary>
+        public bool ShowGizmoByDefault = false;
+        /// <summary>
         /// The color used for DebugGizmo line drawing and inspector row pill icon
         /// </summary>
-        public Color Color = UnityEngine.Color.gray;
+        public Color Color = Color.gray;
         /// <summary>
         /// Specify whether this field/property is tweakable, will show control UI in panel.
         /// For now only supports float and use together with Min, Max param.
         /// </summary>
-        public bool Tweakable = false;
+        public bool Tweakable;
         /// <summary>
         /// Minimum value for the tweak slider
         /// </summary>
-        public float Min = 0.0f;
+        public float Min;
         /// <summary>
         /// Maximum value for the tweak slider
         /// </summary>
@@ -71,7 +77,13 @@ namespace Meta.XR.ImmersiveDebugger
         /// <summary>
         /// Optional category for a specific tab in Inspector Panel
         /// </summary>
-        public string Category = null;
+        public string Category;
+
+        /// <summary>
+        /// Optional name override to be used in the Inspector Panel
+        /// </summary>
+        [Tooltip(DisplayNameTooltip)]
+        public string DisplayName;
 
         public DebugMember(DebugColor color = DebugColor.Gray)
         {

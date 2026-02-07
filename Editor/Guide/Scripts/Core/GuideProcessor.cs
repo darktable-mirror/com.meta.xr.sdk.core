@@ -24,37 +24,44 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Meta.XR.Guides.Editor.Items;
-using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.Guides.Editor
 {
-    [InitializeOnLoad]
     internal static class GuideProcessor
     {
         internal static Dictionary<string, MethodInfo> _guideItemsMap = new();
+        private static bool _initialized;
 
-        private const string RegexMatchPattern = @"\b(Unity|Oculus|Meta)\b";
+        private const string RegexMatchPattern = @"\b(Oculus|Meta)\b";
 
-        static GuideProcessor()
+        private static void Initialize()
         {
+            if (_initialized) return;
+
             var assemblies = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(a => Regex.IsMatch(a.FullName, RegexMatchPattern, RegexOptions.IgnoreCase));
 
-            var types = assemblies.SelectMany(a => a.GetTypes());
+            var types = assemblies.SelectMany(a => a.GetTypes())
+                .Where(t => t.GetCustomAttribute<GuideItemsAttribute>() != null);
+
             var methods = types
                 .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
-                .Where(m => m.GetCustomAttributes<GuideItemsAttribute>(false).Any());
+                .Where(m => m.GetCustomAttribute<GuideItemsAttribute>(false) != null);
 
             foreach (var methodInfo in methods)
             {
                 var id = $"{methodInfo.DeclaringType}.{methodInfo.Name}";
                 _guideItemsMap[id] = methodInfo;
             }
+
+            _initialized = true;
         }
 
         public static List<IGuideItem> GetItems(string methodId)
         {
+            Initialize();
+
             if (_guideItemsMap.TryGetValue(methodId, out var methodInfo))
             {
                 var obj = methodInfo.IsStatic ? null : Activator.CreateInstance(methodInfo.DeclaringType);
@@ -64,7 +71,7 @@ namespace Meta.XR.Guides.Editor
         }
     }
 
-    [AttributeUsage(AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
     sealed class GuideItemsAttribute : Attribute
     {
     }

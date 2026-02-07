@@ -22,13 +22,55 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using static OVRPlugin;
+using UnityEngine;
 
 public partial struct OVRAnchor
 {
     /// <summary>
-    /// Options for <see cref="FetchAnchorsAsync"/>
+    /// Options for <see cref="FetchAnchorsAsync(List{OVRAnchor},FetchOptions,Action{List{OVRAnchor}, int})"/>.
     /// </summary>
+    /// <remarks>
+    /// When querying for anchors (<see cref="OVRAnchor"/>) using `FetchAnchorsAsync`, you must provide
+    /// <see cref="FetchOptions"/> to the query.
+    ///
+    /// These options filter for the anchors you are interested in. If you provide a default-constructed
+    /// <see cref="FetchOptions"/>, the query will return all available anchors. If you provide multiple options, the
+    /// result is the logical AND of those options.
+    ///
+    /// For example, if you specify an array of <see cref="Uuids"/> and a <see cref="SingleComponentType"/>, then
+    /// the result will be anchors that match any of those UUIDs that also support that component type.
+    ///
+    /// Note that the fields prefixed with `Single` are the same as providing an array of length 1. This is useful in
+    /// the common cases of retrieving a single anchor by UUID, or querying for all anchors of a single component
+    /// type, without having to allocate a managed array to hold that single element.
+    ///
+    /// <example>
+    /// For example, these two are equivalent queries:
+    /// <code><![CDATA[
+    /// async void FetchByUuid(Guid uuid) {
+    ///   var options1 = new OVRAnchor.FetchOptions {
+    ///     SingleUuid = uuid
+    ///   };
+    ///
+    ///   var options2 = new OVRAnchor.FetchOptions {
+    ///     Uuids = new Guid[] { uuid }
+    ///   };
+    ///
+    ///   // Both options1 and options2 will perform the same query and return the same result
+    ///   var result1 = await OVRAnchor.FetchAnchorsAsync(new List<OVRAnchor>(), options1);
+    ///   var result2 = await OVRAnchor.FetchAnchorsAsync(new List<OVRAnchor>(), options2);
+    ///
+    ///   Debug.Assert(result1.Status == result2.Status);
+    ///   if (result1.Success)
+    ///   {
+    ///       Debug.Assert(result1.Value.SequenceEqual(result2.Value));
+    ///   }
+    /// }
+    /// ]]></code>
+    /// </example>
+    /// </remarks>
     public struct FetchOptions
     {
         /// <summary>
@@ -83,28 +125,30 @@ public partial struct OVRAnchor
         public IEnumerable<Type> ComponentTypes;
 
 
-        internal unsafe Result DiscoverSpaces(out ulong requestId)
+        // DiscoverSpaces has an upper limit, requiring batching if exceeded
+        private const int MaximumUuidCount = 50;
+
+        /// <summary>
+        /// Creates a batch of DiscoverSpaces calls.
+        ///
+        /// Batches are currently needed when we have too many UUIDS (<see cref="MaximumUuidCount"/>).
+        /// </summary>
+        internal unsafe void DiscoverSpaces(List<(Result, ulong)> batches)
         {
-            SpaceComponentType GetSpaceComponentType(Type type)
-            {
-                if (type == null)
-                    throw new ArgumentNullException(nameof(type));
-
-                if (!_typeMap.TryGetValue(type, out var componentType))
-                    throw new ArgumentException(
-                        $"{type.FullName} is not a supported anchor component type (IOVRAnchorComponent).", nameof(type));
-
-                return componentType;
-            }
+            batches.Clear();
 
             var telemetryMarker = OVRTelemetry.Start((int)Telemetry.MarkerId.DiscoverSpaces);
 
             // Stores the filters
             using var filterStorage = new OVRNativeList<FilterUnion>(Allocator.Temp);
 
+            // Stores only the uuid filters (possibly batched)
+            using var uuidFilterStorage = new OVRNativeList<FilterUnion>(Allocator.Temp);
+
             // Pointers to the filters in filterStorage
             using var filters = new OVRNativeList<IntPtr>(Allocator.Temp);
 
+            // first we aggregate the non-uuid filters (will be reused)
             using var spaceComponentTypes = OVRNativeList.WithSuggestedCapacityFrom(ComponentTypes).AllocateEmpty<long>(Allocator.Temp);
             if (SingleComponentType != null)
             {
@@ -135,48 +179,88 @@ public partial struct OVRAnchor
                     }
                 });
             }
-
             telemetryMarker.AddAnnotation(Telemetry.Annotation.ComponentTypes, spaceComponentTypes.Data,
                 spaceComponentTypes.Count);
 
-            using var uuids = Uuids.ToNativeList(Allocator.Temp);
+
+            using var uuidsList = Uuids.ToNativeList(Allocator.Temp);
             if (SingleUuid.HasValue)
             {
-                uuids.Add(SingleUuid.Value);
+                uuidsList.Add(SingleUuid.Value);
             }
+            var uuids = uuidsList.AsNativeArray();
 
-            if (SingleUuid != null || Uuids != null)
+            telemetryMarker.AddAnnotation(Telemetry.Annotation.UuidCount, uuids.Length);
+
+            var totalFilterCount = filterStorage.Count;
+            if (uuids.Length != 0)
             {
-                filterStorage.Add(new FilterUnion
+                totalFilterCount++;
+            }
+            telemetryMarker.AddAnnotation(Telemetry.Annotation.TotalFilterCount, totalFilterCount);
+
+            var iterations = 1;
+            if (uuids.Length > MaximumUuidCount)
+                iterations = Mathf.CeilToInt(uuids.Length / (float)MaximumUuidCount);
+
+            // now create uuid-specific filters and create batches of requests
+            for (var i = 0; i < iterations; i++)
+            {
+                uuidFilterStorage.Clear();
+                if (SingleUuid != null || Uuids != null)
                 {
-                    IdFilter = new SpaceDiscoveryFilterInfoIds
+                    // get a subset of the filters for this query
+                    var startingIndex = i * MaximumUuidCount;
+                    var length = MaximumUuidCount;
+                    if (startingIndex + length > uuids.Length)
+                        length = uuids.Length - startingIndex;
+
+                    var uuidBatch = uuids.GetSubArray(startingIndex, length);
+
+                    uuidFilterStorage.Add(new FilterUnion
                     {
-                        Type = SpaceDiscoveryFilterType.Ids,
-                        Ids = uuids.Data,
-                        NumIds = uuids.Count,
-                    }
-                });
+                        IdFilter = new SpaceDiscoveryFilterInfoIds
+                        {
+                            Type = SpaceDiscoveryFilterType.Ids,
+                            Ids = length == 0 ? null : (Guid*)uuidBatch.GetUnsafePtr(),
+                            NumIds = length
+                        }
+                    });
+                }
+
+                // Gather pointers to each filter + uuidfilter
+                filters.Clear();
+                for (var j = 0; j < filterStorage.Count; j++)
+                {
+                    filters.Add(new IntPtr(filterStorage.PtrToElementAt(j)));
+                }
+                for (var j = 0; j < uuidFilterStorage.Count; j++)
+                {
+                    filters.Add(new IntPtr(uuidFilterStorage.PtrToElementAt(j)));
+                }
+
+                var result = OVRPlugin.DiscoverSpaces(new SpaceDiscoveryInfo
+                {
+                    NumFilters = (uint)filters.Count,
+                    Filters = (SpaceDiscoveryFilterInfoHeader**)filters.Data,
+                }, out var requestId);
+
+                Telemetry.SetSyncResult(telemetryMarker, requestId, result);
+
+                batches.Add((result, requestId));
             }
+        }
 
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.UuidCount, uuids.Count);
+        private static SpaceComponentType GetSpaceComponentType(Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
 
+            if (!_typeMap.TryGetValue(type, out var componentType))
+                throw new ArgumentException(
+                    $"{type.FullName} is not a supported anchor component type (IOVRAnchorComponent).", nameof(type));
 
-            // Gather pointers to each filter
-            for (var i = 0; i < filterStorage.Count; i++)
-            {
-                filters.Add(new IntPtr(filterStorage.PtrToElementAt(i)));
-            }
-
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.TotalFilterCount, filters.Count);
-
-            var result = OVRPlugin.DiscoverSpaces(new SpaceDiscoveryInfo
-            {
-                NumFilters = (uint)filters.Count,
-                Filters = (SpaceDiscoveryFilterInfoHeader**)filters.Data,
-            }, out requestId);
-
-            Telemetry.SetSyncResult(telemetryMarker, requestId, result);
-            return result;
+            return componentType;
         }
     }
 

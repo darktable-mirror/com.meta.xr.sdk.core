@@ -29,7 +29,9 @@ using LogLevel = Meta.XR.MultiplayerBlocks.Colocation.LogLevel;
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
     /// <summary>
-    ///     A class that handles setting up and initializing colocation
+    /// Helper class that handles setting up and initializing colocation when using the Photon Fusion networking framework.
+    /// Once this networked game object is spawned this class starts the process for getting the players oculus account and starts
+    /// the colocation routines.
     /// </summary>
     public class FusionNetworkBootstrapper : NetworkBehaviour
     {

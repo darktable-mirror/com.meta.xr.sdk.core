@@ -35,6 +35,9 @@ using System.Linq;
 /// <summary>
 /// A manager for <see cref="OVRSceneAnchor"/>s created using the Room Setup feature.
 /// </summary>
+/// <remarks>
+///  "OVRSceneManager and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+/// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/")]
 [Obsolete(DeprecationMessage)]
 [Feature(Feature.Scene)]
@@ -190,6 +193,15 @@ public class OVRSceneManager : MonoBehaviour
     /// <summary>
     /// Represents the available classifications for each <see cref="OVRSceneAnchor"/>.
     /// </summary>
+    /// <remarks>
+    /// Classifications can be useful for functionally describing the contents of an <see cref="OVRSceneRoom"/>.
+    /// By iterating all <see cref="OVRSceneAnchor"/>s and comparing their Classifications with those needed,
+    /// your application can determine whether a room meets its minimum requirements and/or can adjust its behavior
+    /// to fit the physical surroundings.
+    ///
+    /// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+    /// </remarks>
+    [Obsolete(DeprecationMessage)]
     public static class Classification
     {
         /// <summary>
@@ -284,9 +296,11 @@ public class OVRSceneManager : MonoBehaviour
         public const string GlobalMesh = "GLOBAL_MESH";
 
         /// <summary>
-        /// The list of possible semantic labels.
+        /// The list of all possible semantic labels that can be applied to an <see cref="OVRSceneAnchor"/>.
         /// </summary>
-
+        /// <remarks>
+        /// <see cref="Set"/> exposes this list as a HashSet.
+        /// </remarks>
         public static IReadOnlyList<string> List { get; } = new[]
         {
             Floor,
@@ -311,7 +325,7 @@ public class OVRSceneManager : MonoBehaviour
         };
 
         /// <summary>
-        /// The set of possible semantic labels.
+        /// The set of possible semantic labels that can be applied to an <see cref="OVRSceneAnchor"/>.
         /// </summary>
         /// <remarks>
         /// This is the same as <see cref="List"/> but allows for faster lookup.
@@ -320,8 +334,12 @@ public class OVRSceneManager : MonoBehaviour
     }
 
     /// <summary>
-    /// A container for the set of <see cref="OVRSceneAnchor"/>s representing a room.
+    /// A container for the set of <see cref="OVRSceneAnchor"/>s representing a room's Walls, Floor, and Ceiling as
+    /// <see cref="OVRScenePlane"/>s, which provide detailed geometry for each.
     /// </summary>
+    /// <remarks>
+    /// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+    /// </remarks>
     [Obsolete("RoomLayoutInformation is obsoleted. For each room's layout information " +
               "(floor, ceiling, walls) see " + nameof(OVRSceneRoom) + ".", false)]
     public class RoomLayoutInformation
@@ -356,13 +374,13 @@ public class OVRSceneManager : MonoBehaviour
     #region Private Vars
 
     // We use this to store the request id when attempting to load the scene
-    ulong _sceneCaptureRequestId = ulong.MaxValue;
+    private ulong _sceneCaptureRequestId = ulong.MaxValue;
 
-    OVRCameraRig _cameraRig;
+    private OVRCameraRig _cameraRig;
 
-    int _sceneAnchorUpdateIndex;
+    private int _sceneAnchorUpdateIndex;
 
-    bool _hasLoadBeenRequested;
+    private bool _hasLoadBeenRequested;
 
     #endregion
 
@@ -433,7 +451,7 @@ public class OVRSceneManager : MonoBehaviour
             .Send();
     }
 
-    static void LogResult(OVRAnchor.FetchResult value)
+    private static void LogResult(OVRAnchor.FetchResult value)
     {
         if (((OVRPlugin.Result)value).IsSuccess())
         {
@@ -586,7 +604,7 @@ public class OVRSceneManager : MonoBehaviour
         }
     }
 
-    enum LoadSceneModelResult
+    public enum LoadSceneModelResult
     {
         Success = 0,
         NoSceneModelToLoad = 1,
@@ -594,7 +612,7 @@ public class OVRSceneManager : MonoBehaviour
         FailureUnexpectedError = -2,
     }
 
-    struct Metrics
+    internal struct Metrics
     {
         public int TotalRoomCount;
         public int CandidateRoomCount;
@@ -614,14 +632,14 @@ public class OVRSceneManager : MonoBehaviour
         };
     }
 
-    struct RoomLayoutUuids
+    internal struct RoomLayoutUuids
     {
         public Guid Floor;
         public Guid Ceiling;
         public Guid[] Walls;
     }
 
-    async OVRTask<Metrics> ProcessBatch(List<OVRAnchor> rooms, int startingIndex)
+    private async OVRTask<Metrics> ProcessBatch(List<OVRAnchor> rooms, int startingIndex)
     {
         Log($"Processing batch [{startingIndex}..{rooms.Count - 1}]", gameObject);
 
@@ -727,7 +745,7 @@ public class OVRSceneManager : MonoBehaviour
         return metrics;
     }
 
-    async OVRTask<LoadSceneModelResult> LoadSceneModelAsync()
+    private async OVRTask<LoadSceneModelResult> LoadSceneModelAsync()
     {
         if (!Permission.HasUserAuthorizedPermission(OVRPermissionsRequester.ScenePermission))
         {
@@ -800,7 +818,7 @@ public class OVRSceneManager : MonoBehaviour
         }
     }
 
-    static async OVRTask<(LoadSceneModelResult, int)> FilterByActiveRoom(List<OVRAnchor> rooms,
+    private static async OVRTask<(LoadSceneModelResult, int)> FilterByActiveRoom(List<OVRAnchor> rooms,
         Dictionary<OVRAnchor, RoomLayoutUuids> layouts)
     {
         rooms.Clear();
@@ -867,7 +885,7 @@ public class OVRSceneManager : MonoBehaviour
 
     #region Loading active room(s)
 
-    static bool IsUserInRoom(Vector3 userPosition, OVRAnchor floor, OVRAnchor ceiling)
+    private static bool IsUserInRoom(Vector3 userPosition, OVRAnchor floor, OVRAnchor ceiling)
     {
         // Get floor anchor's pose
         if (!OVRPlugin.TryLocateSpace(floor.Handle, OVRPlugin.GetTrackingOriginType(), out var floorPose))
@@ -909,7 +927,7 @@ public class OVRSceneManager : MonoBehaviour
 
     #endregion
 
-    void DestroyExistingAnchors()
+    private void DestroyExistingAnchors()
     {
         // Remove all the scene entities in memory. Update with scene entities from new query.
         using (new OVRObjectPool.ListScope<OVRSceneAnchor>(out var anchors))

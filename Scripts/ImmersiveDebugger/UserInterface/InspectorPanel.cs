@@ -82,9 +82,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _scrollView = div.Append<ScrollView>("main");
             _scrollView.LayoutStyle = Style.Load<LayoutStyle>("PanelScrollView");
             Flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorMainFlex");
-
-            // Initialize the Uncategorized category
-            GetCategoryButton(null, true);
         }
 
         public IInspector RegisterInspector(InstanceHandle instanceHandle, string category)

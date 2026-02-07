@@ -79,9 +79,10 @@ internal static class OVRProjectSetupXRTasks
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
             isDone: _ => !(OVRProjectSetupUtils.IsPackageInstalled(OculusXRPackageName) && OVRProjectSetupUtils.IsPackageInstalled(UnityXRPackage)),
-            message: $"It's not recommended to install Oculus XR Plugin and OpenXR Plugin at the same time, which may introduce unintentional conflicts.\nClick 'Fix' to uninstall the OpenXR Plugin. If you want to uninstall Oculus XR Plugin, please use the {UPMTitle}.",
-            fix: _ => OVRProjectSetupUtils.UninstallPackage(UnityXRPackage),
-            fixMessage: $"Remove the {UnityXRPackage} package"
+            fixAutomatic: false,
+            message: $"It's not recommended to install Oculus XR Plugin and OpenXR Plugin at the same time, which may introduce unintentional conflicts.\nClick 'Edit' to open the Package Manager to uninstall one of the plugins. OpenXR Plugin is the recommended plugin to use.",
+            fixMessage: $"Open Package Manager",
+            fix: _ => { UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName); }
         );
 
         AddXrPluginManagementTasks();
@@ -89,7 +90,7 @@ internal static class OVRProjectSetupXRTasks
 
     private static void AddXrPluginManagementTasks()
     {
-#if USING_XR_MANAGEMENT && USING_XR_SDK_OCULUS
+#if USING_XR_MANAGEMENT && USING_XR_SDK_OCULUS && !USING_XR_SDK_OPENXR
         OVRProjectSetup.AddTask(
             conditionalValidity: _ =>
                 OVRProjectSetupUtils.IsPackageInstalled(XRPluginManagementPackageName),
@@ -162,6 +163,15 @@ internal static class OVRProjectSetupXRTasks
                 {
                     throw new OVRConfigurationTaskException("Could not find XR Plugin Manager settings");
                 }
+#if USING_XR_SDK_OCULUS
+                var loadersListOculus = AssetDatabase.FindAssets($"t: {nameof(OculusLoader)}")
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .Select(AssetDatabase.LoadAssetAtPath<OculusLoader>).ToList();
+                if (loadersListOculus.Count > 0)
+                {
+                    settings.Manager.TryRemoveLoader(loadersListOculus[0]);
+                }
+#endif
 
                 var loadersList = AssetDatabase.FindAssets($"t: {nameof(OpenXRLoader)}")
                     .Select(AssetDatabase.GUIDToAssetPath)

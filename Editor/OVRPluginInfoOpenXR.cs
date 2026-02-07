@@ -107,9 +107,8 @@ namespace Oculus.VR.Editor
                 md5AndroidActual = GetFileChecksum(androidFullPath);
             }
 
-            var projectConfig = OVRProjectConfig.CachedProjectConfig;
-            if (!forceUpdate && projectConfig.ovrPluginMd5Win64 == md5Win64Actual &&
-                projectConfig.ovrPluginMd5Android == md5AndroidActual)
+            if (!forceUpdate && OVRLocalProjectSettings.Instance.OVRPluginMd5Win64 == md5Win64Actual &&
+                OVRLocalProjectSettings.Instance.OVRPluginMd5Android == md5AndroidActual)
             {
                 return;
             }
@@ -128,9 +127,8 @@ namespace Oculus.VR.Editor
                 }
             }
 
-            projectConfig.ovrPluginMd5Win64 = md5Win64Actual;
-            projectConfig.ovrPluginMd5Android = md5AndroidActual;
-            OVRProjectConfig.CommitProjectConfig(projectConfig);
+            OVRLocalProjectSettings.Instance.OVRPluginMd5Win64 = md5Win64Actual;
+            OVRLocalProjectSettings.Instance.OVRPluginMd5Android = md5AndroidActual;
 
             bool userAgreedToRestart = !_unityRunningInBatchMode && EditorUtility.DisplayDialog(
                 "Restart Unity",

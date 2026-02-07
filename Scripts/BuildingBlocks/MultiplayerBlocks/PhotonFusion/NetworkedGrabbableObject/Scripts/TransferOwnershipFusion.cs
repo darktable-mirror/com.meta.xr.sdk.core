@@ -23,13 +23,27 @@ using Meta.XR.MultiplayerBlocks.Shared;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
+    /// <summary>
+    /// The class responsible for the networking part of transferring ownership of a networked game object when using
+    /// the Photon Fusion networking framework. It implements the <see cref="ITransferOwnership"/> interface
+    /// and is used by <see cref="TransferOwnershipOnSelect"/> which handles the non-networking logic.
+    /// </summary>
     public class TransferOwnershipFusion : NetworkBehaviour, ITransferOwnership
     {
+        /// <summary>
+        /// Transfers the ownership of the networked game object to the local player.
+        /// An implementation of the <see cref="ITransferOwnership"/> interface.
+        /// </summary>
         public void TransferOwnershipToLocalPlayer()
         {
             Object.RequestStateAuthority();
         }
 
+        /// <summary>
+        /// Indicates whether the local player has ownership of the networked game object.
+        /// An implementation of the <see cref="ITransferOwnership"/> interface.
+        /// </summary>
+        /// <returns>'true' if the local player has ownership of the networked game object.</returns>
         public bool HasOwnership()
         {
             return HasStateAuthority;

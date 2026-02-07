@@ -27,7 +27,7 @@ using UnityEngine;
 
 public interface OVRMixedRealityCaptureConfiguration
 {
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
     bool enableMixedReality { get; set; }
     LayerMask extraHiddenLayers { get; set; }
     LayerMask extraVisibleLayers { get; set; }
@@ -68,7 +68,7 @@ public interface OVRMixedRealityCaptureConfiguration
 #endif
 }
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
 public static class OVRMixedRealityCaptureConfigurationExtensions
 {
     public static void ApplyTo(this OVRMixedRealityCaptureConfiguration dest,

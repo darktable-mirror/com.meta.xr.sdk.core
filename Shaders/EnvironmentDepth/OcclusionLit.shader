@@ -133,8 +133,6 @@ Shader "EnvironmentDepth/OcclusionLit"
                 float2 uv = input.uv;
                 float4 colorSample = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv) * _Color;
 
-                META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY(input, colorSample, _EnvironmentDepthBias);
-
                 InputData lightingInput = (InputData) 0;
                 lightingInput.positionWS = positionWS;
                 lightingInput.normalWS = normalWS;
@@ -152,7 +150,11 @@ Shader "EnvironmentDepth/OcclusionLit"
                 surfaceInput.emission = 0;
                 surfaceInput.occlusion = 1.0;
 
-                return UniversalFragmentPBR(lightingInput, surfaceInput);
+                half4 finalOutputColor = UniversalFragmentPBR(lightingInput, surfaceInput);
+
+                META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY(input, finalOutputColor, _EnvironmentDepthBias);
+
+                return finalOutputColor;
             }
             ENDHLSL
         }
@@ -194,7 +196,7 @@ Shader "EnvironmentDepth/OcclusionLit"
         Tags { "RenderType"="Opaque" }
         LOD 200
         CGPROGRAM
-        #pragma surface surf Standard fullforwardshadows
+        #pragma surface surf Standard finalcolor:colorModifier fullforwardshadows keepalpha
         #pragma target 3.5
 
         #pragma multi_compile _ HARD_OCCLUSION SOFT_OCCLUSION
@@ -213,14 +215,18 @@ Shader "EnvironmentDepth/OcclusionLit"
         fixed4 _Color;
         float _EnvironmentDepthBias;
 
-        void surf (Input IN, inout SurfaceOutputStandard o)
+        void surf(Input IN, inout SurfaceOutputStandard o)
         {
-            fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-            META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY_WORLDPOS(IN.worldPos, c, _EnvironmentDepthBias)
+            fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
             o.Albedo = c.rgb;
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
             o.Alpha = c.a;
+        }
+
+        void colorModifier(Input IN, SurfaceOutputStandard o, inout fixed4 color)
+        {
+                    META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY_WORLDPOS(IN.worldPos, color, _EnvironmentDepthBias)
         }
         ENDCG
     }

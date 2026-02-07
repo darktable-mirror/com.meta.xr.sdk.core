@@ -28,6 +28,9 @@ using UnityEngine;
 /// <remarks>
 /// This component can be accessed from an <see cref="OVRAnchor"/> that supports it by calling
 /// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.
+///
+/// The bounded 2D component is part of the Meta Quest Scene Model. Read more at
+/// [Scene Overview](https://developer.oculus.com/documentation/unity/unity-scene-overview/).
 /// </remarks>
 /// <seealso cref="BoundingBox"/>
 /// <seealso cref="TryGetBoundaryPointsCount"/>
@@ -35,11 +38,12 @@ using UnityEngine;
 public readonly partial struct OVRBounded2D : IOVRAnchorComponent<OVRBounded2D>, IEquatable<OVRBounded2D>
 {
     /// <summary>
-    /// Bounding Box
+    /// The 2D bounding box of the plane
     /// </summary>
-    /// <returns>
-    /// <see cref="Rect"/> representing the 2D Bounding Box of the Anchor this component is attached to.
-    /// </returns>
+    /// <remarks>
+    /// The bounding box is defined relative to the plane anchor (<see cref="OVRAnchor"/>).
+    /// </remarks>
+    /// <returns>Returns the `Rect` representing the 2D Bounding Box of the Anchor this component is attached to.</returns>
     /// <exception cref="InvalidOperationException">If it fails to retrieve the Bounding Box.</exception>
     public Rect BoundingBox => OVRPlugin.GetSpaceBoundingBox2D(Handle, out var rectf)
         ? ConvertRect(rectf)
@@ -69,7 +73,7 @@ public readonly partial struct OVRBounded2D : IOVRAnchorComponent<OVRBounded2D>,
     /// Retrieves the number of boundary points contained in an Anchor with an enabled Bounded2D component.
     /// </summary>
     /// <param name="count">The number of boundary points contained in the Bounded2D component of the Anchor, as an <c>out</c> parameter.</param>
-    /// <returns><c>true</c> if it successfully retrieves the count, <c>false</c> otherwise.</returns>
+    /// <returns>Returns <c>true</c> if it successfully retrieves the count, <c>false</c> otherwise.</returns>
     /// <remarks>This is the first part of the two-calls idiom for retrieving boundary points. <see cref="TryGetBoundaryPoints"/> to actually get those points.</remarks>
     /// <seealso cref="TryGetBoundaryPoints"/>
     public bool TryGetBoundaryPointsCount(out int count) =>

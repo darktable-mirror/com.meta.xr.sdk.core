@@ -32,8 +32,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             get => _hook;
             set
             {
+                if (_hook == value) return;
+
                 _hook = value;
-                StateChanged = value.OnStateChanged;
+
+                // As we're setting a new hook, we don't want to propagate the change of the state
+                // for its initialization
+                StateChanged = null;
+                State = value.GetState?.Invoke() ?? false;
+                StateChanged = value.SetState;
             }
         }
 

@@ -26,20 +26,49 @@ using UnityEngine.Assertions;
 using SkeletonType = OVRPlugin.SkeletonType;
 using BoneId = OVRPlugin.BoneId;
 [Feature(Feature.BodyTracking)]
+
+/// <summary>
+/// A partial class definition of the class responsible for retargeting from
+/// <see cref="OVRSkeleton"/> body tracking bones to a third party
+/// humanoid skeleton. Unlike <see cref="OVRCustomSkeleton"/>, the skeleton
+/// retargeted to does not need to use bones that match body tracking names, or
+/// have a hierarchy that matches what body tracking expects. Instead, you
+/// can use this class to apply [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/)
+/// to characters that have been imported as Unity Humanoids.
+///
+/// This partial definition is responsible for computing the offsets between
+/// the source (body tracking) and target (Humanoid) skeletons, which will be used
+/// animate the target based on the source's movements.
+/// </summary>
 public partial class OVRUnityHumanoidSkeletonRetargeter : OVRSkeleton
 {
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private OVRSkeletonMetadata _sourceSkeletonData;
     protected OVRSkeletonMetadata SourceSkeletonData => _sourceSkeletonData;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private OVRSkeletonMetadata _sourceSkeletonTPoseData;
     protected OVRSkeletonMetadata SourceSkeletonTPoseData => _sourceSkeletonTPoseData;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private OVRSkeletonMetadata _targetSkeletonData;
     protected OVRSkeletonMetadata TargetSkeletonData => _targetSkeletonData;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private Animator _animatorTargetSkeleton;
     protected Animator AnimatorTargetSkeleton => _animatorTargetSkeleton;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private Dictionary<BoneId, HumanBodyBones> _customBoneIdToHumanBodyBone =
         new Dictionary<BoneId, HumanBodyBones>();
 
@@ -48,8 +77,14 @@ public partial class OVRUnityHumanoidSkeletonRetargeter : OVRSkeleton
         get => _customBoneIdToHumanBodyBone;
     }
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private readonly Dictionary<HumanBodyBones, Quaternion> _targetTPoseRotations =
         new Dictionary<HumanBodyBones, Quaternion>();
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private Dictionary<HumanBodyBones, Transform> _targetTPoseTransformDup =
         new Dictionary<HumanBodyBones, Transform>();
 
@@ -58,59 +93,91 @@ public partial class OVRUnityHumanoidSkeletonRetargeter : OVRSkeleton
         get => _targetTPoseRotations;
     }
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private int _lastSkelChangeCount = -1;
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private Vector3 _lastTrackedScale;
 
+    /// <summary>
+    /// Allows you to tweak joint movements after the <see cref="OVRUnityHumanoidSkeletonRetargeter"/>
+    /// has retargeted to a character. If the retargeted result is unsatisfactory,
+    /// you can use this field to affect the final output.
+    /// </summary>
     [Serializable]
     public class JointAdjustment
     {
         /// <summary>
-        /// Joint to adjust.
+        /// Maps to the Unity Humanoid joint that can be adjusted
+        /// using position or rotation-based tweaks.
         /// </summary>
         public HumanBodyBones Joint;
 
         /// <summary>
-        /// Position change to apply to the joint, post-retargeting.
+        /// The position change to apply to the joint, post-retargeting,
+        /// in world-space. Defaults to the zero vector.
         /// </summary>
         public Vector3 PositionChange = Vector3.zero;
 
         /// <summary>
-        /// Rotation to apply to the joint, post-retargeting.
-        /// NOTE: deprecated, please use <inheritdoc cref="JointAdjustment.RotationTweaks"/>.
+        /// The rotation change to apply to the joint, post-retargeting,
+        /// in world-space. Defaults to the Quaternion identity.
+        /// NOTE: This is deprecated, please use <inheritdoc cref="JointAdjustment.RotationTweaks"/>.
         /// </summary>
         public Quaternion RotationChange = Quaternion.identity;
 
         /// <summary>
-        /// Allows accumulating a series of rotations to be
-        /// applied to a joint, post-retargeting.
+        /// Allows accumulating a series of rotations to be applied to a joint,
+        /// post-retargeting. These values are accumulated and stored in
+        /// <see cref="JointAdjustment.PrecomputedRotationTweaks"/>.
         /// </summary>
         public Quaternion[] RotationTweaks = null;
 
         /// <summary>
-        /// Allows disable rotational transform on joint.
+        /// Use this to disable rotational retargeting on the target joint, so that the
+        /// target's rotation values are not affected by body tracking.
         /// </summary>
         public bool DisableRotationTransform = false;
 
         /// <summary>
-        /// Allows disable position transform on joint.
+        /// Use this to disable positional retargeting on the target joint, so that the
+        /// target's position values are not affected by body tracking.
         /// </summary>
         public bool DisablePositionTransform = false;
 
         /// <summary>
-        /// Allows mapping this human body bone to OVRSkeleton bone different from the
-        /// standard. An ignore value indicates to not override; remove means to exclude
-        /// from retargeting. Cannot be changed at runtime.
+        /// Allows mapping this human body bone to a (full body) OVRSkeleton bone different from the
+        /// standard value. An <see cref="OVRHumanBodyBonesMappings.FullBodyTrackingBoneId.NoOverride"/>
+        /// value indicates to not override the default mapping; <see cref="OVRHumanBodyBonesMappings.FullBodyTrackingBoneId.Remove"/>
+        /// means to exclude the bone from retargeting. This cannot be changed at runtime.
         /// </summary>
         public OVRHumanBodyBonesMappings.FullBodyTrackingBoneId FullBodyBoneIdOverrideValue =
             OVRHumanBodyBonesMappings.FullBodyTrackingBoneId.NoOverride;
+
+        /// <summary>
+        /// Allows mapping this human body bone to a (half body) OVRSkeleton bone different from the
+        /// standard value. An <see cref="OVRHumanBodyBonesMappings.BodyTrackingBoneId.NoOverride"/>
+        /// value indicates to not override the default mapping; <see cref="OVRHumanBodyBonesMappings.BodyTrackingBoneId.Remove"/>
+        /// means to exclude the bone from retargeting. This cannot be changed at runtime.
+        /// </summary>
         public OVRHumanBodyBonesMappings.BodyTrackingBoneId BoneIdOverrideValue =
             OVRHumanBodyBonesMappings.BodyTrackingBoneId.NoOverride;
 
         /// <summary>
-        /// Precomputed accumulated rotations.
+        /// Precomputed accumulated rotations, derived from
+        /// <see cref="JointAdjustment.RotationTweaks"/>.
         /// </summary>
         public Quaternion PrecomputedRotationTweaks { get; private set; }
 
+        /// <summary>
+        /// Precompute rotation tweaks by accumulating them and storing
+        /// them into <see cref="JointAdjustment.PrecomputedRotationTweaks"/>.
+        /// Using the precomputed value is faster at runtime than accumulating the quaternions during
+        /// each frame.
+        /// </summary>
         public void PrecomputeRotationTweaks()
         {
             PrecomputedRotationTweaks = Quaternion.identity;
@@ -134,6 +201,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter : OVRSkeleton
         }
     }
 
+    /// <summary>
+    /// Default constructor for the retargeter class that initializes
+    /// the instance's skeleton type to match half body tracking.
+    /// </summary>
     public OVRUnityHumanoidSkeletonRetargeter()
     {
         _skeletonType = SkeletonType.Body;
@@ -210,15 +281,22 @@ public partial class OVRUnityHumanoidSkeletonRetargeter : OVRSkeleton
         get => _bodySectionToPosition;
     }
 
+    /// <summary>
+    /// Since the retargeter's Update function is driven by <see cref="OVRSkeleton"/>'s
+    /// calls via FixedUpdate as well, the variable allows one to control how often
+    /// updates occurs. Use this field to allow updates during physics ticks, update ticks,
+    /// or both.
+    /// </summary>
     public enum UpdateType
     {
         FixedUpdateOnly = 0,
         UpdateOnly,
         FixedUpdateAndUpdate
     }
+
     /// <summary>
     /// Controls if we run retargeting from FixedUpdate, Update,
-    /// or both.
+    /// or both, and is based on the enum <see cref="OVRUnityHumanoidSkeletonRetargeter.UpdateType"/>.
     /// </summary>
     [SerializeField]
     [Tooltip("Controls if we run retargeting from FixedUpdate, Update, or both.")]
@@ -227,7 +305,9 @@ public partial class OVRUnityHumanoidSkeletonRetargeter : OVRSkeleton
     private OVRHumanBodyBonesMappingsInterface _bodyBonesMappingInterface =
         new OVRHumanBodyBonesMappings();
     /// <summary>
-    /// Returns body bone mappings interface.
+    /// This returns body bone mappings, based on <see cref="OVRHumanBodyBonesMappingsInterface"/>.
+    /// Use this field in case the default mappings fall short and you wish to
+    /// override them with a custom one that works with a specific characters.
     /// </summary>
     public OVRHumanBodyBonesMappingsInterface BodyBoneMappingsInterface
     {

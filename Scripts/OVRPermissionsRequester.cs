@@ -70,10 +70,29 @@ public static class OVRPermissionsRequester
         RecordAudio,
     }
 
+    /// <summary>
+    /// Android permission string for Face Tracking capability.
+    /// </summary>
     public const string FaceTrackingPermission = "com.oculus.permission.FACE_TRACKING";
+
+    /// <summary>
+    /// Android permission string for Eye Tracking capability.
+    /// </summary>
     public const string EyeTrackingPermission = "com.oculus.permission.EYE_TRACKING";
+
+    /// <summary>
+    /// Android permission string for Body Tracking capability.
+    /// </summary>
     public const string BodyTrackingPermission = "com.oculus.permission.BODY_TRACKING";
+
+    /// <summary>
+    /// Android permission string for Scene (Spatial data) capability.
+    /// </summary>
     public const string ScenePermission = "com.oculus.permission.USE_SCENE";
+
+    /// <summary>
+    /// Android permission string for Audio Recording.
+    /// </summary>
     public const string RecordAudioPermission = "android.permission.RECORD_AUDIO";
 
     /// <summary>
@@ -81,6 +100,10 @@ public static class OVRPermissionsRequester
     /// </summary>
     /// <param name="permission">The <see cref="Permission"/> to get the ID of.</param>
     /// <returns></returns>
+    /// <remarks>
+    /// See [Permissions on Android](https://developer.android.com/guide/topics/permissions/overview) for general information about
+    /// Android Permissions.
+    /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when an invalid <see cref="Permission"/> is used.</exception>
     public static string GetPermissionId(Permission permission)
     {
@@ -116,6 +139,9 @@ public static class OVRPermissionsRequester
     /// <remarks>
     /// These permissions are Android-specific, therefore we always return
     /// true if on any other platform.
+    ///
+    /// See [Permissions on Android](https://developer.android.com/guide/topics/permissions/overview) for general information about
+    /// Android Permissions.
     /// </remarks>
     /// <param name="permission"><see cref="Permission"/> to be checked.</param>
     public static bool IsPermissionGranted(Permission permission)
@@ -130,6 +156,10 @@ public static class OVRPermissionsRequester
     /// <summary>
     /// Requests the listed <see cref="permissions"/>.
     /// </summary>
+    /// <remarks>
+    /// See [Permissions on Android](https://developer.android.com/guide/topics/permissions/overview) for general information about
+    /// Android Permissions.
+    /// </remarks>
     /// <param name="permissions">Set of <see cref="Permission"/> to be requested.</param>
     public static void Request(IEnumerable<Permission> permissions)
     {

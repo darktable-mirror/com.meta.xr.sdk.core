@@ -42,6 +42,9 @@ public class OVROverlayCanvas : OVRRayTransformer
         Curved
     }
 
+    // The optimal resolution for the display is approximately 2x the initial eye texture resolution
+    private const float kOptimalResolutionScale = 2.0f;
+
     private RectTransform _rectTransform;
     private Canvas _canvas;
     private Camera _camera;
@@ -53,6 +56,7 @@ public class OVROverlayCanvas : OVRRayTransformer
 
     private Material _imposterMaterial;
 
+    private bool _optimalResolutionInitialized;
     private float _optimalResolutionWidth;
     private float _optimalResolutionHeight;
 
@@ -101,17 +105,6 @@ public class OVROverlayCanvas : OVRRayTransformer
     // Start is called before the first frame update
     void Start()
     {
-        if (UnityEngine.XR.XRSettings.isDeviceActive)
-        {
-            _optimalResolutionWidth = UnityEngine.XR.XRSettings.eyeTextureWidth * 2;
-            _optimalResolutionHeight = UnityEngine.XR.XRSettings.eyeTextureHeight * 2;
-        }
-        else
-        {
-            _optimalResolutionWidth = Screen.width * 2;
-            _optimalResolutionHeight = Screen.height * 2;
-        }
-
         _canvas = GetComponent<Canvas>();
         _rectTransform = _canvas.GetComponent<RectTransform>();
 
@@ -387,6 +380,11 @@ public class OVROverlayCanvas : OVRRayTransformer
         _imposterMaterial.mainTextureOffset = _imposterTextureOffset;
     }
 
+    private void OnValidate()
+    {
+        UnityEngine.Assertions.Assert.IsNotNull(OVROverlayCanvasSettings.Instance);
+    }
+
     private void ApplyViewportScale()
     {
         if (!_scaleViewport)
@@ -395,6 +393,17 @@ public class OVROverlayCanvas : OVRRayTransformer
         var mainCamera = OVRManager.FindMainCamera();
         if (mainCamera == null)
             return;
+
+        if (!_optimalResolutionInitialized && UnityEngine.XR.XRSettings.isDeviceActive)
+        {
+            // Calculate Optimal resolution relative to the default resolution
+            _optimalResolutionWidth = UnityEngine.XR.XRSettings.eyeTextureWidth
+                * kOptimalResolutionScale / UnityEngine.XR.XRSettings.eyeTextureResolutionScale;
+            _optimalResolutionHeight = UnityEngine.XR.XRSettings.eyeTextureHeight
+                 * kOptimalResolutionScale / UnityEngine.XR.XRSettings.eyeTextureResolutionScale;
+            // Don't consider the resolution initialized until the resolution is greater than zero
+            _optimalResolutionInitialized = _optimalResolutionWidth > 0 && _optimalResolutionHeight > 0;
+        }
 
         _rectTransform.GetLocalCorners(_Corners);
 

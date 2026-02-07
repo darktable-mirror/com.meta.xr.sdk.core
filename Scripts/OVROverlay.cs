@@ -1001,6 +1001,11 @@ public class OVROverlay : MonoBehaviour
         if (OVRManager.OVRManagerinitialized)
             InitOVROverlay();
 
+        // The command above (`InitOVROverlay()`) may sometimes cancel the enabling  process for the current component
+        // If this happens, we need to stop here
+        if (!enabled)
+            return;
+
         SetupEditorPreview();
 
         Camera.onPreRender += HandlePreRender;

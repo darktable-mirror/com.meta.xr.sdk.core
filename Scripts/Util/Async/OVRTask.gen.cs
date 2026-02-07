@@ -39,7 +39,7 @@ static partial class OVRTask
     /// </remarks>
     /// <param name="task1">The first task to combine</param>
     /// <param name="task2">The second task to combine</param>
-    /// <returns>A task that represents the completion of all input tasks.</returns>
+    /// <returns>Returns a task that represents the completion of all input tasks.</returns>
     public static OVRTask<(T1, T2)> WhenAll<T1, T2>(OVRTask<T1> task1, OVRTask<T2> task2)
         => MultiTaskData<T1, T2>.Get(task1, task2);
 
@@ -60,7 +60,7 @@ static partial class OVRTask
     /// <param name="task1">The first task to combine</param>
     /// <param name="task2">The second task to combine</param>
     /// <param name="task3">The third task to combine</param>
-    /// <returns>A task that represents the completion of all input tasks.</returns>
+    /// <returns>Returns a task that represents the completion of all input tasks.</returns>
     public static OVRTask<(T1, T2, T3)> WhenAll<T1, T2, T3>(OVRTask<T1> task1, OVRTask<T2> task2, OVRTask<T3> task3)
         => MultiTaskData<T1, T2, T3>.Get(task1, task2, task3);
 
@@ -82,7 +82,7 @@ static partial class OVRTask
     /// <param name="task2">The second task to combine</param>
     /// <param name="task3">The third task to combine</param>
     /// <param name="task4">The forth task to combine</param>
-    /// <returns>A task that represents the completion of all input tasks.</returns>
+    /// <returns>Returns a task that represents the completion of all input tasks.</returns>
     public static OVRTask<(T1, T2, T3, T4)> WhenAll<T1, T2, T3, T4>(OVRTask<T1> task1, OVRTask<T2> task2, OVRTask<T3> task3, OVRTask<T4> task4)
         => MultiTaskData<T1, T2, T3, T4>.Get(task1, task2, task3, task4);
 
@@ -105,7 +105,7 @@ static partial class OVRTask
     /// <param name="task3">The third task to combine</param>
     /// <param name="task4">The forth task to combine</param>
     /// <param name="task5">The fifth task to combine</param>
-    /// <returns>A task that represents the completion of all input tasks.</returns>
+    /// <returns>Returns a task that represents the completion of all input tasks.</returns>
     public static OVRTask<(T1, T2, T3, T4, T5)> WhenAll<T1, T2, T3, T4, T5>(OVRTask<T1> task1, OVRTask<T2> task2, OVRTask<T3> task3, OVRTask<T4> task4, OVRTask<T5> task5)
         => MultiTaskData<T1, T2, T3, T4, T5>.Get(task1, task2, task3, task4, task5);
 
@@ -129,7 +129,7 @@ static partial class OVRTask
     /// <param name="task4">The forth task to combine</param>
     /// <param name="task5">The fifth task to combine</param>
     /// <param name="task6">The sixth task to combine</param>
-    /// <returns>A task that represents the completion of all input tasks.</returns>
+    /// <returns>Returns a task that represents the completion of all input tasks.</returns>
     public static OVRTask<(T1, T2, T3, T4, T5, T6)> WhenAll<T1, T2, T3, T4, T5, T6>(OVRTask<T1> task1, OVRTask<T2> task2, OVRTask<T3> task3, OVRTask<T4> task4, OVRTask<T5> task5, OVRTask<T6> task6)
         => MultiTaskData<T1, T2, T3, T4, T5, T6>.Get(task1, task2, task3, task4, task5, task6);
 
@@ -154,7 +154,7 @@ static partial class OVRTask
     /// <param name="task5">The fifth task to combine</param>
     /// <param name="task6">The sixth task to combine</param>
     /// <param name="task7">The seventh task to combine</param>
-    /// <returns>A task that represents the completion of all input tasks.</returns>
+    /// <returns>Returns a task that represents the completion of all input tasks.</returns>
     public static OVRTask<(T1, T2, T3, T4, T5, T6, T7)> WhenAll<T1, T2, T3, T4, T5, T6, T7>(OVRTask<T1> task1, OVRTask<T2> task2, OVRTask<T3> task3, OVRTask<T4> task4, OVRTask<T5> task5, OVRTask<T6> task6, OVRTask<T7> task7)
         => MultiTaskData<T1, T2, T3, T4, T5, T6, T7>.Get(task1, task2, task3, task4, task5, task6, task7);
 
@@ -180,7 +180,7 @@ static partial class OVRTask
     /// <param name="task6">The sixth task to combine</param>
     /// <param name="task7">The seventh task to combine</param>
     /// <param name="task8">The eighth task to combine</param>
-    /// <returns>A task that represents the completion of all input tasks.</returns>
+    /// <returns>Returns a task that represents the completion of all input tasks.</returns>
     public static OVRTask<(T1, T2, T3, T4, T5, T6, T7, T8)> WhenAll<T1, T2, T3, T4, T5, T6, T7, T8>(OVRTask<T1> task1, OVRTask<T2> task2, OVRTask<T3> task3, OVRTask<T4> task4, OVRTask<T5> task5, OVRTask<T6> task6, OVRTask<T7> task7, OVRTask<T8> task8)
         => MultiTaskData<T1, T2, T3, T4, T5, T6, T7, T8>.Get(task1, task2, task3, task4, task5, task6, task7, task8);
 

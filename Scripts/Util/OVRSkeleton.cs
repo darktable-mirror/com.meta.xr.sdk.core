@@ -22,26 +22,109 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 
+/// <summary>
+/// Creates a skeleton and related bind (or rest) pose associated with that skeleton,
+/// and animates the skeleton based on data obtained from what pose data that
+/// <see cref="OVRSkeleton.IOVRSkeletonDataProvider"/> provides. Use this class to query
+/// the bone transforms via the <see cref="OVRSkeleton.Bones"/> field.
+/// <remarks>
+/// The bones created can be associated with [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/).
+/// </remarks>
+/// </summary>
 public class OVRSkeleton : MonoBehaviour
 {
+    /// <summary>
+    /// The interface of the skeletal provider that <see cref="OVRSkeleton"/> uses
+    /// to animate a skeleton's bone transforms. Contains references to the skeleton type,
+    /// pose data information, as well as the enable state of the provider.
+    /// </summary>
     public interface IOVRSkeletonDataProvider
     {
+        /// <summary>
+        /// Skeleton type field, which can be hand or body. In the case of [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/), the
+        /// bone set can either be upper body or full body. <see cref="OVRSkeleton"/> relies
+        /// on this type.
+        /// </summary>
+        /// <returns><see cref="SkeletonType"/> associated with provider.</returns>
         SkeletonType GetSkeletonType();
+        /// <summary>
+        /// The pose data associated with tracking. Use this function to access data
+        /// related to tracking information, such as joint poses.
+        /// </summary>
+        /// <returns><see cref="SkeletonPoseData"/> associated with provider.</returns>
         SkeletonPoseData GetSkeletonPoseData();
+        /// <summary>
+        /// Returns the enable state of provider. Use this field to enable or disable
+        /// updates to any GameObjects that track the skeletal state.
+        /// </summary>
         bool enabled { get; }
     }
 
+    /// <summary>
+    /// Contains tracking pose data and metadata associated with it. Use this to
+    /// obtain bone rotations, translations, as well as indicators of data validity
+    /// and confidence. Note that rotations and translations might require a conversion
+    /// before being used, see <see cref="OVRSkeleton.UpdateSkeleton"/> to example code.
+    /// <remarks>
+    /// This is relevant for [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/),
+    /// and is a returned data type from <see cref="OVRBody"/>.
+    /// </remarks>
+    /// </summary>
     public struct SkeletonPoseData
     {
+        /// <summary>
+        /// The pose that you can use to set the transform properties of the skeleton's
+        /// root transform.
+        /// </summary>
         public OVRPlugin.Posef RootPose { get; set; }
+        /// <summary>
+        /// The scale of the root transform. Use this to set the local scale of the
+        /// root game object.
+        /// </summary>
         public float RootScale { get; set; }
+        /// <summary>
+        /// Use this field to use the rotations of the skeleton's bones. You
+        /// will need to use <see cref="OVRExtensions.FromFlippedZQuatf(OVRPlugin.Quatf)"/>
+        /// before assigning them to GameObject transforms.
+        /// </summary>
         public OVRPlugin.Quatf[] BoneRotations { get; set; }
+        /// <summary>
+        /// Indicates data validity. Use this field to prevent skeletal updates, coming from
+        /// instances such as <see cref="OVRHand"/> or <see cref="OVRBody"/>, is not valid.
+        /// </summary>
         public bool IsDataValid { get; set; }
+        /// <summary>
+        /// Indicates if the data is high confidence or not. Use this to prevent skeletal
+        /// updates if the data is not considered highly confident.
+        /// </summary>
         public bool IsDataHighConfidence { get; set; }
+        /// <summary>
+        /// Use this field to use the positions of the skeleton's bones, and you
+        /// will need to use <see cref="OVRExtensions.FromFlippedZVector3f(OVRPlugin.Vector3f)"/>
+        /// before assigning them to GameObject transforms.
+        /// </summary>
         public OVRPlugin.Vector3f[] BoneTranslations { get; set; }
+        /// <summary>
+        /// The skeleton change count field, which usually increments when a
+        /// skeleton has changed. Use this field to react to these events by
+        /// detecting changes in its value when [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/)
+        /// skeleton updates.
+        /// </summary>
         public int SkeletonChangedCount { get; set; }
     }
 
+    /// <summary>
+    /// The enum that indicates the type of skeleton that is association
+    /// with a <see cref="OVRSkeleton"/> instance. Use this to react to different
+    /// skeletal types. For instance, a hand skeleton will have different bones relative
+    /// to body tracking skeletons, and <see cref="OVRPlugin.SkeletonType.Body"/>
+    /// skeleton will only track bones of the upper body while <see cref="OVRPlugin.SkeletonType.FullBody"/>
+    /// tracks the legs as well.
+    /// <remarks>
+    /// Depending on the enum, you may want to retarget to a character in a different manner
+    /// or not retarget if the skeletal type does not match the character.
+    /// </remarks>
+    /// </summary>
     public enum SkeletonType
     {
         None = OVRPlugin.SkeletonType.None,
@@ -51,11 +134,20 @@ public class OVRSkeleton : MonoBehaviour
         FullBody = OVRPlugin.SkeletonType.FullBody,
     }
 
+    /// <summary>
+    /// The enum encompassing all possible bone types. This includes hand
+    /// tracking bones, upper body tracking bones, and full body
+    /// tracking bones (which includes the legs). Note that some values
+    /// of this enum overlap each other, so if you wish to use this for
+    /// UI components, consider creating an custom enum to maps to the
+    /// subset of <see cref="OVRSkeleton.BoneId"/> that is applicable to
+    /// your use case.
+    /// </summary>
     public enum BoneId
     {
         Invalid = OVRPlugin.BoneId.Invalid,
 
-        // hand bones
+        // Hand bones
         Hand_Start = OVRPlugin.BoneId.Hand_Start,
         Hand_WristRoot = OVRPlugin.BoneId.Hand_WristRoot, // root frame of the hand, where the wrist is located
         Hand_ForearmStub = OVRPlugin.BoneId.Hand_ForearmStub, // frame for user's forearm
@@ -88,7 +180,7 @@ public class OVRSkeleton : MonoBehaviour
         Hand_End = OVRPlugin.BoneId.Hand_End,
 
 
-        // body bones
+        // Upper body bones
         Body_Start = OVRPlugin.BoneId.Body_Start,
         Body_Root = OVRPlugin.BoneId.Body_Root,
         Body_Hips = OVRPlugin.BoneId.Body_Hips,
@@ -284,13 +376,46 @@ public class OVRSkeleton : MonoBehaviour
     protected OVRPlugin.Skeleton2 _skeleton = new OVRPlugin.Skeleton2();
     private readonly Quaternion wristFixupRotation = new Quaternion(0.0f, 1.0f, 0.0f, 0.0f);
 
+    /// <summary>
+    /// Returns the initialized state of the skeleton, which you can use to determine
+    /// if the skeletal data can be used or not.
+    /// </summary>
     public bool IsInitialized { get; private set; }
+    /// <summary>
+    /// Indicates if the skeletal data is valid or not, which you can use to determine
+    /// if the skeletal data, coming from <see cref="IOVRSkeletonDataProvider"/>, can be used or not.
+    /// <remarks>
+    /// Note that one such provider can be <see cref="OVRBody"/>, which relates to
+    /// [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/).
+    /// </remarks>
+    /// </summary>
     public bool IsDataValid { get; private set; }
+    /// <summary>
+    /// Indicates if the skeletal data is high confidence or not, which you can use to determine
+    /// if the skeletal data can be used or not.
+    /// </summary>
     public bool IsDataHighConfidence { get; private set; }
+    /// <summary>
+    /// The current bones associated with the skeleton. Use this field to update any GameObjects that
+    /// track skeletal bones.
+    /// </summary>
     public IList<OVRBone> Bones { get; protected set; }
+    /// <summary>
+    /// The bones of the bind pose associated with the skeleton. Use this to understand
+    /// the bind pose of the skeleton based on the last update of it.
+    /// </summary>
     public IList<OVRBone> BindPoses { get; private set; }
+    /// <summary>
+    /// The bone capsules objects associated with the skeleton's bones, assuming that physics
+    /// capsules have been created.
+    /// </summary>
     public IList<OVRBoneCapsule> Capsules { get; private set; }
 
+    /// <summary>
+    /// The skeleton type associated with this instance. This could be hand,
+    /// upper body, or full body.
+    /// </summary>
+    /// <returns>The skeletal type.</returns>
     public SkeletonType GetSkeletonType()
     {
         return _skeletonType;
@@ -321,11 +446,22 @@ public class OVRSkeleton : MonoBehaviour
         };
     }
 
+    /// <summary>
+    /// Indicates if the bone ID is valid given the skeleton type (hand, upper or full body) that
+    /// this instance tracks.
+    /// </summary>
+    /// <param name="bone">Bone ID.</param>
+    /// <returns>If the bone ID is valid for this skeleton instance.</returns>
     public bool IsValidBone(BoneId bone)
     {
         return OVRPlugin.IsValidBone((OVRPlugin.BoneId)bone, (OVRPlugin.SkeletonType)_skeletonType);
     }
 
+    /// <summary>
+    /// Skeleton changed property. This value can increment during skeletal change
+    /// events. Use this if your code or character needs to respond to these changes,
+    /// in case your retargeting algorithm has to react to properly map to a character.
+    /// </summary>
     public int SkeletonChangedCount { get; private set; }
 
     protected virtual void Awake()
@@ -370,7 +506,7 @@ public class OVRSkeleton : MonoBehaviour
 
     /// <summary>
     /// Start this instance.
-    /// Initialize data structures.
+    /// Initialize data structures related to the body tracking's skeleton.
     /// </summary>
     protected virtual void Start()
     {
@@ -795,6 +931,12 @@ public class OVRSkeleton : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Returns the starting bone ID of the skeleton type being tracked
+    /// by this skeleton. This depends on the skeleton type, whether that is
+    /// hand, body or full body.
+    /// </summary>
+    /// <returns>Start bone ID of the current skeleton.</returns>
     public BoneId GetCurrentStartBoneId()
     {
         switch (_skeletonType)
@@ -812,6 +954,12 @@ public class OVRSkeleton : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Returns the end bone ID of the skeleton type being tracked
+    /// by this skeleton. This depends on the skeleton type, whether that is
+    /// hand, body or full body.
+    /// </summary>
+    /// <returns>End bone ID of the current skeleton.</returns>
     public BoneId GetCurrentEndBoneId()
     {
         switch (_skeletonType)
@@ -846,6 +994,12 @@ public class OVRSkeleton : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Returns the number of bones of the current skeleton type. You may
+    /// use the return value to match the number of bones being retargeted to on a third
+    /// party character.
+    /// </summary>
+    /// <returns>The number of bones being tracked by the skeleton.</returns>
     public int GetCurrentNumBones()
     {
         switch (_skeletonType)
@@ -861,6 +1015,12 @@ public class OVRSkeleton : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Returns the number of skinnable bones. Use this to compare
+    /// against the number of skinnable bones on a third party character
+    /// of your choice.
+    /// </summary>
+    /// <returns>The current number of skinnable bones.</returns>
     public int GetCurrentNumSkinnableBones()
     {
         switch (_skeletonType)
@@ -876,7 +1036,14 @@ public class OVRSkeleton : MonoBehaviour
         }
     }
 
-    // force aliased enum values to the more appropriate value
+    /// <summary>
+    /// Returns the bone label associated with the bone ID. Use this to
+    /// label GameObjects that might track bones, or any use requires
+    /// debugging bones visually in a game or experience.
+    /// </summary>
+    /// <param name="skeletonType">Skeleton type (hand, body, full body).</param>
+    /// <param name="boneId">Bone ID.</param>
+    /// <returns>Bone label.</returns>
     public static string BoneLabelFromBoneId(SkeletonType skeletonType, BoneId boneId)
     {
         if (skeletonType == SkeletonType.Body)
@@ -1279,16 +1446,54 @@ public class OVRSkeleton : MonoBehaviour
         type.IsHand();
 }
 
+/// <summary>
+/// OVRBone represents bone data obtained from hand or
+/// <see href="https://developer.oculus.com/documentation/unity/move-body-tracking/"/>body</see>
+/// tracking. You can use it to access the transform that tracks the bone's movements,
+/// as well as the bone ID associated with the transform. You can retarget each bone
+/// to a character's skeleton so that a person's movements can be represented
+/// by a visual representation.
+/// <remarks>
+/// Find examples of how this class is used in <see cref="OVRSkeleton"/>.
+/// </remarks>
+/// </summary>
 public class OVRBone : System.IDisposable
 {
+    /// <summary>
+    /// The identifier associated with the bone being tracked. For instance,
+    /// the Id can correspond to body tracking spine bones and you may use them
+    /// to deduce curvature. Query the <see cref="OVRSkeleton">'s
+    /// <see cref="OVRSkeleton.Bones"/> and <see cref="OVRSkeleton.BindPoses"/>
+    /// fields to look up bones by this identifier.
+    /// </summary>
     public OVRSkeleton.BoneId Id { get; set; }
+    /// <summary>
+    /// The index of the parent bone, if one exists, for the current bone.
+    /// Use this field to index into the list of available bones.
+    /// </summary>
     public short ParentBoneIndex { get; set; }
+    /// <summary>
+    /// The transform that is created at runtime. Use this to track the
+    /// pose of the character's bone.
+    /// </summary>
     public Transform Transform { get; set; }
 
+    /// <summary>
+    /// OVRBone constructor which does not require joint data as arguments,
+    /// which means its fields will remain invalid unless you set them
+    /// after instantiation.
+    /// </summary>
     public OVRBone()
     {
     }
 
+    /// <summary>
+    /// OVRBone constructor that requires joint data as arguments, such as the
+    /// bone ID, parent bone index, and the transform associated with the bone.
+    /// </summary>
+    /// <param name="id">Bone ID.</param>
+    /// <param name="parentBoneIndex">Parent bone index.</param>
+    /// <param name="trans">Associated bone transform.</param>
     public OVRBone(OVRSkeleton.BoneId id, short parentBoneIndex, Transform trans)
     {
         Id = id;
@@ -1296,6 +1501,11 @@ public class OVRBone : System.IDisposable
         Transform = trans;
     }
 
+    /// <summary>
+    /// This function destroys the GameObject tracking the skeletal bone. This
+    /// prevents the GameObject from persisting after the skeleton instance is no
+    /// longer relevant.
+    /// </summary>
     public void Dispose()
     {
         if (Transform != null)
@@ -1306,16 +1516,45 @@ public class OVRBone : System.IDisposable
     }
 }
 
+/// <summary>
+/// The bone capsule class tracks data related to capsule colliders that
+/// may or may not be created with skeleton bones. You may use this to
+/// control physics interactions with the skeleton in case the user requires
+/// collision-based interactions in a game or experience.
+/// </summary>
 public class OVRBoneCapsule
 {
+    /// <summary>
+    /// The index of the bone that is associated with the current
+    /// capsule. When used with hand tracking, use to understand what
+    /// part of the hand corresponds with this instance's capsule.
+    /// </summary>
     public short BoneIndex { get; set; }
+    /// <summary>
+    /// The rigidbody of the capsule, which you can use to make the
+    /// capsule kinematic or not.
+    /// </summary>
     public Rigidbody CapsuleRigidbody { get; set; }
+    /// <summary>
+    /// The capsule collider associated with the instance. Use this
+    /// to enable, disable or influence the collisions of the bone's
+    /// capsule.
+    /// </summary>
     public CapsuleCollider CapsuleCollider { get; set; }
 
+    /// <summary>
+    /// Standard constructor which leaves all fields uninitialized.
+    /// </summary>
     public OVRBoneCapsule()
     {
     }
 
+    /// <summary>
+    /// Constructor that completely initializes the bone capsule instance.
+    /// </summary>
+    /// <param name="boneIndex">Bone index.</param>
+    /// <param name="capsuleRigidBody">Bone capsule's rigid body.</param>
+    /// <param name="capsuleCollider">Bone capsule collider.</param>
     public OVRBoneCapsule(short boneIndex, Rigidbody capsuleRigidBody, CapsuleCollider capsuleCollider)
     {
         BoneIndex = boneIndex;
@@ -1323,6 +1562,10 @@ public class OVRBoneCapsule
         CapsuleCollider = capsuleCollider;
     }
 
+    /// <summary>
+    /// Cleans up physics-based objects associated with bone. The
+    /// capsule rigid body's GameObject is destroyed.
+    /// </summary>
     public void Cleanup()
     {
         if (CapsuleRigidbody != null)

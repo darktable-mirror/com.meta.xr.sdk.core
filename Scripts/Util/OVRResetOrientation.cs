@@ -21,7 +21,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Allows you to reset VR input tracking with a gamepad button press.
+/// A helper class that allows you to reset VR input tracking with a gamepad button press.
+/// Note: This behaviour only supports Oculus Rift; on Quest, the recentering can only be triggered by the system.
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-core-overview/#scriptss")]
 public class OVRResetOrientation : MonoBehaviour

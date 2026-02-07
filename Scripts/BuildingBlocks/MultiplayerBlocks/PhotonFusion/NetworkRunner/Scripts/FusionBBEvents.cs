@@ -26,6 +26,11 @@ using UnityEngine;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
+    /// <summary>
+    /// A helper class to easily expose the Photon Fusion callbacks to other Building Blocks. For a full documentation
+    /// of all the exposed callbacks please see the <see cref="INetworkRunnerCallbacks"/> documentation page
+    /// https://doc-api.photonengine.com/en/fusion/v2/interface_fusion_1_1_i_network_runner_callbacks.html.
+    /// </summary>
     public class FusionBBEvents : MonoBehaviour, INetworkRunnerCallbacks
     {
         // The INetworkRunnerCallbacks interface has to be placed in the root of the

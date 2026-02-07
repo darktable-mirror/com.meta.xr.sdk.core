@@ -23,6 +23,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 
 [Feature(Feature.TrackedKeyboard)]
+[HelpURL("https://developer.oculus.com/documentation/unity/tk-overview/")]
 public class OVRTrackedKeyboardHands : MonoBehaviour
 {
     public GameObject LeftHandPresence;
@@ -437,9 +438,9 @@ public class OVRTrackedKeyboardHands : MonoBehaviour
         {
             var entry = boneMappings_[index];
 
-            var ovrBoneStringLeft = OVRSkeleton.BoneLabelFromBoneId(OVRSkeleton.SkeletonType.HandLeft, entry.BoneName);
+            var ovrBoneStringLeft = OVRSkeleton.BoneLabelFromBoneId(leftHandSkeleton_.GetSkeletonType(), entry.BoneName);
             var ovrBoneStringRight =
-                OVRSkeleton.BoneLabelFromBoneId(OVRSkeleton.SkeletonType.HandRight, entry.BoneName);
+                OVRSkeleton.BoneLabelFromBoneId(rightHandSkeleton_.GetSkeletonType(), entry.BoneName);
 
             boneMappings_[index].LeftHandTransform =
                 leftHand_.transform.FindChildRecursive(ovrBoneStringLeft);

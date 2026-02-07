@@ -21,7 +21,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
 
 internal class OVRCompositionUtil
 {

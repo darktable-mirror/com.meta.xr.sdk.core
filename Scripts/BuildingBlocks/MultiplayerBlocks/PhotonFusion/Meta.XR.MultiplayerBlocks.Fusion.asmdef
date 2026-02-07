@@ -33,7 +33,7 @@
         },
         {
             "name": "com.meta.xr.sdk.avatars",
-            "expression": "",
+            "expression": "[24.0.0,28.0)",
             "define": "META_AVATAR_SDK_DEFINED"
         },
         {

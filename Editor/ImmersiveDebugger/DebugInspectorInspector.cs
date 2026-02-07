@@ -19,7 +19,6 @@
  */
 
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.StatusMenu;
@@ -148,7 +147,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                         using (var changedCheckScope = new EditorGUI.ChangeCheckScope())
                         {
                             member.DrawTweak();
-                            member._editorSelectedGizmoIndex = member.DrawGizmo(member._editorSelectedGizmoIndex);
+                            member.DrawGizmo();
 
                             EditorGUI.BeginChangeCheck();
                             var color = EditorGUILayout.ColorField(
@@ -164,6 +163,10 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                             attribute.Category = EditorGUILayout.TextField(
                                 new GUIContent("Category", "Optional category for a specific tab in Inspector Panel"),
                                 attribute.Category);
+
+                            attribute.DisplayName = EditorGUILayout.TextField(
+                                new GUIContent("Display Name", DebugMember.DisplayNameTooltip),
+                                attribute.DisplayName);
 
                             _hasChanged |= changedCheckScope.changed;
                         }

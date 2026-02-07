@@ -28,8 +28,17 @@ using UnityEngine.Serialization;
 using ColorMapType = OVRPlugin.InsightPassthroughColorMapType;
 
 /// <summary>
-/// A layer used for passthrough.
+/// Represents a layer used for passthrough.
 /// </summary>
+/// <remarks>
+/// The Passthrough API enables you to show the user's real environment in your mixed reality experiences.
+/// It offers several options to customize the appearance of passthrough, such as adjusting opacity, highlight salient edges in the image, or control the color reproduction.
+/// For passthrough to be visible, it must be enabled in <see cref="OVRManager"/>
+/// via the <see cref="OVRManager.isInsightPassthroughEnabled"/> field.
+///
+/// Find out more about [passthrough and its features](https://developer.oculus.com/documentation/unity/unity-passthrough/)
+/// or follow along with these [tutorials](https://developer.oculus.com/documentation/unity/unity-passthrough-tutorial).
+/// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-passthrough-gs/")]
 [Feature(Feature.Passthrough)]
 public class OVRPassthroughLayer : MonoBehaviour
@@ -41,10 +50,10 @@ public class OVRPassthroughLayer : MonoBehaviour
     /// </summary>
     public enum ProjectionSurfaceType
     {
-        // Reconstructed surface type will render passthrough using automatic environment depth reconstruction
+        /// Reconstructed surface type will render passthrough using automatic environment depth reconstruction.
         Reconstructed,
 
-        /// UserDefined allows you to define a surface
+        /// UserDefined allows you to define the projection surface manually, see [Surface Projected Passthrough](https://developer.oculus.com/documentation/unity/unity-customize-passthrough-surface-projected-passthrough/).
         UserDefined
     }
 
@@ -57,43 +66,51 @@ public class OVRPassthroughLayer : MonoBehaviour
     public ProjectionSurfaceType projectionSurfaceType = ProjectionSurfaceType.Reconstructed;
 
     /// <summary>
-    /// Overlay type that defines the placement of the passthrough layer to appear on top as an overlay or beneath as an underlay of the application’s main projection layer. By default, the passthrough layer appears as an overlay.
+    /// Specify whether passthrough should appear on top of (`OverlayType.Overlay`) or beneath (`OverlayType.Underlay`) the virtual content. The default is `Overlay`.
     /// </summary>
     public OVROverlay.OverlayType overlayType = OVROverlay.OverlayType.Overlay;
 
     /// <summary>
-    /// The compositionDepth defines the order of the layers in composition. The layer with smaller compositionDepth would be composited in the front of the layer with larger compositionDepth. The default value is zero.
+    /// Defines the order of the layers among all passthrough layers and OVROverlay instances. The layer with smaller compositionDepth
+    /// is composited in the front of the layer with larger compositionDepth. The default value is zero.
     /// </summary>
     public int compositionDepth = 0;
 
     /// <summary>
-    /// Property that can hide layers when required. Should be false when present, true when hidden. By default, the value is set to false, which means the layers are present.
+    /// Hides the passthrough layer from view when `true` and pauses the system's passthrough system if there are no other visible passthrough layers.
     /// </summary>
     public bool hidden = false;
 
     /// <summary>
-    /// Specify whether `colorScale` and `colorOffset` should be applied to this layer. By default, the color scale and offset are not applied to the layer.
+    /// Specify whether `colorScale` and `colorOffset` field values should be applied to this layer. By default, the color scale and offset are not applied to the layer.
     /// </summary>
     public bool overridePerLayerColorScaleAndOffset = false;
 
     /// <summary>
     /// Color scale is a factor applied to the pixel color values during compositing.
     /// The four components of the vector correspond to the R, G, B, and A values, default set to `{1,1,1,1}`.
+    /// This field is only applicable if #overridePerLayerColorScaleAndOffset is set to 'true'.
     /// </summary>
     public Vector4 colorScale = Vector4.one;
 
     /// <summary>
     /// Color offset is a value which gets added to the pixel color values during compositing.
     /// The four components of the vector correspond to the R, G, B, and A values, default set to `{0,0,0,0}`.
+    /// This field is only applicable if #overridePerLayerColorScaleAndOffset is set to 'true'.
     /// </summary>
     public Vector4 colorOffset = Vector4.zero;
 
     /// <summary>
-    /// Add a GameObject to the Insight Passthrough projection surface. This is only applicable
-    /// if the projection surface type is `UserDefined`.
-    /// When `updateTransform` parameter is set to `true`, OVRPassthroughLayer will update the transform
-    /// of the surface mesh every frame. Otherwise only the initial transform is recorded.
+    /// Adds a GameObject to the passthrough projection surface.
     /// </summary>
+    /// <remarks>
+    /// This is only applicable if #projectionSurfaceType is set to \link ProjectionSurfaceType::UserDefined UserDefined \endlink. Refer to
+    /// [Surface Projected Passthrough](https://developer.oculus.com/documentation/unity/unity-customize-passthrough-surface-projected-passthrough/)
+    /// for more details.
+    ///
+    /// When `updateTransform` parameter is set to `true`, current layer will update the transform
+    /// of the surface mesh every frame. Otherwise only the initial transform is recorded.
+    /// </remarks>
     /// <param name="obj">The Gameobject you want to add to the Insight Passthrough projection surface.</param>
     /// <param name="updateTransform">Indicate if the transform should be updated every frame</param>
     public void AddSurfaceGeometry(GameObject obj, bool updateTransform = false)
@@ -129,7 +146,7 @@ public class OVRPassthroughLayer : MonoBehaviour
     /// <summary>
     /// Removes a GameObject that was previously added using `AddSurfaceGeometry` from the projection surface.
     /// </summary>
-    /// <param name="obj">The Gameobject to remove. </param>
+    /// <param name="obj">The GameObject to remove.</param>
     public void RemoveSurfaceGeometry(GameObject obj)
     {
         PassthroughMeshInstance passthroughMeshInstance;
@@ -158,15 +175,15 @@ public class OVRPassthroughLayer : MonoBehaviour
     /// <summary>
     /// Checks if the given gameobject is a surface geometry (If called with AddSurfaceGeometry).
     /// </summary>
-    /// <returns> True if the gameobject is a surface geometry. </returns>
+    /// <returns> `true` if the GameObject has been added to the passthrough projection surface.</returns>
     public bool IsSurfaceGeometry(GameObject obj)
     {
         return surfaceGameObjects.ContainsKey(obj) || deferredSurfaceGameObjects.Exists(x => x.gameObject == obj);
     }
 
     /// <summary>
-    /// Float that defines the passthrough texture opacity.
-    /// Value range from 0f to 1f.
+    /// Defines the passthrough opacity. It can be used to blend between passthrough and VR when `overlayType` is set to `OverlayType.Overlay`, or to dim passthrough when `overlayType is set to `OverlayType.Underlay`.
+    /// Value ranges from 0f to 1f.
     /// </summary>
     public float textureOpacity
     {
@@ -183,7 +200,7 @@ public class OVRPassthroughLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// Enable or disable the Edge rendering.
+    /// Enables or disables edge rendering.
     /// Use this flag to enable or disable the edge rendering but retain the previously selected color (incl. alpha)
     /// in the UI when it is disabled.
     /// </summary>
@@ -226,7 +243,7 @@ public class OVRPassthroughLayer : MonoBehaviour
     /// Occurs when a passthrough layer has been rendered and presented on the HMD screen for the first time after being restarted.
     /// </summary>
     /// <remarks>
-    /// @params (OVRPassthroughLayer passthroughLayer): the sender of the event
+    /// This event passes the reference to the current <see cref="OVRPassthroughLayer"/> passthrough layer to subscribers.
     /// </remarks>
     public UnityEvent<OVRPassthroughLayer> passthroughLayerResumed = new();
 
@@ -248,13 +265,16 @@ public class OVRPassthroughLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// Applies a color LUT to the passthrough layer.
+    /// Applies a color look-up table (LUT) to the passthrough layer. Color LUTs enable a wide range of effects, ranging from
+    /// subtle color grading to stylizations such as posterization, selective coloring, and chroma keying. See
+    /// [Color Mapping Techniques](https://developer.oculus.com/documentation/unity/unity-customize-passthrough-color-mapping/)
+    /// for more details.
     /// </summary>
-    /// <param name="lut"></param>
-    /// <param name="weight"> Value between 0 and 1 which defines the blend between the original Passthrough colors and
-    ///   the LUT. If `weight` is 0, the appearance of Passthrough is unchanged. If `weight` is 1, the colors are fully
-    ///   taken from the LUT. Values between 0 and 1 lead to a linear interpolation between the original color and the
-    ///   LUT color. This value can be animated to create smooth transitions.
+    /// <param name="lut">An instance of <see cref="OVRPassthroughColorLut"/> containing the color LUT.</param>
+    /// <param name="weight">Value between 0 and 1 which defines the blend between the original Passthrough colors and
+    /// the LUT. If `weight` is 0, the appearance of Passthrough is unchanged. If `weight` is 1, the colors are fully
+    /// taken from the LUT. Values between 0 and 1 lead to a linear interpolation between the original color and the
+    /// LUT color. This value can be animated to create smooth transitions.
     /// </param>
     public void SetColorLut(OVRPassthroughColorLut lut, float weight = 1)
     {
@@ -273,13 +293,14 @@ public class OVRPassthroughLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// Applies the interpolation between two color LUTs to the passthrough layer.
+    /// Applies the interpolation between two color LUTs to the passthrough layer. Use it to transition
+    /// between two different color LUTs.
     /// </summary>
-    /// <param name="lutSource"></param>
-    /// <param name="lutTarget"></param>
+    /// <param name="lutSource">An instance of <see cref="OVRPassthroughColorLut"/> containing the source color LUT</param>
+    /// <param name="lutTarget">An instance of <see cref="OVRPassthroughColorLut"/> containing the target color LUT</param>
     /// <param name="weight">Value between 0 and 1 which defines the blend between lutSource and lutTarget. The output
-    ///   color is computed as `C_result = (1 - weight) * lutSource[C_in] + weight * lutTarget[C_in]`, where `C_in`
-    ///   represents the original Passthrough color. This value can be animated to create smooth transitions.
+    /// color is computed as `C_result = (1 - weight) * lutSource[C_in] + weight * lutTarget[C_in]`, where `C_in`
+    /// represents the original Passthrough color. This value can be animated to create smooth transitions.
     /// </param>
     public void SetColorLut(OVRPassthroughColorLut lutSource, OVRPassthroughColorLut lutTarget, float weight)
     {
@@ -302,9 +323,9 @@ public class OVRPassthroughLayer : MonoBehaviour
     /// This method allows to generate (and apply) a color map from the set of controls which is also available in
     /// inspector.
     /// </summary>
-    /// <param name="contrast">The contrast value. Range from -1 (minimum) to 1 (maximum). </param>
-    /// <param name="brightness">The brightness value. Range from 0 (minimum) to 1 (maximum). </param>
-    /// <param name="posterize">The posterize value. Range from 0 to 1, where 0 = no posterization (no effect), 1 = reduce to two colors. </param>
+    /// <param name="contrast">The contrast value. Ranges from -1 (minimum) to 1 (maximum). </param>
+    /// <param name="brightness">The brightness value. Ranges from 0 (minimum) to 1 (maximum). </param>
+    /// <param name="posterize">The posterize value. Ranges from 0 to 1, where 0 = no posterization (no effect), 1 = reduce to two colors. </param>
     /// <param name="gradient">The gradient will be evaluated from 0 (no intensity) to 1 (maximum intensity).
     /// This parameter only has an effect if `colorMapType` is `GrayscaleToColor`.</param>
     /// <param name="colorMapType">Type of color map which should be generated. Supported values: `Grayscale` and `GrayscaleToColor`.</param>
@@ -381,9 +402,8 @@ public class OVRPassthroughLayer : MonoBehaviour
         UpdateColorMapFromControls();
     }
 
-
     /// <summary>
-    /// Disables color mapping. Use this to remove any effects.
+    /// Disables any previously set color maps or color LUTs.
     /// </summary>
     public void DisableColorMap()
     {

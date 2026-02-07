@@ -759,7 +759,6 @@ public class OVRManifestPreprocessor
                 else
                     targetDeviceValue += "|quest";
             }
-
             if (OVRDeviceSelector.isTargetDeviceQuest2)
             {
                 if (string.IsNullOrEmpty(targetDeviceValue))
@@ -767,7 +766,6 @@ public class OVRManifestPreprocessor
                 else
                     targetDeviceValue += "|quest2";
             }
-
             if (OVRDeviceSelector.isTargetDeviceQuestPro)
             {
                 if (string.IsNullOrEmpty(targetDeviceValue))
@@ -778,9 +776,16 @@ public class OVRManifestPreprocessor
             if (OVRDeviceSelector.isTargetDeviceQuest3)
             {
                 if (string.IsNullOrEmpty(targetDeviceValue))
-                    targetDeviceValue = "eureka";
+                    targetDeviceValue = "quest3";
                 else
-                    targetDeviceValue += "|eureka";
+                    targetDeviceValue += "|quest3";
+            }
+            if (OVRDeviceSelector.isTargetDeviceQuest3S)
+            {
+                if (string.IsNullOrEmpty(targetDeviceValue))
+                    targetDeviceValue = "quest3s";
+                else
+                    targetDeviceValue += "|quest3s";
             }
             if (string.IsNullOrEmpty(targetDeviceValue))
             {

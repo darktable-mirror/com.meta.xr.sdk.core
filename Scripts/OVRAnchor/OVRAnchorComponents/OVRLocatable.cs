@@ -27,8 +27,12 @@ using UnityEngine;
 /// <remarks>
 /// This component can be accessed from an <see cref="OVRAnchor"/> that supports it by calling
 /// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.
+///
 /// This component needs to be enabled before requesting its Pose. See <see cref="IsEnabled"/> and
 /// <see cref="SetEnabledAsync"/>
+///
+/// Read more about anchors generally at
+/// [Spatial Anchors Overview](https://developer.oculus.com/documentation/unity/unity-spatial-anchors-overview/)
 /// </remarks>
 /// <seealso cref="TrackingSpacePose"/>
 /// <seealso cref="TryGetSceneAnchorPose"/>
@@ -36,11 +40,15 @@ using UnityEngine;
 public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>, IEquatable<OVRLocatable>
 {
     /// <summary>
-    /// Tracking space position and rotation of the anchor
+    /// Tracking space position and rotation of the anchor.
     /// </summary>
     /// <remarks>
-    /// Position and rotation are both nullable <see cref="Vector3"/> and <see cref="Quaternion"/>
-    /// and might be null independently if one of them or both are invalid.
+    /// Obtain a <see cref="TrackingSpacePose"/> from <see cref="OVRLocatable.TryGetSceneAnchorPose"/> or
+    /// <see cref="OVRLocatable.TryGetSpatialAnchorPose"/> depending on the type of anchor you wish to interpret it as.
+    ///
+    /// Position and rotation are both nullable [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html) and
+    /// [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html) and might be null independently if one of
+    /// them or both are invalid.
     /// </remarks>
     /// <seealso cref="Position"/>
     /// <seealso cref="IsPositionTracked"/>
@@ -51,10 +59,11 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
     public readonly struct TrackingSpacePose
     {
         /// <summary>
-        /// Position in tracking space of the anchor
+        /// Position in tracking space of the anchor.
         /// </summary>
         /// <remarks>
-        /// Null if and when the position is invalid
+        /// Null if and when the rotation is invalid. This constitutes the positional aspect of the anchor's pose. See
+        /// <see cref="Rotation"/> for the rotational part.
         /// </remarks>
         /// <seealso cref="Rotation"/>
         /// <seealso cref="ComputeWorldPosition"/>
@@ -62,10 +71,11 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
         public Vector3? Position { get; }
 
         /// <summary>
-        /// Rotation in tracking space of the Anchor
+        /// Rotation in tracking space of the anchor.
         /// </summary>
         /// <remarks>
-        /// Null if and when the rotation is invalid
+        /// Null if and when the rotation is invalid. This constitutes the rotational aspect of the anchor's pose. See
+        /// <see cref="Position"/> for the positional part.
         /// </remarks>
         /// <seealso cref="Position"/>
         /// <seealso cref="ComputeWorldPosition"/>
@@ -73,12 +83,12 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
         public Quaternion? Rotation { get; }
 
         /// <summary>
-        /// Indicates whether or not the position is currently tracked
+        /// Indicates whether the position is currently tracked.
         /// </summary>
         public bool IsPositionTracked => _flags.IsPositionTracked();
 
         /// <summary>
-        /// Indicates whether or not the rotation is currently tracked
+        /// Indicates whether the rotation is currently tracked.
         /// </summary>
         public bool IsRotationTracked => _flags.IsOrientationTracked();
 
@@ -96,12 +106,12 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
                                                                   "Use an overload with the 'trackingSpaceToWorldSpaceTransform' parameter instead.";
 
         /// <summary>
-        /// Computes the world space position of the anchor
+        /// \deprecated Computes the world space position of the anchor
         /// </summary>
         /// <param name="camera">A <see cref="Camera"/> component that will be use to compute the transform to world space</param>
         /// <returns>
-        /// The nullable <see cref="Vector3"/> position in world space which may be
-        /// null if and when <see cref="Position"/> is invalid or head pose is invalid.
+        /// Returns the nullable [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html) position in world
+        /// space which may be null if and when <see cref="Position"/> is invalid or head pose is invalid.
         /// </returns>
         /// <seealso cref="Position"/>
         /// <seealso cref="Rotation"/>
@@ -130,12 +140,12 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
         }
 
         /// <summary>
-        /// Computes the world space rotation of the anchor
+        /// \deprecated Computes the world space rotation of the anchor
         /// </summary>
         /// <param name="camera">A <see cref="Camera"/> component that will be use to compute the transform to world space</param>
         /// <returns>
-        /// The nullable <see cref="Quaternion"/> rotation in world space which may be
-        /// null if and when <see cref="Rotation"/> is invalid or if head rotation is invalid.
+        /// The nullable [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html) rotation in world space
+        /// which may be null if and when <see cref="Rotation"/> is invalid or if head rotation is invalid.
         /// </returns>
         /// <seealso cref="Position"/>
         /// <seealso cref="Rotation"/>
@@ -159,9 +169,10 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
         }
 
         /// <summary>
-        /// Returns world-space position of the anchor.
+        /// Computes the world-space position of the anchor.
         /// </summary>
         /// <param name="trackingSpaceToWorldSpaceTransform">Uses this transform to convert position from tracking-space to world-space.</param>
+        /// <returns>The world-space position of the anchor, or `null` if <see cref="Position"/> does not have a value.</returns>
         public Vector3? ComputeWorldPosition(Transform trackingSpaceToWorldSpaceTransform)
         {
             if (trackingSpaceToWorldSpaceTransform == null)
@@ -176,9 +187,10 @@ public readonly partial struct OVRLocatable : IOVRAnchorComponent<OVRLocatable>,
         }
 
         /// <summary>
-        /// Returns world-space rotation of the anchor.
+        /// Computes the world-space rotation of the anchor.
         /// </summary>
         /// <param name="trackingSpaceToWorldSpaceTransform">Uses this transform to convert rotation from tracking-space to world-space.</param>
+        /// <returns>The world-space rotation of the anchor, or `null` if <see cref="Rotation"/> does not have a value.</returns>
         public Quaternion? ComputeWorldRotation(Transform trackingSpaceToWorldSpaceTransform)
         {
             if (trackingSpaceToWorldSpaceTransform == null)

@@ -26,7 +26,7 @@ using UnityEngine;
 using System;
 using System.IO;
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
 public class OVRMixedRealityCaptureSettings : ScriptableObject, OVRMixedRealityCaptureConfiguration
 {
     public bool enableMixedReality = false;

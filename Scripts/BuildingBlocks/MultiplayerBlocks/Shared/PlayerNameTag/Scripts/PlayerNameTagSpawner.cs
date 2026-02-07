@@ -25,12 +25,42 @@ using Random = UnityEngine.Random;
 
 namespace Meta.XR.MultiplayerBlocks.Shared
 {
+    /// <summary>
+    /// The interface used for spawning name tags for connected players over different networking frameworks.
+    /// </summary>
+    /// <remarks>Currently there are implementations for Photon Fusion (<see cref="PlayerNameTagSpawnerFusion"/>) and Unity Netcode for Gameobjects (<see cref="PlayerNameTagSpawnerNGO"/>)
+    /// for spawning name tags, but more may be added using this interface.</remarks>
     public interface INameTagSpawner
     {
+        /// <summary>
+        /// Indicates whether this player has fully connected to the game/app room.
+        /// You can use this to determine when to spawn the name tag.
+        /// </summary>
         public bool IsConnected { get; }
+
+        /// <summary>
+        /// Spawns the name tag with the given username for this player.
+        /// </summary>
+        /// <param name="playerName">The selected username for this player.</param>
         public void Spawn(string playerName);
     }
 
+
+    /// <summary>
+    /// The class responsible for the logic of spawning player name tags, (excluding the networking part which is handled via the
+    /// <see cref="INameTagSpawner"/> interface).
+    /// The player name used will be one of the following:
+    /// <list type="bullet">
+    /// <item>
+    /// <description>If it's possible to fetch the player's oculus account we use its username.</description>
+    /// </item>
+    /// <item>
+    /// <description>If it's not possible we create a randomized name based on the available <see cref="namePrefix"/> and <see cref="namePostfix"/> serialized lists.</description>
+    /// </item>
+    /// </list>
+    /// </summary>
+    /// <remarks><see cref="namePrefix"/> and <see cref="namePostfix"/> come with a small set of initial values for demonstration purposes
+    /// which can be changed to best fit your project's needs.</remarks>
     public class PlayerNameTagSpawner : MonoBehaviour
     {
         [Header("Randomized name for non-entitled folks eg. 'HappyHippo'", order = 1)]

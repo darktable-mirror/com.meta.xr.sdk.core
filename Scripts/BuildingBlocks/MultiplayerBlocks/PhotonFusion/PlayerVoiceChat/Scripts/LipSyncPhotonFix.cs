@@ -29,6 +29,11 @@ using Photon.Voice.Unity;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
+    /// <summary>
+    /// A helper class to ensure the correct behaviour of lip sync with the Meta Avatars when using the Photon Fusion
+    /// networking framework.
+    /// For the setup of lip sync and networked voice using Photon Fusion, see <see cref="VoiceSetup"/>.
+    /// </summary>
 #if PHOTON_VOICE_DEFINED
     [RequireComponent(typeof(Recorder))]
 #endif // PHOTON_VOICE_DEFINED
@@ -68,7 +73,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
     }
 
 #if META_AVATAR_SDK_DEFINED && PHOTON_VOICE_DEFINED
-    class ProcessVoiceDataToLipsync : IProcessor<float>
+    internal class ProcessVoiceDataToLipsync : IProcessor<float>
     {
         private const int bitsPerSample = 32;
         private OvrAvatarLipSyncContext lipsync;

@@ -26,7 +26,10 @@ using System.Collections.Generic;
 /// </summary>
 /// <remarks>
 /// This component can be accessed from an <see cref="OVRAnchor"/> that supports it by calling
-/// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.s
+/// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.
+///
+/// The anchor container is part of the Meta Quest Scene Model. Read more at
+/// [Scene Overview](https://developer.oculus.com/documentation/unity/unity-scene-overview/).
 /// </remarks>
 /// <seealso cref="Uuids"/>
 /// <seealso cref="FetchChildrenAsync"/>
@@ -36,7 +39,14 @@ public readonly partial struct OVRAnchorContainer : IOVRAnchorComponent<OVRAncho
     /// <summary>
     /// Uuids of the anchors contained by this Anchor Container.
     /// </summary>
-    /// <seealso cref="OVRAnchor.FetchAnchorsAsync(System.Collections.Generic.IEnumerable{System.Guid},System.Collections.Generic.IList{OVRAnchor},OVRSpace.StorageLocation,double)"/>
+    /// <remarks>
+    /// The UUIDs can be passed to
+    /// <see cref="OVRAnchor.FetchAnchorsAsync(List{OVRAnchor},OVRAnchor.FetchOptions,Action{List{OVRAnchor},int})"/>
+    /// to obtain runtime instances of those anchors. Alternatively, you can use <see cref="FetchAnchorsAsync"/>
+    /// to combine this call with
+    /// <see cref="OVRAnchor.FetchAnchorsAsync(List{OVRAnchor},OVRAnchor.FetchOptions,Action{List{OVRAnchor},int})"/>.
+    /// </remarks>
+    /// <seealso cref="OVRAnchor.FetchAnchorsAsync(List{OVRAnchor},OVRAnchor.FetchOptions,Action{List{OVRAnchor},int})"/>
     /// <exception cref="InvalidOperationException">If it fails to retrieve the Uuids, which could happen if the component is not supported or enabled.</exception>
     public Guid[] Uuids => OVRPlugin.GetSpaceContainer(Handle, out var containerUuids)
         ? containerUuids
@@ -49,8 +59,8 @@ public readonly partial struct OVRAnchorContainer : IOVRAnchorComponent<OVRAncho
     /// <remarks>
     /// \deprecated This method is obsolete. Use <see cref="FetchAnchorsAsync"/> instead.
     ///
-    /// Dispose of the returned <see cref="OVRTask{T}"/> if you don't use the results</remarks>
-    /// <returns>An <see cref="OVRTask{T}"/> that will eventually let you test if the fetch was successful or not.
+    /// Dispose of the returned <see cref="OVRTask"/>&lt;bool&gt; if you don't use the results</remarks>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; that will eventually let you test if the fetch was successful or not.
     /// If the result is true, then the <see cref="anchors"/> parameter has been populated with the requested anchors.</returns>
     /// <exception cref="InvalidOperationException">If it fails to retrieve the Uuids</exception>
     /// <exception cref="ArgumentNullException">If parameter anchors is null</exception>
@@ -62,8 +72,8 @@ public readonly partial struct OVRAnchorContainer : IOVRAnchorComponent<OVRAncho
     /// </summary>
     /// <param name="anchors">List that will get cleared and populated with the requested anchors.</param>
     /// <remarks>
-    /// Dispose of the returned <see cref="OVRTask{T}"/> if you don't use the results</remarks>
-    /// <returns>An <see cref="OVRTask{T}"/> that will eventually let you test if the fetch was successful or not.
+    /// Dispose of the returned <see cref="OVRTask"/> if you don't use the results</remarks>
+    /// <returns>Returns an <see cref="OVRTask"/> that will eventually let you test if the fetch was successful or not.
     /// If the result is true, then the <see cref="anchors"/> parameter has been populated with the requested anchors.</returns>
     /// <exception cref="InvalidOperationException">If it fails to retrieve the Uuids</exception>
     /// <exception cref="ArgumentNullException">If parameter anchors is null</exception>

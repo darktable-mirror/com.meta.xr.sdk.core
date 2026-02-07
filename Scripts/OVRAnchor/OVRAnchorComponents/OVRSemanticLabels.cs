@@ -28,6 +28,9 @@ using UnityEngine;
 /// <remarks>
 /// This component can be accessed from an <see cref="OVRAnchor"/> that supports it by calling
 /// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.
+///
+/// The semantic labels comonent is part of the Meta Quest Scene Model. Read more at
+/// [Scene Overview](https://developer.oculus.com/documentation/unity/unity-scene-overview/).
 /// </remarks>
 /// <seealso cref="Labels"/>
 public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemanticLabels>, IEquatable<OVRSemanticLabels>
@@ -60,10 +63,10 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
     internal const string DeprecationMessage = "String-based labels are deprecated (v65). Please use the equivalent enum-based methods.";
 
     /// <summary>
-    /// Semantic Labels. Please use <see cref="GetClassifications"/> instead.
+    /// \deprecated Semantic Labels. Please use <see cref="GetClassifications"/> instead.
     /// </summary>
     /// <returns>
-    /// <para>Comma-separated values in one <see cref="string"/></para>
+    /// <para>Returns comma-separated values in one <see cref="string"/></para>
     /// </returns>
     /// <exception cref="Exception">If it fails to get the semantic labels</exception>
     [Obsolete(DeprecationMessage)]
@@ -100,10 +103,8 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
             classifications.Add(Classification.WallFace);
     }
 
-    /// <summary>
-    /// Convert a single label into a Classification.
-    /// Be aware: unsupported labels are always OTHER (including deprecated DESK).
-    /// </summary>
+    // Convert a single label into a Classification.
+    // NOTE: unsupported labels are always OTHER (including deprecated DESK).
     internal static Classification FromApiLabel(ReadOnlySpan<char> singleLabel)
     {
         if (singleLabel.SequenceEqual("FLOOR")) return Classification.Floor;
@@ -127,9 +128,7 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
         return Classification.Other;
     }
 
-    /// <summary>
-    /// Converts a comma separated list of labels into a list of Classifications.
-    /// </summary>
+    // Converts a comma separated list of labels into a list of Classifications.
     internal static void FromApiString(ReadOnlySpan<char> apiLabels, ICollection<Classification> classifications)
     {
         // we avoid string.Split(',') because of allocations
@@ -162,9 +161,7 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
         }
     }
 
-    /// <summary>
-    /// Convert a single classification into an API label.
-    /// </summary>
+    // Convert a single classification into an API label.
     internal static string ToApiLabel(Classification classification) =>
         classification switch
         {
@@ -189,10 +186,7 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
 #pragma warning restore CS0618, CS0612 // Type or member is obsolete
         };
 
-    /// <summary>
-    /// Convert a list of classifications into a comma-separated string.
-    /// Null returns the empty string.
-    /// </summary>
+    // Convert a list of classifications into a comma-separated string. Null returns the empty string.
     internal static string ToApiString(IReadOnlyList<Classification> classifications)
     {
         if (classifications == null) return string.Empty;
@@ -200,7 +194,10 @@ public readonly partial struct OVRSemanticLabels : IOVRAnchorComponent<OVRSemant
         using (new OVRObjectPool.ListScope<string>(out var labels))
         {
             foreach (var classification in classifications)
+            {
                 labels.Add(ToApiLabel(classification));
+            }
+
             return string.Join(',', labels);
         }
     }

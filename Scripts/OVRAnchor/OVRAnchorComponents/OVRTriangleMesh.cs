@@ -30,6 +30,9 @@ using static OVRPlugin;
 /// <remarks>
 /// This component can be accessed from an <see cref="OVRAnchor"/> that supports it by calling
 /// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.
+///
+/// The triangle mesh component is part of the Meta Quest Scene Model. Read more at
+/// [Scene Overview](https://developer.oculus.com/documentation/unity/unity-scene-overview/).
 /// </remarks>
 /// <seealso cref="TryGetCounts"/>
 /// <seealso cref="TryGetMeshRawUntransformed"/>
@@ -48,7 +51,7 @@ public readonly partial struct OVRTriangleMesh
     /// </remarks>
     /// <param name="vertexCount">The number of vertices in the mesh.</param>
     /// <param name="triangleCount">The number of triangles in the mesh. There are three times as many indices.</param>
-    /// <returns>True if the counts were retrieved; otherwise, false.</returns>
+    /// <returns>Returns true if the counts were retrieved; otherwise, false.</returns>
     public bool TryGetCounts(out int vertexCount, out int triangleCount)
         => GetSpaceTriangleMeshCounts(Handle, out vertexCount, out triangleCount);
 
@@ -81,7 +84,7 @@ public readonly partial struct OVRTriangleMesh
     /// </remarks>
     /// <param name="positions">The vertex positions of the mesh.</param>
     /// <param name="indices">The triangle indices of the mesh.</param>
-    /// <returns>True if the mesh data was retrieved; otherwise, false.</returns>
+    /// <returns>Returns true if the mesh data was retrieved; otherwise, false.</returns>
     public bool TryGetMeshRawUntransformed(NativeArray<Vector3> positions, NativeArray<int> indices)
         => GetSpaceTriangleMesh(Handle, positions, indices);
 
@@ -98,7 +101,7 @@ public readonly partial struct OVRTriangleMesh
     /// </remarks>
     /// <param name="positions">The vertex positions of the mesh.</param>
     /// <param name="indices">The triangle indices of the mesh.</param>
-    /// <returns>True if the mesh data was retrieved; otherwise, false.</returns>
+    /// <returns>Returns true if the mesh data was retrieved; otherwise, false.</returns>
     public bool TryGetMesh(NativeArray<Vector3> positions, NativeArray<int> indices)
     {
         if (!TryGetMeshRawUntransformed(positions, indices)) return false;

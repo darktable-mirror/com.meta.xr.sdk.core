@@ -47,8 +47,17 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         internal bool enableVerboseLogging = false;
     }
 
+    /// <summary>
+    /// The class responsible for storing and applying the debugging options and callbacks for the Colocation
+    /// functionality of the Meta Quest SDK. For more information on Colocation, see [Learn Mixed Reality Development through Discover Showcase](https://developer.oculus.com/documentation/unity/unity-learn-mixed-reality-through-discover/).
+    /// </summary>
+    /// <remarks>Currently there are implementations for Photon Fusion and Unity Netcode for Gameobjects
+    /// for networking the Colocation state, but more can be added using this controller.</remarks>
     public class ColocationController : MonoBehaviour
     {
+        /// <summary>
+        /// An event triggered when the Colocation is ready to be used by the game.
+        /// </summary>
         [SerializeField]
         public UnityEvent ColocationReadyCallbacks;
         [SerializeField]

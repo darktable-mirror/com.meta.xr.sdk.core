@@ -36,14 +36,31 @@ using Debug = UnityEngine.Debug;
 /// Represents a spatial anchor.
 /// </summary>
 /// <remarks>
+/// A spatial anchor tracks a real-world pose and provides world-locking capability for virtual content. Read more at
+/// [Spatial Anchor Overview](https://developer.oculus.com/documentation/unity/unity-spatial-anchors-persist-content/#ovrspatialanchor-component).
+///
 /// This component can be used in two ways: to create a new spatial anchor or to bind to an existing spatial anchor.
 ///
 /// To create a new spatial anchor, simply add this component to any GameObject. The transform of the GameObject is used
-/// to create a new spatial anchor in the Oculus Runtime. Afterwards, the GameObject's transform will be updated
+/// to create a new spatial anchor in the Meta Quest Runtime. Afterwards, the GameObject's transform will be updated
 /// automatically. The creation operation is asynchronous, and, if it fails, this component will be destroyed.
 ///
 /// To load previously saved anchors and bind them to an <see cref="OVRSpatialAnchor"/>, see
 /// <see cref="LoadUnboundAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor},Action{List{UnboundAnchor},int})"/>.
+///
+/// <example>Example:
+/// <code><![CDATA[
+/// async void CreateSpatialAnchor(GameObject gameObject) {
+///   // Add the component to a GameObject
+///   var anchor = gameObject.AddComponent<OVRSpatialAnchor>();
+///
+///   // Wait for creation+localization
+///   await anchor.WhenLocalizedAsync();
+///
+///   // Anchor is ready to use
+///   Debug.Log($"Anchor created at {anchor.transform.position}");
+/// }
+/// ]]></code></example>
 /// </remarks>
 [DisallowMultipleComponent]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-spatial-anchors-persist-content/#ovrspatialanchor-component")]
@@ -113,7 +130,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     public bool PendingCreation => this && _requestId != 0;
 
     /// <summary>
-    /// Creates an async task that completes when <see cref="Created"/> becomes `True`.
+    /// Creates an async task that completes when <see cref="Created"/> becomes `true`.
     /// </summary>
     /// <remarks>
     /// Anchor creation is asynchronous, and adding this component to a `GameObject` will start the creation operation.
@@ -130,8 +147,8 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// ]]></code>
     /// </example>
     /// </remarks>
-    /// <returns>A task-like object that can be used to track the completion of the creation. If creation succeeds,
-    /// the result of the task is `True`, otherwise `False`.</returns>
+    /// <returns>Returns a task-like object that can be used to track the completion of the creation. If creation succeeds,
+    /// the result of the task is `true`, otherwise `false`.</returns>
     public async OVRTask<bool> WhenCreatedAsync()
     {
         while (this && !Created && !_creationFailed)
@@ -163,7 +180,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     ///
     /// If the localization operation has already completed, this method returns immediately.
     ///
-    /// The `bool` result of the returned <see cref="OVRTask{TResult}"/> indicates whether localization was successful.
+    /// The `bool` result of the returned <see cref="OVRTask"/>&lt;bool&gt; indicates whether localization was successful.
     ///
     /// <example>
     /// To create a new spatial anchor and wait until it is both created and localized, you can use code like this:
@@ -176,7 +193,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// ]]></code>
     /// </example>
     /// </remarks>
-    /// <returns>A task-like object that can be used to track the completion of the asynchronous localization operation.</returns>
+    /// <returns>Returns a task-like object that can be used to track the completion of the asynchronous localization operation.</returns>
     public async OVRTask<bool> WhenLocalizedAsync()
     {
         if (!await WhenCreatedAsync())
@@ -203,11 +220,11 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The specified user will be able to download, track, and share specified anchors.
     /// </summary>
     /// <remarks>
-    /// This method is asynchronous; use the returned <see cref="OVRTask{TResult}"/> to be notified of completion.
+    /// This method is asynchronous; use the returned <see cref="OVRTask"/> to be notified of completion.
     /// </remarks>
     /// <param name="user">An Oculus user to share the anchor with.</param>
     /// <returns>
-    /// An <see cref="OVRTask{TResult}"/> with a <see cref="OperationResult"/> type parameter indicating the success of the share operation.
+    /// Returns an <see cref="OVRTask"/>&lt;<see cref="OperationResult"/>&gt; indicating the success of the share operation.
     /// </returns>
     public OVRTask<OperationResult> ShareAsync(OVRSpaceUser user)
     {
@@ -221,12 +238,12 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The specified user will be able to download, track, and share specified anchors.
     /// </summary>
     /// <remarks>
-    /// This method is asynchronous; use the returned <see cref="OVRTask{TResult}"/> to be notified of completion.
+    /// This method is asynchronous; use the returned <see cref="OVRTask"/> to be notified of completion.
     /// </remarks>
     /// <param name="user1">An Oculus user to share the anchor with.</param>
     /// <param name="user2">An Oculus user to share the anchor with.</param>
     /// <returns>
-    /// An <see cref="OVRTask{TResult}"/> with a <see cref="OperationResult"/> type parameter indicating the success of the share operation.
+    /// Returns an <see cref="OVRTask"/>&lt;<see cref="OperationResult"/>&gt; indicating the success of the share operation.
     /// </returns>
     public OVRTask<OperationResult> ShareAsync(OVRSpaceUser user1, OVRSpaceUser user2)
     {
@@ -241,13 +258,13 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The specified user will be able to download, track, and share specified anchors.
     /// </summary>
     /// <remarks>
-    /// This method is asynchronous; use the returned <see cref="OVRTask{TResult}"/> to be notified of completion.
+    /// This method is asynchronous; use the returned <see cref="OVRTask"/> to be notified of completion.
     /// </remarks>
     /// <param name="user1">An Oculus user to share the anchor with.</param>
     /// <param name="user2">An Oculus user to share the anchor with.</param>
     /// <param name="user3">An Oculus user to share the anchor with.</param>
     /// <returns>
-    /// An <see cref="OVRTask{TResult}"/> with a <see cref="OperationResult"/> type parameter indicating the success of the share operation.
+    /// Returns an <see cref="OVRTask"/>&lt;<see cref="OperationResult"/>&gt; indicating the success of the share operation.
     /// </returns>
     public OVRTask<OperationResult> ShareAsync(OVRSpaceUser user1, OVRSpaceUser user2, OVRSpaceUser user3)
     {
@@ -263,14 +280,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The specified user will be able to download, track, and share specified anchors.
     /// </summary>
     /// <remarks>
-    /// This method is asynchronous; use the returned <see cref="OVRTask{TResult}"/> to be notified of completion.
+    /// This method is asynchronous; use the returned <see cref="OVRTask"/> to be notified of completion.
     /// </remarks>
     /// <param name="user1">An Oculus user to share the anchor with.</param>
     /// <param name="user2">An Oculus user to share the anchor with.</param>
     /// <param name="user3">An Oculus user to share the anchor with.</param>
     /// <param name="user4">An Oculus user to share the anchor with.</param>
     /// <returns>
-    /// An <see cref="OVRTask{TResult}"/> with a <see cref="OperationResult"/> type parameter indicating the success of the share operation.
+    /// Returns an <see cref="OVRTask"/>&lt;<see cref="OperationResult"/>&gt; indicating the success of the share operation.
     /// </returns>
     public OVRTask<OperationResult> ShareAsync(OVRSpaceUser user1, OVRSpaceUser user2, OVRSpaceUser user3,
         OVRSpaceUser user4)
@@ -288,11 +305,11 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The specified user will be able to download, track, and share specified anchors.
     /// </summary>
     /// <remarks>
-    /// This method is asynchronous; use the returned <see cref="OVRTask{TResult}"/> to be notified of completion.
+    /// This method is asynchronous; use the returned <see cref="OVRTask"/> to be notified of completion.
     /// </remarks>
     /// <param name="users">A collection of Oculus users to share the anchor with.</param>
     /// <returns>
-    /// An <see cref="OVRTask{TResult}"/> with a <see cref="OperationResult"/> type parameter indicating the success of the share operation.
+    /// Returns an <see cref="OVRTask"/>&lt;<see cref="OperationResult"/>&gt; indicating the success of the share operation.
     /// </returns>
     public OVRTask<OperationResult> ShareAsync(IEnumerable<OVRSpaceUser> users)
     {
@@ -307,14 +324,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// <remarks>
     /// The <see cref="users"/> will be able to download, localize, and share the specified <see cref="anchors"/>.
     ///
-    /// This method is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to monitor completion.
+    /// This method is asynchronous. Use the returned <see cref="OVRTask"/> to monitor completion.
     ///
     /// This operation fully succeeds or fails, which means, either all anchors are successfully shared
     /// or the operation fails.
     /// </remarks>
     /// <param name="anchors">The collection of anchors to share.</param>
     /// <param name="users">An array of Oculus users to share these anchors with.</param>
-    /// <returns>A task that can be used to track the completion of the sharing operation.</returns>
+    /// <returns>Returns a task that can be used to track the completion of the sharing operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> is `null`.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="users"/> is `null`.</exception>
     public static OVRTask<OperationResult> ShareAsync(IEnumerable<OVRSpatialAnchor> anchors,
@@ -405,7 +422,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// Saves a collection of anchors.
     /// </summary>
     /// <remarks>
-    /// This method is asynchronous; use the returned <see cref="OVRTask{TResult}"/> to be notified of completion.
+    /// This method is asynchronous; use the returned <see cref="OVRTask"/> to be notified of completion.
     /// When saved, the <see cref="OVRSpatialAnchor"/> can be loaded by a different session. Use
     /// <see cref="LoadUnboundAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor},Action{List{UnboundAnchor},int})"/>
     /// to load some or all <see cref="OVRSpatialAnchor"/> at a future time.
@@ -414,7 +431,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// fails.
     /// </remarks>
     /// <param name="anchors">The anchors to save (up to 32).</param>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous save operation.</returns>
+    /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous save operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> is `null`.</exception>
     /// <seealso cref="SaveAnchorAsync"/>
     /// <exception cref="ArgumentException">Thrown if <paramref name="anchors"/> contains more than 32 anchors.</exception>
@@ -439,7 +456,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// Saves this anchor to persistent storage.
     /// </summary>
     /// <remarks>
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     ///
     /// When saved, an <see cref="OVRSpatialAnchor"/> can be loaded by a different session. Use the
@@ -447,7 +464,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     ///
     /// NOTE: If you have a collection of anchors to save, it is more efficient to use <see cref="SaveAnchorsAsync"/>.
     /// </remarks>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous save operation.</returns>
+    /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous save operation.</returns>
     /// <seealso cref="SaveAnchorsAsync"/>
     public OVRTask<OVRResult<OVRAnchor.SaveResult>> SaveAnchorAsync() => _anchor.SaveAsync();
 
@@ -455,12 +472,12 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// Erase the anchor from persistent storage.
     /// </summary>
     /// <remarks>
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     ///
     /// NOTE: If you have a collection of anchors to save, it is more efficient to use <see cref="EraseAnchorsAsync"/>.
     /// </remarks>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous erase operation.</returns>
+    /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous erase operation.</returns>
     /// <seealso cref="EraseAnchorsAsync"/>
     public OVRTask<OVRResult<OVRAnchor.EraseResult>> EraseAnchorAsync() => _anchor.EraseAsync();
 
@@ -468,14 +485,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// Erase a collection of anchors from persistent storage.
     /// </summary>
     /// <remarks>
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     ///
     /// The total number of anchors (<paramref name="anchors"/> and <paramref name="uuids"/>) may not exceed 32.
     /// </remarks>
     /// <param name="anchors">(Optional) The anchors to erase</param>
     /// <param name="uuids">(Optional) The UUIDs to erase</param>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous erase operation.</returns>
+    /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous erase operation.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="anchors"/> and <paramref name="uuids"/> are both `null`.</exception>
     /// <seealso cref="EraseAnchorAsync"/>
     /// <exception cref="ArgumentException">Thrown if the combined number of <paramref name="anchors"/> and
@@ -672,13 +689,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         new Dictionary<ulong, MultiAnchorDelegatePair>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void InitializeOnLoad()
+    private static void InitializeOnLoad()
     {
         CreationRequests.Clear();
         MultiAnchorCompletionDelegates.Clear();
         SpatialAnchors.Clear();
     }
 
+    /// <summary>This is an internal member.</summary>
     static OVRSpatialAnchor()
     {
         OVRManager.SpatialAnchorCreateComplete += OnSpatialAnchorCreateComplete;
@@ -824,11 +842,11 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         ///
         /// If the anchor is not localized, this method throws `InvalidOperationException`. If the anchor has been
         /// localized, but the pose cannot be retrieved (for example, because of a temporary tracking issue), then this
-        /// method returns `False`, and you should try again later.
+        /// method returns `false`, and you should try again later.
         /// </remarks>
-        /// <param name="pose">If this method returns `True`, then <paramref name="pose"/> will contain the world space
-        /// pose of the anchor. If this method returns `False`, <paramref name="pose"/> is set to identity.</param>
-        /// <returns>Returns `True` if the pose could be obtained, otherwise `False`.</returns>
+        /// <param name="pose">If this method returns `true`, then <paramref name="pose"/> will contain the world space
+        /// pose of the anchor. If this method returns `false`, <paramref name="pose"/> is set to identity.</param>
+        /// <returns>Returns `true` if the pose could be obtained, otherwise `false`.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the anchor is invalid, e.g., because it has been destroyed.</exception>
         /// <exception cref="InvalidOperationException">Thrown if the anchor has not been localized.</exception>
         public bool TryGetPose(out Pose pose)
@@ -870,7 +888,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         /// </remarks>
         /// <param name="timeout">The timeout, in seconds, to attempt localization, or zero to indicate no timeout.</param>
         /// <returns>
-        /// An <see cref="OVRTask{TResult}"/> with a boolean type parameter indicating the success of the localization.
+        /// Returns an <see cref="OVRTask"/>&lt;bool&gt; indicating the success of the localization.
         /// </returns>
         /// <exception cref="InvalidOperationException">Thrown if the anchor does not support localization, e.g.,
         /// because it is invalid.</exception>
@@ -948,7 +966,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     ///
     /// NOTE: This method will only process the first 50 UUIDs provided by <paramref name="uuids"/>.
     ///
-    /// This method is asynchronous. The returned <see cref="OVRTask{TResult}"/> completes when all results are
+    /// This method is asynchronous. The returned <see cref="OVRTask"/> completes when all results are
     /// available. However, anchors may be loaded in batches. To be notified as the results of individual batches are
     /// loaded, provide an <paramref name="onIncrementalResultsAvailable"/> callback. The callback accepts two
     /// parameters: <code><![CDATA[(List<UnboundAnchor> unboundAnchors, int startingIndex)]]></code>
@@ -970,7 +988,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// <param name="unboundAnchors">The buffer to store the resulting unbound anchors into.</param>
     /// <param name="onIncrementalResultsAvailable">An optional callback that is invoked whenever a new batch of unbound
     /// anchors has been loaded.</param>
-    /// <returns>A new <see cref="OVRTask{TResult}"/> that completes when the loading operation completes.</returns>
+    /// <returns>A new <see cref="OVRTask"/> that completes when the loading operation completes.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uuids"/> is `null`.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="unboundAnchors"/> is `null`.</exception>
     public static OVRTask<OVRResult<List<UnboundAnchor>, OVRAnchor.FetchResult>> LoadUnboundAnchorsAsync(
@@ -1048,7 +1066,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     }
 
 
-    static async OVRTask<OVRResult<List<UnboundAnchor>, OVRAnchor.FetchResult>> LoadUnboundAnchorsAsync(
+    private static async OVRTask<OVRResult<List<UnboundAnchor>, OVRAnchor.FetchResult>> LoadUnboundAnchorsAsync(
         OVRAnchor.FetchOptions fetchOptions, List<UnboundAnchor> unboundAnchors,
         Action<List<UnboundAnchor>, int> resultsHandler)
     {
@@ -1246,21 +1264,28 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     }
 
     /// <summary>
-    /// Possible results of operations related to anchor sharing.
+    /// Possible results of various anchor operations.
     /// </summary>
+    /// <seealso cref="OnLocalize"/>
+    /// <seealso cref="ShareAsync(OVRSpaceUser)"/>
+    /// <seealso cref="ShareAsync(OVRSpaceUser,OVRSpaceUser)"/>
+    /// <seealso cref="ShareAsync(OVRSpaceUser,OVRSpaceUser,OVRSpaceUser)"/>
+    /// <seealso cref="ShareAsync(OVRSpaceUser,OVRSpaceUser,OVRSpaceUser,OVRSpaceUser)"/>
+    /// <seealso cref="ShareAsync(IEnumerable{OVRSpaceUser})"/>
+    /// <seealso cref="ShareAsync(IEnumerable{OVRSpatialAnchor},IEnumerable{OVRSpaceUser})"/>
     [OVRResultStatus]
     public enum OperationResult
     {
-        /// <summary>Operation succeeded.</summary>
+        /// <summary>The operation succeeded</summary>
         Success = OVRPlugin.Result.Success,
 
-        /// <summary>Operation failed.</summary>
+        /// <summary>The operation failed with no additional details</summary>
         Failure = OVRPlugin.Result.Failure,
 
-        /// <summary>Invalid data.</summary>
+        /// <summary>The operation failed because the associated data is invalid</summary>
         Failure_DataIsInvalid = OVRPlugin.Result.Failure_DataIsInvalid,
 
-        /// <summary>Saving anchors to cloud storage is not permitted by the user.</summary>
+        /// <summary>The operation failed because saving anchors to cloud storage is not permitted by the user.</summary>
         Failure_SpaceCloudStorageDisabled = OVRPlugin.Result.Failure_SpaceCloudStorageDisabled,
 
         /// <summary>
@@ -1281,16 +1306,15 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         Failure_SpaceNetworkRequestFailed = OVRPlugin.Result.Failure_SpaceNetworkRequestFailed,
     }
 
-    /// <summary>
-    /// This struct helped inverting callback signature
-    /// when using OVRTasks. OVRTasks expect <c>Action{TResult, TCapture}</c> signature
-    /// but public API requires <c>Action{TCapture, TResult}</c> signature.
-    /// </summary>
+    // This struct helps inverting callback signature
+    // when using OVRTasks. OVRTasks expect <code><![CDATA[Action<TResult, TCapture>]]></code> signature
+    // but public API requires <code><![CDATA[Action<TCapture, TResult>]]></code> signature.
     private readonly struct InvertedCapture<TResult, TCapture>
     {
-        private static readonly Action<TResult, InvertedCapture<TResult, TCapture>> Delegate = Invoke;
+        private static readonly Action<TResult, InvertedCapture<TResult, TCapture>> s_delegate = Invoke;
 
         private readonly TCapture _capture;
+
         private readonly Action<TCapture, TResult> _callback;
 
         private InvertedCapture(Action<TCapture, TResult> callback, TCapture capture)
@@ -1307,32 +1331,97 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         public static void ContinueTaskWith(OVRTask<TResult> task, Action<TCapture, TResult> onCompleted,
             TCapture state)
         {
-            task.ContinueWith(Delegate, new InvertedCapture<TResult, TCapture>(onCompleted, state));
+            task.ContinueWith(s_delegate, new InvertedCapture<TResult, TCapture>(onCompleted, state));
         }
     }
 }
 
+/// <summary>
+/// Extension methods for <see cref="OVRSpatialAnchor.OperationResult"/>.
+/// </summary>
+/// <remarks>
+/// An <see cref="OVRSpatialAnchor.OperationResult"/> represents the result of an asynchronous operation of a method in
+/// the <see cref="OVRSpatialAnchor"/> class.
+///
+/// An operation may either succeed, in which case <see cref="IsSuccess"/> is true, or fail, in which case
+/// <see cref="IsError"/> is true and the value of the <see cref="OVRSpatialAnchor.OperationResult"/> will provide
+/// the reason for the failure.
+/// </remarks>
 public static class OperationResultExtensions
 {
+    /// <summary>
+    /// Tests whether an <see cref="OVRSpatialAnchor.OperationResult"/> represents an unqualified success.
+    /// </summary>
+    /// <param name="res">The value to test.</param>
+    /// <returns>Returns `true` if <paramref name="res"/> is a successful result, otherwise `false`.</returns>
     public static bool IsSuccess(this OVRSpatialAnchor.OperationResult res) => res == OVRSpatialAnchor.OperationResult.Success;
+
+    /// <summary>
+    /// Tests whether an <see cref="OVRSpatialAnchor.OperationResult"/> represents an error.
+    /// </summary>
+    /// <param name="res">The value to test.</param>
+    /// <returns>Returns `true` if <paramref name="res"/> is an error result, otherwise `false`.</returns>
     public static bool IsError(this OVRSpatialAnchor.OperationResult res) => res < 0;
+
+    /// <summary>
+    /// (Obsolete) Tests whether an <see cref="OVRSpatialAnchor.OperationResult"/> represents a warning (also known as a
+    /// "qualified success").
+    /// </summary>
+    /// <remarks>
+    /// \deprecated A warning (or "qualified success") means that the operation didn't fail, but succeeded with some additional
+    /// information.
+    ///
+    /// There are no <see cref="OVRSpatialAnchor.OperationResult"/> values that represent warnings, so this method need
+    /// not be used.
+    /// </remarks>
+    /// <param name="res">The value to test.</param>
+    /// <returns>Returns `true` if <paramref name="res"/> is a warning, otherwise `false`.</returns>
+    [Obsolete("There are no OperationResults that are considered warnings so this method will always return False.")]
     public static bool IsWarning(this OVRSpatialAnchor.OperationResult res) => res > 0;
 }
 
 /// <summary>
-/// Represents a user for purposes of sharing scene anchors
+/// Represents a user for purposes of sharing scene anchors.
 /// </summary>
+/// <remarks>
+/// In order to share an anchor, you need to specify the user or users with whom you'd like to share those anchor(s).
+///
+/// A "space user" represents an Oculus user and is used by the following methods:
+/// - <see cref="OVRSpatialAnchor.ShareAsync(OVRSpaceUser)"/>
+/// - <see cref="OVRSpatialAnchor.ShareAsync(OVRSpaceUser,OVRSpaceUser)"/>
+/// - <see cref="OVRSpatialAnchor.ShareAsync(OVRSpaceUser,OVRSpaceUser,OVRSpaceUser)"/>
+/// - <see cref="OVRSpatialAnchor.ShareAsync(OVRSpaceUser,OVRSpaceUser,OVRSpaceUser,OVRSpaceUser)"/>
+/// - <see cref="OVRSpatialAnchor.ShareAsync(IEnumerable{OVRSpaceUser})"/>
+/// - <see cref="OVRSpatialAnchor.ShareAsync(IEnumerable{OVRSpatialAnchor},IEnumerable{OVRSpaceUser})"/>
+///
+/// An <see cref="OVRSpaceUser"/> is a lightweight struct that wraps a native handle to a space user. You can create
+/// an <see cref="OVRSpaceUser"/> from the user id of an Oculus user obtained from the
+/// [Platform SDK](https://developer.oculus.com/documentation/unity/ps-platform-intro/).
+/// </remarks>
 public struct OVRSpaceUser : IDisposable
 {
     internal ulong _handle;
 
     /// <summary>
-    /// Checks if the user is valid
+    /// Checks if the user is valid.
     /// </summary>
+    /// <remarks>
+    /// The <see cref="OVRSpaceUser"/> may be invalid if it has been disposed (<see cref="Dispose"/>) or if it was
+    /// default-constructed, for example:
+    /// <example><code><![CDATA[
+    /// void Test(ulong spaceUserId) {
+    ///   var spaceUser = new OVRSpaceUser(spaceUserId);
+    ///   Debug.Log(spaceUser.Valid); // True
+    ///
+    ///   spaceUser.Dispose();
+    ///   Debug.Log(spaceUser.Valid); // False
+    /// }
+    /// ]]></code></example>
+    /// </remarks>
     public bool Valid => _handle != 0 && Id != 0;
 
     /// <summary>
-    /// Creates a space user handle for given Facebook user ID
+    /// Creates a space user handle for given Oculus user ID.
     /// </summary>
     /// <param name="spaceUserId">The Facebook user ID obtained from the other party over the network</param>
     public OVRSpaceUser(ulong spaceUserId)
@@ -1343,6 +1432,10 @@ public struct OVRSpaceUser : IDisposable
     /// <summary>
     /// The user ID associated with this <see cref="OVRSpaceUser"/>.
     /// </summary>
+    /// <remarks>
+    /// This property is the `spaceUserId` argument provided to the  <see cref="OVRSpaceUser"/> constructor, or zero
+    /// if the <see cref="OVRSpaceUser"/> is not valid (<see cref="Valid"/> is false).
+    /// </remarks>
     public ulong Id => OVRPlugin.GetSpaceUserId(_handle, out var userId) ? userId : 0;
 
     /// <summary>

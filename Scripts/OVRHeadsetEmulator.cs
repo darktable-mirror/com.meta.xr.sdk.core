@@ -25,8 +25,17 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
+/// <summary>
+/// This script enables you to emulate the movement of a headset directly in the Unity Editor.
+/// Any app that uses the <see cref="OVRCameraRig"/> or <see cref="OVRPlayerController"/> prefabs will enable the emulator. Otherwise,
+/// you can attach the OVRHeadsetEmulator to a game object.
+/// For more information, see https://developer.oculus.com/documentation/unity/unity-hmd-emulation/.
+/// </summary>
 public class OVRHeadsetEmulator : MonoBehaviour
 {
+    /// <summary>
+    /// The scope of the headset movement enumeration.
+    /// </summary>
     public enum OpMode
     {
         Off,
@@ -34,12 +43,32 @@ public class OVRHeadsetEmulator : MonoBehaviour
         AlwaysOn
     }
 
+    /// <summary>
+    /// The current scope of the headset movement.
+    ///
+    /// By default, OVRHeadsetEmulator.opMode is set to EditorOnly, which make it effective only in
+    /// the Unity Editor preview window. Set it to AlwaysOn to activate the function in standalone builds.
+    /// </summary>
     public OpMode opMode = OpMode.EditorOnly;
+
+    /// <summary>
+    /// Whether the headset pose should be restored when you press the activate key (e.g. Ctrl).
+    /// </summary>
     public bool resetHmdPoseOnRelease = true;
+
+    /// <summary>
+    /// Whether to cancel all the modification to the headset pose when the middle button is pressed.
+    /// </summary>
     public bool resetHmdPoseByMiddleMouseButton = true;
 
+    /// <summary>
+    /// The key to activate the headset movement emulation.
+    /// </summary>
     public KeyCode[] activateKeys = new KeyCode[] { KeyCode.LeftControl, KeyCode.RightControl, KeyCode.F1 };
 
+    /// <summary>
+    /// The key to adjust the pitch of the headset movement emulation.
+    /// </summary>
     public KeyCode[] pitchKeys = new KeyCode[] { KeyCode.LeftAlt, KeyCode.RightAlt, KeyCode.F2 };
 
 #if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED

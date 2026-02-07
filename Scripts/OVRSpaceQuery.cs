@@ -22,13 +22,13 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// Utility to assist with queries for <see cref="OVRSpace"/>s.
+/// (Internal) Utility to assist with queries for <see cref="OVRSpace"/>s.
 /// </summary>
 [Obsolete("This helper is for xrQuerySpacesFB, which is obsolete. See OVRAnchor.FetchAnchorsAsync.")]
 internal static class OVRSpaceQuery
 {
     /// <summary>
-    /// Represents options used to generate an <see cref="OVRSpaceQuery"/>.
+    /// (Internal) Represents options used to generate an <see cref="OVRSpaceQuery"/>.
     /// </summary>
     public struct Options
     {

@@ -19,10 +19,14 @@
  */
 
 /// <summary>
-/// Interface shared by all components from an <see cref="OVRAnchor"/>.
+/// Interface shared by all <see cref="OVRAnchor"/> components.
 /// </summary>
+/// <remarks>
+/// For more information about the anchor-component model, see
+/// [Spatial Anchor Overview](https://developer.oculus.com/documentation/unity/unity-spatial-anchors-persist-content/#ovrspatialanchor-component).
+/// </remarks>
 /// <typeparam name="T">The actual implementation Type of the interface.</typeparam>
-/// <seealso cref="OVRAnchor.FetchAnchorsAsync{T}"/>
+/// <seealso cref="OVRAnchor.FetchAnchorsAsync(System.Collections.Generic.List{OVRAnchor},OVRAnchor.FetchOptions,System.Action{System.Collections.Generic.List{OVRAnchor},int})"/>
 /// <seealso cref="OVRAnchor.TryGetComponent{T}"/>
 /// <seealso cref="OVRAnchor.SupportsComponent{T}"/>
 public interface IOVRAnchorComponent<T>
@@ -45,10 +49,12 @@ public interface IOVRAnchorComponent<T>
     /// </remarks>
     /// <param name="enable">The desired state of the component.</param>
     /// <param name="timeout">The timeout, in seconds, for the operation. Use zero to indicate an infinite timeout.</param>
-    /// <returns>Returns an <see cref="OVRTask{T}" /> whose result indicates the result of the operation.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; whose result indicates the result of the operation.</returns>
     public OVRTask<bool> SetEnabledAsync(bool enable, double timeout = 0);
 
     internal OVRPlugin.SpaceComponentType Type { get; }
+
     internal ulong Handle { get; }
+
     internal T FromAnchor(OVRAnchor anchor);
 }

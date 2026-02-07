@@ -30,11 +30,32 @@ using TaskResult = OVRResult<System.Collections.Generic.List<OVRAnchor>, OVRAnch
 /// Represents an anchor.
 /// </summary>
 /// <remarks>
-/// Scenes anchors are uniquely identified with their <see cref="Uuid"/>.
-/// <para>You may dispose of an anchor by calling their <see cref="Dispose"/> method.</para>
+/// An <see cref="OVRAnchor"/> can represent either a
+/// ["spatial anchor"](https://developer.oculus.com/documentation/unity/unity-spatial-anchors-overview/),
+/// which is created and managed by the app, or a
+/// ["scene anchor"](https://developer.oculus.com/documentation/unity/unity-scene-overview/),
+/// which is created and managed by the system and used to represent the Scene Model.
+///
+/// This is a low-level, lightweight interface to access anchors. For more Unity-friendly components, see
+/// <see cref="OVRSpatialAnchor"/> (for spatial anchors) or
+/// [Access Scene data with OVRAnchor](https://developer.oculus.com/documentation/unity/unity-scene-ovranchor/) for Scene.
+///
+/// This API gives you access to all anchor functionality:
+/// - <see cref="FetchAnchorsAsync(List{OVRAnchor},OVRAnchor.FetchOptions,Action{List{OVRAnchor},int})"/>: Query for anchors by UUID or by component types.
+/// - <see cref="CreateSpatialAnchorAsync(Pose)"/>: Create a new spatial anchor (app owned)
+/// - <see cref="GetComponent{T}"/>: Access a component (for example, plane or volume data) associated with an anchor.
+/// - <see cref="ShareAsync(IEnumerable{OVRSpaceUser})"/>: Shares an anchor with one or more users.
+/// - <see cref="SaveAsync()"/>: Saves the anchor to persistent storage.
+/// - <see cref="EraseAsync()"/>: Erases the anchor from persistent storage.
+/// - <see cref="Dispose"/>: Destroys the runtime instance of the anchor.
 /// </remarks>
 public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 {
+    /// <summary>
+    /// Possible results of a save operation.
+    /// </summary>
+    /// <seealso cref="OVRAnchor.SaveAsync()"/>
+    /// <seealso cref="OVRAnchor.SaveAsync(IEnumerable{OVRAnchor})"/>
     [OVRResultStatus]
     public enum SaveResult
     {
@@ -125,6 +146,11 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailurePersistenceNotEnabled = Result.Failure_SpaceComponentNotEnabled,
     }
 
+    /// <summary>
+    /// Possible results of an erase operation.
+    /// </summary>
+    /// <seealso cref="OVRAnchor.EraseAsync()"/>
+    /// <seealso cref="OVRAnchor.EraseAsync(IEnumerable{OVRAnchor},IEnumerable{Guid})"/>
     [OVRResultStatus]
     public enum EraseResult
     {
@@ -186,6 +212,14 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailurePersistenceNotEnabled = Result.Failure_SpaceComponentNotEnabled,
     }
 
+    /// <summary>
+    /// Possible results of a fetch operation.
+    /// </summary>
+    /// <remarks>
+    /// Use <see cref="OVRAnchor.FetchAnchorsAsync(System.Collections.Generic.List{OVRAnchor},OVRAnchor.FetchOptions,System.Action{System.Collections.Generic.List{OVRAnchor},int})"/>
+    /// to query for anchors. When that operation completes, use the resulting status code to determine whether the operation succeeded,
+    /// or why it failed.
+    /// </remarks>
     [OVRResultStatus]
     public enum FetchResult
     {
@@ -266,6 +300,11 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureUnsupported = Result.Failure_Unsupported,
     }
 
+    /// <summary>
+    /// Possible results of a share operation.
+    /// </summary>
+    /// <seealso cref="OVRAnchor.ShareAsync(IEnumerable{OVRSpaceUser})"/>
+    /// <seealso cref="OVRAnchor.ShareAsync(IEnumerable{OVRAnchor},IEnumerable{OVRSpaceUser})"/>
     [OVRResultStatus]
     public enum ShareResult
     {
@@ -342,7 +381,25 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
     #region Static
 
-    public static readonly OVRAnchor Null = new OVRAnchor(0, Guid.Empty);
+    /// <summary>
+    /// Represents a `null` anchor
+    /// </summary>
+    /// <remarks>
+    /// Because <see cref="OVRAnchor"/> is a value-type, it is not C#-nullable. However, if you default-construct an
+    /// <see cref="OVRAnchor"/> (instead of obtaining one from a query or creation method) then it will be equal to
+    /// <see cref="Null"/>. You can test for null by comparing against <see cref="Null"/>:
+    /// <example><code><![CDATA[
+    /// async void CreateAnchor(Pose pose) {
+    ///   var anchor = await OVRAnchor.CreateSpatialAnchorAsync(pose);
+    ///   if (anchor == OVRAnchor.Null) {
+    ///     Debug.LogError("Anchor creation failed!");
+    ///   } else {
+    ///     // anchor is valid
+    ///   }
+    /// }
+    /// ]]></code></example>
+    /// </remarks>
+    public static readonly OVRAnchor Null = new(0, Guid.Empty);
 
     // Called by OVRManager event loop
     internal static void OnSpaceDiscoveryComplete(OVRDeserialize.SpaceDiscoveryCompleteData data)
@@ -357,8 +414,9 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         }
         else
         {
-            Debug.LogError(
-                $"SpaceDiscovery completed but its task does not have an associated anchor List. This is likely a bug. RequestId={data.RequestId}, Result={data.Result}");
+            Debug.Log($"SpaceDiscovery completed but its task does not have an associated anchor List, " +
+                           $"likely due to part of a batch of requests failing. " +
+                           $"RequestId={data.RequestId}, Result={data.Result}");
             result = OVRResult.From((List<OVRAnchor>)null, (FetchResult)data.Result);
         }
 
@@ -422,7 +480,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         taskData.IncrementalResultsCallback?.Invoke(taskData.Anchors, startingIndex);
     }
 
-    struct FetchTaskData
+    private struct FetchTaskData
     {
         public List<OVRAnchor> Anchors;
         public Action<List<OVRAnchor>, int> IncrementalResultsCallback;
@@ -433,7 +491,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// </summary>
     /// <remarks>
     /// This method queries for anchors that match the corresponding <paramref name="options"/>. This method is
-    /// asynchronous; use the returned <see cref="OVRTask{TResult}"/> to check for completion.
+    /// asynchronous; use the returned <see cref="OVRTask"/> to check for completion.
     ///
     /// Anchors may be returned in batches. If <paramref name="incrementalResultsCallback"/> is not `null`, then this
     /// delegate is invoked whenever results become available prior to the completion of the entire operation. New anchors
@@ -445,7 +503,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// <param name="anchors">Container to store the results. The list is cleared before adding any anchors.</param>
     /// <param name="options">Options describing which anchors to fetch.</param>
     /// <param name="incrementalResultsCallback">(Optional) A callback invoked when incremental results are available.</param>
-    /// <returns>An <see cref="OVRTask{TResult}"/> that can be used to track the asynchronous fetch.</returns>
+    /// <returns>Returns an <see cref="OVRTask"/> that can be used to track the asynchronous fetch.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> is `null`.</exception>
     public static OVRTask<TaskResult> FetchAnchorsAsync(
         List<OVRAnchor> anchors, FetchOptions options, Action<List<OVRAnchor>, int> incrementalResultsCallback = null)
@@ -455,20 +513,53 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
         anchors.Clear();
 
-        var result = options.DiscoverSpaces(out var requestId);
-        if (!result.IsSuccess())
+        using (new OVRObjectPool.ListScope<(Result, ulong)>(out var batches))
         {
-            return OVRTask.FromResult(OVRResult.From(anchors, (FetchResult)result));
+            options.DiscoverSpaces(batches);
+
+            // fail now if any results failed, ignoring the other requests
+            foreach (var (result, _) in batches)
+            {
+                if (!result.IsSuccess())
+                {
+                    return OVRTask.FromResult(OVRResult.From(anchors, (FetchResult)result));
+                }
+            }
+
+            // if we only have a single task, avoid the WhenAll
+            if (batches.Count == 1)
+            {
+                return CreateTask(batches[0].Item2);
+            }
+
+            using (new OVRObjectPool.ListScope<OVRTask<TaskResult>>(out var tasks))
+            using (new OVRObjectPool.ListScope<TaskResult>(out var results))
+            {
+                // create a task per batch, all sharing the data
+                foreach (var (_, requestId) in batches)
+                {
+                    tasks.Add(CreateTask(requestId));
+                }
+                return WaitAll(tasks, results);
+            }
         }
 
-        var task = OVRTask.FromRequest<TaskResult>(requestId);
-        task.SetInternalData(new FetchTaskData
+        OVRTask<TaskResult> CreateTask(ulong requestId)
         {
-            Anchors = anchors,
-            IncrementalResultsCallback = incrementalResultsCallback,
-        });
+            var task = OVRTask.FromRequest<TaskResult>(requestId);
+            task.SetInternalData(new FetchTaskData
+            {
+                Anchors = anchors,
+                IncrementalResultsCallback = incrementalResultsCallback,
+            });
+            return task;
+        }
 
-        return task;
+        async OVRTask<TaskResult> WaitAll(List<OVRTask<TaskResult>> tasks, List<TaskResult> results)
+        {
+            await OVRTask.WhenAll(tasks, results);
+            return results.Count != 0 ? results[0] : TaskResult.FromFailure(FetchResult.Failure);
+        }
     }
 
     /// <summary>
@@ -476,7 +567,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// </summary>
     /// <remarks>
     /// Spatial anchor creation is asynchronous. This method initiates a request to create a spatial anchor at
-    /// <paramref name="trackingSpacePose"/>. The returned <see cref="OVRTask{TResult}"/> can be awaited or used to
+    /// <paramref name="trackingSpacePose"/>. The returned <see cref="OVRTask"/>&lt;<see cref="OVRAnchor"/>&gt; can be awaited or used to
     /// track the completion of the request.
     ///
     /// If spatial anchor creation fails, the resulting <see cref="OVRAnchor"/> will be <see cref="OVRAnchor.Null"/>.
@@ -502,7 +593,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// </summary>
     /// <remarks>
     /// Spatial anchor creation is asynchronous. This method initiates a request to create a spatial anchor at
-    /// <paramref name="transform"/>. The returned <see cref="OVRTask{TResult}"/> can be awaited or used to
+    /// <paramref name="transform"/>. The returned <see cref="OVRTask"/>&lt;<see cref="OVRAnchor"/>&gt; can be awaited or used to
     /// track the completion of the request.
     ///
     /// If spatial anchor creation fails, the resulting <see cref="OVRAnchor"/> will be <see cref="OVRAnchor.Null"/>.
@@ -537,13 +628,13 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// This method persists the anchor so that it may be retrieved later, e.g., by using
     /// <see cref="FetchAnchorsAsync(List{OVRAnchor},FetchOptions,Action{List{OVRAnchor},int})"/>.
     ///
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     ///
     /// NOTE: When saving multiple anchors, it is more efficient to save them in a batch using
     /// <see cref="SaveAsync(IEnumerable{OVRAnchor})"/>.
     /// </remarks>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous request.</returns>
+    /// <returns>An awaitable <see cref="OVRTask"/> representing the asynchronous request.</returns>
     /// <seealso cref="FetchAnchorsAsync(List{OVRAnchor},FetchOptions,Action{List{OVRAnchor},int})"/>
     /// <seealso cref="SaveAsync(IEnumerable{OVRAnchor})"/>
     /// <seealso cref="EraseAsync()"/>
@@ -562,11 +653,11 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// <remarks>
     /// This method persists up to 32 anchors so that they may be retrieved later.
     ///
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     /// </remarks>
     /// <param name="anchors">A collection of anchors to persist.</param>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous request.</returns>
+    /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous request.</returns>
     /// <seealso cref="FetchAnchorsAsync(List{OVRAnchor},FetchOptions,Action{List{OVRAnchor},int})"/>
     /// <seealso cref="SaveAsync()"/>
     /// <seealso cref="EraseAsync(IEnumerable{OVRAnchor},IEnumerable{Guid})"/>
@@ -620,13 +711,13 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// <remarks>
     /// This method removes the anchor from persistent storage. Note this does not destroy the current instance.
     ///
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     ///
     /// NOTE: When erasing multiple anchors, it is more efficient to erase them in a batch using
     /// <see cref="EraseAsync(IEnumerable{OVRAnchor},IEnumerable{Guid})"/>.
     /// </remarks>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous request.</returns>
+    /// <returns>An awaitable <see cref="OVRTask"/> representing the asynchronous request.</returns>
     /// <seealso cref="SaveAsync()"/>
     /// <seealso cref="EraseAsync(IEnumerable{OVRAnchor},IEnumerable{Guid})"/>
     public OVRTask<OVRResult<EraseResult>> EraseAsync()
@@ -644,12 +735,12 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// <remarks>
     /// This method removes up to 32 anchors from persistent storage.
     ///
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     /// </remarks>
     /// <param name="anchors">(Optional) A collection of anchors to remove from persistent storage.</param>
     /// <param name="uuids">(Optional) A collection of uuids to remove from persistent storage.</param>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous request.</returns>
+    /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous request.</returns>
     /// <exception cref="ArgumentException">Thrown if both <paramref name="anchors"/> and <paramref name="uuids"/> are `null`.</exception>
     /// <seealso cref="SaveAsync(IEnumerable{OVRAnchor})"/>
     /// <exception cref="ArgumentException">Thrown if the combined number of <paramref name="anchors"/> and
@@ -678,7 +769,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         return EraseSpacesAsync(spaces, ids);
     }
 
-    static unsafe OVRTask<OVRResult<EraseResult>> EraseSpacesAsync(ReadOnlySpan<ulong> spaces, ReadOnlySpan<Guid> uuids)
+    private static unsafe OVRTask<OVRResult<EraseResult>> EraseSpacesAsync(ReadOnlySpan<ulong> spaces, ReadOnlySpan<Guid> uuids)
     {
         var telemetryMarker = OVRTelemetry
             .Start((int)Telemetry.MarkerId.EraseSpaces)
@@ -707,14 +798,14 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     ///
     /// This method shares the anchor with a collection of <see cref="OVRSpaceUser"/>.
     ///
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     /// </remarks>
     /// <param name="users"> A collection of users with whom anchors will be shared.</param>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous request.</returns>
+    /// <returns>An awaitable <see cref="OVRTask"/> representing the asynchronous request.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="users"/> is `null`.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="users"/> count is less than one.</exception>
-    /// <seealso cref="ShareAsync(IEnumerable{OVRAnchor})"/>
+    /// <seealso cref="ShareAsync(IEnumerable{OVRAnchor},IEnumerable{OVRSpaceUser})"/>
     public OVRTask<OVRResult<ShareResult>> ShareAsync(IEnumerable<OVRSpaceUser> users)
     {
         if (users == null)
@@ -740,15 +831,14 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// Share a collection of anchors with a collection of users.
     /// </summary>
     /// <remarks>
-    ///
     /// This method shares a collection of anchors with a collection of users.
     ///
-    /// This operation is asynchronous. Use the returned <see cref="OVRTask{TResult}"/> to track the result of the
+    /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
     /// </remarks>
     /// <param name="anchors">A collection of anchors to share.</param>
     /// <param name="users"> A collection of users with whom anchors will be shared.</param>
-    /// <returns>An awaitable <see cref="OVRTask{TResult}"/> representing the asynchronous request.</returns>
+    /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous request.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> or <paramref name="users"/> are `null`.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="users"/> count is less than one.</exception>
     /// <seealso cref="ShareAsync(IEnumerable{OVRSpaceUser})"/>
@@ -783,7 +873,8 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         return ShareSpacesAsync(spaces: spaceList, users: userList);
     }
 
-    static unsafe OVRTask<OVRResult<ShareResult>> ShareSpacesAsync(ReadOnlySpan<ulong> spaces, ReadOnlySpan<ulong> users)
+    private static unsafe OVRTask<OVRResult<ShareResult>> ShareSpacesAsync(ReadOnlySpan<ulong> spaces,
+        ReadOnlySpan<ulong> users)
     {
         fixed (ulong* spacePtr = spaces)
         fixed (ulong* userPtr = users)
@@ -805,8 +896,11 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     internal ulong Handle { get; }
 
     /// <summary>
-    /// Unique Identifier representing the anchor.
+    /// The unique identifier of this anchor.
     /// </summary>
+    /// <remarks>
+    /// UUIDs persist across sessions. If you load a persisted anchor, you can use the UUID to identify it.
+    /// </remarks>
     public Guid Uuid { get; }
 
     internal OVRAnchor(ulong handle, Guid uuid)
@@ -873,7 +967,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     /// Get all the supported components of an anchor.
     /// </summary>
     /// <param name="components">The list to populate with the supported components. The list is cleared first.</param>
-    /// <returns>`True` if the supported components could be retrieved, otherwise `False`.</returns>
+    /// <returns>`true` if the supported components could be retrieved, otherwise `false`.</returns>
     public bool GetSupportedComponents(List<SpaceComponentType> components)
     {
         components.Clear();
@@ -896,11 +990,54 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         }
     }
 
+    /// <summary>
+    /// Compares two anchors for equality.
+    /// </summary>
+    /// <param name="other">The anchor to compare with this one.</param>
+    /// <returns>Returns `true` if both anchor UUIDs are the same and they are the same runtime instance.
+    /// That is, they are the same instance of the same anchor.</returns>
     public bool Equals(OVRAnchor other) => Handle.Equals(other.Handle) && Uuid.Equals(other.Uuid);
+
+    /// <summary>
+    /// Compares this anchor with an object for equality.
+    /// </summary>
+    /// <param name="obj">The `object` to compare with this anchor.</param>
+    /// <returns>Returns `true` if <paramref name="obj"/> is an <see cref="OVRAnchor"/> and
+    /// <see cref="Equals(OVRAnchor)"/> is also `true`, otherwise `false`.</returns>
     public override bool Equals(object obj) => obj is OVRAnchor other && Equals(other);
+
+    /// <summary>
+    /// Compares two anchors for equality.
+    /// </summary>
+    /// <remarks>
+    /// This is the same equality test as <see cref="Equals(OVRAnchor)"/>.
+    /// </remarks>
+    /// <param name="lhs">The anchor to compare with <paramref name="rhs"/>.</param>
+    /// <param name="rhs">The anchor to compare with <paramref name="lhs"/>.</param>
+    /// <returns>Returns `true` if <paramref name="lhs"/> is equal to <paramref name="rhs"/>, otherwise `false`.</returns>
     public static bool operator ==(OVRAnchor lhs, OVRAnchor rhs) => lhs.Equals(rhs);
+
+    /// <summary>
+    /// Compares two anchors for inequality.
+    /// </summary>
+    /// <remarks>
+    /// This is the logical negation of <see cref="Equals(OVRAnchor)"/>.
+    /// </remarks>
+    /// <param name="lhs">The anchor to compare with <paramref name="rhs"/>.</param>
+    /// <param name="rhs">The anchor to compare with <paramref name="lhs"/>.</param>
+    /// <returns>Returns `true` if <paramref name="lhs"/> is not equal to <paramref name="rhs"/>, otherwise `false`.</returns>
     public static bool operator !=(OVRAnchor lhs, OVRAnchor rhs) => !lhs.Equals(rhs);
+
+    /// <summary>
+    /// Generates a hash code suitable for use in a `Dictionary` or `HashSet`
+    /// </summary>
+    /// <returns>Returns a hash code suitable for use in a `Dictionary` or `HashSet`</returns>
     public override int GetHashCode() => unchecked(Handle.GetHashCode() * 486187739 + Uuid.GetHashCode());
+
+    /// <summary>
+    /// Generates a string representation of this anchor, based on its <see cref="Uuid"/>.
+    /// </summary>
+    /// <returns>Returns the stringification of this anchor's <see cref="Uuid"/>.</returns>
     public override string ToString() => Uuid.ToString();
 
     /// <summary>

@@ -22,11 +22,14 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// Represents a room described by its floor, ceiling and walls <see cref="OVRAnchor"/>s.
+/// Represents a room described by its floor, ceiling and walls.
 /// </summary>
 /// <remarks>
-/// This component can be accessed from an <see cref="OVRAnchor"/> that supports it by calling
-/// <see cref="OVRAnchor.GetComponent{T}"/> from the anchor.
+/// An <see cref="OVRAnchor"/> supports this component when it is a room anchor. Access this component by calling
+/// <see cref="OVRAnchor.GetComponent{T}"/> on a room anchor.
+///
+/// The room layout component is part of the Meta Quest Scene Model. Read more at
+/// [Control flow for rooms and child anchors](https://developer.oculus.com/documentation/unity/unity-scene-ovranchor/#control-flow-for-rooms-and-child-anchors).
 /// </remarks>
 /// <seealso cref="FetchLayoutAnchorsAsync"/>
 /// <seealso cref="TryGetRoomLayout"/>
@@ -40,7 +43,7 @@ public readonly partial struct OVRRoomLayout : IOVRAnchorComponent<OVRRoomLayout
     /// \deprecated This method is obsolete. Use <see cref="FetchAnchorsAsync"/> instead.
     ///
     /// Dispose of the returned task if you don't use the results</remarks>
-    /// <returns>A task that will eventually let you test if the fetch was successful or not.
+    /// <returns>Returns a task that will eventually let you test if the fetch was successful or not.
     /// If the result is true, then the <see cref="anchors"/> parameter has been populated with the requested anchors.</returns>
     /// <exception cref="InvalidOperationException">If it fails to retrieve the Room Layout</exception>
     /// <exception cref="ArgumentNullException">If parameter anchors is null</exception>
@@ -94,14 +97,18 @@ public readonly partial struct OVRRoomLayout : IOVRAnchorComponent<OVRRoomLayout
     }
 
     /// <summary>
-    /// Tries to get the Ceiling, Floor and Walls unique identifiers. These can then be used to Fetch their anchors.
+    /// Tries to get the UUIDs of the Ceiling, Floor and Walls in the room layout.
     /// </summary>
+    /// <remarks>
+    /// The UUIDs can be passed to
+    /// <see cref="OVRAnchor.FetchAnchorsAsync(List{OVRAnchor},OVRAnchor.FetchOptions,Action{List{OVRAnchor}, int})"/>.
+    ///
+    /// You can also use <see cref="FetchAnchorsAsync"/> to combine this method with the fetch operation.
+    /// </remarks>
     /// <param name="ceiling">Out <see cref="Guid"/> representing the ceiling of the room.</param>
     /// <param name="floor">Out <see cref="Guid"/> representing the floor of the room.</param>
     /// <param name="walls">Out array of <see cref="Guid"/>s representing the walls of the room.</param>
-    /// <returns>
-    /// <see cref="bool"/> true if the request succeeds and false if it fails.
-    /// </returns>
+    /// <returns>Returns `true` if the request succeeds, otherwise `false`.</returns>
     public bool TryGetRoomLayout(out Guid ceiling, out Guid floor, out Guid[] walls)
     {
         ceiling = Guid.Empty;

@@ -22,38 +22,94 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// A partial class definition of the class responsible for retargeting from
+/// <see cref="OVRSkeleton"/> body tracking bones to a third party
+/// humanoid skeleton. Unlike <see cref="OVRCustomSkeleton"/>, the skeleton
+/// retargeted to does not need to use bones that match body tracking names, or
+/// have a hierarchy that matches what body tracking expects. Instead, you
+/// can use this class to apply [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/)
+/// to characters that have been imported as Unity Humanoids.
+///
+/// This partial definition contains maps useful for retargeting, such as
+/// maps between body tracking and humanoid bones for upper body and full
+/// body tracking.
+/// </summary>
 public partial class OVRUnityHumanoidSkeletonRetargeter
 {
     /// <summary>
-    /// This class contains mappings between Unity Humanoid Rig bones and Oculus Body Tracking bones
+    /// Implements the <see cref="OVRHumanBodyBonesMappingsInterface"/> interface, and contains mappings
+    /// that are relevant to retargeting by classes such as <see cref="OVRUnityHumanoidSkeletonRetargeter"/>.
+    /// This includes associations between <see cref="HumanBodyBones"/> and <see cref="BoneId"/>,
+    /// <see cref="HumanBodyBones"/> and <see cref="BodySection"/>.
+    /// There are also mappings between a body tracking or humanoid bone and joint pairs used for
+    /// retargeting.
+    /// <remarks>
+    /// This is a default implementation, which means that if you have a custom character is not
+    /// compatible then you will need to implement <see cref="OVRHumanBodyBonesMappings"/> separately.
+    /// </remarks>
     /// </summary>
     public class OVRHumanBodyBonesMappings : OVRHumanBodyBonesMappingsInterface
     {
-        /// <inheritdoc />
+        /// <summary>
+        /// The mapping between <see cref="HumanBodyBones"/> a tuple of <see cref="HumanBodyBones"/>.
+        /// <remarks>
+        /// The tuple is a joint pair that retargeting uses to create a <see cref="HumanBodyBones"/>'s orientation
+        /// during runtime. Define this field so that you can influence what kind of tuple is
+        /// used during retargeting.
+        /// </remarks>
+        /// </summary>
         public Dictionary<HumanBodyBones, Tuple<HumanBodyBones, HumanBodyBones>> GetBoneToJointPair
             => BoneToJointPair;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// The mapping between <see cref="HumanBodyBones"/> and <see cref="BodySection"/>. Define
+        /// this mapping to associate a body with parts of the body, such as the back, left arm,
+        /// right leg, and so on.
+        /// </summary>
         public Dictionary<HumanBodyBones, BodySection> GetBoneToBodySection => BoneToBodySection;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Returns <see cref="BoneId"> to <see cref="HumanBodyBones"/> mapping for full body
+        /// characters. Since retargeting retargets to humanoid characters, it uses this field
+        /// to map body tracking bones to humanoid bones.
+        /// </summary>
         public Dictionary<OVRSkeleton.BoneId, HumanBodyBones> GetFullBodyBoneIdToHumanBodyBone
             => FullBodyBoneIdToHumanBodyBone;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Returns <see cref="BoneId"> to <see cref="HumanBodyBones"/> mapping for upper body
+        /// characters. Since retargeting retargets to humanoid characters, it uses this field
+        /// to map body tracking bones to humanoid bones.
+        /// </summary>
         public Dictionary<OVRSkeleton.BoneId, HumanBodyBones> GetBoneIdToHumanBodyBone
             => BoneIdToHumanBodyBone;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// The mapping between <see cref="BoneId"/> a tuple of <see cref="BoneId"/>.
+        /// Retargeting uses this tuple or joint pair to create a <see cref="BoneId"/>'s orientation
+        /// during retargeting. Define this field so that you can influence what kind of tuple is
+        /// used during retargeting. Intended for the retargeting source (i.e. body tracking)
+        /// assuming full body tracking is used.
+        /// </summary>
         public Dictionary<OVRSkeleton.BoneId, Tuple<OVRSkeleton.BoneId, OVRSkeleton.BoneId>>
             GetFullBodyBoneIdToJointPair => FullBoneIdToJointPair;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// The mapping between <see cref="BoneId"/> a tuple of <see cref="BoneId"/>.
+        /// Retargeting uses this tuple or joint pair to create a <see cref="BoneId"/>'s orientation
+        /// during retargeting. Define this field so that you can influence what kind of tuple is
+        /// used during retargeting. Intended for the retargeting source (i.e. body tracking)
+        /// assuming upper body tracking is used.
+        /// </summary>
         public Dictionary<OVRSkeleton.BoneId, Tuple<OVRSkeleton.BoneId, OVRSkeleton.BoneId>>
             GetBoneIdToJointPair => BoneIdToJointPair;
 
         /// <summary>
-        /// Corresponds to major sections of the body (left food, chest, etc).
+        /// Since humanoid characters can possibly be described as large sections, such the
+        /// back, left leg, right arm, and so on, <see cref="BodySection"/> is defined to
+        /// define those sections. Use this enum to associate a body section with
+        /// a character's bone.
         /// </summary>
         public enum BodySection
         {
@@ -73,9 +129,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
 
         /// <summary>
         /// Body tracking bone IDs that should be exposed through the inspector.
-        /// BoneId has enum values that map to the same integers, which would not work
-        /// with a serialized field that expects unique integers. FullBodyTrackingBoneId
-        /// is an enum that restricts BoneId to the values that we care about.
+        /// <see cref="OVRPlugin.BoneId"> has enum values that map to the same integers, which would not work
+        /// with a serialized field that expects unique integers. <see cref="FullBodyTrackingBoneId">
+        /// is an enum that restricts BoneId to the values that are relevant for full body characters
+        /// and avoids redundant values.
         /// </summary>
         public enum FullBodyTrackingBoneId
         {
@@ -174,9 +231,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
 
         /// <summary>
         /// Body tracking bone IDs that should be exposed through the inspector.
-        /// BoneId has enum values that map to the same integers, which would not work
-        /// with a serialized field that expects unique integers. BodyTrackingBoneId
-        /// is an enum that restricts BoneId to the values that we care about.
+        /// <see cref="OVRPlugin.BoneId"> has enum values that map to the same integers, which would not work
+        /// with a serialized field that expects unique integers. <see cref="BodyTrackingBoneId">
+        /// is an enum that restricts BoneId to the values that are relevant for full body characters
+        /// and avoids redundant values.
         /// </summary>
         public enum BodyTrackingBoneId
         {
@@ -260,9 +318,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
         };
 
         /// <summary>
-        /// For each humanoid bone, create a pair that determines the
-        /// pair of bones that create the joint pair. Used to
-        /// create the "axis" of the bone.
+        /// The map associates a pair of bones for each <see cref="HumanBodyBones"/>.
+        /// Retargeters such as <see cref="OVRUnityHumanoidSkeletonRetargeter"/> and
+        /// <see cref="OVRSkeletonMetadata"/> use these pairs to creates axes for the purposes
+        /// of retargeting.
         /// </summary>
         public static readonly Dictionary<HumanBodyBones, Tuple<HumanBodyBones, HumanBodyBones>>
             BoneToJointPair = new Dictionary<HumanBodyBones, Tuple<HumanBodyBones, HumanBodyBones>>()
@@ -530,7 +589,8 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
             };
 
         /// <summary>
-        /// Paired human body bones with body sections.
+        /// Maps <see cref="HumanBodyBones"/> to <see cref="BodySection"/>. Use this
+        /// to determine which part of the body (i.e. back) corresponds with a humanoid bone.
         /// </summary>
         public static readonly Dictionary<HumanBodyBones, BodySection> BoneToBodySection =
             new Dictionary<HumanBodyBones, BodySection>()
@@ -604,7 +664,8 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
             };
 
         /// <summary>
-        /// Paired OVRSkeleton bones with human body bones.
+        /// Maps full body body tracking bones with <see cref="HumanBodyBones"/> bones.
+        /// Use this field to retarget from a body tracking to its humanoid equivalent.
         /// </summary>
         public static readonly Dictionary<OVRSkeleton.BoneId, HumanBodyBones> FullBodyBoneIdToHumanBodyBone =
             new Dictionary<OVRSkeleton.BoneId, HumanBodyBones>()
@@ -668,6 +729,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
                 { OVRSkeleton.BoneId.FullBody_RightFootBall, HumanBodyBones.RightToes },
             };
 
+        /// <summary>
+        /// Maps upper body body tracking bones with <see cref="HumanBodyBones"/> bones.
+        /// Use this field to retarget from a body tracking to its humanoid equivalent.
+        /// </summary>
         public static readonly Dictionary<OVRSkeleton.BoneId, HumanBodyBones> BoneIdToHumanBodyBone =
             new Dictionary<OVRSkeleton.BoneId, HumanBodyBones>()
             {
@@ -722,9 +787,10 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
             };
 
         /// <summary>
-        /// For each humanoid bone, create a pair that determines the
-        /// pair of bones that create the joint pair. Used to
-        /// create the "axis" of the bone.
+        /// The map associates a pair of bones for each <see cref="OVRSkeleton.BoneId"/>.
+        /// Retargeters such as <see cref="OVRUnityHumanoidSkeletonRetargeter"/> and
+        /// <see cref="OVRSkeletonMetadata"/> use these pairs to creates axes for the purposes
+        /// of retargeting. Intended for full body tracking.
         /// </summary>
         public static readonly Dictionary<OVRSkeleton.BoneId, Tuple<OVRSkeleton.BoneId, OVRSkeleton.BoneId>>
             FullBoneIdToJointPair = new Dictionary<OVRSkeleton.BoneId, Tuple<OVRSkeleton.BoneId, OVRSkeleton.BoneId>>()
@@ -1152,6 +1218,12 @@ public partial class OVRUnityHumanoidSkeletonRetargeter
                 },
             };
 
+        /// <summary>
+        /// The map associates a pair of bones for each <see cref="OVRSkeleton.BoneId"/>.
+        /// Retargeters such as <see cref="OVRUnityHumanoidSkeletonRetargeter"/> and
+        /// <see cref="OVRSkeletonMetadata"/> use these pairs to creates axes for the purposes
+        /// of retargeting. Intended for half body tracking.
+        /// </summary>
         public static readonly Dictionary<OVRSkeleton.BoneId, Tuple<OVRSkeleton.BoneId, OVRSkeleton.BoneId>>
             BoneIdToJointPair = new Dictionary<OVRSkeleton.BoneId, Tuple<OVRSkeleton.BoneId, OVRSkeleton.BoneId>>()
             {

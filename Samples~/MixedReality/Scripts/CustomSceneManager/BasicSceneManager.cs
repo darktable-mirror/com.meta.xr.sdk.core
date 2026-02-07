@@ -73,6 +73,7 @@ public class BasicSceneManager : MonoBehaviour
             await CreateSceneAnchors(roomObject, children);
         }).ToList();
         await Task.WhenAll(tasks);
+
     }
 
     async Task CreateSceneAnchors(GameObject roomGameObject, List<OVRAnchor> anchors)
@@ -92,6 +93,7 @@ public class BasicSceneManager : MonoBehaviour
             };
             if (anchor.TryGetComponent(out OVRSemanticLabels labels))
                 labels.GetClassifications(classifications);
+
 
             // create and parent Unity game object
             var gameObject = new GameObject(string.Join(',', classifications));

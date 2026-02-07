@@ -28,8 +28,16 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 /// <summary>
-/// Static methods related to <see cref="OVRTask{TResult}"/>
+/// Static methods related to <see cref="OVRTask"/>&lt;TResult&gt;
 /// </summary>
+/// <remarks>
+/// The static class `OVRTask` provides some utilities for working with tasks.
+///
+/// Many asynchronous methods in the Core SDK return an awaitable <see cref="OVRTask"/>&lt;TResult&gt;. The methods in this
+/// class provide functionality to combine multiple tasks (see <see cref="WhenAll{T1,T2}"/>) and create your own
+/// <see cref="OVRTask"/>&lt;TResult&gt; (see <see cref="Create{TResult}"/>). For more information
+/// on tasks, see [Asynchronous Tasks](https://developer.oculus.com/documentation/unity/unity-async-tasks/).
+/// </remarks>
 public static partial class OVRTask
 {
     /// <summary>
@@ -44,9 +52,9 @@ public static partial class OVRTask
     /// </remarks>
     /// <param name="tasks">The tasks to combine</param>
     /// <typeparam name="TResult">The type of the result produced by the <paramref name="tasks"/>.</typeparam>
-    /// <returns>A new task which is completed when all <paramref name="tasks"/> have completed.</returns>
+    /// <returns>Returns a new task which is completed when all <paramref name="tasks"/> have completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="tasks"/> is `null`.</exception>
-    /// <seealso cref="OVRTask{TResult}"/>
+    /// <seealso cref="OVRTask"/>
     public static OVRTask<TResult[]> WhenAll<TResult>(IEnumerable<OVRTask<TResult>> tasks)
         => OVRTask<TResult>.WhenAll(tasks);
 
@@ -67,14 +75,14 @@ public static partial class OVRTask
     /// <param name="tasks">The tasks to combine</param>
     /// <param name="results">A list to store the results in. The list is cleared before adding any results to it.</param>
     /// <typeparam name="TResult">The type of the result produced by the <paramref name="tasks"/>.</typeparam>
-    /// <returns>A new task which completes when all <paramref name="tasks"/> are complete.</returns>
+    /// <returns>Returns a new task which completes when all <paramref name="tasks"/> are complete.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="tasks"/> is `null`.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="results"/> is `null`.</exception>
-    /// <seealso cref="OVRTask{TResult}"/>
+    /// <seealso cref="OVRTask"/>
     public static OVRTask<List<TResult>> WhenAll<TResult>(IEnumerable<OVRTask<TResult>> tasks, List<TResult> results)
         => OVRTask<TResult>.WhenAll(tasks, results);
 
-    class MultiTaskData<T> : OVRObjectPool.IPoolObject
+    private class MultiTaskData<T> : OVRObjectPool.IPoolObject
     {
         protected OVRTask<T> CombinedTask;
 
@@ -113,8 +121,10 @@ public static partial class OVRTask
         }
     }
 
+    /// \cond
     internal static OVRTask<TResult> FromGuid<TResult>(Guid id) => Create<TResult>(id);
     internal static OVRTask<TResult> FromRequest<TResult>(ulong id) => Create<TResult>(GetId(id));
+    /// \endcond
 
     /// <summary>
     /// Creates an already-complete task.
@@ -132,8 +142,10 @@ public static partial class OVRTask
         return task;
     }
 
+    /// \cond
     internal static OVRTask<TResult> GetExisting<TResult>(Guid id) => Get<TResult>(id);
     internal static OVRTask<TResult> GetExisting<TResult>(ulong id) => Get<TResult>(GetId(id));
+    /// \endcond
 
     /// <summary>
     /// Sets the result of a pending task.
@@ -179,6 +191,7 @@ public static partial class OVRTask
         task.SetResult(result);
     }
 
+    /// \cond
     internal static void SetResult<TResult>(ulong id, TResult result) =>
         GetExisting<TResult>(id).SetResult(result);
 
@@ -186,6 +199,7 @@ public static partial class OVRTask
     {
         return new OVRTask<TResult>(id);
     }
+    /// \endcond
 
     /// <summary>
     /// Creates a new task.
@@ -194,7 +208,7 @@ public static partial class OVRTask
     /// This method creates a new pending task. When the task completes, set its result with
     /// <see cref="SetResult{TResult}"/>.
     ///
-    /// The returned task is in a pending state; that is, <see cref="OVRTask{TResult}.IsCompleted"/> is `False` until
+    /// The returned task is in a pending state; that is, <see cref="OVRTask{TResult}.IsCompleted"/> is `false` until
     /// you later set its result with <see cref="SetResult{TResult}"/>.
     ///
     /// The <paramref name="taskId"/> must be unique to the new task. You may use any `Guid` as long as it has not
@@ -214,6 +228,7 @@ public static partial class OVRTask
         return task;
     }
 
+    /// \cond
     private const ulong HashModifier1 = 0x319642b2d24d8ec3;
     private const ulong HashModifier2 = 0x96de1b173f119089;
 
@@ -244,6 +259,7 @@ public static partial class OVRTask
         DomainReloadMethods.Add(OVRTask<TResult>.Clear);
 #endif
     }
+    /// \endcond
 
 #if UNITY_EDITOR
     private static readonly HashSet<Action> DomainReloadMethods = new HashSet<Action>();
@@ -265,18 +281,29 @@ public static partial class OVRTask
 /// Represents an awaitable task.
 /// </summary>
 /// <remarks>
-/// This is a task-like object which supports the <c>await</c> pattern. Typically, you do not need to
-/// create or use this object directly. Instead, you can either :
-/// <para>- <c>await</c> a method which returns an object of type <see cref="OVRTask{TResult}"/>,
-/// which will eventually return a <typeparamref name="TResult"/></para>
-/// <para>- poll the <see cref="IsCompleted"/> property and then call <see cref="GetResult"/></para>
-/// <para>- pass a delegate by calling <see cref="ContinueWith(Action{TResult})"/>. Note that an additional state <c>object</c> can get passed in and added as a parameter of the callback, see <see cref="ContinueWith{T}"/></para>
-/// Requires the main thread to complete the await contract - blocking can result in an infinite loop.
+/// The `OVRTask&lt;TResult&gt;` struct is a task-like object which supports the <c>await</c> pattern. Typically, you
+/// do not need to create or use this object directly. Instead, you can either:
+/// - `await` a method which returns an object of type <see cref="OVRTask"/>&lt;TResult&gt;, which will eventually
+/// return a <typeparamref name="TResult"/>
+/// - poll the <see cref="IsCompleted"/> property and then call <see cref="GetResult"/>
+/// - pass a delegate by calling <see cref="ContinueWith(Action{TResult})"/>. Note that an additional state `object` can
+/// get passed in and added as a parameter of the callback, see <see cref="ContinueWith{T}"/>
+///
+/// Note this requires the main thread to complete the await contract; therefore, blocking on an `OVRTask` can result in
+/// an infinite loop.
+///
+/// You can also:
+/// - Combine multiple tasks (<see cref="OVRTask.WhenAll{T1,T2}"/>)
+/// - Create your own task (<see cref="OVRTask.Create{TResult}"/>)
+///
+/// For more details, including code samples, see
+/// [Asynchronous Tasks](https://developer.oculus.com/documentation/unity/unity-async-tasks/).
 /// </remarks>
 /// <typeparam name="TResult">The type of result being awaited.</typeparam>
 [AsyncMethodBuilder(typeof(OVRTaskBuilder<>))]
 public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposable
 {
+    /// \cond
     #region static
 
     private static readonly HashSet<Guid> Pending = new();
@@ -373,7 +400,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     internal bool TryGetInternalData<T>(out T data) => InternalData<T>.TryGet(_id, out data);
 
     /// <summary>
-    /// Set an exception that occurred during task execution.
+    /// (Internal) Set an exception that occurred during task execution.
     /// </summary>
     /// <remarks>
     /// Do not call this directly.
@@ -426,13 +453,13 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     }
 
     /// <summary>
-    /// Removes internal data related to the task.
+    /// (Internal) Removes internal data related to the task.
     /// </summary>
     /// <remarks>
     /// Removes incremental result subscribers and internal data. Call this when the task completes.
     /// </remarks>
-    /// <returns>`True` if the task was pending, otherwise `False`</returns>
-    bool TryRemoveInternalData()
+    /// <returns>Returns `true` if the task was pending, otherwise `false`</returns>
+    private bool TryRemoveInternalData()
     {
         if (!Pending.Remove(_id)) return false;
 
@@ -449,7 +476,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
         return true;
     }
 
-    bool TryInvokeContinuation()
+    private bool TryInvokeContinuation()
     {
         if (Continuations.Remove(_id, out var continuation))
         {
@@ -487,13 +514,13 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     }
 
     /// <summary>
-    /// Represents additional data associated with the task
+    /// (Internal) Represents additional data associated with the task
     /// </summary>
     /// <remarks>
     /// These "removers" and "clearers" offer a sort of type erasure so that we can store a typeless
     /// delegate to invoke that doesn't depend on <typeparamref name="T"/>.
     /// </remarks>
-    static class InternalData<T>
+    private static class InternalData<T>
     {
         static readonly Dictionary<Guid, T> Data = new Dictionary<Guid, T>();
 
@@ -522,9 +549,9 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// It is up to the task creator to provide incremental data, but this offers a way to store the delegates,
     /// if your API offers one to the caller of an async operation.
     /// </remarks>
-    static class IncrementalResultSubscriber<T>
+    private static class IncrementalResultSubscriber<T>
     {
-        static readonly Dictionary<Guid, Action<T>> Subscribers = new();
+        private static readonly Dictionary<Guid, Action<T>> Subscribers = new();
 
         public static void Set(Guid taskId, Action<T> subscriber)
         {
@@ -541,17 +568,17 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
             }
         }
 
-        static readonly Action<Guid> Remover = Remove;
+        private static readonly Action<Guid> Remover = Remove;
 
-        static void Remove(Guid id) => Subscribers.Remove(id);
+        private static void Remove(Guid id) => Subscribers.Remove(id);
 
-        static readonly Action Clearer = Clear;
+        private static readonly Action Clearer = Clear;
 
-        static void Clear() => Subscribers.Clear();
+        private static void Clear() => Subscribers.Clear();
     }
 
     /// <summary>
-    /// Sets the delegate to be invoked when an incremental result is available before the task is complete.
+    /// (Internal) Sets the delegate to be invoked when an incremental result is available before the task is complete.
     /// </summary>
     /// <remarks>
     /// Some tasks may provide incremental results before the task is complete. In this case, you can use
@@ -575,7 +602,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     }
 
     /// <summary>
-    /// Notifies a subscriber of an incremental result associated with an ongoing task.
+    /// (Internal) Notifies a subscriber of an incremental result associated with an ongoing task.
     /// </summary>
     /// <remarks>
     /// Use this to provide partial results that may be available before the task fully completes.
@@ -584,15 +611,19 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     internal void NotifyIncrementalResult<TIncrementalResult>(TIncrementalResult incrementalResult)
         => IncrementalResultSubscriber<TIncrementalResult>.Notify(_id, incrementalResult);
 
-    readonly struct CombinedTaskData : IDisposable
+    private readonly struct CombinedTaskData : IDisposable
     {
         public readonly OVRTask<List<TResult>> Task;
-        readonly HashSet<Guid> _remainingTaskIds;
-        readonly List<Guid> _originalTaskOrder;
-        readonly Dictionary<Guid, TResult> _completedTasks;
-        readonly List<TResult> _userOwnedResultList;
 
-        void OnSingleTaskCompleted(Guid taskId, TResult result)
+        private readonly HashSet<Guid> _remainingTaskIds;
+
+        private readonly List<Guid> _originalTaskOrder;
+
+        private readonly Dictionary<Guid, TResult> _completedTasks;
+
+        private readonly List<TResult> _userOwnedResultList;
+
+        private void OnSingleTaskCompleted(Guid taskId, TResult result)
         {
             _completedTasks.Add(taskId, result);
             _remainingTaskIds.Remove(taskId);
@@ -614,7 +645,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
             }
         }
 
-        static readonly Action<TResult, CombinedTaskDataWithCompletedTaskId> _onSingleTaskCompleted = (result, data)
+        private static readonly Action<TResult, CombinedTaskDataWithCompletedTaskId> _onSingleTaskCompleted = (result, data)
             => data.CombinedData.OnSingleTaskCompleted(data.CompletedTaskId, result);
 
         public CombinedTaskData(IEnumerable<OVRTask<TResult>> tasks, List<TResult> userOwnedResultList)
@@ -665,7 +696,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
         }
     }
 
-    struct CombinedTaskDataWithCompletedTaskId
+    private struct CombinedTaskDataWithCompletedTaskId
     {
         public Guid CompletedTaskId;
         public CombinedTaskData CombinedData;
@@ -693,12 +724,13 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
         return task;
     }
 
-    static readonly Action<List<TResult>, OVRTask<TResult[]>> _onCombinedTaskCompleted = (resultsFromPool, task) =>
+    private static readonly Action<List<TResult>, OVRTask<TResult[]>> _onCombinedTaskCompleted = (resultsFromPool, task) =>
     {
         var resultsArray = resultsFromPool.ToArray();
         OVRObjectPool.Return(resultsFromPool);
         task.SetResult(resultsArray);
     };
+    /// \endcond
 
     #region Polling Implementation
 
@@ -725,7 +757,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// Get the exception if the task is in a faulted state.
     /// </summary>
     /// <remarks>
-    /// If <see cref="IsFaulted"/> is `True`, then this method gets the exception associated with this method. Similar
+    /// If <see cref="IsFaulted"/> is `true`, then this method gets the exception associated with this method. Similar
     /// to <see cref="GetResult"/>, you can only get the exception once and throws if there is no exception.
     ///
     /// When using `await` or <see cref="ContinueWith"/>, you do not need to explicitly get the exception. Use this
@@ -748,7 +780,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// ]]></code></example>
     /// </remarks>
     /// <returns>Returns the `Exception` associated with the task.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if <see cref="IsFaulted"/> is `False`.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if <see cref="IsFaulted"/> is `false`.</exception>
     public Exception GetException() => Exceptions.Remove(_id, out var exception)
         ? exception
         : throw new InvalidOperationException($"Task {_id} is not in a faulted state. Check with {nameof(IsFaulted)}");
@@ -788,7 +820,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// Whether there is a result available.
     /// </summary>
     /// <remarks>
-    /// This property is true when the <see cref="OVRTask{TResult}"/> is complete (<see cref="IsCompleted"/> is `true`)
+    /// This property is true when the <see cref="OVRTask"/>&lt;TResult&gt; is complete (<see cref="IsCompleted"/> is `true`)
     /// and <see cref="GetResult"/> has not already been called.
     ///
     /// Note that <see cref="GetResult"/> is called implicitly when using `await` or <see cref="ContinueWith"/>.
@@ -802,10 +834,10 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// </summary>
     /// <remarks>
     /// This method may safely be called at any time. It tests whether the operation is both complete
-    /// (<see cref="IsCompleted"/> is `True`) and the result has not already been retrieved with <see cref="GetResult"/>
-    /// (<see cref="HasResult"/> is `True`).
+    /// (<see cref="IsCompleted"/> is `true`) and the result has not already been retrieved with <see cref="GetResult"/>
+    /// (<see cref="HasResult"/> is `true`).
     ///
-    /// If the result is available, <paramref name="result"/> is set to the result and this method returns `True`. This
+    /// If the result is available, <paramref name="result"/> is set to the result and this method returns `true`. This
     /// method is equivalent to (though more efficient than) the following:
     /// <code>
     /// <![CDATA[
@@ -821,7 +853,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// </remarks>
     /// <param name="result">Set to the result of the task, if one is available. Otherwise, it is set to the default
     /// value for <typeparamref name="TResult"/>.</param>
-    /// <returns>`True` if this task is complete and a result is available.</returns>
+    /// <returns>`true` if this task is complete and a result is available.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the task doesn't have any available result. This could
     /// happen if the method is called before <see cref="IsCompleted"/> is true, after the task has been disposed of
     /// or if this method has already been called once.</exception>
@@ -831,9 +863,10 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
 
     #endregion
 
-    class TaskSource : IValueTaskSource<TResult>, OVRObjectPool.IPoolObject
+    /// \cond
+    private class TaskSource : IValueTaskSource<TResult>, OVRObjectPool.IPoolObject
     {
-        ManualResetValueTaskSourceCore<TResult> _manualSource;
+        private ManualResetValueTaskSourceCore<TResult> _manualSource;
 
         public ValueTask<TResult> Task { get; private set; }
 
@@ -867,12 +900,13 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
 
         public void SetException(Exception exception) => _manualSource.SetException(exception);
     }
+    /// \endcond
 
     /// <summary>
     /// Converts the task to a ValueTask
     /// </summary>
     /// <remarks>
-    /// This method converts this <see cref="OVRTask{TResult}"/> to a
+    /// This method converts this <see cref="OVRTask"/>&lt;TResult&gt; to a
     /// [ValueTask](https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.valuetask-1?view=net-8.0).
     ///
     /// A `ValueTask` is similar to an `OVRTask`. Key differences:
@@ -882,8 +916,8 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// The above are only supported on the
     /// [Task](https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task-1?view=net-8.0) object.
     ///
-    /// Invoking this method also invalidates this <see cref="OVRTask{TResult}"/>. It is invalid to continue using an
-    /// <see cref="OVRTask{TResult}"/> after calling <see cref="ToValueTask"/>.
+    /// Invoking this method also invalidates this <see cref="OVRTask"/>&lt;TResult&gt;. It is invalid to continue using an
+    /// <see cref="OVRTask"/>&lt;TResult&gt; after calling <see cref="ToValueTask"/>.
     /// </remarks>
     /// <returns>Returns a new `ValueTask` that completes when the asynchronous operation completes.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the task is not pending (<see cref="IsCompleted"/> is true)
@@ -917,18 +951,20 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     }
 
 #if !UNITY_2023_1_OR_NEWER
-    class Awaitable<T> { }
+    /// \cond
+    private class Awaitable<T> { }
 
-    class AwaitableCompletionSource<T>
+    private class AwaitableCompletionSource<T>
     {
         public void SetResult(in T result) => throw new NotImplementedException();
         public void Reset() => throw new NotImplementedException();
         public void SetException(Exception exception) => throw new NotImplementedException();
         public Awaitable<T> Awaitable => throw new NotImplementedException();
     }
+    /// \endcond
 #endif
 
-    class AwaitableSource : AwaitableCompletionSource<TResult>, OVRObjectPool.IPoolObject
+    private class AwaitableSource : AwaitableCompletionSource<TResult>, OVRObjectPool.IPoolObject
     {
         public void OnGet()
         {
@@ -962,8 +998,8 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     ///
     /// Awaitables are available starting with Unity 2023.1.
     ///
-    /// Invoking this method invalidates this <see cref="OVRTask{TResult}"/>. It is invalid to continue using an
-    /// <see cref="OVRTask{TResult}"/> after calling <see cref="ToAwaitable"/>.
+    /// Invoking this method invalidates this <see cref="OVRTask"/>&lt;TResult&gt;. It is invalid to continue using an
+    /// <see cref="OVRTask"/>&lt;TResult&gt; after calling <see cref="ToAwaitable"/>.
     /// </remarks>
     /// <returns>Returns a new Awaitable that completes when the asynchronous operation completes.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the task is not pending (<see cref="IsCompleted"/> is true)
@@ -1004,24 +1040,26 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// Definition of an awaiter that satisfies the await contract.
     /// </summary>
     /// <remarks>
-    /// This allows an <see cref="OVRTask{T}"/> to be awaited using the <c>await</c> keyword.
+    /// This allows an <see cref="OVRTask"/>&lt;TResult&gt; to be awaited using the <c>await</c> keyword.
     /// Typically, you should not use this struct; instead, it is used by the compiler by
     /// automatically calling the <see cref="GetAwaiter"/> method when using the <c>await</c> keyword.
     /// </remarks>
     public readonly struct Awaiter : INotifyCompletion
     {
+        /// \cond
         private readonly OVRTask<TResult> _task;
 
         internal Awaiter(OVRTask<TResult> task)
         {
             _task = task;
         }
+        /// \endcond
 
         /// <summary>
         /// Whether the task has completed
         /// </summary>
         /// <remarks>
-        /// When `True` the asynchronous operation associated with the <see cref="OVRTask{TResult}"/> that created
+        /// When `true` the asynchronous operation associated with the <see cref="OVRTask"/>&lt;TResult&gt; that created
         /// this <see cref="Awaiter"/> (see <see cref="OVRTask{TResult}.GetAwaiter"/>) is complete.
         ///
         /// Typically, you would not call this directly. This is queried by a compiler-generated state machine to
@@ -1054,7 +1092,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     /// Gets an awaiter that satisfies the await contract.
     /// </summary>
     /// <remarks>
-    /// This allows an <see cref="OVRTask{T}"/> to be awaited using the <c>await</c> keyword.
+    /// This allows an <see cref="OVRTask"/>&lt;TResult&gt; to be awaited using the <c>await</c> keyword.
     /// Typically, you should not call this directly; instead, it is invoked by the compiler, e.g.,
     /// <example>
     /// <code><![CDATA[
@@ -1085,7 +1123,8 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
 
     #region Delegate Implementation
 
-    readonly struct Callback
+    /// \cond
+    private readonly struct Callback
     {
         private static readonly Dictionary<Guid, Callback> Callbacks = new Dictionary<Guid, Callback>();
 
@@ -1123,16 +1162,16 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
         }
     }
 
-    readonly struct CallbackWithState<T>
+    private readonly struct CallbackWithState<T>
     {
         private static readonly Dictionary<Guid, CallbackWithState<T>> Callbacks =
             new Dictionary<Guid, CallbackWithState<T>>();
 
-        readonly T _data;
+        private readonly T _data;
 
-        readonly Action<TResult, T> _delegate;
+        private readonly Action<TResult, T> _delegate;
 
-        static void Invoke(Guid taskId, TResult result)
+        private static void Invoke(Guid taskId, TResult result)
         {
             if (Callbacks.TryGetValue(taskId, out var callback))
             {
@@ -1141,7 +1180,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
             }
         }
 
-        CallbackWithState(T data, Action<TResult, T> @delegate)
+        private CallbackWithState(T data, Action<TResult, T> @delegate)
         {
             _data = data;
             _delegate = @delegate;
@@ -1162,6 +1201,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
             ContinueWithClearers.Add(Clearer);
         }
     }
+    /// \endcond
 
     /// <summary>
     /// Registers a delegate to be invoked on completion of the task.
@@ -1173,11 +1213,11 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     ///
     /// Note: If the task throws an exception during execution, there is no way to catch it in when using
     /// <see cref="ContinueWith"/>. Most Meta XR Core SDK calls that return an OVRTask do not throw, but it is possible
-    /// to return an <see cref="OVRTask{TResult}"/> from your own async method, which can still throw. For example,
+    /// to return an <see cref="OVRTask"/>&lt;TResult&gt; from your own async method, which can still throw. For example,
     /// <code><![CDATA[
     /// async OVRTask<OVRAnchor> DoSomethingAsync() {
-    ///   var anchor = await OVRAnchor.CreateSpatialAnchorAsync(pose); // <-- doesn't throw
-    ///   throw new Exception(); // <-- Cannot be caught if using ContinueWith
+    ///   var anchor = await OVRAnchor.CreateSpatialAnchorAsync(pose); // doesn't throw
+    ///   throw new Exception(); // Cannot be caught if using ContinueWith
     ///   return anchor;
     /// }
     ///
@@ -1193,6 +1233,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     ///   DoSomethingAsync().ContinueWith(anchor => {
     ///     Debug.Log($"Anchor {anchor} created!");
     ///   });
+    /// }
     /// ]]></code>
     ///
     /// In the above example, the exception generated by `DoSomethingAsync` is caught in `MethodA`, but there is no
@@ -1257,7 +1298,7 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
         }
     }
 
-    void ValidateDelegateAndThrow(object @delegate, string paramName)
+    private void ValidateDelegateAndThrow(object @delegate, string paramName)
     {
         if (@delegate == null)
             throw new ArgumentNullException(paramName);
@@ -1316,12 +1357,58 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     #endregion
 
     #region IEquatable Implementation
-
+    /// <summary>
+    /// Compares for equality with another task.
+    /// </summary>
+    /// <param name="other">The <see cref="OVRTask"/>&lt;TResult&gt; to compare for equality with this task.</param>
+    /// <returns>Returns `true` if the two task objects represent the same task, otherwise `false`.</returns>
     public bool Equals(OVRTask<TResult> other) => _id == other._id;
+
+    /// <summary>
+    /// Compares for equality with an `object`.
+    /// </summary>
+    /// <param name="obj">The `object` to compare for equality with this task.</param>
+    /// <returns>Returns `true` if <paramref name="obj"/> is an <see cref="OVRTask"/>&lt;TResult&gt; and represents the same
+    /// task as this one, otherwise `false`.</returns>
     public override bool Equals(object obj) => obj is OVRTask<TResult> other && Equals(other);
+
+    /// <summary>
+    /// Compares two tasks for equality.
+    /// </summary>
+    /// <remarks>
+    /// This is the same equality test as <see cref="Equals(OVRTask{TResult})"/>.
+    /// </remarks>
+    /// <param name="lhs">The task to compare with <paramref name="rhs"/>.</param>
+    /// <param name="rhs">The task to compare with <paramref name="lhs"/>.</param>
+    /// <returns>Returns `true` if <paramref name="lhs"/> is equal to <paramref name="rhs"/>, otherwise `false`.</returns>
     public static bool operator ==(OVRTask<TResult> lhs, OVRTask<TResult> rhs) => lhs.Equals(rhs);
+
+    /// <summary>
+    /// Compares two tasks for inequality.
+    /// </summary>
+    /// <remarks>
+    /// This is the logical negation of <see cref="Equals(OVRTask{TResult})"/>.
+    /// </remarks>
+    /// <param name="lhs">The task to compare with <paramref name="rhs"/>.</param>
+    /// <param name="rhs">The task to compare with <paramref name="lhs"/>.</param>
+    /// <returns>Returns `true` if <paramref name="lhs"/> is not equal to <paramref name="rhs"/>, otherwise `false`.</returns>
     public static bool operator !=(OVRTask<TResult> lhs, OVRTask<TResult> rhs) => !lhs.Equals(rhs);
+
+    /// <summary>
+    /// Generates a hash code suitable for use in a `Dictionary` or `HashSet`
+    /// </summary>
+    /// <returns>Returns a hash code suitable for use in a `Dictionary` or `HashSet`</returns>
     public override int GetHashCode() => _id.GetHashCode();
+
+    /// <summary>
+    /// Generates a string representation of this task, based on its internal id.
+    /// </summary>
+    /// <remarks>
+    /// Internally, tasks are identified by a `System.Guid`. This method should only be used for debugging purposes.
+    /// The implementation or behavior may change in future versions, so you should not rely on the format of this
+    /// string for other uses.
+    /// </remarks>
+    /// <returns>Returns the stringification of this task's unique identifier (Guid).</returns>
     public override string ToString() => _id.ToString();
 
     #endregion
@@ -1329,22 +1416,26 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
 
 #region Task builder
 /// <summary>
-/// The AsyncMethodBuilder for <see cref="OVRTask{TResult}"/>.
+/// The AsyncMethodBuilder for <see cref="OVRTask"/>&lt;TResult&gt;.
 /// </summary>
 /// <remarks>
-/// Do not use this type directly. It is used by the compiler to allow <see cref="OVRTask{TResult}"/> to be used as
+/// Do not use this type directly. It is used by the compiler to allow <see cref="OVRTask"/>&lt;TResult&gt; to be used as
 /// a task-like object, that is, you can await on it from an awaitable function.
+///
+/// For more information see [Asynchronous Tasks](https://developer.oculus.com/documentation/unity/unity-async-tasks/).
 /// </remarks>
 /// <typeparam name="T">The type of the result of an asynchronous operation.</typeparam>
+/// <seealso cref="OVRTask"/>
 public struct OVRTaskBuilder<T>
 {
-    interface IPooledStateMachine : IDisposable
+    /// \cond
+    private interface IPooledStateMachine : IDisposable
     {
         OVRTask<T>? Task { get; set; }
         Action MoveNext { get; }
     }
 
-    class PooledStateMachine<TStateMachine> : IPooledStateMachine, OVRObjectPool.IPoolObject
+    private class PooledStateMachine<TStateMachine> : IPooledStateMachine, OVRObjectPool.IPoolObject
         where TStateMachine : IAsyncStateMachine
     {
         public TStateMachine StateMachine;
@@ -1359,7 +1450,7 @@ public struct OVRTaskBuilder<T>
 
         public PooledStateMachine() => MoveNext = ExecuteMoveNext;
 
-        void ExecuteMoveNext() => StateMachine.MoveNext();
+        private void ExecuteMoveNext() => StateMachine.MoveNext();
 
         void OVRObjectPool.IPoolObject.OnGet()
         {
@@ -1374,10 +1465,11 @@ public struct OVRTaskBuilder<T>
         }
     }
 
-    IPooledStateMachine _pooledStateMachine;
+    private IPooledStateMachine _pooledStateMachine;
 
-    OVRTask<T>? _task;
+    private OVRTask<T>? _task;
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public OVRTask<T> Task
     {
         get
@@ -1396,6 +1488,7 @@ public struct OVRTaskBuilder<T>
         }
     }
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public void AwaitOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
         where TAwaiter : INotifyCompletion
         where TStateMachine : IAsyncStateMachine
@@ -1405,6 +1498,7 @@ public struct OVRTaskBuilder<T>
         awaiter.OnCompleted(pooledStateMachine.MoveNext);
     }
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public void AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter awaiter, ref TStateMachine stateMachine)
         where TAwaiter : ICriticalNotifyCompletion
         where TStateMachine : IAsyncStateMachine
@@ -1414,6 +1508,7 @@ public struct OVRTaskBuilder<T>
         awaiter.UnsafeOnCompleted(pooledStateMachine.MoveNext);
     }
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
     {
         var pooledStateMachine = GetPooledStateMachine<TStateMachine>();
@@ -1421,9 +1516,10 @@ public struct OVRTaskBuilder<T>
         stateMachine.MoveNext();
     }
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public static OVRTaskBuilder<T> Create() => default;
 
-    IPooledStateMachine GetPooledStateMachine<TStateMachine>() where TStateMachine : IAsyncStateMachine
+    private IPooledStateMachine GetPooledStateMachine<TStateMachine>() where TStateMachine : IAsyncStateMachine
     {
         if (_pooledStateMachine == null)
         {
@@ -1434,6 +1530,7 @@ public struct OVRTaskBuilder<T>
         return _pooledStateMachine;
     }
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public void SetException(Exception exception)
     {
         Task.SetException(exception);
@@ -1441,6 +1538,7 @@ public struct OVRTaskBuilder<T>
         _pooledStateMachine = null;
     }
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public void SetResult(T result)
     {
         Task.SetResult(result);
@@ -1448,7 +1546,9 @@ public struct OVRTaskBuilder<T>
         _pooledStateMachine = null;
     }
 
+    /// <summary>This is provided for use by the .NET runtime and should not be used directly.</summary>
     public void SetStateMachine(IAsyncStateMachine stateMachine)
     { }
+    /// \endcond
 }
 #endregion

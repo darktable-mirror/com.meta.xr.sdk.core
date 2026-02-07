@@ -25,6 +25,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using static Meta.XR.Editor.UserInterface.Styles;
 using static Meta.XR.Editor.UserInterface.Styles.Contents;
+using static Meta.XR.Editor.UserInterface.Utils;
+using static Meta.XR.Editor.UserInterface.Utils.ColorScope;
 
 namespace Meta.XR.InputActions.Editor
 {
@@ -35,7 +37,12 @@ namespace Meta.XR.InputActions.Editor
         public static string SettingsPath => $"{OVRProjectSetupSettingsProvider.SettingsPath}/{SettingsName}";
 
         public static readonly string Description =
-            "Define new <b>Actions</b> to get input from new devices and controllers.\nYou can also import <b>Action Sets</b> for Third Party controllers here.";
+            "<b>Input Actions</b> are a way to define how inputs from certain devices such as the Logitech MX Ink Stylus are made available through the Meta Core SDK.\n" +
+            "Actions are defined using the Open XR Action specification, where an Action describes how that particular action, e.g. a button press, could be retrieved from a particular controller.\n" +
+            " - The Action name describes how the action can be accessed in code.\n" +
+            " - The Interaction Profile identifies which device the action applies to, e.g. <i>/interaction_profiles/oculus/touch_controller</i> would indicate this action should be used if the attached device is a Meta Quest Touch controller.\n" +
+            " - The Paths identify which input is to be returned from the device, e.g. <i>/user/hand/left/input/grip/pose</i> would indicate the action should return the grip pose of the left controller.\n\n" +
+            "Multiple actions can exist with the same name so long as they have different Interaction Profiles. When that action name is queried the Open XR runtime will determine the right action to use based on which devices are attached.";
 
         public InputSettings(string path, SettingsScope scopes, IEnumerable<string> keywords = null) : base(path, scopes, keywords)
         {
@@ -76,6 +83,8 @@ namespace Meta.XR.InputActions.Editor
 
         public override void OnGUI(string searchContext)
         {
+            ShowExperimentalNotice();
+
             EditorGUILayout.BeginHorizontal(GUIStyles.DialogBox);
             EditorGUILayout.LabelField(DialogIcon, GUIStyles.DialogIconStyle, GUILayout.Width(GUIStyles.DialogIconStyle.fixedWidth));
             EditorGUILayout.BeginVertical();
@@ -108,6 +117,22 @@ namespace Meta.XR.InputActions.Editor
         public override void OnTitleBarGUI()
         {
             Utils.Item.DrawHeaderFromSettingProvider();
+        }
+
+        private static readonly string InternalNotice =
+            $"[Experimental] <b>{Utils.PublicName}</b> is currently an experimental feature.";
+
+        private void ShowExperimentalNotice()
+        {
+            EditorGUILayout.BeginHorizontal(GUIStyles.ExperimentalNoticeBox);
+            using (new ColorScope(Scope.Content, Colors.DarkGray))
+            {
+                EditorGUILayout.LabelField(ExperimentalIcon, GUIStyles.NoticeIconStyle,
+                    GUILayout.Width(GUIStyles.NoticeIconStyle.fixedWidth));
+            }
+
+            EditorGUILayout.LabelField(InternalNotice, GUIStyles.ExperimentalNoticeTextStyle);
+            EditorGUILayout.EndHorizontal();
         }
     }
 

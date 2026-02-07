@@ -28,19 +28,56 @@ using UnityEditor;
 
 namespace Meta.XR.BuildingBlocks
 {
+    /// <summary>
+    /// Building Blocks are designed to help developers discover and install XR features using the Meta XR SDK.
+    /// The <see cref="BuildingBlock"/> <see cref="MonoBehaviour"/> is used as a container for Metadata.
+    /// It stores its <see cref="BlockId"/>, <see cref="InstanceId"/>, <see cref="Version"/>
+    /// as well as <see cref="InstallationRoutineCheckpoint"/> which helps the Building Blocks system to keep track
+    /// of which blocks are installed or not, specifically to properly manage dependency chains.
+    /// </summary>
+    /// <remarks>
+    /// In Editor, you can delete this component by right-clicking the object
+    /// and using Building Blocks > Break Block Connection, which will erase the Metadata and stop treating the
+    /// <see cref="GameObject"/> as a block.
+    /// </remarks>
+    /// <remarks>
+    /// The <see cref="BuildingBlock"/> <see cref="MonoBehaviour"/> is not meant to be added dynamically to an existing
+    /// <see cref="GameObject"/> at runtime as it requires some specific metadata to properly work register
+    /// with the Building Blocks system.
+    /// </remarks>
+    /// <seealso cref="BlockId"/>
+    /// <seealso cref="InstanceId"/>
+    /// <seealso cref="Version"/>
+    /// <seealso cref="InstallationRoutineCheckpoint"/>
+    [HelpURL("https://developer.oculus.com/documentation/unity/bb-overview/")]
     [DisallowMultipleComponent, ExecuteInEditMode]
     public class BuildingBlock : MonoBehaviour
     {
         [SerializeField, OVRReadOnly] internal string blockId;
+        /// <summary>
+        /// Identifies the <see cref="Meta.XR.BuildingBlocks.Editor.BlockData"/> that this block originates from.
+        /// </summary>
         public string BlockId => blockId;
 
         [SerializeField, HideInInspector] internal string instanceId = Guid.NewGuid().ToString();
+        /// <summary>
+        /// A unique identifier string representing the block instance.
+        /// </summary>
         public string InstanceId => instanceId;
 
         [SerializeField, OVRReadOnly] internal int version = 1;
+        /// <summary>
+        /// The version integer of the block, set up during the installation of the block.
+        /// This value is used to detect whether or not an update is available for this block.
+        /// </summary>
         public int Version => version;
 
         [SerializeField, HideInInspector] private InstallationRoutineCheckpoint installationRoutineCheckpoint;
+        /// <summary>
+        /// Contains all Metadata related to the installation of the block,
+        /// typically the variants and interfaces choices required by the installation process.
+        /// This data is serialized into the scene (or prefab) on the related <see cref="GameObject"/>.
+        /// </summary>
         public InstallationRoutineCheckpoint InstallationRoutineCheckpoint
         {
             get => installationRoutineCheckpoint;

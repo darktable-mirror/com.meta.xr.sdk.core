@@ -23,13 +23,27 @@ using Unity.Netcode;
 
 namespace Meta.XR.MultiplayerBlocks.NGO
 {
+    /// <summary>
+    /// The class responsible for the networking part of transferring ownership of a networked game object when using
+    /// the Unity Netcode for Gameobjects networking framework. It implements the <see cref="ITransferOwnership"/> interface
+    /// and is used by <see cref="TransferOwnershipOnSelect"/> which handles the non-networking logic.
+    /// </summary>
     public class TransferOwnershipNGO : NetworkBehaviour, ITransferOwnership
     {
+        /// <summary>
+        /// Transfers the ownership of the networked game object to the local player.
+        /// An implementation of the <see cref="ITransferOwnership"/> interface.
+        /// </summary>
         public void TransferOwnershipToLocalPlayer()
         {
             TransferOwnershipToLocalPlayerServerRpc();
         }
 
+        /// <summary>
+        /// Indicates whether the local player has ownership of the networked game object.
+        /// An implementation of the <see cref="ITransferOwnership"/> interface.
+        /// </summary>
+        /// <returns>'true' if the local player has ownership of the networked game object</returns>
         public bool HasOwnership()
         {
             return IsOwner;

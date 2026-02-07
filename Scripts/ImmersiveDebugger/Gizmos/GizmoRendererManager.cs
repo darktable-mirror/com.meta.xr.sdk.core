@@ -113,6 +113,12 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             _renderers.Add(renderer);
         }
 
+        public bool GetState(Object instance)
+        {
+            var id = instance != null ? instance.GetInstanceID() : 0;
+            return _enabledInstances.Contains(id);
+        }
+
         public void SetState(Object instance, bool state)
         {
             var id = instance != null ? instance.GetInstanceID() : 0;

@@ -28,6 +28,11 @@ using UnityEngine;
 /// <summary>
 /// A <see cref="OVRSceneAnchor"/> that has a 2D bounds associated with it.
 /// </summary>
+/// <remarks>
+/// Examples of scene anchors that would be associated with this component include Wall, Floor, and Ceiling.
+///
+/// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+/// </remarks>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(OVRSceneAnchor))]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/#further-scene-model-unity-components")]
@@ -46,7 +51,7 @@ public class OVRScenePlane : MonoBehaviour, IOVRSceneComponent
     public float Height { get; private set; }
 
     /// <summary>
-    /// The offset of the plane with respect to the anchor's pivot.
+    /// The offset of the plane with respect to the anchor's pivot as a Vector2.
     /// </summary>
     /// <remarks>
     /// The offset is mostly zero, as objects have the anchor's pivot
@@ -58,7 +63,7 @@ public class OVRScenePlane : MonoBehaviour, IOVRSceneComponent
     public Vector2 Offset { get; private set; }
 
     /// <summary>
-    /// The dimensions of the plane.
+    /// The dimensions of the plane as a Vector2.
     /// </summary>
     /// <remarks>
     /// This property corresponds to a Vector whose components are
@@ -67,7 +72,7 @@ public class OVRScenePlane : MonoBehaviour, IOVRSceneComponent
     public Vector2 Dimensions => new Vector2(Width, Height);
 
     /// <summary>
-    /// The vertices of the 2D plane boundary.
+    /// The vertices of the 2D plane boundary as list of Vector2.
     /// </summary>
     /// <remarks>
     /// The vertices are provided in clockwise order and in plane-space (relative to the
@@ -277,7 +282,7 @@ public class OVRScenePlane : MonoBehaviour, IOVRSceneComponent
         }
     }
 
-    void Update()
+    private void Update()
     {
         if (_jobHandle?.IsCompleted == true)
         {
@@ -370,11 +375,14 @@ public class OVRScenePlane : MonoBehaviour, IOVRSceneComponent
 
     private struct GetBoundaryLengthJob : IJob
     {
+        /// <summary>This is an internal member.</summary>
         public OVRSpace Space;
 
+        /// <summary>This is an internal member.</summary>
         [WriteOnly]
         public NativeArray<int> Length;
 
+        /// <summary>This is an internal member.</summary>
         public void Execute() => Length[0] = OVRPlugin.GetSpaceBoundary2DCount(Space, out var count)
             ? count
             : 0;
@@ -382,10 +390,13 @@ public class OVRScenePlane : MonoBehaviour, IOVRSceneComponent
 
     private struct GetBoundaryJob : IJob
     {
+        /// <summary>This is an internal member.</summary>
         public OVRSpace Space;
 
+        /// <summary>This is an internal member.</summary>
         public NativeArray<Vector2> Boundary;
 
+        /// <summary>This is an internal member.</summary>
         public NativeArray<Vector2> PreviousBoundary;
 
         private bool HasBoundaryChanged()
@@ -411,6 +422,7 @@ public class OVRScenePlane : MonoBehaviour, IOVRSceneComponent
             }
         }
 
+        /// <summary>This is an internal member.</summary>
         public void Execute()
         {
             if (OVRPlugin.GetSpaceBoundary2D(Space, Boundary) && HasBoundaryChanged())

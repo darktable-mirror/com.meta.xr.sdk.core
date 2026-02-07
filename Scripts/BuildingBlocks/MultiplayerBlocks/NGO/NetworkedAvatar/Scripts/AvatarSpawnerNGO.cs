@@ -29,6 +29,12 @@ using Oculus.Avatar2;
 
 namespace Meta.XR.MultiplayerBlocks.NGO
 {
+    /// <summary>
+    /// The class responsible for spawning an Avatar when using Unity Netcode for Gameobjects.
+    /// The spawning may happen on <c>Awake()</c> if <see cref="loadAvatarWhenConnected"/> is set to <c>true</c> or at any
+    /// time chosen by the developer by calling <see cref="SpawnAvatar"/>.
+    /// For more information on the Meta Avatars SDK, see https://developer.oculus.com/documentation/unity/meta-avatars-overview/.
+    /// </summary>
     public class AvatarSpawnerNGO : NetworkBehaviour
     {
 #pragma warning disable CS0414 // If Avatar SDK not installed these fields are not used, disable warning but retain serialization
@@ -109,6 +115,10 @@ namespace Meta.XR.MultiplayerBlocks.NGO
 #endif // META_PLATFORM_SDK_DEFINED
 
         // ReSharper disable once MemberCanBePrivate.Global
+        /// <summary>
+        /// Spawns the Avatar.
+        /// </summary>
+        /// <remarks>This is called automatically on <c>Awake()</c> if <see cref="loadAvatarWhenConnected"/> is set to <c>true</c>.</remarks>
         public void SpawnAvatar()
         {
             ulong oculusId = 0;

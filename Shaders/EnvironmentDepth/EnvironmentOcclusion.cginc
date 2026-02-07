@@ -43,13 +43,11 @@ float CalculateEnvironmentDepthHardOcclusion(float2 depthUv, float sceneDepth)
   return SampleEnvironmentDepthLinear(depthUv) > sceneDepth;
 }
 
-float CalculateEnvironmentDepthSoftOcclusion(float4 depthSpace, float2 uvCoords, float bias) {
+float CalculateEnvironmentDepthSoftOcclusion(float2 uvCoords, float linearSceneDepth) {
 
   const float2 halfPixelOffset = 0.5f * float2(_PreprocessedEnvironmentDepthTexture_TexelSize.xy);
   uvCoords -= halfPixelOffset;
 
-  float linearSceneDepth = (1.0f / ((depthSpace.z / depthSpace.w) + _EnvironmentDepthZBufferParams.y)) * _EnvironmentDepthZBufferParams.x;
-  linearSceneDepth -= bias * linearSceneDepth * UNITY_NEAR_CLIP_VALUE;
   float biasedDepthSpace = _EnvironmentDepthZBufferParams.x / linearSceneDepth - _EnvironmentDepthZBufferParams.y;
 
   float cubeDepthRangeLow  = (biasedDepthSpace + 1.0f) * 0.5f;
@@ -89,7 +87,7 @@ float CalculateEnvironmentDepthOcclusion(float3 worldCoords, float bias)
   #if defined(HARD_OCCLUSION)
    return CalculateEnvironmentDepthHardOcclusion(uvCoords, linearSceneDepth);
   #elif defined(SOFT_OCCLUSION)
-   return CalculateEnvironmentDepthSoftOcclusion(depthSpace, uvCoords, bias);
+   return CalculateEnvironmentDepthSoftOcclusion(uvCoords, linearSceneDepth);
   #endif
 
   return 1.0f;
@@ -110,9 +108,6 @@ float CalculateEnvironmentDepthOcclusion(float3 worldCoords, float bias)
 
 #define META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY_WORLDPOS(posWorld, output, zBias) \
     float occlusionValue = META_DEPTH_GET_OCCLUSION_VALUE_WORLDPOS(posWorld, zBias); \
-    if (occlusionValue < 0.01) { \
-      discard; \
-    } \
     output *= occlusionValue; \
 
 #define META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY_WORLDPOS_NAME(input, fieldName, output, zBias) \

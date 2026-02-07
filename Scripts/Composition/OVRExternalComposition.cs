@@ -33,7 +33,7 @@ using Object = UnityEngine.Object;
 using UnityEngine.Rendering.Universal;
 #endif
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
 
 public class OVRExternalComposition : OVRComposition
 {

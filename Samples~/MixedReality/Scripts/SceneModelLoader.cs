@@ -21,6 +21,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Unity.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -37,6 +38,9 @@ public class SceneModelLoader : MonoBehaviour
 {
     public GameObject SceneObjectPrefab;
     [SerializeField] private Transform _trackingSpace;
+    [SerializeField] private bool _loadMeshes = false;
+    [SerializeField] private bool _loadPlanes = true;
+    [SerializeField] private bool _loadVolumes = true;
 
     void Start()
     {
@@ -100,18 +104,49 @@ public class SceneModelLoader : MonoBehaviour
                 );
             }
 
-            // set child object's dimensions to the geometry of the scene object
-            var childTransform = gObj.transform.GetChild(0);
-            if (anchor.TryGetComponent(out OVRBounded3D bounds3D) && bounds3D.IsEnabled)
+            // get child objects and deactivate
+            var volumeTransform = gObj.transform.GetChild(0);
+            volumeTransform.gameObject.SetActive(false);
+            var planeTransform = gObj.transform.GetChild(1);
+            planeTransform.gameObject.SetActive(false);
+            var meshTransform = gObj.transform.GetChild(2);
+            meshTransform.gameObject.SetActive(false);
+
+            // activate and populate Unity object with Scene object data
+            // different objects have different data (volumes, planes, meshes)
+            if (anchor.TryGetComponent(out OVRTriangleMesh trimesh) && trimesh.IsEnabled && _loadMeshes)
             {
-                childTransform.localPosition = new Vector3(
-                    0, 0, -bounds3D.BoundingBox.size.z / 2);
-                childTransform.localScale = bounds3D.BoundingBox.size;
+                meshTransform.gameObject.SetActive(true);
+                if (trimesh.TryGetCounts(out var vertexCount, out var triangleCount))
+                {
+                    using var vertices = new NativeArray<Vector3>(vertexCount, Allocator.Temp);
+                    using var triangles = new NativeArray<int>(triangleCount * 3, Allocator.Temp);
+
+
+                    if (trimesh.TryGetMesh(vertices, triangles))
+                    {
+                        var mesh = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+                        mesh.SetVertices(vertices);
+                        mesh.SetTriangles(triangles.ToArray(), 0);
+                        mesh.RecalculateNormals();
+
+                        meshTransform.gameObject.GetComponent<MeshFilter>().mesh = mesh;
+                        meshTransform.gameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
+                    }
+                }
             }
-            else if (anchor.TryGetComponent(out OVRBounded2D bounds2D) && bounds2D.IsEnabled)
+            if (anchor.TryGetComponent(out OVRBounded3D bounds3D) && bounds3D.IsEnabled && _loadVolumes)
             {
-                childTransform.localEulerAngles = new Vector3(0, 180, 0);
-                childTransform.localScale = new Vector3(
+                volumeTransform.gameObject.SetActive(true);
+                volumeTransform.localPosition = bounds3D.BoundingBox.center;
+                volumeTransform.localScale = bounds3D.BoundingBox.size;
+            }
+            if (anchor.TryGetComponent(out OVRBounded2D bounds2D) && bounds2D.IsEnabled && _loadPlanes)
+            {
+                planeTransform.gameObject.SetActive(true);
+                planeTransform.localPosition = bounds2D.BoundingBox.center;
+                planeTransform.localEulerAngles = new Vector3(0, 180, 0);
+                planeTransform.localScale = new Vector3(
                     bounds2D.BoundingBox.size.x,
                     bounds2D.BoundingBox.size.y,
                     0.01f);

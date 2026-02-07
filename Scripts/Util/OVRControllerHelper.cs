@@ -208,7 +208,9 @@ public class OVRControllerHelper : MonoBehaviour,
                 activeControllerType = ControllerType.TouchPro;
                 break;
             case OVRPlugin.SystemHeadset.Meta_Quest_3:
+            case OVRPlugin.SystemHeadset.Meta_Quest_3S:
             case OVRPlugin.SystemHeadset.Meta_Link_Quest_3:
+            case OVRPlugin.SystemHeadset.Meta_Link_Quest_3S:
                 if (profile == OVRPlugin.InteractionProfile.TouchPro)
                 {
                     activeControllerType = ControllerType.TouchPro;
@@ -441,7 +443,7 @@ public class OVRControllerHelper : MonoBehaviour,
         }
 
 
-        if (m_animator != null)
+        if (m_animator != null && m_animator.gameObject.activeSelf)
         {
             m_animator.SetFloat("Button 1", OVRInput.Get(OVRInput.Button.One, m_controller) ? 1.0f : 0.0f);
             m_animator.SetFloat("Button 2", OVRInput.Get(OVRInput.Button.Two, m_controller) ? 1.0f : 0.0f);

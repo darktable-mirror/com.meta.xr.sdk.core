@@ -23,6 +23,13 @@ using Unity.Netcode.Components;
 
 namespace Meta.XR.MultiplayerBlocks.NGO
 {
+    /// <summary>
+    /// The class for networking the transform of a game object in a client-authoritative fashion when using the
+    /// Unity Netcode for Gameobjects networking framework.
+    /// For more information, see the <see cref="NetworkTransform"/> documentation page https://docs-multiplayer.unity3d.com/netcode/current/components/networktransform/.
+    /// </summary>
+    /// <remarks>This class puts the trust in the client to determine the transform value which may be undesirable
+    /// if you're developing a game that is security/cheating sensitive.</remarks>
     [DisallowMultipleComponent]
     public class ClientNetworkTransform : NetworkTransform
     {

@@ -85,7 +85,8 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 if (!gizmo?.Matches(member, instance) ?? true)
                 {
                     void OnStateChanged(bool state) => memberToGizmoRendererManagerDict[member].SetState(instance, state);
-                    memberController.RegisterGizmo(new GizmoHook(member, instance, attribute, OnStateChanged));
+                    bool GetState() => memberToGizmoRendererManagerDict[member].GetState(instance);
+                    memberController.RegisterGizmo(new GizmoHook(member, instance, attribute, OnStateChanged, GetState));
                 }
             });
         }

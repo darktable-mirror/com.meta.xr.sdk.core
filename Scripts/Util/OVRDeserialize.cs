@@ -24,7 +24,6 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using static OVRPlugin;
 
-//-------------------------------------------------------------------------------------
 /// <summary>
 /// Collection of helper methods to facilitate data deserialization
 /// </summary>
@@ -80,6 +79,7 @@ internal static class OVRDeserialize
         public int Result;
     }
 
+    /// <summary>This is an internal type.</summary>
     public struct SceneCaptureCompleteData
     {
         public UInt64 RequestId;
@@ -161,8 +161,16 @@ internal static class OVRDeserialize
         public OVRAnchor.EraseResult Result;
     }
 
+    /// <summary>
+    /// This is a low-level structure used to make the <see cref="OVRPassthroughLayer.PassthroughLayerResumed"/> event work.
+    /// Use this event to get notifications when a passthrough layer has been rendered for the first time after being restarted.
+    /// </summary>
     public struct PassthroughLayerResumedData
     {
+        /// <summary>
+        /// Stores the passthrough layer's id which has just been started or resumed after the pause.
+        /// See <see cref="OVROverlay.layerId"/> of the <see cref="OVRPassthroughLayer"/> component.
+        /// </summary>
         public int LayerId;
     }
 

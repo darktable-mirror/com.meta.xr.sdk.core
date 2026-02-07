@@ -25,6 +25,11 @@ using Meta.XR.MultiplayerBlocks.Shared;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
+    /// <summary>
+    /// An implementation of the <see cref="IAvatarBehaviour"/> interface to network Avatar states using Photon Fusion.
+    /// This class gets or creates an <see cref="AvatarEntity"/> in the same game object and will handle the networking for it.
+    /// For more information on the Meta Avatars SDK, see https://developer.oculus.com/documentation/unity/meta-avatars-overview/.
+    /// </summary>
     public class AvatarBehaviourFusion : NetworkBehaviour, IAvatarBehaviour
     {
         private const float LERP_TIME = 0.5f;
@@ -107,6 +112,11 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
 
         #region IAvatarBehaviour
 
+        /// <summary>
+        /// Loads a serialized avatar state and update it in the local client.
+        /// An implementation of the <see cref="IAvatarBehaviour"/> interface.
+        /// </summary>
+        /// <param name="bytes">A byte stream containing the serialized avatar state.</param>
         public void ReceiveStreamData(byte[] bytes)
         {
             if (bytes.Length > AvatarDataStreamMaxCapacity)

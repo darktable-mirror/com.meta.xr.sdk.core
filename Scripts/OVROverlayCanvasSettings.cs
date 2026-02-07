@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -29,7 +30,15 @@ using System.Linq;
 
 public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
 {
-    private const string _assetName = "OVROverlayCanvasSettings";
+    private const string kAssetName = "OVROverlayCanvasSettings";
+
+    private const string kOverrideUiShaderName = "UI/Default Correct";
+
+    private const string kBuiltInOpaqueShaderName = "UI/Prerendered Opaque";
+    private const string kUrpOpaqueShaderName = "URP/UI/Prerendered Opaque";
+    private const string kBuiltInTransparentShaderName = "UI/Prerendered";
+    private const string kUrpTransparentShaderName = "URP/UI/Prerendered";
+
     private static OVROverlayCanvasSettings _instance;
 
     public static OVROverlayCanvasSettings Instance
@@ -61,7 +70,7 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
 #if UNITY_EDITOR
     public static string GetOculusOverlayCanvasSettingsAssetPath()
     {
-        return GetAssetPath(_assetName);
+        return GetAssetPath(kAssetName);
     }
 
     public static void CommitOverlayCanvasSettings(OVROverlayCanvasSettings settings)
@@ -77,16 +86,22 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
     }
 #endif
 
-    public static OVROverlayCanvasSettings GetOverlayCanvasSettings()
+    private static OVROverlayCanvasSettings GetOverlayCanvasSettings()
     {
-        LoadAsset(out OVROverlayCanvasSettings settings, _assetName);
+        LoadAsset(out OVROverlayCanvasSettings settings, kAssetName);
 #if !UNITY_EDITOR
         if (settings == null)
         {
             Debug.LogWarning("Failed to load runtime settings. Using default runtime settings instead.");
             settings = ScriptableObject.CreateInstance<OVROverlayCanvasSettings>();
         }
+#else
+        if (settings == null)
+        {
+            throw new UnityEditor.Build.BuildFailedException("OVROverlayCanvasSettings must be created before building player.");
+        }
 #endif
+        settings.EnsureInitialized();
         return settings;
     }
 
@@ -110,7 +125,46 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
             case OVROverlayCanvas.DrawMode.TransparentDefaultAlpha:
             default:
                 return _transparentImposterShader;
-
         }
+    }
+
+    private static bool UsingBuiltInRenderPipeline()
+    {
+        return UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == default;
+    }
+
+    private static void EnsureShaderInitialized(ref Shader shader, string shaderName, string replaceShaderName)
+    {
+        if (shader != null && shader.name != replaceShaderName)
+        {
+            return;
+        }
+        var s = Shader.Find(shaderName);
+        if (s == null)
+        {
+            Debug.LogError($"Failed to find shader \"{shaderName}\"");
+            return;
+        }
+        shader = s;
+    }
+
+    private void EnsureInitialized()
+    {
+        EnsureShaderInitialized(ref _overrideCanvasShader, kOverrideUiShaderName, string.Empty);
+
+        bool useBuiltInShaders = UsingBuiltInRenderPipeline();
+        EnsureShaderInitialized(
+            ref _opaqueImposterShader,
+            useBuiltInShaders ? kBuiltInOpaqueShaderName : kUrpOpaqueShaderName,
+            useBuiltInShaders ? kUrpOpaqueShaderName : kBuiltInOpaqueShaderName);
+        EnsureShaderInitialized(
+            ref _transparentImposterShader,
+            useBuiltInShaders ? kBuiltInTransparentShaderName : kUrpTransparentShaderName,
+            useBuiltInShaders ? kUrpTransparentShaderName : kBuiltInTransparentShaderName);
+    }
+
+    private void OnValidate()
+    {
+        EnsureInitialized();
     }
 }

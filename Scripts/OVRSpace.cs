@@ -22,13 +22,34 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Represents a "space" in the Oculus Runtime.
+/// Represents an XrSpace in the Oculus Runtime.
 /// </summary>
+/// <remarks>
+/// A "space" is an instance of an [XrSpace](https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#XrSpace) in
+/// the OpenXR runtime and is used typically as the low-level handle of an anchor.
+///
+/// \deprecated Most APIs that use <see cref="OVRSpace"/> are deprecated. For low-level access to anchors, use
+/// <see cref="OVRAnchor"/> instead.
+///
+/// Read more about anchors generally at
+/// [Spatial Anchor Overview](https://developer.oculus.com/documentation/unity/unity-spatial-anchors-persist-content/#ovrspatialanchor-component)
+/// and
+/// [Scene Overview](https://developer.oculus.com/documentation/unity/unity-scene-overview/).
+/// </remarks>
 public readonly struct OVRSpace : IEquatable<OVRSpace>
 {
     /// <summary>
-    /// Represents a storage location for an <see cref="OVRSpace"/>.
+    /// \deprecated Represents a storage location for an anchor.
     /// </summary>
+    /// <remarks>
+    /// \deprecated APIs that accept a storage location are obsolete.
+    ///
+    /// When you save (<see cref="OVRSpatialAnchor.SaveAsync(OVRSpatialAnchor.SaveOptions)"/>,
+    /// erase (<see cref="OVRSpatialAnchor.EraseAsync(OVRSpatialAnchor.EraseOptions)"/>,
+    /// or load (<see cref="OVRSpatialAnchor.LoadUnboundAnchorsAsync(OVRSpatialAnchor.LoadOptions)"/> a spatial
+    /// anchor using these obsolete APIs, you may specify a storage location to indicate from where you would like to
+    /// save, erase, or load the anchor(s), respectively.
+    /// </remarks>
     [Obsolete("Anchor APIs no longer require a storage location.")]
     public enum StorageLocation
     {
@@ -44,9 +65,12 @@ public readonly struct OVRSpace : IEquatable<OVRSpace>
     }
 
     /// <summary>
-    /// A runtime handle associated with this <see cref="OVRSpace"/>. This could change between subsequent sessions
-    /// or apps.
+    /// A runtime handle associated with this <see cref="OVRSpace"/>.
     /// </summary>
+    /// <remarks>
+    /// The handle can change between subsequent sessions. To refer to a persistent anchor, use <see cref="TryGetUuid"/>
+    /// to get a unique identifier for the anchor.
+    /// </remarks>
     public ulong Handle { get; }
 
     /// <summary>
@@ -80,25 +104,67 @@ public readonly struct OVRSpace : IEquatable<OVRSpace>
     public OVRSpace(ulong handle) => Handle = handle;
 
     /// <summary>
-    /// Generates a string representation of this <see cref="OVRSpace"/> of the form
-    /// "0xYYYYYYYY"
-    /// where "Y" are the hexadecimal digits of the <see cref="Handle"/>.
+    /// Generates a string representation of this <see cref="OVRSpace"/> of the form "0xYYYYYYYY" where "Y" are the
+    /// hexadecimal digits of the <see cref="Handle"/>.
     /// </summary>
     /// <returns>Returns a string representation of this <see cref="OVRSpace"/>.</returns>
     public override string ToString() => $"0x{Handle:x16}";
 
+    /// <summary>
+    /// Compares for equality with another space.
+    /// </summary>
+    /// <param name="other">The <see cref="OVRSpace"/> to compare for equality with this space.</param>
+    /// <returns>Returns `true` if the two spaces represent the same space instance, otherwise `false`.</returns>
     public bool Equals(OVRSpace other) => Handle == other.Handle;
 
+    /// <summary>
+    /// Compares for equality with an `object`.
+    /// </summary>
+    /// <param name="obj">The `object` to compare for equality with this space.</param>
+    /// <returns>Returns `true` if <paramref name="obj"/> is an <see cref="OVRSpace"/> and represents the same
+    /// space instance as this one, otherwise `false`.</returns>
     public override bool Equals(object obj) => obj is OVRSpace other && Equals(other);
 
+    /// <summary>
+    /// Generates a hash code suitable for use in a `Dictionary` or `HashSet`
+    /// </summary>
+    /// <returns>Returns a hash code suitable for use in a `Dictionary` or `HashSet`</returns>
     public override int GetHashCode() => Handle.GetHashCode();
 
+    /// <summary>
+    /// Compares two spaces for equality.
+    /// </summary>
+    /// <remarks>
+    /// This is the same equality test as <see cref="Equals(OVRSpace)"/>.
+    /// </remarks>
+    /// <param name="lhs">The space to compare with <paramref name="rhs"/>.</param>
+    /// <param name="rhs">The space to compare with <paramref name="lhs"/>.</param>
+    /// <returns>Returns `true` if <paramref name="lhs"/> is equal to <paramref name="rhs"/>, otherwise `false`.</returns>
     public static bool operator ==(OVRSpace lhs, OVRSpace rhs) => lhs.Handle == rhs.Handle;
 
+    /// <summary>
+    /// Compares two spaces for inequality.
+    /// </summary>
+    /// <remarks>
+    /// This is the logical negation of <see cref="Equals(OVRSpace)"/>.
+    /// </remarks>
+    /// <param name="lhs">The space to compare with <paramref name="rhs"/>.</param>
+    /// <param name="rhs">The space to compare with <paramref name="lhs"/>.</param>
+    /// <returns>Returns `true` if <paramref name="lhs"/> is not equal to <paramref name="rhs"/>, otherwise `false`.</returns>
     public static bool operator !=(OVRSpace lhs, OVRSpace rhs) => lhs.Handle != rhs.Handle;
 
+    /// <summary>
+    /// Casts a `ulong` handle to an <see cref="OVRSpace"/>.
+    /// </summary>
+    /// <param name="handle">The handle of the `XrSpace` to convert.</param>
+    /// <returns>Returns the <paramref name="handle"/> as an <see cref="OVRSpace"/>.</returns>
     public static implicit operator OVRSpace(ulong handle) => new OVRSpace(handle);
 
+    /// <summary>
+    /// Casts an <see cref="OVRSpace"/> to its underlying `XrSpace` handle.
+    /// </summary>
+    /// <param name="space">The <see cref="OVRSpace"/> to cast.</param>
+    /// <returns>Returns the `XrSpace` handle of the <see cref="OVRSpace"/>.</returns>
     public static implicit operator ulong(OVRSpace space) => space.Handle;
 }
 

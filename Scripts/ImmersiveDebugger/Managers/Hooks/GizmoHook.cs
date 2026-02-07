@@ -26,11 +26,16 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 {
     public class GizmoHook : Hook
     {
-        public Action<bool> OnStateChanged { get; private set; }
+        public Action<bool> SetState { get; }
+        public Func<bool> GetState { get; }
 
-        public GizmoHook(MemberInfo memberInfo, object instance, DebugMember attribute, Action<bool> onStateChanged) : base(memberInfo, instance, attribute)
+        public GizmoHook(MemberInfo memberInfo, object instance, DebugMember attribute, Action<bool> setState, Func<bool> getState) : base(memberInfo, instance, attribute)
         {
-            OnStateChanged = onStateChanged;
+            SetState = setState;
+            GetState = getState;
+
+            // Initializing the Gizmo to its default state
+            SetState?.Invoke(attribute.ShowGizmoByDefault);
         }
     }
 }

@@ -141,9 +141,15 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         Oculus_Quest_2 = OVRPlugin.SystemHeadset.Oculus_Quest_2,
         Meta_Quest_Pro = OVRPlugin.SystemHeadset.Meta_Quest_Pro,
         Meta_Quest_3 = OVRPlugin.SystemHeadset.Meta_Quest_3,
-        Placeholder_12 = OVRPlugin.SystemHeadset.Placeholder_12,
+        Meta_Quest_3S = OVRPlugin.SystemHeadset.Meta_Quest_3S,
         Placeholder_13 = OVRPlugin.SystemHeadset.Placeholder_13,
         Placeholder_14 = OVRPlugin.SystemHeadset.Placeholder_14,
+        Placeholder_15 = OVRPlugin.SystemHeadset.Placeholder_15,
+        Placeholder_16 = OVRPlugin.SystemHeadset.Placeholder_16,
+        Placeholder_17 = OVRPlugin.SystemHeadset.Placeholder_17,
+        Placeholder_18 = OVRPlugin.SystemHeadset.Placeholder_18,
+        Placeholder_19 = OVRPlugin.SystemHeadset.Placeholder_19,
+        Placeholder_20 = OVRPlugin.SystemHeadset.Placeholder_20,
 
         // PC headsets
         Rift_DK1 = OVRPlugin.SystemHeadset.Rift_DK1,
@@ -155,9 +161,15 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         Oculus_Link_Quest_2 = OVRPlugin.SystemHeadset.Oculus_Link_Quest_2,
         Meta_Link_Quest_Pro = OVRPlugin.SystemHeadset.Meta_Link_Quest_Pro,
         Meta_Link_Quest_3 = OVRPlugin.SystemHeadset.Meta_Link_Quest_3,
-        PC_Placeholder_4105 = OVRPlugin.SystemHeadset.PC_Placeholder_4105,
+        Meta_Link_Quest_3S = OVRPlugin.SystemHeadset.Meta_Link_Quest_3S,
         PC_Placeholder_4106 = OVRPlugin.SystemHeadset.PC_Placeholder_4106,
-        PC_Placeholder_4107 = OVRPlugin.SystemHeadset.PC_Placeholder_4107
+        PC_Placeholder_4107 = OVRPlugin.SystemHeadset.PC_Placeholder_4107,
+        PC_Placeholder_4108 = OVRPlugin.SystemHeadset.PC_Placeholder_4108,
+        PC_Placeholder_4109 = OVRPlugin.SystemHeadset.PC_Placeholder_4109,
+        PC_Placeholder_4110 = OVRPlugin.SystemHeadset.PC_Placeholder_4110,
+        PC_Placeholder_4111 = OVRPlugin.SystemHeadset.PC_Placeholder_4111,
+        PC_Placeholder_4112 = OVRPlugin.SystemHeadset.PC_Placeholder_4112,
+        PC_Placeholder_4113 = OVRPlugin.SystemHeadset.PC_Placeholder_4113,
     }
 
     public enum SystemHeadsetTheme
@@ -406,7 +418,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     public static event Action HSWDismissed;
 #pragma warning restore
 
-    private static bool _isHmdPresentCached = false;
+    private static int _isHmdPresentCacheFrame = -1;
     private static bool _isHmdPresent = false;
     private static bool _wasHmdPresent = false;
 
@@ -418,19 +430,13 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     {
         get
         {
-            if (!_isHmdPresentCached)
+            // Caching to ensure that IsHmdPresent() is called only once per frame
+            if (_isHmdPresentCacheFrame != Time.frameCount)
             {
-                _isHmdPresentCached = true;
+                _isHmdPresentCacheFrame = Time.frameCount;
                 _isHmdPresent = OVRNodeStateProperties.IsHmdPresent();
             }
-
             return _isHmdPresent;
-        }
-
-        private set
-        {
-            _isHmdPresentCached = true;
-            _isHmdPresent = value;
         }
     }
 
@@ -705,7 +711,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         set { OVRPlugin.eyeFovPremultipliedAlphaModeEnabled = value; }
     }
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
     /// <summary>
     /// If true, the MixedRealityCapture properties will be displayed
     /// </summary>
@@ -1992,7 +1998,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         get { return OVRPlugin.nativeSDKVersion; }
     }
 
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_ANDROID
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
     private static bool MixedRealityEnabledFromCmd()
     {
         var args = System.Environment.GetCommandLineArgs();
@@ -2516,6 +2522,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
+            // do an early return to avoid calling the rest of the Update() logic.
+            return;
 #else
             Application.Quit();
 #endif
@@ -2558,9 +2566,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         OVRPlugin.useIPDInPositionTracking = useIPDInPositionTracking;
 
         // Dispatch HMD events.
-
-        isHmdPresent = OVRNodeStateProperties.IsHmdPresent();
-
         int currentMsaaLevel = 0;
 #if USING_URP
         var renderPipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
@@ -3541,8 +3546,10 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 
     /// <summary>
-    /// Specify if Insight Passthrough should be enabled.
-    /// Passthrough layers can only be used if passthrough is enabled.
+    /// This class is used by <see cref="OVRManager.GetPassthroughCapabilities()"/> to report on Passthrough
+    /// capabilities provided by the system.
+    /// Use it to configure various passthrough color mapping techniques, e.g. color LUTs. See
+    /// [Color Mapping Techniques](https://developer.oculus.com/documentation/unity/unity-customize-passthrough-color-mapping/) for more details.
     /// </summary>
     public class PassthroughCapabilities
     {
@@ -3552,12 +3559,14 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         public bool SupportsPassthrough { get; }
 
         /// <summary>
-        /// Indicates that the system can show Passthrough with realistic colors.
+        /// Indicates that the system can show Passthrough with realistic colors. If 'false', then the system
+        /// either supports the basic grayscale passthrough, or doesn't support passthrough at all.
         /// </summary>
         public bool SupportsColorPassthrough { get; }
 
         /// <summary>
-        /// Maximum color LUT resolution supported by the system.
+        /// Maximum color LUT resolution supported by the system. Use it together with the <see cref="OVRPassthroughLayer.SetColorLut(OVRPassthroughColorLut, float)"/>
+        /// method to apply a color LUT to a <see cref="OVRPassthroughLayer"/> component.
         /// </summary>
         public uint MaxColorLutResolution { get; }
 

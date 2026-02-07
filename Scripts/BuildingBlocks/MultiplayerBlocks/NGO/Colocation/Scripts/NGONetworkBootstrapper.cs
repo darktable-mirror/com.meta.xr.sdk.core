@@ -28,7 +28,9 @@ using LogLevel = Meta.XR.MultiplayerBlocks.Colocation.LogLevel;
 namespace Meta.XR.MultiplayerBlocks.NGO
 {
     /// <summary>
-    ///     A class that handles setting up and initializing colocation
+    /// A helper class that handles setting up and initializing colocation when using the Unity Netcode for Gameobjects networking framework.
+    /// Once this networked game object is spawned this class starts the process for getting the player's Meta account and starts
+    /// the colocation routines.
     /// </summary>
     public class NGONetworkBootstrapper : NetworkBehaviour
     {

@@ -30,8 +30,9 @@ namespace Meta.XR.InputActions
 {
     public class RuntimeSettings : OVRRuntimeAssetsBase
     {
-
+        [Tooltip("A list of input action definitions, which define how certain input values can be obtained from third party devices.")]
         public List<UserInputActionSet> InputActionDefinitions = new List<UserInputActionSet>();
+        [Tooltip("Allows for the inclusion of Input Actions defined in an InputActionSet Serializable Object, such as those provided in third party device samples.")]
         public List<InputActionSet> InputActionSets = new List<InputActionSet>();
 
         internal static string InstanceAssetName = "InputActions";
@@ -140,7 +141,10 @@ namespace Meta.XR.InputActions
     [System.Serializable]
     public class UserInputActionSet
     {
+        [InlineLink("https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#semantic-path-interaction-profiles")]
+        [Tooltip("The interaction profile of the devices these actions should be applied to.")]
         public string InteractionProfile;
+        [Tooltip("A list of the different Input Actions that this device supports.")]
         public List<InputActionDefinition> InputActionDefinitions = new List<InputActionDefinition>();
 
         public override string ToString()
@@ -152,8 +156,11 @@ namespace Meta.XR.InputActions
     [System.Serializable]
     public class InputActionDefinition
     {
+        [Tooltip("The name of this action. This is used in functions like OVRPlugin.GetActionStateBoolean to identify this specific action.")]
         public string ActionName;
+        [Tooltip("The type of this action. Does it return a bool, pose, vector2, float or trigger a vibration?")]
         public OVRPlugin.ActionTypes Type;
+        [Tooltip("Paths: the path from where this action will get its data. This is based on the OpenXR specification for the device.")]
         [FormerlySerializedAs("Path")]
         public string[] Paths;
     }

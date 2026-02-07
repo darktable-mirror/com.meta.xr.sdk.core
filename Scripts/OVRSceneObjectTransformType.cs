@@ -39,11 +39,16 @@ using UnityEngine;
 /// Note: if this type does not exist on the scene anchor's child objects,
 /// then the <seealso cref="OVRSceneVolume"/> will take precedence for
 /// scaling/offseting child objects.
+///
+/// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
 /// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/#further-scene-model-unity-components")]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
 public class OVRSceneObjectTransformType : MonoBehaviour
 {
+    /// <summary>
+    /// The possible transformation types that can be applied to a child object of a scene anchor.
+    /// </summary>
     [Serializable]
     public enum Transformation
     {
@@ -52,6 +57,9 @@ public class OVRSceneObjectTransformType : MonoBehaviour
         None
     }
 
+    /// <summary>
+    /// The type of <see cref="OVRSceneObjectTransformType.Transformation"/> currently being applied to a child object of a scene anchor.
+    /// </summary>
     [Tooltip("Choose the type of scene anchor (volume/plane) " +
              "that may modify this transform.")]
     public Transformation TransformType;

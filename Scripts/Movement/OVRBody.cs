@@ -23,11 +23,15 @@ using Meta.XR.Util;
 using UnityEngine;
 
 /// <summary>
-/// Manages data related to body tracking.
+/// This class implements <see cref="OVRSkeleton.IOVRSkeletonDataProvider"/> in order
+/// to provide body pose data and related skeleton type, and it also implements
+/// <see cref="OVRSkeletonRenderer.IOVRSkeletonRendererDataProvider"/> in case body tracking
+/// state needs to be provided to renderer-based classes. It starts and stops body tracking.
+/// For more information, see [Body Tracking for Movement SDK for Unity](https://developer.oculus.com/documentation/unity/move-body-tracking/).
 /// </summary>
 /// <remarks>
-/// Typically, you would use this in conjunction with an <see cref="OVRSkeleton"/> and/or
-/// <see cref="OVRSkeletonRenderer"/>.
+/// Typically, you would use this in conjunction with an <see cref="OVRSkeleton"/> in order
+/// to transform bones and/or an <see cref="OVRSkeletonRenderer"/> to render them.
 /// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/move-body-tracking/")]
 [Feature(Feature.BodyTracking)]
@@ -35,16 +39,34 @@ public class OVRBody : MonoBehaviour,
     OVRSkeleton.IOVRSkeletonDataProvider,
     OVRSkeletonRenderer.IOVRSkeletonRendererDataProvider
 {
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private OVRPlugin.BodyState _bodyState;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private OVRPlugin.Quatf[] _boneRotations;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private OVRPlugin.Vector3f[] _boneTranslations;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private bool _dataChangedSinceLastQuery;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private bool _hasData;
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private const OVRPermissionsRequester.Permission BodyTrackingPermission =
         OVRPermissionsRequester.Permission.BodyTracking;
 
@@ -54,16 +76,26 @@ public class OVRBody : MonoBehaviour,
     [Tooltip("The skeleton data type to be provided. Should be sync with OVRSkeleton. For selecting the tracking mode on the device, check settings in OVRManager.")]
     private OVRPlugin.BodyJointSet _providedSkeletonType = OVRPlugin.BodyJointSet.UpperBody;
 
+    /// <summary>
+    /// The skeleton type joint set that is used when updating the body state.
+    /// Change this value based on the joint set that is compatible with your
+    /// character.
+    /// </summary>
     public OVRPlugin.BodyJointSet ProvidedSkeletonType
     {
         get => _providedSkeletonType;
         set => _providedSkeletonType = value;
     }
 
+    /// <summary>
+    /// This field is private. Do not use it in your app logic.
+    /// </summary>
     private static int _trackingInstanceCount;
 
     /// <summary>
     /// The raw <see cref="BodyState"/> data used to populate the <see cref="OVRSkeleton"/>.
+    /// Query this value for metadata associated with <see cref="BodyState"/>, such as joint locations
+    /// or confidence values.
     /// </summary>
     public OVRPlugin.BodyState? BodyState => _hasData ? _bodyState : default(OVRPlugin.BodyState?);
 
@@ -155,6 +187,13 @@ public class OVRBody : MonoBehaviour,
 
     private void Update() => GetBodyState(OVRPlugin.Step.Render);
 
+    /// <summary>
+    /// Attempts to set the requested joint set. If you call this function and
+    /// request a joint set that is not supported, you will get a false value
+    /// returned as a result.
+    /// </summary>
+    /// <param name="jointSet">The requested joint set.</param>
+    /// <returns>`true` if joint set requested was set; `false` if not.</returns>
     public static bool SetRequestedJointSet(OVRPlugin.BodyJointSet jointSet)
     {
         var activeJointSet = OVRRuntimeSettings.GetRuntimeSettings().BodyTrackingJointSet;
@@ -172,10 +211,24 @@ public class OVRBody : MonoBehaviour,
     }
 
 
+    /// <summary>
+    /// Runs body tracking calibration with the height specified in meters. Use this function
+    /// to enforce the height of the user.
+    /// </summary>
+    /// <param name="height">The height in meters.</param>
+    /// <returns>`true` if the height calibration worked, `false` if not.</returns>
     public static bool SuggestBodyTrackingCalibrationOverride(float height) =>
         OVRPlugin.SuggestBodyTrackingCalibrationOverride(new OVRPlugin.BodyTrackingCalibrationInfo { BodyHeight = height });
+    /// <summary>
+    /// Resets body tracking calibration.
+    /// </summary>
+    /// <returns>`true` if body tracking calibration was successful; `false` if not.</returns>
     public static bool ResetBodyTrackingCalibration() => OVRPlugin.ResetBodyTrackingCalibration();
 
+    /// <summary>
+    /// Returns the current body tracking calibration status.
+    /// </summary>
+    /// <returns>Body calibration status in the form of <see cref="OVRPlugin.BodyTrackingCalibrationState"/>.</returns>
     public OVRPlugin.BodyTrackingCalibrationState GetBodyTrackingCalibrationStatus()
     {
         if (!_hasData)
@@ -184,6 +237,11 @@ public class OVRBody : MonoBehaviour,
         return _bodyState.CalibrationStatus;
     }
 
+    /// <summary>
+    /// This function returns the current body tracking fidelity. Use this function to understand
+    /// the visual fidelity of body tracking of your app during runtime.
+    /// </summary>
+    /// <returns>Body tracking fidelity as <see cref="OVRPlugin.BodyTrackingFidelity2"/>.</returns>
     public OVRPlugin.BodyTrackingFidelity2 GetBodyTrackingFidelityStatus()
     {
         return _bodyState.Fidelity;
@@ -266,7 +324,10 @@ public class OVRBody : MonoBehaviour,
         : default;
 
     /// <summary>
-    /// Body Tracking Fidelity defines the quality of the tracking
+    /// This field manages body tracking fidelity, which is associated with
+    /// body tracking quality that is currently being used in an app. Fidelity
+    /// is determined by the app's runtime settings as well as the capabilities of
+    /// the device that is runs on.
     /// </summary>
     public static OVRPlugin.BodyTrackingFidelity2 Fidelity
     {

@@ -24,6 +24,7 @@ using Meta.XR.Guides.Editor.Items;
 
 namespace Meta.XR.Guides.Editor
 {
+    [GuideItems]
     internal static class OcclusionBlockSetupInfo
     {
         private static string ImportantTag = $"<color={XR.Editor.UserInterface.Utils.ColorToHex(Styles.Colors.Yellow)}>[Important]</color>";

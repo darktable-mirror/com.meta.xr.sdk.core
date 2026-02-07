@@ -48,6 +48,8 @@ internal class OVRConfigurationTask
 
     public Action<BuildTargetGroup> FixAction { get; }
 
+    public bool FixAutomatic { get; }
+
     private readonly Dictionary<BuildTargetGroup, OVRProjectSetupSettingBool> _ignoreSettings =
         new Dictionary<BuildTargetGroup, OVRProjectSetupSettingBool>();
 
@@ -62,7 +64,8 @@ internal class OVRConfigurationTask
         OptionalLambdaType<BuildTargetGroup, string> message,
         OptionalLambdaType<BuildTargetGroup, string> fixMessage,
         OptionalLambdaType<BuildTargetGroup, string> url,
-        OptionalLambdaType<BuildTargetGroup, bool> valid)
+        OptionalLambdaType<BuildTargetGroup, bool> valid,
+        bool fixAutomatic = true)
     {
         Platform = platform;
         Group = group;
@@ -70,6 +73,7 @@ internal class OVRConfigurationTask
         FixAction = fix;
         Level = level;
         Message = message;
+        FixAutomatic = fixAutomatic;
 
         // If parameters are null, we're creating a OptionalLambdaType that points to default values
         // We don't want a null OptionalLambdaType, but we may be okay with an OptionalLambdaType containing a null value
@@ -266,7 +270,7 @@ internal class OVRConfigurationTask
             Message = Message.GetValue(platform),
             CheckPredicate = () => IsDone(platform),
             FixIt = () => FixAction(platform),
-            FixItAutomatic = true,
+            FixItAutomatic = FixAutomatic,
             FixItMessage = FixMessage.GetValue(platform),
             HelpText = null,
             HelpLink = null,

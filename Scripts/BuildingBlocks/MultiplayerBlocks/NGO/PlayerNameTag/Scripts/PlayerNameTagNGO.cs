@@ -26,6 +26,11 @@ using UnityEngine.UI;
 
 namespace Meta.XR.MultiplayerBlocks.NGO
 {
+    /// <summary>
+    /// The class responsible for synchronizing the position and username of a player's name tag to all connected clients
+    /// when using the Unity Netcode for Gameobjects networking framework.
+    /// The position is synced on each network update and the username is synced every time it's changed.
+    /// </summary>
     public class PlayerNameTagNGO : NetworkBehaviour
     {
         [SerializeField] private Text nameTag;
@@ -35,6 +40,10 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         [SerializeField] private float heightOffset = 0.3f;
 
         private Transform _centerEye;
+        /// <summary>
+        /// The networked string responsible for storing the player's username when using the Unity Netcode for Gameobjects networking framework.
+        /// When set, it triggers a visual update of what's displayed in the player name tag for all connected clients.
+        /// </summary>
         public NetworkVariable<FixedString128Bytes> PlayerName = new();
 
         private void Awake()

@@ -28,7 +28,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
     using CustomNetworkObjectSpawnFunc = Func<GameObject>;
     /// <summary>
     /// A custom provider to allow composing NetworkObjects programmatically (instead of placing in-Scene or spawning from Prefabs).
-    /// This object should be attached onto NetworkRunner object.
+    /// This object should be attached onto a NetworkRunner object. This is a helper component when using the Photon Fusion networking framework.
     /// </summary>
     public class CustomNetworkObjectProvider : NetworkObjectProviderDefault
     {

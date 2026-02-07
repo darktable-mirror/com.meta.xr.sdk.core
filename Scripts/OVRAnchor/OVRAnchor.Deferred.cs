@@ -25,7 +25,7 @@ using static OVRPlugin;
 
 partial struct OVRAnchor
 {
-    struct DeferredValue
+    private struct DeferredValue
     {
         public OVRTask<bool> Task;
         public bool EnabledDesired;
@@ -34,7 +34,7 @@ partial struct OVRAnchor
         public float StartTime;
     }
 
-    struct DeferredKey : IEquatable<DeferredKey>
+    private struct DeferredKey : IEquatable<DeferredKey>
     {
         public ulong Space;
         public SpaceComponentType ComponentType;
@@ -49,7 +49,7 @@ partial struct OVRAnchor
         public override int GetHashCode() => unchecked(Space.GetHashCode() * 486187739 + ((int)ComponentType).GetHashCode());
     }
 
-    static readonly Dictionary<DeferredKey, List<DeferredValue>> _deferredTasks = new();
+    private static readonly Dictionary<DeferredKey, List<DeferredValue>> _deferredTasks = new();
 
     internal static OVRTask<bool> CreateDeferredSpaceComponentStatusTask(ulong space, SpaceComponentType componentType, bool enabledDesired, double timeout
     )

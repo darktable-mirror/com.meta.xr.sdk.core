@@ -46,7 +46,13 @@ namespace Meta.XR.EnvironmentDepth
             return new Vector4(invDepthFactor, depthOffset, 0, 0);
         }
 
-        public static Matrix4x4 CalculateReprojection(DepthFrameDesc frameDesc)
+        internal static Matrix4x4 CalculateReprojection(DepthFrameDesc frameDesc)
+        {
+            CalculateDepthCameraMatrices(frameDesc, out var proj, out var view);
+            return proj * view;
+        }
+
+        internal static void CalculateDepthCameraMatrices(DepthFrameDesc frameDesc, out Matrix4x4 projMatrix, out Matrix4x4 viewMatrix)
         {
             float left = frameDesc.fovLeftAngle;
             float right = frameDesc.fovRightAngle;
@@ -72,7 +78,7 @@ namespace Meta.XR.EnvironmentDepth
                 d = -(2.0F * far * near) / (far - near);
             }
             float e = -1.0F;
-            Matrix4x4 m = new Matrix4x4
+            projMatrix = new Matrix4x4
             {
                 m00 = x,
                 m01 = 0,
@@ -101,10 +107,8 @@ namespace Meta.XR.EnvironmentDepth
                 createRotation.w
             );
 
-            var viewMatrix = Matrix4x4.TRS(frameDesc.createPoseLocation, depthOrientation,
+            viewMatrix = Matrix4x4.TRS(frameDesc.createPoseLocation, depthOrientation,
                 _scalingVector3).inverse;
-
-            return m * viewMatrix;
         }
     }
 }

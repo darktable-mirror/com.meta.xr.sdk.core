@@ -31,18 +31,23 @@ using Unity.Collections;
 /// <seealso cref="OVRExtensions.ToNonAlloc{T}"/>
 internal readonly struct OVREnumerable<T> : IEnumerable<T>
 {
-    readonly IEnumerable<T> _enumerable;
+    private readonly IEnumerable<T> _enumerable;
 
+    /// <summary>This is an internal member.</summary>
     public OVREnumerable(IEnumerable<T> enumerable) => _enumerable = enumerable;
 
+    /// <summary>This is an internal member.</summary>
     public Enumerator GetEnumerator() => new(_enumerable);
 
+    /// <summary>This is an internal member.</summary>
     IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
+    /// <summary>This is an internal member.</summary>
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     // If the count can be determined without enumerating the collection, sets count and returns True.
     // Otherwise, returns False.
+    /// <summary>This is an internal member.</summary>
     public bool TryGetCount(out int count)
     {
         var ncount = Count;
@@ -51,6 +56,7 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
     }
 
     // Returns the count if it can do so without enumerating the collection, otherwise null.
+    /// <summary>This is an internal member.</summary>
     public int? Count => _enumerable switch
     {
         null => 0,
@@ -60,6 +66,7 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
         _ => null,
     };
 
+    /// <summary>This is an internal member.</summary>
     [Obsolete("This method may enumerate the collection. Consider " + nameof(Count) + " or " +
               nameof(TryGetCount) + " instead.")]
     public int GetCount()
@@ -76,9 +83,10 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
         return count;
     }
 
+    /// <summary>This is an internal type.</summary>
     public struct Enumerator : IEnumerator<T>
     {
-        enum CollectionType
+        private enum CollectionType
         {
             None,
             ReadOnlyList,
@@ -88,15 +96,16 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
             Enumerable,
         }
 
-        int _listIndex;
-        readonly CollectionType _type;
-        readonly int _listCount;
-        readonly IEnumerator<T> _enumerator;
-        readonly IReadOnlyList<T> _readOnlyList;
-        HashSet<T>.Enumerator _setEnumerator;
-        Queue<T>.Enumerator _queueEnumerator;
-        List<T>.Enumerator _listEnumerator;
+        private int _listIndex;
+        private readonly CollectionType _type;
+        private readonly int _listCount;
+        private readonly IEnumerator<T> _enumerator;
+        private readonly IReadOnlyList<T> _readOnlyList;
+        private HashSet<T>.Enumerator _setEnumerator;
+        private Queue<T>.Enumerator _queueEnumerator;
+        private List<T>.Enumerator _listEnumerator;
 
+        /// <summary>This is an internal member.</summary>
         public Enumerator(IEnumerable<T> enumerable)
         {
             _setEnumerator = default;
@@ -136,6 +145,7 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
             }
         }
 
+        /// <summary>This is an internal member.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool MoveNext() => _type switch
         {
@@ -148,12 +158,13 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
             _ => throw new InvalidOperationException($"Unsupported collection type {_type}.")
         };
 
-        bool MoveNextReadOnlyList()
+        private bool MoveNextReadOnlyList()
         {
             ValidateAndThrow();
             return ++_listIndex < _listCount;
         }
 
+        /// <summary>This is an internal member.</summary>
         public void Reset()
         {
             switch (_type)
@@ -172,6 +183,7 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
             }
         }
 
+        /// <summary>This is an internal member.</summary>
         public T Current
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -186,8 +198,10 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
             };
         }
 
+        /// <summary>This is an internal member.</summary>
         object IEnumerator.Current => Current;
 
+        /// <summary>This is an internal member.</summary>
         public void Dispose()
         {
             switch (_type)
@@ -209,6 +223,7 @@ internal readonly struct OVREnumerable<T> : IEnumerable<T>
             }
         }
 
+        /// <summary>This is an internal member.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void ValidateAndThrow()
         {
@@ -388,6 +403,7 @@ static partial class OVRExtensions
 
 internal static class OVREnumerable
 {
+    /// <summary>This is an internal member.</summary>
     public static unsafe int CopyTo<T>(this OVREnumerable<T> enumerable, T* memory) where T : unmanaged
     {
         var count = 0;

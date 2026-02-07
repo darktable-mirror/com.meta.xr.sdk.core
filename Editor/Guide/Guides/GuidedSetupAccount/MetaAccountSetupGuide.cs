@@ -31,6 +31,7 @@ using static Meta.XR.Editor.UserInterface.Styles;
 
 namespace Meta.XR.Guides.Editor
 {
+    [GuideItems]
     internal static class MetaAccountSetupGuide
     {
         private const string MetaDashboardURL = "https://developer.oculus.com/manage";

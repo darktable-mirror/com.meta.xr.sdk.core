@@ -30,6 +30,7 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.XR;
 using Debug = UnityEngine.Debug;
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("meta.xr.mrutilitykit")]
 
 namespace Meta.XR.EnvironmentDepth
 {
@@ -41,14 +42,16 @@ namespace Meta.XR.EnvironmentDepth
     {
         public const string HardOcclusionKeyword = "HARD_OCCLUSION";
         public const string SoftOcclusionKeyword = "SOFT_OCCLUSION";
+        private const int numViews = 2;
         private static readonly int DepthTextureID = Shader.PropertyToID("_EnvironmentDepthTexture");
         private static readonly int ReprojectionMatricesID = Shader.PropertyToID("_EnvironmentDepthReprojectionMatrices");
         private static readonly int ZBufferParamsID = Shader.PropertyToID("_EnvironmentDepthZBufferParams");
+        private static readonly int PreprocessedEnvironmentDepthTexture = Shader.PropertyToID("_PreprocessedEnvironmentDepthTexture");
 
         [SerializeField] private OcclusionShadersMode _occlusionShadersMode = OcclusionShadersMode.SoftOcclusion;
         [SerializeField] private bool _removeHands;
         [SerializeField, HideInInspector] private OVRCameraRig _cameraRig;
-        private static readonly IDepthProvider _provider = CreateProvider();
+        internal static readonly IDepthProvider _provider = CreateProvider();
         private bool _hasPermission;
         private uint? _prevTextureId;
         private Material _preprocessMaterial;
@@ -202,9 +205,7 @@ namespace Meta.XR.EnvironmentDepth
             var rightEyeData = _provider.GetFrameDesc(1);
             var depthZBufferParams = EnvironmentDepthUtils.ComputeNdcToLinearDepthParameters(leftEyeData.nearZ, leftEyeData.farZ);
             Shader.SetGlobalVector(ZBufferParamsID, depthZBufferParams);
-            
-            CacheCameraRig();
-            Assert.IsNotNull(_cameraRig, $"{nameof(OVRCameraRig)} is not present in the scene.");
+
             var trackingSpaceViewMatrix = _cameraRig.trackingSpace.worldToLocalMatrix;
             _reprojectionMatrices[0] = EnvironmentDepthUtils.CalculateReprojection(leftEyeData) * trackingSpaceViewMatrix;
             _reprojectionMatrices[1] = EnvironmentDepthUtils.CalculateReprojection(rightEyeData) * trackingSpaceViewMatrix;
@@ -266,6 +267,8 @@ namespace Meta.XR.EnvironmentDepth
             _prevTextureId = textureId;
 
             Assert.IsTrue(depthTexture.IsCreated(), "depthTexture.IsCreated()");
+            CacheCameraRig();
+            Assert.IsNotNull(_cameraRig, $"{nameof(OVRCameraRig)} is not present in the scene.");
             Shader.SetGlobalTexture(DepthTextureID, depthTexture);
             if (!IsDepthAvailable)
             {
@@ -278,20 +281,20 @@ namespace Meta.XR.EnvironmentDepth
                 PreprocessDepthTexture(depthTexture);
         }
 
+
         private void PreprocessDepthTexture(RenderTexture depthTexture)
         {
-            const int numSlices = 2;
             if (_preprocessTexture == null)
             {
                 _preprocessTexture = new RenderTexture(depthTexture.width, depthTexture.height, GraphicsFormat.R16G16B16A16_SFloat, GraphicsFormat.None)
                 {
                     dimension = TextureDimension.Tex2DArray,
-                    volumeDepth = numSlices,
+                    volumeDepth = numViews,
                     name = nameof(_preprocessTexture),
-                    depth = 0,
+                    depth = 0
                 };
                 _preprocessTexture.Create();
-                Shader.SetGlobalTexture("_PreprocessedEnvironmentDepthTexture", _preprocessTexture);
+                Shader.SetGlobalTexture(PreprocessedEnvironmentDepthTexture, _preprocessTexture);
 
                 _preprocessRenderTargetSetup = new RenderTargetSetup
                 {
@@ -309,7 +312,7 @@ namespace Meta.XR.EnvironmentDepth
 
             Graphics.SetRenderTarget(_preprocessRenderTargetSetup);
             _preprocessMaterial.SetPass(0);
-            Graphics.DrawProceduralNow(MeshTopology.Triangles, 3, numSlices);
+            Graphics.DrawProceduralNow(MeshTopology.Triangles, 3, numViews);
         }
 
         [Conditional("UNITY_ASSERTIONS")]

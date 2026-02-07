@@ -59,7 +59,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_100_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_101_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -422,9 +422,15 @@ public static partial class OVRPlugin
         Oculus_Quest_2 = 9,
         Meta_Quest_Pro = 10,
         Meta_Quest_3 = 11,
-        Placeholder_12,
+        Meta_Quest_3S = 12,
         Placeholder_13,
         Placeholder_14,
+        Placeholder_15,
+        Placeholder_16,
+        Placeholder_17,
+        Placeholder_18,
+        Placeholder_19,
+        Placeholder_20,
 
         // PC headsets
         Rift_DK1 = 0x1000,
@@ -436,9 +442,15 @@ public static partial class OVRPlugin
         Oculus_Link_Quest_2,
         Meta_Link_Quest_Pro,
         Meta_Link_Quest_3,
-        PC_Placeholder_4105,
+        Meta_Link_Quest_3S,
         PC_Placeholder_4106,
-        PC_Placeholder_4107
+        PC_Placeholder_4107,
+        PC_Placeholder_4108,
+        PC_Placeholder_4109,
+        PC_Placeholder_4110,
+        PC_Placeholder_4111,
+        PC_Placeholder_4112,
+        PC_Placeholder_4113,
     }
 
     public enum OverlayShape
@@ -5329,111 +5341,66 @@ public static partial class OVRPlugin
 
     public static bool GetActionStateBoolean(string actionName, out bool result)
     {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        result = false;
-        return false;
-#else
         Bool ovrResult = Bool.False;
         result = false;
 
-        if (version >= OVRP_1_95_0.version)
+        var outcome = OVRP_1_95_0.ovrp_GetActionStateBoolean(actionName, ref ovrResult);
+        if (outcome == Result.Success)
         {
-            var outcome = OVRP_1_95_0.ovrp_GetActionStateBoolean(actionName, ref ovrResult);
-            if (outcome == Result.Success)
-            {
-                result = ovrResult == Bool.True;
-                return true;
-            }
-            else
-            {
-                Debug.LogError($"Error calling GetActionStateBoolean: {outcome}");
-                return false;
-            }
-        } else
+            result = ovrResult == Bool.True;
+            return true;
+        }
+        else
         {
+            Debug.LogError($"Error calling GetActionStateBoolean({actionName}): {outcome}");
             return false;
         }
-#endif
     }
 
     public static bool GetActionStateFloat(string actionName, out float result)
     {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        result = 0;
-        return false;
-#else
         result = 0f;
 
-        if (version >= OVRP_1_95_0.version)
+        var outcome = OVRP_1_95_0.ovrp_GetActionStateFloat(actionName, ref result);
+        if (outcome == Result.Success)
         {
-            var outcome = OVRP_1_95_0.ovrp_GetActionStateFloat(actionName, ref result);
-            if (outcome == Result.Success)
-            {
-                return true;
-            }
-            else
-            {
-                Debug.LogError($"Error calling GetActionStateFloat: {outcome}");
-                return false;
-            }
-        } else
+            return true;
+        }
+        else
         {
+            Debug.LogError($"Error calling GetActionStateFloat: {outcome}");
             return false;
         }
-#endif
     }
 
     public static bool GetActionStatePose(string actionName, out Posef result)
     {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        pose = default(Posef);
-        return false;
-#else
         result = new Posef();
-        if (version >= OVRP_1_95_0.version)
+        var outcome = OVRP_1_95_0.ovrp_GetActionStatePose(actionName, ref result);
+        if (outcome == Result.Success)
         {
-            var outcome = OVRP_1_95_0.ovrp_GetActionStatePose(actionName, ref result);
-            if (outcome == Result.Success)
-            {
-                return true;
-            }
-            else
-            {
-                Debug.LogError($"Error calling GetActionStatePose: {outcome}");
-                return false;
-            }
-        } else
+            return true;
+        }
+        else
         {
+            Debug.LogError($"Error calling GetActionStatePose: {outcome}");
             return false;
         }
-#endif
     }
 
     public static bool GetActionStatePose(string actionName, Hand hand, out Posef result)
     {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        result = default(Posef);
-        return false;
-#else
         result = new Posef();
-
-        if (version >= OVRP_1_100_0.version)
+        var outcome = OVRP_1_95_0.ovrp_GetActionStatePose2(actionName, hand, ref result);
+        if (outcome == Result.Success)
         {
-            var outcome = OVRP_1_100_0.ovrp_GetActionStatePose2(actionName, hand, ref result);
-            if (outcome == Result.Success)
-            {
-                return true;
-            }
-            else
-            {
-                Debug.LogError($"Error calling GetActionStatePose2: {outcome}");
-                return false;
-            }
-        } else
+            return true;
+        }
+        else
         {
+            Debug.LogError($"Error calling GetActionStatePose2: {outcome}");
             return false;
         }
-#endif
     }
 
     public static bool TriggerVibrationAction(string actionName, Hand hand, float duration, float amplitude)
@@ -13623,6 +13590,9 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetActionStatePose(string path, ref Posef value);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetActionStatePose2(string path, Hand hand, ref Posef value);
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetDeveloperTelemetryConsent(Bool consent);

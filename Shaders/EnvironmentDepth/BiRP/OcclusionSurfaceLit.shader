@@ -32,8 +32,9 @@ Shader "Meta/EnvironmentDepth/Built-in Render Pipeline/OcclusionSurfaceLit"
     {
         Tags { "RenderType"="Opaque" }
         LOD 200
+
         CGPROGRAM
-        #pragma surface surf Standard fullforwardshadows
+        #pragma surface surf Standard finalcolor:colorModifier fullforwardshadows keepalpha
         #pragma target 3.5
 
         #pragma multi_compile _ HARD_OCCLUSION SOFT_OCCLUSION
@@ -55,11 +56,15 @@ Shader "Meta/EnvironmentDepth/Built-in Render Pipeline/OcclusionSurfaceLit"
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-            META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY_WORLDPOS(IN.worldPos, c, _EnvironmentDepthBias)
             o.Albedo = c.rgb;
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
             o.Alpha = c.a;
+        }
+
+        void colorModifier (Input IN, SurfaceOutputStandard o, inout fixed4 color)
+        {
+            META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY_WORLDPOS(IN.worldPos, color, _EnvironmentDepthBias)
         }
         ENDCG
     }

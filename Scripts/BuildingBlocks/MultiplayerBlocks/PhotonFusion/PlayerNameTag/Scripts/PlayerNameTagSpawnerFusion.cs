@@ -24,6 +24,11 @@ using Meta.XR.MultiplayerBlocks.Shared;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
+    /// <summary>
+    /// The class responsible for the networking part of spawning a player's name tag when using the Photon Fusion networking framework.
+    /// It implements the <see cref="INameTagSpawner"/> interface and is used by <see cref="PlayerNameTagSpawner"/> which handles the
+    /// non-networking logic.
+    /// </summary>
     public class PlayerNameTagSpawnerFusion : MonoBehaviour, INameTagSpawner
     {
         [SerializeField] private GameObject playerNameTagPrefab;
@@ -49,8 +54,18 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
 
         #region INameTagSpawner
 
+        /// <summary>
+        /// Indicates whether this player has fully connected to the game/app room.
+        /// You can use this to determine when to spawn the name tag.
+        /// An implementation of the <see cref="INameTagSpawner"/> interface.
+        /// </summary>
         public bool IsConnected => _networkRunner != null && _sceneLoaded;
 
+        /// <summary>
+        /// Spawns the name tag with the given username for this player.
+        /// An implementation of the <see cref="INameTagSpawner"/> interface.
+        /// </summary>
+        /// <param name="playerName">The selected username for this player.</param>
         public void Spawn(string playerName)
         {
             var spawnedObject = _networkRunner.Spawn(

@@ -24,8 +24,9 @@ using Unity.XR.Oculus;
 #endif
 using UnityEngine.SceneManagement;
 using UnityEngine;
-using UnityEditor.PackageManager;
 using UnityEngine.Rendering;
+using System.Collections.Generic;
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("meta.xr.mrutilitykit.editor")]
 
 namespace Meta.XR.EnvironmentDepth.Editor
 {
@@ -37,6 +38,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
         private static bool _isPassthroughEnabled => CheckPassthrough();
         private static bool _isScenePermissionSet => CheckScenePermission();
         private static bool _isCurrentSceneUsingDepth => CheckSceneForDepthAPI();
+
 #if USING_XR_SDK_OCULUS
         private static OculusSettings OculusSettings
         {
@@ -48,6 +50,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
             }
         }
 #endif
+
         static ProjectSetupDepthAPI()
         {
 #if UNITY_2022_3_OR_NEWER
@@ -177,10 +180,21 @@ namespace Meta.XR.EnvironmentDepth.Editor
 #endif // UNITY_2022_3_OR_NEWER
         }
 
+        internal static readonly List<System.Type> DepthApiComponentTypes = new List<System.Type> { typeof(EnvironmentDepthManager) };
+
         private static bool CheckSceneForDepthAPI()
         {
-            return FindComponentInScene<OVRManager>() != null &&
-                   FindComponentInScene<EnvironmentDepthManager>() != null;
+            if (FindComponentInScene<OVRManager>() != null)
+            {
+                foreach (var type in DepthApiComponentTypes)
+                {
+                    if (Object.FindAnyObjectByType(type, FindObjectsInactive.Include) != null)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private static bool CheckPassthrough()

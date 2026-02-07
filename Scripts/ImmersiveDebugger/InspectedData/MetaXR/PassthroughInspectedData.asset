@@ -23,6 +23,7 @@ MonoBehaviour:
       Min: 0
       Max: 1
       Category: Meta XR
+      DisplayName: 
     memberName: isInsightPassthroughEnabled
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -33,6 +34,7 @@ MonoBehaviour:
       Min: 0
       Max: 1
       Category: Meta XR
+      DisplayName: 
     memberName: textureOpacity
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -43,6 +45,7 @@ MonoBehaviour:
       Min: 0
       Max: 1
       Category: Meta XR
+      DisplayName: 
     memberName: edgeRenderingEnabled
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -53,6 +56,7 @@ MonoBehaviour:
       Min: 0
       Max: 0
       Category: Meta XR
+      DisplayName: 
     memberName: overlayType
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -63,6 +67,7 @@ MonoBehaviour:
       Min: 0
       Max: 0
       Category: Meta XR
+      DisplayName: 
     memberName: colorMapEditorType
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -73,6 +78,7 @@ MonoBehaviour:
       Min: 0
       Max: 0
       Category: Meta XR
+      DisplayName: 
     memberName: edgeColor
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -83,6 +89,7 @@ MonoBehaviour:
       Min: -1
       Max: 1
       Category: Meta XR
+      DisplayName: Contrast
     memberName: colorMapEditorContrast
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -93,6 +100,7 @@ MonoBehaviour:
       Min: -1
       Max: 1
       Category: Meta XR
+      DisplayName: Brightness
     memberName: colorMapEditorBrightness
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -103,6 +111,7 @@ MonoBehaviour:
       Min: 0
       Max: 1
       Category: Meta XR
+      DisplayName: Posterize
     memberName: colorMapEditorPosterize
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
@@ -113,4 +122,5 @@ MonoBehaviour:
       Min: -1
       Max: 1
       Category: Meta XR
+      DisplayName: Saturation
     memberName: colorMapEditorSaturation

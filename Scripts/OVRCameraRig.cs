@@ -30,7 +30,13 @@ using UnityEngine.XR;
 using Node = UnityEngine.XR.XRNode;
 
 /// <summary>
-/// A head-tracked stereoscopic virtual reality camera rig.
+/// This class is the core component of the <see cref="OVRCameraRig"/> prefab, which provides the transform object to
+/// represent the Oculus tracking space and the trackable objects. It contains  a tracking space
+/// game object to fine-tune the relationship between the head tracking reference frame and your world.
+/// It also contains a center eye anchor, which is the main Unity camera, two anchor game objects for each eye,
+/// and left and right hand anchors for controllers.
+///
+/// For more information, see https://developer.oculus.com/documentation/unity/unity-add-camera-rig/.
 /// </summary>
 [ExecuteInEditMode]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-add-camera-rig/")]

@@ -39,7 +39,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         Quest = 1,
         Quest2 = 2,
         QuestPro = 3,
-        Quest3 = 4
+        Quest3 = 4,
+        Quest3S = 5,
     }
 
     public enum HandTrackingSupport
@@ -97,7 +98,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     }
 
     public List<DeviceType> targetDeviceTypes = new()
-        { DeviceType.Quest, DeviceType.Quest2, DeviceType.QuestPro, DeviceType.Quest3 };
+        { DeviceType.Quest, DeviceType.Quest2, DeviceType.QuestPro, DeviceType.Quest3, DeviceType.Quest3S };
 
     public bool allowOptional3DofHeadTracking = false;
     public HandTrackingSupport handTrackingSupport = HandTrackingSupport.ControllersOnly;
@@ -176,13 +177,6 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
 
     [SerializeField]
     internal SystemLoadingScreenBackground _systemLoadingScreenBackground = SystemLoadingScreenBackground.Black;
-
-    // Store the checksum of native plugins to compare and prompt for editor restarts when changed
-    [SerializeField]
-    internal string ovrPluginMd5Win64 = null;
-
-    [SerializeField]
-    internal string ovrPluginMd5Android = null;
 
     //public const string OculusProjectConfigAssetPath = "Assets/Oculus/OculusProjectConfig.asset";
 
@@ -272,6 +266,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
             projectConfig.targetDeviceTypes.Add(DeviceType.Quest2);
             projectConfig.targetDeviceTypes.Add(DeviceType.QuestPro);
             projectConfig.targetDeviceTypes.Add(DeviceType.Quest3);
+            projectConfig.targetDeviceTypes.Add(DeviceType.Quest3S);
             projectConfig.allowOptional3DofHeadTracking = false;
             projectConfig.handTrackingSupport = HandTrackingSupport.ControllersOnly;
             projectConfig.handTrackingFrequency = HandTrackingFrequency.LOW;
@@ -322,6 +317,11 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
             if (!projectConfig.targetDeviceTypes.Contains(DeviceType.Quest3))
             {
                 projectConfig.targetDeviceTypes.Add(DeviceType.Quest3);
+            }
+
+            if (!projectConfig.targetDeviceTypes.Contains(DeviceType.Quest3S))
+            {
+                projectConfig.targetDeviceTypes.Add(DeviceType.Quest3S);
             }
         }
 

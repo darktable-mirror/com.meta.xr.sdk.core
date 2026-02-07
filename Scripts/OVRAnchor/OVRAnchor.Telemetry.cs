@@ -25,14 +25,15 @@ partial struct OVRAnchor
 {
     // This utility helps with the asynchronous nature of a marker which starts with one API call and completes when an
     // event is received, probably on a future frame.
+    private
     static class Telemetry
     {
         // requestIds are not necessarily unique across separate APIs, so we need to construct a unique key
         // to map (markerId, requestId) pairs to a particular OVRTelemetryMarker
-        readonly struct Key : IEquatable<Key>
+        private readonly struct Key : IEquatable<Key>
         {
-            readonly int _markerId;
-            readonly ulong _requestId;
+            private readonly int _markerId;
+            private readonly ulong _requestId;
             public Key(MarkerId markerId, ulong requestId) => (_markerId, _requestId) = ((int)markerId, requestId);
             public Key(OVRTelemetryMarker marker, ulong requestId) => (_markerId, _requestId) = (marker.MarkerId, requestId);
 
@@ -41,7 +42,7 @@ partial struct OVRAnchor
             public override int GetHashCode() => unchecked(_markerId.GetHashCode() * 486187739 + _requestId.GetHashCode());
         }
 
-        static Dictionary<Key, OVRTelemetryMarker> s_markers = new();
+        private static Dictionary<Key, OVRTelemetryMarker> s_markers = new();
 
         // Called from OVRAnchor.Init
         public static void OnInit() => s_markers.Clear();
@@ -102,7 +103,7 @@ partial struct OVRAnchor
         public static OVRTelemetryMarker? GetRemove(MarkerId markerId, ulong requestId)
             => Remove(markerId, requestId, out var marker) ? marker : null;
 
-        public enum MarkerId
+        internal enum MarkerId
         {
             // XR_META_spatial_entity_discovery
             DiscoverSpaces = 163054959,
@@ -117,7 +118,7 @@ partial struct OVRAnchor
             EraseSingleSpace = 163062284,
         }
 
-        public static class Annotation
+        internal static class Annotation
         {
             public const string ComponentTypes = "component_types";
             public const string UuidCount = "uuid_count";

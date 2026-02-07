@@ -74,18 +74,5 @@ internal static class OVRProjectSetupQualityTasks
             fix: buildTargetGroup => QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable,
             fixMessage: "QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable"
         );
-
-        // Texture compression : Use ASTC
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            group: taskGroup,
-            platform: BuildTargetGroup.Android,
-            isDone: group => EditorUserBuildSettings.androidBuildSubtarget == MobileTextureSubtarget.ASTC ||
-                             EditorUserBuildSettings.androidBuildSubtarget == MobileTextureSubtarget.ETC2,
-            message: "Optimize Texture Compression : For GPU performance, please use ETC2. In some cases, " +
-                     "ASTC may produce better visuals and is also a viable solution",
-            fix: group => EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ETC2,
-            fixMessage: "EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ETC2"
-        );
     }
 }

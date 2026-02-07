@@ -34,6 +34,7 @@ using System.Collections.Generic;
 using Assets.OVR.Scripts;
 using Assets.Oculus.VR;
 using Assets.Oculus.VR.Editor;
+using Meta.XR.Editor.Rules;
 using Oculus.VR.Editor;
 
 #if USING_XR_MANAGEMENT && USING_XR_SDK_OCULUS
@@ -985,14 +986,13 @@ public class OVRLint : EditorWindow
                 }, null, false, "Disable Projectors");
         }
 
-        if (EditorUserBuildSettings.androidBuildSubtarget != MobileTextureSubtarget.ASTC &&
-            EditorUserBuildSettings.androidBuildSubtarget != MobileTextureSubtarget.ETC2)
+        if (!OptimizeTextureCompression.IsDone(BuildTargetGroup.Android))
         {
-            AddFix(eRecordType.StaticAndroid, "Optimize Texture Compression",
-                "For GPU performance, please use ASTC or ETC2.",
+            AddFix(eRecordType.StaticAndroid, OptimizeTextureCompression.Title,
+                OptimizeTextureCompression.ComputeDescriptionMessage(BuildTargetGroup.Android),
                 delegate(UnityEngine.Object obj, bool last, int selected)
                 {
-                    EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ETC2;
+                    OptimizeTextureCompression.Fix(BuildTargetGroup.Android);
                 }, null, false, "Fix");
         }
 

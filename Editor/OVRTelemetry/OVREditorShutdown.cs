@@ -26,6 +26,19 @@ public static class OVREditorShutdown
 {
     static OVREditorShutdown()
     {
-        EditorApplication.quitting += OVRPlugin.OnEditorShutdown;
+        EditorApplication.quitting += OnEditorShutdown;
+    }
+
+    static void OnEditorShutdown()
+    {
+        try
+        {
+            Meta.XR.Editor.Callbacks.Shutdown.OnEditorShutdown();
+        }
+        finally
+        {
+            // this must happen last or OvrPlugin will deadlock
+            OVRPlugin.OnEditorShutdown();
+        }
     }
 }

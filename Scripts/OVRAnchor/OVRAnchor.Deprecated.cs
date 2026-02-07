@@ -37,9 +37,9 @@ partial struct OVRAnchor
     /// \deprecated This method is obsolete. Use
     /// <see cref="FetchAnchorsAsync(List{OVRAnchor},FetchOptions,Action{List{OVRAnchor}, int})"/> instead.
     ///
-    /// Dispose of the returned <see cref="OVRTask{T}"/> if you don't use the results
+    /// Dispose of the returned <see cref="OVRTask"/>&lt;bool&gt; if you don't use the results
     /// </remarks>
-    /// <returns>An <see cref="OVRTask{T}"/> that will eventually let you test if the fetch was successful or not.
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; that will eventually let you test if the fetch was successful or not.
     /// If the result is true, then the <see cref="anchors"/> parameter has been populated with the requested anchors.</returns>
     /// <exception cref="System.ArgumentNullException">Thrown if <paramref name="anchors"/> is `null`.</exception>
     [Obsolete("Use the overload of FetchAnchorsAsync that accepts a FetchOptions parameter")]
@@ -67,9 +67,9 @@ partial struct OVRAnchor
     /// \deprecated This method is obsolete. Use
     /// <see cref="FetchAnchorsAsync(List{OVRAnchor},FetchOptions,Action{List{OVRAnchor}, int})"/> instead.
     ///
-    /// Dispose of the returned <see cref="OVRTask{T}"/> if you don't use the results
+    /// Dispose of the returned <see cref="OVRTask"/>&lt;bool&gt; if you don't use the results
     /// </remarks>
-    /// <returns>An <see cref="OVRTask{T}"/> that will eventually let you test if the fetch was successful or not.
+    /// <returns>Returns an <see cref="OVRTask"/>&lt;bool&gt; that will eventually let you test if the fetch was successful or not.
     /// If the result is true, then the <see cref="anchors"/> parameter has been populated with the requested anchors.</returns>
     /// <exception cref="System.ArgumentNullException">Thrown if <paramref name="uuids"/> is `null`.</exception>
     /// <exception cref="System.ArgumentNullException">Thrown if <paramref name="anchors"/> is `null`.</exception>

@@ -25,40 +25,66 @@ using static OVRUnityHumanoidSkeletonRetargeter.OVRHumanBodyBonesMappings;
 using BoneId = OVRSkeleton.BoneId;
 
 /// <summary>
-/// Defines interface for mapping OVRBoneId to humanoid bones, joint pairs for
-/// bones, et cetera.
+/// Defines the interface for mappings that are relevant to retargeting by classes such as
+/// <see cref="OVRUnityHumanoidSkeletonRetargeter"/>. This includes associations between
+/// <see cref="HumanBodyBones"/> and <see cref="BoneId"/>, <see cref="HumanBodyBones"/> and
+/// <see cref="BodySection"/>. There are also mappings between a body tracking or
+/// humanoid bone to joint pairs used for retargeting.
+/// <remarks>
+/// Implement this interface to create your own custom mappings in case your character is
+/// specialized, otherwise use the implementation provided via <see cref="OVRHumanBodyBonesMappings"/>.
+/// </remarks>
 /// </summary>
 public interface OVRHumanBodyBonesMappingsInterface
 {
     /// <summary>
-    /// Returns HumanBodyBones to joint pair map.
+    /// The mapping between <see cref="HumanBodyBones"/> a tuple of <see cref="HumanBodyBones"/>.
+    /// <remarks>
+    /// The tuple is a joint pair that retargeting uses to create a <see cref="HumanBodyBones"/>'s orientation
+    /// during runtime. Define this field so that you can influence what kind of tuple is
+    /// used during retargeting.
+    /// </remarks>
     /// </summary>
     public Dictionary<HumanBodyBones, Tuple<HumanBodyBones, HumanBodyBones>> GetBoneToJointPair { get; }
 
     /// <summary>
-    /// Returns HumanBodeBones to body section map.
+    /// The mapping between <see cref="HumanBodyBones"/> and <see cref="BodySection"/>. Define
+    /// this mapping to associate a body with parts of the body, such as the back, left arm,
+    /// right leg, and so on.
     /// </summary>
     public Dictionary<HumanBodyBones, BodySection> GetBoneToBodySection { get; }
 
     /// <summary>
-    /// Returns full-body bone ID to HumanBodyBone map.
+    /// Returns <see cref="BoneId"> to <see cref="HumanBodyBones"/> mapping for full body
+    /// characters. Since retargeting retargets to humanoid characters, it uses this field
+    /// to map body tracking bones to humanoid bones.
     /// </summary>
     public Dictionary<BoneId, HumanBodyBones> GetFullBodyBoneIdToHumanBodyBone { get; }
 
     /// <summary>
-    /// Returns half-body bone ID to HumanBodyBone map.
+    /// Returns <see cref="BoneId"> to <see cref="HumanBodyBones"/> mapping for upper body
+    /// characters. Since retargeting retargets to humanoid characters, it uses this field
+    /// to map body tracking bones to humanoid bones.
     /// </summary>
     public Dictionary<BoneId, HumanBodyBones> GetBoneIdToHumanBodyBone { get; }
 
     /// <summary>
-    /// Returns BoneId to joint pair map, for full-body.
+    /// The mapping between <see cref="BoneId"/> a tuple of <see cref="BoneId"/>.
+    /// Retargeting uses this tuple or joint pair to create a <see cref="BoneId"/>'s orientation
+    /// during retargeting. Define this field so that you can influence what kind of tuple is
+    /// used during retargeting. Intended for the retargeting source (i.e. body tracking)
+    /// assuming full body tracking is used.
     /// </summary>
     public Dictionary<BoneId, Tuple<BoneId, BoneId>>
         GetFullBodyBoneIdToJointPair
     { get; }
 
     /// <summary>
-    /// Returns BoneId to joint pair map, for half-body.
+    /// The mapping between <see cref="BoneId"/> a tuple of <see cref="BoneId"/>.
+    /// Retargeting uses this tuple or joint pair to create a <see cref="BoneId"/>'s orientation
+    /// during retargeting. Define this field so that you can influence what kind of tuple is
+    /// used during retargeting. Intended for the retargeting source (i.e. body tracking)
+    /// assuming upper body tracking is used.
     /// </summary>
     public Dictionary<BoneId, Tuple<BoneId, BoneId>>
         GetBoneIdToJointPair

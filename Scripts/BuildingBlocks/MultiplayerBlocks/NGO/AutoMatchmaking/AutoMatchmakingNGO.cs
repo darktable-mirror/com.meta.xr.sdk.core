@@ -40,11 +40,34 @@ using UnityEngine;
 
 namespace Meta.XR.MultiplayerBlocks.NGO
 {
+    /// <summary>
+    /// The class for doing auto-matchmaking for your game when using the Unity Netcode for Gameobjects networking framework.
+    /// On <c>Awake()</c> this class will look for an available game room or create a new one if none is found.
+    /// This room will then be automatically joined and the game session is ready to be started.
+    /// </summary>
+    /// <remarks>This behaviour of auto-matchmaking is best suited for projects in the prototype phase and should
+    /// be replaced by another matchmaking system once your project is closer to production.</remarks>
     public class AutoMatchmakingNGO : MonoBehaviour
     {
+        /// <summary>
+        /// The maximum number of players allowed per game room.
+        /// </summary>
         public int maxPlayersPerRoom = 4;
+
+        /// <summary>
+        /// The name of the lobby that will be automatically created when no available game rooms are found to be joined.
+        /// </summary>
         public string lobbyName = "lobbyName";
+
+        /// <summary>
+        /// The maximum number of retries this class will attempt to connect to a game room if a connection attempt fails.
+        /// </summary>
         public int maxRetries = 3;
+
+        /// <summary>
+        /// The interval range, in seconds, from which a random value will be chosen and awaited before attempting a new
+        /// connection after the previous attempt failed.
+        /// </summary>
         public Vector2 retryInterval = new(0.1f, 0.5f);
         private const string JoinCodeKey = "joinCode";
 

@@ -257,7 +257,8 @@ public static class OVRProjectSetup
         string url = null,
         Func<BuildTargetGroup, string> conditionalUrl = null,
         bool validity = true,
-        Func<BuildTargetGroup, bool> conditionalValidity = null
+        Func<BuildTargetGroup, bool> conditionalValidity = null,
+        bool fixAutomatic = true
     )
     {
         var optionalLevel =
@@ -268,7 +269,7 @@ public static class OVRProjectSetup
         var optionalUrl = OptionalLambdaType<BuildTargetGroup, string>.Create(url, conditionalUrl, true);
         var optionalValidity = OptionalLambdaType<BuildTargetGroup, bool>.Create(validity, conditionalValidity, true);
         AddTask(new OVRConfigurationTask(group, platform, isDone, fix, optionalLevel, optionalMessage,
-            optionalFixMessage, optionalUrl, optionalValidity));
+            optionalFixMessage, optionalUrl, optionalValidity, fixAutomatic));
     }
 
     internal static bool IsPlatformSupported(BuildTargetGroup buildTargetGroup)

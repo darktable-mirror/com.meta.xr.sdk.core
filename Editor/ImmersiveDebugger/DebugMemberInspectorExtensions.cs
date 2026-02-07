@@ -29,14 +29,22 @@ namespace Meta.XR.ImmersiveDebugger.Editor
 {
     internal static class DebugMemberInspectorExtensions
     {
+        private static readonly GUIContent TweakableContent = new GUIContent("Tweakable",
+            "Specify whether this field/property is tweakable, will show control UI in panel.");
+
+        private static readonly GUIContent GizmoTypeContent = new GUIContent("Gizmo Type",
+            "Draw gizmo in space according to the runtime value of the field/property data");
+
+        private static readonly GUIContent ShowGizmoContent = new GUIContent("Show Gizmo by Default",
+                "Turn on gizmo by default on startup");
+
         // Draw tweak
         public static void DrawTweak(this InspectedMember member)
         {
             var attribute = member.attribute;
             if (TweakUtils.IsMemberTypeValidForTweak(member.MemberInfo))
             {
-                attribute.Tweakable = EditorGUILayout.Toggle(new GUIContent("Tweakable", "Specify whether this field/property is tweakable, will show control UI in panel."),
-                    attribute.Tweakable);
+                attribute.Tweakable = EditorGUILayout.Toggle(TweakableContent, attribute.Tweakable);
 
                 if (attribute.Tweakable && !member.MemberInfo.IsTypeEqual(typeof(bool)))
                 {
@@ -46,17 +54,21 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             }
         }
 
-        public static int DrawGizmo(this InspectedMember member, int selectedGizmoIndex)
+        public static void DrawGizmo(this InspectedMember member)
         {
             var supportedGizmos = member.SupportedGizmos;
-            if (supportedGizmos.Count == 1) return selectedGizmoIndex;
+            if (supportedGizmos.Count == 1) return;
+
+            var attribute = member.attribute;
 
             var options = supportedGizmos.Select(g => g.ToString()).ToArray();
-            selectedGizmoIndex = EditorGUILayout.Popup(
-                new GUIContent("Gizmo Type", "Draw gizmo in space according to the runtime value of the field/property data"),
-                selectedGizmoIndex, options);
-            member.attribute.GizmoType = (DebugGizmoType)Enum.Parse(typeof(DebugGizmoType), options[selectedGizmoIndex]);
-            return selectedGizmoIndex;
+            var selectedGizmoIndex = EditorGUILayout.Popup(GizmoTypeContent, member._editorSelectedGizmoIndex, options);
+            attribute.GizmoType = (DebugGizmoType)Enum.Parse(typeof(DebugGizmoType), options[selectedGizmoIndex]);
+            member._editorSelectedGizmoIndex = selectedGizmoIndex;
+            if (attribute.GizmoType != DebugGizmoType.None)
+            {
+                attribute.ShowGizmoByDefault = EditorGUILayout.Toggle(ShowGizmoContent, attribute.ShowGizmoByDefault);
+            }
         }
     }
 }

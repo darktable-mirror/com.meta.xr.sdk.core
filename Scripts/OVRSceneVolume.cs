@@ -25,6 +25,11 @@ using UnityEngine;
 /// <summary>
 /// A <see cref="OVRSceneAnchor"/> that has a 3D bounds associated with it.
 /// </summary>
+/// <remarks>
+/// Typically, this component is associated with furnishings including Couch, Table, or Chair.
+///
+/// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+/// </remarks>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(OVRSceneAnchor))]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/#further-scene-model-unity-components")]
@@ -48,7 +53,7 @@ public class OVRSceneVolume : MonoBehaviour, IOVRSceneComponent
     public float Depth { get; private set; }
 
     /// <summary>
-    /// The dimensions of the volume.
+    /// The dimensions of the volume as a Vector3.
     /// </summary>
     /// <remarks>
     /// This property corresponds to a Vector whose components are
@@ -57,7 +62,7 @@ public class OVRSceneVolume : MonoBehaviour, IOVRSceneComponent
     public Vector3 Dimensions => new Vector3(Width, Height, Depth);
 
     /// <summary>
-    /// The offset of the volume with respect to the anchor's pivot.
+    /// The offset of the volume with respect to the anchor's pivot as a Vector3.
     /// </summary>
     /// <remarks>
     /// The offset is mostly zero, as most objects have the anchor's pivot
@@ -75,10 +80,12 @@ public class OVRSceneVolume : MonoBehaviour, IOVRSceneComponent
     /// <summary>
     /// Whether the child transforms will be scaled according to the dimensions of this volume.
     /// </summary>
-    /// <remarks>If set to True, all the child transforms will be scaled to the dimensions of this volume immediately.
+    /// <remarks>
+    /// If set to `true`, all the child transforms will be scaled to the dimensions of this volume immediately.
     /// And, if it's set to False, dimensions of this volume will no longer affect the child transforms, and child
     /// transforms will retain their current scale. This can be controlled further by using a
-    /// <seealso cref="OVRSceneObjectTransformType"/>.</remarks>
+    /// <seealso cref="OVRSceneObjectTransformType"/>.
+    /// </remarks>
     public bool ScaleChildren
     {
         get => _scaleChildren;
@@ -112,11 +119,13 @@ public class OVRSceneVolume : MonoBehaviour, IOVRSceneComponent
         }
     }
 
+    /// <summary>This is an internal member.</summary>
     [Tooltip("When enabled, scales the child transforms according to the dimensions of this volume. " +
         "If both Volume and Plane components exist on the game object, the volume takes precedence.")]
     [SerializeField]
     internal bool _scaleChildren = true;
 
+    /// <summary>This is an internal member.</summary>
     [Tooltip("When enabled, offsets the child transforms according to the offset of this volume. " +
         "If both Volume and Plane components exist on the game object, the volume takes precedence.")]
     [SerializeField]
@@ -133,6 +142,7 @@ public class OVRSceneVolume : MonoBehaviour, IOVRSceneComponent
         }
     }
 
+    /// <summary>This is an internal member.</summary>
     void IOVRSceneComponent.Initialize()
     {
         UpdateTransform();

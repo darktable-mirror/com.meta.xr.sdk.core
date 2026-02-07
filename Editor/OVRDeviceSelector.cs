@@ -33,7 +33,7 @@ public class OVRDeviceSelector
     {
         get
         {
-            return isTargetDeviceQuest || isTargetDeviceQuest2 || isTargetDeviceQuestPro || isTargetDeviceQuest3;
+            return isTargetDeviceQuest || isTargetDeviceQuest2 || isTargetDeviceQuestPro || isTargetDeviceQuest3 || isTargetDeviceQuest3S;
         }
     }
 
@@ -99,6 +99,19 @@ public class OVRDeviceSelector
 #else
             OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
             return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3);
+#endif
+        }
+    }
+
+    public static bool isTargetDeviceQuest3S
+    {
+        get
+        {
+#if PRIORITIZE_OCULUS_XR_SETTINGS
+            return false;
+#else
+            OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
+            return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3S);
 #endif
         }
     }

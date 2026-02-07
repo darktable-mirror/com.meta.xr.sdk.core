@@ -25,7 +25,17 @@ using Unity.Jobs;
 using UnityEngine;
 
 /// <summary>
-/// Passthrough Color Look-Up Tables (LUTs).
+/// This class represents a color look-up table (LUT) that can be applied to an <see cref="OVRPassthroughLayer"/>
+/// in order to change the color reproduction of that passthrough layer.
+///
+/// Color LUTs map each RGB input color to a new RGB(A) color. It unlocks a number of effects:
+/// - Color grading and color correction
+/// - Stylizations, such as posterization or hue rotation
+/// - Color filtering and chroma keying
+///
+/// To apply a color LUT to a Passthrough layer, create a new instance of `OVRPassthroughColorLut`
+/// and call <see cref="OVRPassthroughLayer.SetColorLut()"/>. For more information
+/// and examples, see [Color Mapping Techniques](https://developer.oculus.com/documentation/unity/unity-customize-passthrough-color-mapping/).
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-customize-passthrough-color-mapping/#color-look-up-tables-luts")]
 [Feature(Feature.Passthrough)]
@@ -33,14 +43,28 @@ public class OVRPassthroughColorLut : System.IDisposable
 {
     private const int RecomendedBatchSize = 128;
 
+    /// <summary>
+    /// The size of one edge of the color cube spanned by the LUT. For example, a resolution of 16
+    /// means that the LUT encompasses 16 * 16 * 16 colors.
+    /// This property is defined at construction time and cannot be modified.
+    /// </summary>
     public uint Resolution { get; private set; }
+
+    /// <summary>
+    /// The color channels contained in each of the resulting colors. Can be `ColorChannels.Rgb` or
+    /// `ColorChannels.Rgba`.
+    /// This property is defined at construction time and cannot be modified.
+    /// </summary>
     public ColorChannels Channels { get; private set; }
 
-    [System.Obsolete("IsInitialized is obsoleted. Instead use IsValid.", false)]
+    /// <summary>
+    /// \deprecated - use `IsValid` instead.
+    /// </summary>
+    [System.Obsolete("IsInitialized is deprecated. Use IsValid instead.", false)]
     public bool IsInitialized => IsValid;
 
     /// <summary>
-    /// Checks if the LUT is usable. Can become invalid at runtime.
+    /// Checks if the current state of the LUT is valid for use by an <see cref="OVRPassthroughLayer"/>.
     /// </summary>
     public bool IsValid => _createState != CreateState.Invalid;
 
@@ -113,8 +137,9 @@ public class OVRPassthroughColorLut : System.IDisposable
     }
 
     /// <summary>
-    /// Update color LUT data from an array of Colors.
-    /// Color channels and resolution must match the original.
+    /// Updates color LUT data from an array of `Color`.
+    /// The resolution (number of colors) must match the original specification at construction
+    /// time. The alpha value is ignored if `ColorChannels` was set to `Rgb`.
     /// </summary>
     /// <param name="colors">Color array</param>
     public void UpdateFrom(Color[] colors)
@@ -127,8 +152,9 @@ public class OVRPassthroughColorLut : System.IDisposable
     }
 
     /// <summary>
-    /// Update color LUT data from an array of Colors.
-    /// Color channels and resolution must match the original.
+    /// Updates color LUT data from an array of `Color32`.
+    /// The resolution (number of colors) must match the original specification at construction
+    /// time. The alpha value is ignored if `ColorChannels` was set to `Rgb`.
     /// </summary>
     /// <param name="colors">Color array</param>
     public void UpdateFrom(Color32[] colors)
@@ -141,10 +167,12 @@ public class OVRPassthroughColorLut : System.IDisposable
     }
 
     /// <summary>
-    /// Update color LUT data from an array of Colors.
-    /// Color channels and resolution must match the original.
+    /// Updates color LUT data from an array of RGB(A) values.
+    /// The resolution (number of colors) must match the original specification at construction
+    /// time. The expected number of bytes per color is 3 if `ColorChannels` was set to `Rgb`, 4 if
+    /// it was set to `Rgba`.
     /// </summary>
-    /// <param name="colors">Color array</param>
+    /// <param name="colors">Array of consecutive RGB(A) color tuples</param>
     public void UpdateFrom(byte[] colors)
     {
         if (IsValidLutUpdate(colors, 1))
@@ -171,6 +199,10 @@ public class OVRPassthroughColorLut : System.IDisposable
         }
     }
 
+    /// <summary>
+    /// Free the system resources associated with the color LUT. Subsequent calls to <see cref="OVRPassthroughLayer.SetColorLut()"/>
+    /// with this instance will fail.
+    /// </summary>
     public void Dispose()
     {
         if (IsValid)
@@ -191,7 +223,7 @@ public class OVRPassthroughColorLut : System.IDisposable
     }
 
     /// <summary>
-    /// Check if texture is in acceptable LUT format
+    /// Check if the given texture is formatted correctly for the use as color LUT.
     /// </summary>
     /// <param name="texture">Texture to check</param>
     /// <param name="errorMessage">Error message describing acceptance fail reason</param>

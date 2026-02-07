@@ -28,6 +28,11 @@ using Debug = UnityEngine.Debug;
 /// <summary>
 /// Represents a <see cref="OVRRoomLayout"/> type Scene anchor.
 /// </summary>
+/// <remarks>
+/// This component provides properties for accessing information on the Walls, Floors, and Ceiling.
+///
+/// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
+/// </remarks>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(OVRSceneAnchor))]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/#further-scene-model-unity-components")]
@@ -39,24 +44,33 @@ public class OVRSceneRoom : MonoBehaviour, IOVRSceneComponent
     /// <summary>
     /// The <see cref="OVRScenePlane"/> representing the floor of the room.
     /// </summary>
+    /// <remarks>
+    /// A room contains only a single Floor.
+    /// </remarks>
     public OVRScenePlane Floor { get; private set; }
 
     /// <summary>
     /// The <see cref="OVRScenePlane"/> representing the ceiling of the room.
     /// </summary>
+    /// <remarks>
+    /// A room contains only a single Ceiling.
+    /// </remarks>
     public OVRScenePlane Ceiling { get; private set; }
 
     /// <summary>
     /// The set of <see cref="OVRScenePlane"/> representing the walls of the room.
     /// </summary>
+    /// <remarks>
+    /// A room may contain a single Wall, but typically there is more than one.
+    /// </remarks>
     public OVRScenePlane[] Walls { get; private set; } = Array.Empty<OVRScenePlane>();
 
 
-    OVRSceneAnchor _sceneAnchor;
+    private OVRSceneAnchor _sceneAnchor;
 
-    OVRSceneManager _sceneManager;
+    private OVRSceneManager _sceneManager;
 
-    Guid _uuid;
+    private Guid _uuid;
 
     internal static readonly Dictionary<Guid, OVRSceneRoom> SceneRooms = new();
 
@@ -198,11 +212,11 @@ public class OVRSceneRoom : MonoBehaviour, IOVRSceneComponent
     }
 
     [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
-    void Log(string message) => Debug.Log($"[{nameof(OVRSceneRoom)}] {message}", gameObject);
+    private void Log(string message) => Debug.Log($"[{nameof(OVRSceneRoom)}] {message}", gameObject);
 
     [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
-    void LogWarning(string message) => Debug.LogWarning($"[{nameof(OVRSceneRoom)}] {message}", gameObject);
+    private void LogWarning(string message) => Debug.LogWarning($"[{nameof(OVRSceneRoom)}] {message}", gameObject);
 
     [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
-    void LogError(string message) => Debug.LogError($"[{nameof(OVRSceneRoom)}] {message}", gameObject);
+    private void LogError(string message) => Debug.LogError($"[{nameof(OVRSceneRoom)}] {message}", gameObject);
 }

@@ -22,8 +22,19 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks
 {
+    /// <summary>
+    /// Static container class of utility methods used at runtime and related to <see cref="BuildingBlock"/>s.
+    /// </summary>
     public static class RunTimeUtils
     {
+        /// <summary>
+        /// Returns the first (order not guaranteed) instance of a <see cref="MonoBehaviour"/> implementing the
+        /// interface <see cref="T"/>.
+        /// </summary>
+        /// <param name="monoBehaviour"><see cref="MonoBehaviour"/> instance, as caller, on whose
+        /// <see cref="GameObject"/> the search will occur.</param>
+        /// <typeparam name="T">Interface type expected</typeparam>
+        /// <returns>The first instance of <see cref="T"/> found.</returns>
         public static T GetInterfaceComponent<T>(this MonoBehaviour monoBehaviour) where T : class
         {
             foreach (var component in monoBehaviour.GetComponents<MonoBehaviour>())

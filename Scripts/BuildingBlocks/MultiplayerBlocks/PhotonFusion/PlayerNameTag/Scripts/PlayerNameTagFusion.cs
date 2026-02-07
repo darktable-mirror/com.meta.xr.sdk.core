@@ -25,8 +25,17 @@ using UnityEngine.UI;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
+    /// <summary>
+    /// The class responsible for synchronizing the position and username of a player's name tag to all connected clients
+    /// when using the Photon Fusion networking framework.
+    /// The position is synced on each network update and the username is synced every time it's changed.
+    /// </summary>
     public class PlayerNameTagFusion : NetworkBehaviour
     {
+        /// <summary>
+        /// A networked string responsible for storing the player's username when using the Photon Fusion networking framework.
+        /// When set, it triggers a visual update of what's displayed in the player name tag for all connected clients.
+        /// </summary>
         [Networked, OnChangedRender(nameof(OnPlayerNameChange))]
         public NetworkString<_64> OculusName { get; set; }
 

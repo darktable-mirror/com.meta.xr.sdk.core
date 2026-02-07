@@ -18,10 +18,6 @@
  * limitations under the License.
  */
 
-#if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || (UNITY_ANDROID && !UNITY_EDITOR))
-#define OVRPLUGIN_UNSUPPORTED_PLATFORM
-#endif
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -48,12 +44,19 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private static BlockData[] _contentFilter;
         private static OVRPlatformTool.EditorCoroutine _editorCoroutine;
+        private static readonly Version VersionZero = new(0, 0, 0);
+        private static int? SdkVersion
+        {
+            get
+            {
+                if (OVRPlugin.version == null || OVRPlugin.version == VersionZero)
+                {
+                    return null;
+                }
 
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        private static int? SdkVersion => null;
-#else
-        private static int? SdkVersion => OVRPlugin.version.Minor - 32;
-#endif
+                return OVRPlugin.version.Minor - 32;
+            }
+        }
 
         static BlocksContentManager()
         {

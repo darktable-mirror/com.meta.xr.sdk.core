@@ -22,19 +22,45 @@ using System.Collections.Generic;
 using Meta.XR.Util;
 using UnityEngine;
 
+/// <summary>
+/// A child class definition of the class responsible for setting
+/// <see cref="OVRSkeleton"/> body tracking bones transforms to a specified
+/// oculus skeleton. The oculus skeleton is a skeleton that will need to use bones
+/// that match body tracking names specified in <see cref="OVRSkeleton.BoneId"/>
+/// for the desired skeleton joint set, and performs no other modifications on top of
+/// applying the body tracking data. As such, the skeleton bones should be rigged
+/// such that the rest pose bones of the skeleton matches the bone structure and space in
+/// <see cref="OVRSkeleton.BindPoses"/>. A visual reference of body joints can also be found
+/// [here](https://developer.oculus.com/documentation/native/android/move-ref-body-joints/).
+/// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/move-samples/")]
 [Feature(Feature.BodyTracking)]
 public class OVRCustomSkeleton : OVRSkeleton, ISerializationCallbackReceiver
 {
-    [HideInInspector][SerializeField] private List<Transform> _customBones_V2;
+    [HideInInspector]
+    [SerializeField]
+    private List<Transform> _customBones_V2;
+
+    /// <summary>
+    /// Provides access to the list of bones that are part of the Oculus skeleton. These bones have
+    /// body tracking data applied, and can be accessed to apply or retrieve information about
+    /// the skeleton such as the position and rotation of a specific bone. By using these transforms,
+    /// you can modify the skeleton to be affected by application logic.
+    /// </summary>
     public List<Transform> CustomBones => _customBones_V2;
 
     /// <summary>
-    /// List of skeleton structures to be retargeted to the supported format for body tracking.
+    /// This enum specifies the types of supported skeleton structures to be retargeted to from body tracking.
+    /// Any skeleton type that isn't specified here is not compatible with the <see cref="OVRCustomSkeleton"/>.
+    /// Instead, please check the [body tracking](https://developer.oculus.com/documentation/unity/move-body-tracking/) documentation
+    /// for more information on retargeting to a third party humanoid skeleton.
     /// </summary>
     public enum RetargetingType
     {
-        /// <summary>The default skeleton structure of the Oculus tracking system</summary>
+        /// <summary>
+        /// The default skeleton structure of the body tracking system. The rest pose of this skeleton
+        /// should match the rest pose specified by <see cref="OVRSkeleton.BindPoses"/>.
+        /// </summary>
         OculusSkeleton
     }
 
@@ -69,10 +95,13 @@ public class OVRCustomSkeleton : OVRSkeleton, ISerializationCallbackReceiver
     {
         int max = (int)BoneId.Max;
 
-        if (_customBones_V2.Count == (int)BoneId.Max) return;
+        if (_customBones_V2.Count == max)
+        {
+            return;
+        }
 
         // Make sure we have the right number of bones
-        while (_customBones_V2.Count < (int)BoneId.Max)
+        while (_customBones_V2.Count < max)
         {
             _customBones_V2.Add(null);
         }

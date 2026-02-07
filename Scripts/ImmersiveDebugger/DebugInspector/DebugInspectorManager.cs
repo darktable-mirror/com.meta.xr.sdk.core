@@ -174,11 +174,12 @@ namespace Meta.XR.ImmersiveDebugger
                 var gizmo = member.GetGizmo();
                 if (!gizmo?.Matches(memberInfo, handle.Instance) ?? true)
                 {
-                    member.RegisterGizmo(new GizmoHook(memberInfo, handle.Instance, memberAttribute, OnStateChanged));
+                    member.RegisterGizmo(new GizmoHook(memberInfo, handle.Instance, memberAttribute, OnStateChanged, GetState));
                 }
                 return true;
 
                 void OnStateChanged(bool state) => _memberToGizmoRendererManagerDict[memberInfo].SetState(handle.Instance, state);
+                bool GetState() => _memberToGizmoRendererManagerDict[memberInfo].GetState(handle.Instance);
             }
 
             private bool AddGizmo(Type type, MemberInfo member, DebugMember gizmoAttribute, out GizmoRendererManager gizmoRendererManager)

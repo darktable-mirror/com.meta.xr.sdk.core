@@ -37,6 +37,8 @@ using UnityEngine.Rendering;
 /// in physics and collisions. Default collider cooking options are used.
 ///
 /// The Unity Job System is used to avoid blocking the main thread.
+///
+/// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
 /// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/#further-scene-model-unity-components")]
 [RequireComponent(typeof(MeshFilter))]
@@ -163,9 +165,11 @@ public class OVRSceneVolumeMeshFilter : MonoBehaviour
     // Results array - vertexCount:0, triangleCount:1, -1 if failed
     private struct GetTriangleMeshCountsJob : IJob
     {
+        /// <summary>This is an internal member.</summary>
         public OVRSpace Space;
         [WriteOnly] public NativeArray<int> Results;
 
+        /// <summary>This is an internal member.</summary>
         public void Execute()
         {
             Results[0] = -1;
@@ -181,11 +185,16 @@ public class OVRSceneVolumeMeshFilter : MonoBehaviour
     // IJob wrapper for OVRPlugin.GetSpaceTM
     private struct GetTriangleMeshJob : IJob
     {
+        /// <summary>This is an internal member.</summary>
         public OVRSpace Space;
 
+        /// <summary>This is an internal member.</summary>
         [WriteOnly] public NativeArray<Vector3> Vertices;
+
+        /// <summary>This is an internal member.</summary>
         [WriteOnly] public NativeArray<int> Triangles;
 
+        /// <summary>This is an internal member.</summary>
         public void Execute() =>
             OVRPlugin.GetSpaceTriangleMesh(Space, Vertices, Triangles);
     }
@@ -194,12 +203,17 @@ public class OVRSceneVolumeMeshFilter : MonoBehaviour
     // to Unity. Ensure that you set mesh data on Mesh after completion.
     private struct PopulateMeshDataJob : IJob
     {
+        /// <summary>This is an internal member.</summary>
         [ReadOnly] public NativeArray<Vector3> Vertices;
+
+        /// <summary>This is an internal member.</summary>
         [ReadOnly] public NativeArray<int> Triangles;
 
+        /// <summary>This is an internal member.</summary>
         [WriteOnly]
         public Mesh.MeshData MeshData;
 
+        /// <summary>This is an internal member.</summary>
         public void Execute()
         {
             // assign vertices, converting from OpenXR to Unity
@@ -234,9 +248,13 @@ public class OVRSceneVolumeMeshFilter : MonoBehaviour
     // to the collider.
     private struct BakeMeshJob : IJob
     {
+        /// <summary>This is an internal member.</summary>
         public int MeshID;
+
+        /// <summary>This is an internal member.</summary>
         public bool Convex;
 
+        /// <summary>This is an internal member.</summary>
         public void Execute() => Physics.BakeMesh(MeshID, Convex);
     }
 

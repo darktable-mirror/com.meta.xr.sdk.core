@@ -30,6 +30,8 @@ using UnityEngine;
 /// <remarks>
 /// When added to a GameObject that represents a scene entity, such as a floor, ceiling, or desk, this component
 /// generates a mesh from its boundary vertices.
+///
+/// <see cref="OVRSceneManager"/> and associated classes are deprecated (v65), please use [MR Utility Kit](https://developer.oculus.com/documentation/unity/unity-mr-utility-kit-overview)" instead.
 /// </remarks>
 [RequireComponent(typeof(MeshFilter))]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-scene-use-scene-anchors/#further-scene-model-unity-components")]
@@ -177,7 +179,7 @@ public class OVRScenePlaneMeshFilter : MonoBehaviour
         }
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
         // Job completed but we may not yet have consumed the data
         if (_triangles.IsCreated)
@@ -191,18 +193,21 @@ public class OVRScenePlaneMeshFilter : MonoBehaviour
 
     private struct TriangulateBoundaryJob : IJob
     {
+        /// <summary>This is an internal member.</summary>
         [ReadOnly]
         public NativeArray<Vector2> Boundary;
 
+        /// <summary>This is an internal member.</summary>
         [WriteOnly]
         public NativeArray<int> Triangles;
 
-        struct NList : IDisposable
+        private struct NList : IDisposable
         {
             public int Count { get; private set; }
 
             NativeArray<int> _data;
 
+            /// <summary>This is an internal member.</summary>
             public NList(int capacity, Allocator allocator)
             {
                 Count = capacity;
@@ -213,6 +218,7 @@ public class OVRScenePlaneMeshFilter : MonoBehaviour
                 }
             }
 
+            /// <summary>This is an internal member.</summary>
             public void RemoveAt(int index)
             {
                 --Count;
@@ -222,6 +228,7 @@ public class OVRScenePlaneMeshFilter : MonoBehaviour
                 }
             }
 
+            /// <summary>This is an internal member.</summary>
             public int GetAt(int index)
             {
                 if (index >= Count)
@@ -233,11 +240,14 @@ public class OVRScenePlaneMeshFilter : MonoBehaviour
                 return _data[index];
             }
 
+            /// <summary>This is an internal member.</summary>
             public int this[int index] => _data[index];
 
+            /// <summary>This is an internal member.</summary>
             public void Dispose() => _data.Dispose();
         }
 
+        /// <summary>This is an internal member.</summary>
         public void Execute()
         {
             if (Boundary.Length == 0 || float.IsNaN(Boundary[0].x)) return;

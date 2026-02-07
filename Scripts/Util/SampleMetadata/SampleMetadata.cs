@@ -55,6 +55,17 @@ namespace Meta.XR.Samples
         public void Awake()
         {
             _timestampOpen = Time.realtimeSinceStartup;
+
+#if UNITY_EDITOR
+            Meta.XR.Editor.Callbacks.Shutdown.editorShutdown += OnEditorShutdown;
+#endif
+        }
+
+        public void OnDestroy()
+        {
+#if UNITY_EDITOR
+            Meta.XR.Editor.Callbacks.Shutdown.editorShutdown -= OnEditorShutdown;
+#endif
         }
 
         public void Start()
@@ -74,7 +85,7 @@ namespace Meta.XR.Samples
             }
         }
 
-        public void OnDestroy()
+        public void OnEditorShutdown()
         {
             SendEvent(SampleTelemetryEvents.EventTypes.Close);
         }
