@@ -23,6 +23,11 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="ScriptableObject"/> that's storing the style of the layout used by Immersive Debugger.
+    /// Containing properties like layout direction, flow type, anchor, margin etc.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class LayoutStyle : Style
     {
         public enum Layout
@@ -62,7 +67,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         public Vector2 TopLeftMargin => margin;
         public Vector2 BottomRightMargin => useBottomRightMargin ? bottomRightMargin : margin;
 
-        public bool SetHeight(float height)
+        internal bool SetHeight(float height)
         {
             if (!_instantiated || size.y == height) return false;
 
@@ -70,7 +75,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return true;
         }
 
-        public bool SetWidth(float width)
+        internal bool SetWidth(float width)
         {
             if (!_instantiated || size.x == width) return false;
 

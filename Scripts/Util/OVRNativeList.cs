@@ -21,8 +21,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
 
 /// <summary>
 /// Internal
@@ -147,6 +149,12 @@ struct OVRNativeList<T> : IDisposable, IReadOnlyList<T> where T : unmanaged
         Count = 0;
     }
 
+    public JobHandle Dispose(JobHandle dependency)
+    {
+        Count = 0;
+        return _array.Dispose(dependency);
+    }
+
     public static unsafe implicit operator T*(OVRNativeList<T> list) => list.Data;
 
     public static implicit operator Span<T>(OVRNativeList<T> list) => list.AsSpan();
@@ -197,7 +205,7 @@ static class OVRNativeList
     // the collection.
     // Ex:
     //   using var list = OVRNativeList.WithSuggestedCapacityFrom(collection).AllocateEmpty<ulong>(Allocator.Temp);
-    public static CapacityHelper WithSuggestedCapacityFrom<T>(IEnumerable<T> collection)
+    public static CapacityHelper WithSuggestedCapacityFrom<T>([NoEnumeration] IEnumerable<T> collection)
         => new(collection.ToNonAlloc().Count);
 
     // Creates a new OVRNativeList and copies the elements from collection into it.

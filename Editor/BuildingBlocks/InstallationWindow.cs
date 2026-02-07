@@ -83,6 +83,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 return;
             }
 
+            var changed = false;
+
             using var scope = new XR.Editor.UserInterface.Utils.IndentScope(0);
             var rect = EditorGUILayout.BeginVertical();
             DrawThumbnail(Selection.BlockData);
@@ -96,29 +98,21 @@ namespace Meta.XR.BuildingBlocks.Editor
             // Draw Variants
             foreach (var variant in Selection)
             {
-                // Don't draw the Definition variant if only one possibility
-                if (variant.Attribute.Behavior == VariantAttribute.VariantBehavior.Definition &&
-                    Selection.PossibleRoutines.Count <= 1)
+                if (variant.NeedsChoice(Selection, out var variantChanged))
                 {
-                    continue;
+                    variant.DrawGUI(null, out variantChanged);
+                    changed |= variantChanged;
                 }
-                variant.DrawGUI();
             }
             EditorGUILayout.Space();
 
             // Notice
-            var canBeConfirmed = true;
-            if (Selection.BlockData is InterfaceBlockData interfaceBlock)
+            var canBeConfirmed = !Selection.HasMissingDependencies;
+            if (!canBeConfirmed)
             {
-                var packageDependencies = interfaceBlock.ComputeMissingPackageDependencies(Selection);
-                canBeConfirmed = !packageDependencies.Any();
-                if (!canBeConfirmed)
-                {
-                    DrawPackageDependenciesNotice(interfaceBlock, packageDependencies);
-                    EditorGUILayout.Space();
-                }
+                DrawPackageDependenciesNotice(Selection.BlockData as InterfaceBlockData, Selection.MissingDependencies);
+                EditorGUILayout.Space();
             }
-
 
             // Buttons
             EditorGUILayout.BeginHorizontal();
@@ -139,7 +133,13 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
 
             UpdateHeight(rect);
+
+            if (changed)
+            {
+                Selection.UpdateVariants();
+            }
         }
+
 
         private void UpdateHeight(Rect rect)
         {

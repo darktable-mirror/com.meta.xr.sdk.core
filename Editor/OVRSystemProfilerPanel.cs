@@ -667,7 +667,7 @@ public class OVRSystemProfilerPanel : EditorWindow
 
     void InitializeAndroidSdkPath()
     {
-        androidSdkRootPath = OVRConfig.Instance.GetAndroidSDKPath();
+        androidSdkRootPath = OVRConfig.GetAndroidSDKPathLocation();
     }
 
     // OnDestroy is called to close the EditorWindow window.

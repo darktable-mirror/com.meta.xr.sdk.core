@@ -74,7 +74,6 @@ internal static class OVRSpaceQuery
 
         private IEnumerable<Guid> _uuidFilter;
 
-
         /// <summary>
         /// The components which must be present on the space in order to match the query.
         /// </summary>
@@ -91,7 +90,6 @@ internal static class OVRSpaceQuery
             set
             {
                 ValidateSingleFilter(_uuidFilter, value);
-
                 _componentType = value;
             }
         }
@@ -122,7 +120,6 @@ internal static class OVRSpaceQuery
                 _uuidFilter = value;
             }
         }
-
 
         /// <summary>
         /// Creates a copy of <paramref name="other"/>.
@@ -197,7 +194,6 @@ internal static class OVRSpaceQuery
         public bool TryQuerySpaces(out ulong requestId)
         {
             var querySpaces = OVRPlugin.QuerySpaces(ToQueryInfo(), out requestId);
-
             return querySpaces;
         }
 

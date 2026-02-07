@@ -50,11 +50,27 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly Color Yellow = HexToColor("#ffd74e");
             public static readonly Color SelectedWhite = HexToColor("#f0f0f0");
             public static readonly Color UnselectedWhite = HexToColor("#c4c4c4");
+            public static readonly Color LinkColor = HexToColor("#81b3ff");
+            public static readonly Color CollectionTagsColor = HexToColor("#eeeeee");
+            public static readonly Color InstallationStepPanelBackground = HexToColor("#333333");
+            public static readonly Color InstallationStepBackground = HexToColor("#474747");
 
         }
 
         public class GUIStylesContainer
         {
+            public class ColorStates
+            {
+                public Color Normal;
+                public Color Hover;
+                public Color Active;
+
+                public Color GetColor(bool active, bool hover)
+                {
+                    return hover ? Hover : active ? Active : Normal;
+                }
+            }
+
             public readonly GUIStyle BoldLabel = new GUIStyle(EditorStyles.boldLabel);
 
             public readonly GUIStyle BoldLabelHover = new GUIStyle(EditorStyles.boldLabel)
@@ -172,6 +188,25 @@ namespace Meta.XR.Editor.UserInterface
                 stretchHeight = false,
                 fontSize = 12,
                 fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = Color.white
+
+                },
+                hover =
+                {
+                    textColor = Color.white
+                }
+            };
+
+            public readonly GUIStyle NonFoldoutHeader = new GUIStyle(EditorStyles.boldLabel)
+            {
+                stretchWidth = false,
+                stretchHeight = false,
+                fontSize = 12,
+                fontStyle = FontStyle.Bold,
+                padding = new RectOffset(Constants.FoldoutMargin, 0, 0, 0),
+
                 normal =
                 {
                     textColor = Color.white
@@ -313,6 +348,8 @@ namespace Meta.XR.Editor.UserInterface
             public const float LabelWidth = 192.0f;
 
             public const int Border = 1;
+            public const int DoublePadding = 8;
+            public const int LargePadding = 6;
             public const int Padding = 4;
             public const int MiniPadding = 2;
             public const int Margin = 8;
@@ -320,6 +357,7 @@ namespace Meta.XR.Editor.UserInterface
             public const int MiniMargin = 4;
             public const int LargeMargin = 32;
             public const int TextWidthOffset = 2;
+            public const int FoldoutMargin = 14;
         }
 
         private static GUIStylesContainer _guiStyles;

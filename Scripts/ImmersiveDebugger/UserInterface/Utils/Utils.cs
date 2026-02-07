@@ -25,21 +25,11 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
-    public static class Utils
+    internal static class Utils
     {
         private const int MaxLetterCountForTitle = 22;
 
-        // Console
-        internal static readonly Vector3 ConsolePanelClosePosition = new(0.8f, 0.51f, 0.01f);
-        internal static readonly Vector3 ConsolePanelDefaultPosition = new(1.0f, 0.5f, 0.01f);
-        internal static readonly Vector3 ConsolePanelFarPosition = new(1.2f, 0.5f, 0.01f);
-
-        // Inspectors
-        internal static readonly Vector3 InspectorsPanelClosePosition = new(0.8f, -0.51f, 0.01f);
-        internal static readonly Vector3 InspectorsPanelDefaultPosition = new(1.0f, -0.5f, 0.01f);
-        internal static readonly Vector3 InspectorsPanelFarPosition = new(1.20f, -0.5f, 0.01f);
-
-        public static string ToDisplayText(this string input)
+        internal static string ToDisplayText(this string input)
         {
             string output = Regex.Replace(input, @"([a-z])([A-Z])", "$1 $2");
             output = Regex.Replace(output, @"([A-Z]+)([A-Z][a-z])", "$1 $2");
@@ -52,7 +42,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             return output;
         }
 
-        public static Vector3 LerpPosition(Vector3 current, Vector3 target, float lerpSpeed)
+        internal static Vector3 LerpPosition(Vector3 current, Vector3 target, float lerpSpeed)
         {
             if (Vector3.Distance(current, target) < 0.01f)
             {
@@ -63,7 +53,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             return current;
         }
 
-        public static string ClampText(string text, int limit) => text.Length > limit ? text.Substring(0, limit) : text;
+        internal static string ClampText(string text, int limit) => text.Length > limit ? text.Substring(0, limit) : text;
     }
 }
 

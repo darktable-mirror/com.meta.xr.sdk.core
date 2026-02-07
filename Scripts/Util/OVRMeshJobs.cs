@@ -25,8 +25,15 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
 
+/// <summary>
+/// Defines a asynchronous jobs used for converting mesh data into Unity types. Used by <see cref="OVRMesh"/> to convert mesh data obtained from the Meta Quest runtime
+/// into Unity data types.
+/// </summary>
 public class OVRMeshJobs
 {
+    /// <summary>
+    /// Asynchronous job that transforms mesh vertices, normals, UVs, and bone weights into Unity space.
+    /// </summary>
     public struct TransformToUnitySpaceJob : IJobParallelFor
     {
         public NativeArray<Vector3> Vertices;
@@ -73,6 +80,9 @@ public class OVRMeshJobs
         }
     }
 
+    /// <summary>
+    /// Asynchronous job that rearranges mesh indicies into Unity required order for triangles.
+    /// </summary>
     public struct TransformTrianglesJob : IJobParallelFor
     {
         public NativeArray<uint> Triangles;
@@ -88,6 +98,10 @@ public class OVRMeshJobs
         }
     }
 
+    /// <summary>
+    /// Helper struct that converts arrays to Unity NativeArray based on type.
+    /// </summary>
+    /// <typeparam name="T">Data type of the array.</typeparam>
     public unsafe struct NativeArrayHelper<T> : IDisposable where T : struct
     {
         public NativeArray<T> UnityNativeArray;
@@ -97,6 +111,11 @@ public class OVRMeshJobs
         private readonly AtomicSafetyHandle _atomicSafetyHandle;
 #endif
 
+        /// <summary>
+        /// Constructor that performs the conversion from array to Unity NativeArray.
+        /// </summary>
+        /// <param name="ovrArray">Input array to convert.</param>
+        /// <param name="length">Length of the input array.</param>
         public NativeArrayHelper(T[] ovrArray, int length)
         {
             _handle = GCHandle.Alloc(ovrArray, GCHandleType.Pinned);
@@ -110,6 +129,9 @@ public class OVRMeshJobs
 #endif
         }
 
+        /// <summary>
+        /// Safely disposes of allocated memory used when converting.
+        /// </summary>
         public void Dispose()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS

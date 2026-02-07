@@ -59,7 +59,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_101_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_103_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -177,12 +177,17 @@ public static partial class OVRPlugin
         True
     }
 
+    [OVRResultStatus]
     public enum Result
     {
         /// Success
         Success = 0,
         Success_EventUnavailable = 1,
         Success_Pending = 2,
+
+        /// Colocation Session qualified success cases
+        Success_ColocationSessionAlreadyAdvertising = 3001,
+        Success_ColocationSessionAlreadyDiscovering = 3002,
 
         /// Failure
         Failure = -1000,
@@ -213,6 +218,12 @@ public static partial class OVRPlugin
         Failure_SpaceComponentStatusPending = -2007,
         Failure_SpaceComponentStatusAlreadySet = -2008,
 
+        /// XR_META_spatial_entity_group_sharing
+        Failure_SpaceGroupNotFound = -2009,
+
+        /// XR_META_colocation_discovery
+        Failure_ColocationSessionNetworkFailed = -3002,
+        Failure_ColocationSessionNoDiscoveryMethodAvailable = -3003,
 
         // XR_META_spatial_entity_persistence & XR_META_spatial_entity_discovery
         Failure_SpaceInsufficientResources = -9000,
@@ -225,6 +236,10 @@ public static partial class OVRPlugin
 
         // XR_META_boundary_visibility
         Warning_BoundaryVisibilitySuppressionNotAllowed = 9030,
+
+        // XR_EXT_future
+        Failure_FuturePending = -10000,
+        Failure_FutureInvalid = -10001,
     }
 
     public static bool IsSuccess(this Result result) => result >= 0;
@@ -1567,6 +1582,38 @@ public static partial class OVRPlugin
         Hand_PinkyTip = Hand_MaxSkinnable + 4,  // tip of the pinky
         Hand_End = Hand_MaxSkinnable + 5,
 
+        // Hand bone ids in OpenXR format.
+        // XRHands use HandState3 data and openXR format hand skeletons.
+        // Hand_ bone ids will be deprecated in an upcoming version.
+        XRHand_Start = 0,
+        XRHand_Palm = 0,
+        XRHand_Wrist = 1,
+        XRHand_ThumbMetacarpal = 2,
+        XRHand_ThumbProximal = 3,
+        XRHand_ThumbDistal = 4,
+        XRHand_ThumbTip = 5,
+        XRHand_IndexMetacarpal = 6,
+        XRHand_IndexProximal = 7,
+        XRHand_IndexIntermediate = 8,
+        XRHand_IndexDistal = 9,
+        XRHand_IndexTip = 10,
+        XRHand_MiddleMetacarpal = 11,
+        XRHand_MiddleProximal = 12,
+        XRHand_MiddleIntermediate = 13,
+        XRHand_MiddleDistal = 14,
+        XRHand_MiddleTip = 15,
+        XRHand_RingMetacarpal = 16,
+        XRHand_RingProximal = 17,
+        XRHand_RingIntermediate = 18,
+        XRHand_RingDistal = 19,
+        XRHand_RingTip = 20,
+        XRHand_LittleMetacarpal = 21,
+        XRHand_LittleProximal = 22,
+        XRHand_LittleIntermediate = 23,
+        XRHand_LittleDistal = 24,
+        XRHand_LittleTip = 25,
+        XRHand_Max = 26,
+        XRHand_End = 26,
 
         // body bones (upper body)
         Body_Start = 0,
@@ -1763,6 +1810,7 @@ public static partial class OVRPlugin
         public HandStatus Status;
         public Posef RootPose;
         public Quatf[] BoneRotations;
+        public Vector3f[] BonePositions;
         public HandFingerPinch Pinches;
         public float[] PinchStrength;
         public Posef PointerPose;
@@ -1821,6 +1869,54 @@ public static partial class OVRPlugin
         public double SampleTimeStamp;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct HandState3Internal
+    {
+        public HandStatus Status;
+        public Posef RootPose;
+        public Posef BonePoses_0;
+        public Posef BonePoses_1;
+        public Posef BonePoses_2;
+        public Posef BonePoses_3;
+        public Posef BonePoses_4;
+        public Posef BonePoses_5;
+        public Posef BonePoses_6;
+        public Posef BonePoses_7;
+        public Posef BonePoses_8;
+        public Posef BonePoses_9;
+        public Posef BonePoses_10;
+        public Posef BonePoses_11;
+        public Posef BonePoses_12;
+        public Posef BonePoses_13;
+        public Posef BonePoses_14;
+        public Posef BonePoses_15;
+        public Posef BonePoses_16;
+        public Posef BonePoses_17;
+        public Posef BonePoses_18;
+        public Posef BonePoses_19;
+        public Posef BonePoses_20;
+        public Posef BonePoses_21;
+        public Posef BonePoses_22;
+        public Posef BonePoses_23;
+        public Posef BonePoses_24;
+        public Posef BonePoses_25;
+        public HandFingerPinch Pinches;
+        public float PinchStrength_0;
+        public float PinchStrength_1;
+        public float PinchStrength_2;
+        public float PinchStrength_3;
+        public float PinchStrength_4;
+        public Posef PointerPose;
+        public float HandScale;
+        public TrackingConfidence HandConfidence;
+        public TrackingConfidence FingerConfidences_0;
+        public TrackingConfidence FingerConfidences_1;
+        public TrackingConfidence FingerConfidences_2;
+        public TrackingConfidence FingerConfidences_3;
+        public TrackingConfidence FingerConfidences_4;
+        public double RequestedTimeStamp;
+        public double SampleTimeStamp;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct BoneCapsule
@@ -1842,6 +1938,7 @@ public static partial class OVRPlugin
     public enum SkeletonConstants
     {
         MaxHandBones = BoneId.Hand_End,
+        MaxXRHandBones = BoneId.XRHand_Max,
         MaxBodyBones = BoneId.Body_End,
         MaxBones = BoneId.Max,
         MaxBoneCapsules = 19,
@@ -1854,6 +1951,8 @@ public static partial class OVRPlugin
         HandRight = 1,
         Body = 2,
         FullBody = 3,
+        XRHandLeft = 4,
+        XRHandRight = 5,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -2098,6 +2197,8 @@ public static partial class OVRPlugin
         None = -1,
         HandLeft = 0,
         HandRight = 1,
+        XRHandLeft = SkeletonType.XRHandLeft,
+        XRHandRight = SkeletonType.XRHandRight,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -2941,6 +3042,7 @@ public static partial class OVRPlugin
         SpaceEraseComplete = 54,
         SpaceShareResult = 56,
         SpaceListSaveResult = 57,
+        SpaceShareToGroupsComplete = 58,
 
         SceneCaptureComplete = 100,
 
@@ -2956,13 +3058,22 @@ public static partial class OVRPlugin
         SpacesSaveResult = 302,
         SpacesEraseResult = 303,
 
+        ColocationSessionStartAdvertisementComplete = 370,
+        ColocationSessionAdvertisementComplete = 371,
+        ColocationSessionStopAdvertisementComplete = 372,
+        ColocationSessionStartDiscoveryComplete = 373,
+        ColocationSessionDiscoveryResult = 374,
+        ColocationSessionDiscoveryComplete = 375,
+        ColocationSessionStopDiscoveryComplete = 376,
 
         PassthroughLayerResumed = 500,
 
         // XR_META_boundary_visibility
         BoundaryVisibilityChanged = 510,
 
-
+        // XR_META_dynamic_object_tracker
+        CreateDynamicObjectTrackerResult = 650,
+        SetDynamicObjectTrackedClassesResult = 651,
 
     }
 
@@ -3228,6 +3339,8 @@ public static partial class OVRPlugin
         RoomLayout = 6,
         SpaceContainer = 7,
         TriangleMesh = 1000269000,
+        // XR_META_dynamic_object_tracker
+        DynamicObject = 1000288006,
     }
 
     public enum SpaceStorageLocation
@@ -3258,6 +3371,7 @@ public static partial class OVRPlugin
         None = 0,
         Ids = 1,
         Components = 2,
+        Group = 3,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -3304,6 +3418,19 @@ public static partial class OVRPlugin
         public SpaceFilterInfoComponents ComponentsInfo;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SpaceQueryInfo2
+    {
+        public SpaceQueryType QueryType;
+        public int MaxQuerySpaces;
+        public double Timeout;
+        public SpaceStorageLocation Location;
+        public SpaceQueryActionType ActionType;
+        public SpaceQueryFilterType FilterType;
+        public SpaceFilterInfoIds IdInfo;
+        public SpaceFilterInfoComponents ComponentsInfo;
+        public Guid GroupUuidInfo;
+    }
 
     public const int SpatialEntityMaxQueryResultsPerEvent = 128;
 
@@ -3314,6 +3441,44 @@ public static partial class OVRPlugin
         public Guid uuid;
     }
 
+
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ColocationSessionStartAdvertisementInfo
+    {
+        public UInt32 PeerMetadataCount;
+
+        public unsafe byte* GroupMetadata;
+    }
+
+    public const int MaxQuerySpacesByGroup = 1024;
+
+    public enum ShareSpacesRecipientType
+    {
+        Group = 1
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ShareSpacesRecipientInfoBase
+    {
+        // Intentionally Empty
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ShareSpacesInfo
+    {
+        public ShareSpacesRecipientType RecipientType;
+        public unsafe ShareSpacesRecipientInfoBase* RecipientInfo;
+        public UInt32 SpaceCount;
+        public unsafe UInt64* Spaces;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ShareSpacesGroupRecipientInfo
+    {
+        public uint GroupCount;
+        public unsafe Guid* GroupUuids;
+    }
 
     public static string GuidToUuidString(Guid guid)
     {
@@ -3341,6 +3506,7 @@ public static partial class OVRPlugin
         Ids = 2,
         Component = 3,
     }
+
 
     //-----------------------------------------------------------------
     // Methods
@@ -5255,7 +5421,6 @@ public static partial class OVRPlugin
 #endif
     }
 
-
     public static bool SetControllerDrivenHandPoses(bool controllerDrivenHandPoses)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -5338,69 +5503,141 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public static bool SetHandSkeletonVersion(OVRHandSkeletonVersion skeletonVersion)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return false;
+#else
+        if (skeletonVersion == OVRHandSkeletonVersion.Uninitialized)
+        {
+            HandSkeletonVersion = skeletonVersion;
+            return false;
+        }
+
+        if (version >= OVRP_1_103_0.version)
+        {
+            Result result = OVRP_1_103_0.ovrp_SetHandSkeletonVersion(skeletonVersion);
+            if (result == Result.Success)
+            {
+                HandSkeletonVersion = skeletonVersion;
+            }
+            return result == Result.Success;
+        }
+        return false;
+#endif // OVRPLUGIN_UNSUPPORTED_PLATFORM
+    }
 
     public static bool GetActionStateBoolean(string actionName, out bool result)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        result = false;
+        return false;
+#else
         Bool ovrResult = Bool.False;
         result = false;
 
-        var outcome = OVRP_1_95_0.ovrp_GetActionStateBoolean(actionName, ref ovrResult);
-        if (outcome == Result.Success)
+        if (version >= OVRP_1_95_0.version)
         {
-            result = ovrResult == Bool.True;
-            return true;
+            var outcome = OVRP_1_95_0.ovrp_GetActionStateBoolean(actionName, ref ovrResult);
+            if (outcome == Result.Success)
+            {
+                result = ovrResult == Bool.True;
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStateBoolean: {outcome}");
+                return false;
+            }
         }
         else
         {
-            Debug.LogError($"Error calling GetActionStateBoolean({actionName}): {outcome}");
             return false;
         }
+#endif
     }
 
     public static bool GetActionStateFloat(string actionName, out float result)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        result = 0;
+        return false;
+#else
         result = 0f;
 
-        var outcome = OVRP_1_95_0.ovrp_GetActionStateFloat(actionName, ref result);
-        if (outcome == Result.Success)
+        if (version >= OVRP_1_95_0.version)
         {
-            return true;
+            var outcome = OVRP_1_95_0.ovrp_GetActionStateFloat(actionName, ref result);
+            if (outcome == Result.Success)
+            {
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStateFloat: {outcome}");
+                return false;
+            }
         }
         else
         {
-            Debug.LogError($"Error calling GetActionStateFloat: {outcome}");
             return false;
         }
+#endif
     }
 
     public static bool GetActionStatePose(string actionName, out Posef result)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        result = default(Posef);
+        return false;
+#else
         result = new Posef();
-        var outcome = OVRP_1_95_0.ovrp_GetActionStatePose(actionName, ref result);
-        if (outcome == Result.Success)
+        if (version >= OVRP_1_95_0.version)
         {
-            return true;
+            var outcome = OVRP_1_95_0.ovrp_GetActionStatePose(actionName, ref result);
+            if (outcome == Result.Success)
+            {
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStatePose: {outcome}");
+                return false;
+            }
         }
         else
         {
-            Debug.LogError($"Error calling GetActionStatePose: {outcome}");
             return false;
         }
+#endif
     }
 
     public static bool GetActionStatePose(string actionName, Hand hand, out Posef result)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        result = default(Posef);
+        return false;
+#else
         result = new Posef();
-        var outcome = OVRP_1_95_0.ovrp_GetActionStatePose2(actionName, hand, ref result);
-        if (outcome == Result.Success)
+
+        if (version >= OVRP_1_100_0.version)
         {
-            return true;
+            var outcome = OVRP_1_100_0.ovrp_GetActionStatePose2(actionName, hand, ref result);
+            if (outcome == Result.Success)
+            {
+                return true;
+            }
+            else
+            {
+                Debug.LogError($"Error calling GetActionStatePose2: {outcome}");
+                return false;
+            }
         }
         else
         {
-            Debug.LogError($"Error calling GetActionStatePose2: {outcome}");
             return false;
         }
+#endif
     }
 
     public static bool TriggerVibrationAction(string actionName, Hand hand, float duration, float amplitude)
@@ -8265,6 +8502,10 @@ public static partial class OVRPlugin
     }
 
     private static HandStateInternal cachedHandState = new HandStateInternal();
+    private static HandState3Internal cachedHandState3 = new HandState3Internal();
+
+
+    public static OVRHandSkeletonVersion HandSkeletonVersion { get; private set; } = OVRHandSkeletonVersion.OVR;
 
     private static Quaternion LeftBoneRotator = Quaternion.AngleAxis(180f, Vector3.right) * Quaternion.AngleAxis(270f, Vector3.up);
     private static Quaternion RightBoneRotator = Quaternion.AngleAxis(270f, Vector3.up);
@@ -8280,6 +8521,118 @@ public static partial class OVRPlugin
             stepId = Step.Render;
         }
 
+        if (version >= OVRP_1_103_0.version && HandSkeletonVersion == OVRHandSkeletonVersion.OpenXR)
+        {
+            Result res = Result.Failure;
+            res = OVRP_1_103_0.ovrp_GetHandState3(stepId, -1, hand, out cachedHandState3);
+
+            if (res == Result.Success)
+            {
+                // attempt to avoid allocations if client provides appropriately pre-initialized HandState
+                if (handState.BoneRotations == null ||
+                    handState.BoneRotations.Length != (int)SkeletonConstants.MaxXRHandBones)
+                {
+                    handState.BoneRotations = new Quatf[(int)SkeletonConstants.MaxXRHandBones];
+                }
+
+                if (handState.BonePositions == null ||
+                    handState.BonePositions.Length != (int)SkeletonConstants.MaxXRHandBones)
+                {
+                    handState.BonePositions = new Vector3f[(int)SkeletonConstants.MaxXRHandBones];
+                }
+
+                if (handState.PinchStrength == null || handState.PinchStrength.Length != (int)HandFinger.Max)
+                {
+                    handState.PinchStrength = new float[(int)HandFinger.Max];
+                }
+
+                if (handState.FingerConfidences == null || handState.FingerConfidences.Length != (int)HandFinger.Max)
+                {
+                    handState.FingerConfidences = new TrackingConfidence[(int)HandFinger.Max];
+                }
+
+                // unrolling the arrays is necessary to avoid per-frame allocations during marshaling
+                handState.Status = cachedHandState3.Status;
+                handState.RootPose = cachedHandState3.RootPose;
+
+                handState.BoneRotations[0] =    cachedHandState3.BonePoses_0.Orientation;
+                handState.BoneRotations[1] =    cachedHandState3.BonePoses_1.Orientation;
+                handState.BoneRotations[2] =    cachedHandState3.BonePoses_2.Orientation;
+                handState.BoneRotations[3] =    cachedHandState3.BonePoses_3.Orientation;
+                handState.BoneRotations[4] =    cachedHandState3.BonePoses_4.Orientation;
+                handState.BoneRotations[5] =    cachedHandState3.BonePoses_5.Orientation;
+                handState.BoneRotations[6] =    cachedHandState3.BonePoses_6.Orientation;
+                handState.BoneRotations[7] =    cachedHandState3.BonePoses_7.Orientation;
+                handState.BoneRotations[8] =    cachedHandState3.BonePoses_8.Orientation;
+                handState.BoneRotations[9] =    cachedHandState3.BonePoses_9.Orientation;
+                handState.BoneRotations[10] =   cachedHandState3.BonePoses_10.Orientation;
+                handState.BoneRotations[11] =   cachedHandState3.BonePoses_11.Orientation;
+                handState.BoneRotations[12] =   cachedHandState3.BonePoses_12.Orientation;
+                handState.BoneRotations[13] =   cachedHandState3.BonePoses_13.Orientation;
+                handState.BoneRotations[14] =   cachedHandState3.BonePoses_14.Orientation;
+                handState.BoneRotations[15] =   cachedHandState3.BonePoses_15.Orientation;
+                handState.BoneRotations[16] =   cachedHandState3.BonePoses_16.Orientation;
+                handState.BoneRotations[17] =   cachedHandState3.BonePoses_17.Orientation;
+                handState.BoneRotations[18] =   cachedHandState3.BonePoses_18.Orientation;
+                handState.BoneRotations[19] =   cachedHandState3.BonePoses_19.Orientation;
+                handState.BoneRotations[20] =   cachedHandState3.BonePoses_20.Orientation;
+                handState.BoneRotations[21] =   cachedHandState3.BonePoses_21.Orientation;
+                handState.BoneRotations[22] =   cachedHandState3.BonePoses_22.Orientation;
+                handState.BoneRotations[23] =   cachedHandState3.BonePoses_23.Orientation;
+                handState.BoneRotations[24] =   cachedHandState3.BonePoses_24.Orientation;
+                handState.BoneRotations[25] =   cachedHandState3.BonePoses_25.Orientation;
+
+                handState.BonePositions[0] = cachedHandState3.BonePoses_0.Position;
+                handState.BonePositions[1] = cachedHandState3.BonePoses_1.Position;
+                handState.BonePositions[2] = cachedHandState3.BonePoses_2.Position;
+                handState.BonePositions[3] = cachedHandState3.BonePoses_3.Position;
+                handState.BonePositions[4] = cachedHandState3.BonePoses_4.Position;
+                handState.BonePositions[5] = cachedHandState3.BonePoses_5.Position;
+                handState.BonePositions[6] = cachedHandState3.BonePoses_6.Position;
+                handState.BonePositions[7] = cachedHandState3.BonePoses_7.Position;
+                handState.BonePositions[8] = cachedHandState3.BonePoses_8.Position;
+                handState.BonePositions[9] = cachedHandState3.BonePoses_9.Position;
+                handState.BonePositions[10] = cachedHandState3.BonePoses_10.Position;
+                handState.BonePositions[11] = cachedHandState3.BonePoses_11.Position;
+                handState.BonePositions[12] = cachedHandState3.BonePoses_12.Position;
+                handState.BonePositions[13] = cachedHandState3.BonePoses_13.Position;
+                handState.BonePositions[14] = cachedHandState3.BonePoses_14.Position;
+                handState.BonePositions[15] = cachedHandState3.BonePoses_15.Position;
+                handState.BonePositions[16] = cachedHandState3.BonePoses_16.Position;
+                handState.BonePositions[17] = cachedHandState3.BonePoses_17.Position;
+                handState.BonePositions[18] = cachedHandState3.BonePoses_18.Position;
+                handState.BonePositions[19] = cachedHandState3.BonePoses_19.Position;
+                handState.BonePositions[20] = cachedHandState3.BonePoses_20.Position;
+                handState.BonePositions[21] = cachedHandState3.BonePoses_21.Position;
+                handState.BonePositions[22] = cachedHandState3.BonePoses_22.Position;
+                handState.BonePositions[23] = cachedHandState3.BonePoses_23.Position;
+                handState.BonePositions[24] = cachedHandState3.BonePoses_24.Position;
+                handState.BonePositions[25] = cachedHandState3.BonePoses_25.Position;
+
+                handState.Pinches = cachedHandState3.Pinches;
+                handState.PinchStrength[0] = cachedHandState3.PinchStrength_0;
+                handState.PinchStrength[1] = cachedHandState3.PinchStrength_1;
+                handState.PinchStrength[2] = cachedHandState3.PinchStrength_2;
+                handState.PinchStrength[3] = cachedHandState3.PinchStrength_3;
+                handState.PinchStrength[4] = cachedHandState3.PinchStrength_4;
+                handState.PointerPose = cachedHandState3.PointerPose;
+                handState.HandScale = cachedHandState3.HandScale;
+                handState.HandConfidence = cachedHandState3.HandConfidence;
+                handState.FingerConfidences[0] = cachedHandState3.FingerConfidences_0;
+                handState.FingerConfidences[1] = cachedHandState3.FingerConfidences_1;
+                handState.FingerConfidences[2] = cachedHandState3.FingerConfidences_2;
+                handState.FingerConfidences[3] = cachedHandState3.FingerConfidences_3;
+                handState.FingerConfidences[4] = cachedHandState3.FingerConfidences_4;
+                handState.RequestedTimeStamp = cachedHandState3.RequestedTimeStamp;
+                handState.SampleTimeStamp = cachedHandState3.SampleTimeStamp;
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         if (version >= OVRP_1_44_0.version)
         {
@@ -8371,6 +8724,9 @@ public static partial class OVRPlugin
             case SkeletonType.HandLeft:
             case SkeletonType.HandRight:
                 return (bone >= BoneId.Hand_Start) && (bone <= BoneId.Hand_End);
+            case SkeletonType.XRHandLeft:
+            case SkeletonType.XRHandRight:
+                return (bone >= BoneId.XRHand_Start) && (bone <= BoneId.XRHand_End);
             case SkeletonType.Body:
                 return (bone >= BoneId.Body_Start) && (bone <= BoneId.Body_End);
             case SkeletonType.FullBody:
@@ -10273,6 +10629,53 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public static Result QuerySpaces2(SpaceQueryInfo2 queryInfo, out UInt64 requestId)
+    {
+        requestId = 0;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            if (queryInfo.FilterType == SpaceQueryFilterType.Ids)
+            {
+                if (queryInfo.IdInfo.Ids?.Length > SpaceFilterInfoIdsMaxSize)
+                {
+                    Debug.LogError("QuerySpaces attempted to query more uuids than the maximum number supported: " +
+                                   SpaceFilterInfoIdsMaxSize);
+                    return Result.Failure_InvalidParameter;
+                }
+            }
+            else if (queryInfo.FilterType == SpaceQueryFilterType.Components)
+            {
+                if (queryInfo.ComponentsInfo.Components?.Length > SpaceFilterInfoComponentsMaxSize)
+                {
+                    Debug.LogError("QuerySpaces attempted to query more components than the maximum " +
+                                   "number supported: " + SpaceFilterInfoComponentsMaxSize);
+                    return Result.Failure_InvalidParameter;
+                }
+            }
+
+            // The array size must be exactly SpaceFilterInfoIdsMaxSize or else the data marshaling will fail
+            if (queryInfo.IdInfo.Ids?.Length != SpaceFilterInfoIdsMaxSize)
+            {
+                Array.Resize(ref queryInfo.IdInfo.Ids, SpaceFilterInfoIdsMaxSize);
+            }
+
+            // The array size must be exactly SpaceFilterInfoComponentsMaxSize or else the data marshaling will fail
+            if (queryInfo.ComponentsInfo.Components?.Length != SpaceFilterInfoComponentsMaxSize)
+            {
+                Array.Resize(ref queryInfo.ComponentsInfo.Components, SpaceFilterInfoComponentsMaxSize);
+            }
+
+            return OVRP_1_103_0.ovrp_QuerySpaces2(ref queryInfo, out requestId);
+        }
+        else
+        {
+            return Result.Failure_NotYetImplemented;
+        }
+#endif
+    }
 
     public static unsafe bool RetrieveSpaceQueryResults(UInt64 requestId,
         out NativeArray<SpaceQueryResult> results, Allocator allocator)
@@ -10862,7 +11265,6 @@ public static partial class OVRPlugin
         public SpaceComponentType Component;
     }
 
-
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct SpaceDiscoveryInfo
     {
@@ -11224,6 +11626,90 @@ public static partial class OVRPlugin
         }
     }
 
+    public static Result StartColocationSessionAdvertisement(ColocationSessionStartAdvertisementInfo info, out UInt64 requestId)
+    {
+        requestId = 0;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_StartColocationAdvertisement(in info, out requestId);
+        }
+        else
+        {
+            return Result.Failure_NotYetImplemented;
+        }
+#endif
+    }
+
+    public static Result StopColocationSessionAdvertisement(out UInt64 requestId)
+    {
+        requestId = 0;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_StopColocationAdvertisement(out requestId);
+        }
+        else
+        {
+            return Result.Failure_NotYetImplemented;
+        }
+#endif
+    }
+
+    public static Result StartColocationSessionDiscovery(out UInt64 requestId)
+    {
+        requestId = 0;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_StartColocationDiscovery(out requestId);
+        }
+        else
+        {
+            return Result.Failure_NotYetImplemented;
+        }
+#endif
+    }
+
+    public static Result StopColocationSessionDiscovery(out UInt64 requestId)
+    {
+        requestId = 0;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_StopColocationDiscovery(out requestId);
+        }
+        else
+        {
+            return Result.Failure_NotYetImplemented;
+        }
+#endif
+    }
+
+    public static Result ShareSpaces(in ShareSpacesInfo info, out ulong requestId)
+    {
+        requestId = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_ShareSpaces2(in info, out requestId);
+        }
+        else
+        {
+            return Result.Failure_NotYetImplemented;
+        }
+#endif
+    }
 
 
 
@@ -11287,7 +11773,6 @@ public static partial class OVRPlugin
     }
 
 
-
     public enum BoundaryVisibility
     {
         NotSuppressed = 1,
@@ -11320,6 +11805,134 @@ public static partial class OVRPlugin
 
 
 
+    public enum DynamicObjectClass
+    {
+        Keyboard = 0,
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct DynamicObjectTrackedClassesSetInfo
+    {
+        public unsafe DynamicObjectClass* Classes;
+        public uint ClassCount;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct DynamicObjectData
+    {
+        public DynamicObjectClass ClassType;
+    }
+
+    public static Result CreateDynamicObjectTracker(out ulong tracker)
+    {
+        tracker = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_CreateDynamicObjectTracker(out tracker);
+        }
+        else
+        {
+            return Result.Failure_Unsupported;
+        }
+#endif
+    }
+
+    public static OVRTask<OVRResult<ulong, Result>> CreateDynamicObjectTrackerAsync()
+    {
+        var result = CreateDynamicObjectTracker(out var tracker);
+        // The task id and type must match OVRManager's case OVRPlugin.EventType.CreateDynamicObjectTrackerResult
+        return result.IsSuccess()
+            ? OVRTask.FromRequest<OVRResult<ulong, Result>>(tracker, EventType.CreateDynamicObjectTrackerResult)
+            : OVRTask.FromResult(OVRResult<ulong, Result>.FromFailure(result));
+    }
+
+    public static Result DestroyDynamicObjectTracker(ulong tracker)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_DestroyDynamicObjectTracker(tracker);
+        }
+        else
+        {
+            return Result.Failure_Unsupported;
+        }
+#endif
+    }
+
+    public static unsafe Result SetDynamicObjectTrackedClasses(ulong tracker, ReadOnlySpan<DynamicObjectClass> classes)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            fixed (DynamicObjectClass* ptr = classes)
+            {
+                return OVRP_1_103_0.ovrp_SetDynamicObjectTrackedClasses(tracker, new()
+                {
+                    Classes = ptr,
+                    ClassCount = (uint)classes.Length,
+                });
+            }
+        }
+        else
+        {
+            return Result.Failure_Unsupported;
+        }
+#endif
+    }
+
+    public static OVRTask<OVRResult<Result>> SetDynamicObjectTrackedClassesAsync(ulong tracker,
+        ReadOnlySpan<DynamicObjectClass> classes)
+    {
+        var result = SetDynamicObjectTrackedClasses(tracker, classes);
+        // The task id and type must match OVRManager's case OVRPlugin.EventType.SetDynamicObjectTrackedClassesResult
+        return result.IsSuccess()
+            ? OVRTask.FromRequest<OVRResult<Result>>(tracker, EventType.SetDynamicObjectTrackedClassesResult)
+            : OVRTask.FromResult(OVRResult<Result>.FromFailure(result));
+    }
+
+    public static Result GetSpaceDynamicObjectData(UInt64 space, out DynamicObjectData data)
+    {
+        data = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            return OVRP_1_103_0.ovrp_GetSpaceDynamicObjectData(ref space, out data);
+        }
+        else
+        {
+            return Result.Failure_Unsupported;
+        }
+#endif
+    }
+
+    public static Result GetDynamicObjectTrackerSupported(out bool value)
+    {
+        value = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_103_0.version)
+        {
+            var result = OVRP_1_103_0.ovrp_GetDynamicObjectTrackerSupported(out var supported);
+            value = (supported == Bool.True);
+            return result;
+        }
+        else
+        {
+            return Result.Failure_Unsupported;
+        }
+#endif
+    }
 
     public class UnityOpenXR
     {
@@ -11505,6 +12118,38 @@ public static partial class OVRPlugin
 
 
 
+
+
+
+    public enum FutureState
+    {
+        Pending = 1,
+        Ready = 2,
+    }
+
+    public static Result PollFuture(ulong future, out FutureState state)
+    {
+        state = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_103_0.version
+            ? OVRP_1_103_0.ovrp_PollFuture(future, out state)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result CancelFuture(ulong future)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_103_0.version
+            ? OVRP_1_103_0.ovrp_CancelFuture(future)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
     public static Result SetDeveloperTelemetryConsent(Bool consent)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -11517,6 +12162,7 @@ public static partial class OVRPlugin
         return OVRP_1_95_0.ovrp_SetDeveloperTelemetryConsent(consent);
 #endif
     }
+
 
     public static class Qpl
     {
@@ -13450,7 +14096,6 @@ public static partial class OVRPlugin
         public static readonly System.Version version = new System.Version(1, 86, 0);
 
 
-
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetControllerDrivenHandPoses(Bool controllerDrivenHandPoses);
 
@@ -13472,7 +14117,6 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetControllerIsInHand(Step stepId, Node nodeId, ref Bool isInHand);
-
     }
 
     private static class OVRP_1_87_0
@@ -13515,7 +14159,6 @@ public static partial class OVRPlugin
     private static class OVRP_1_91_0
     {
         public static readonly System.Version version = new System.Version(1, 91, 0);
-
 
     }
 
@@ -13567,8 +14210,6 @@ public static partial class OVRPlugin
         public static extern Result ovrp_IsSetWideMotionModeHandPosesEnabled(ref Bool enabled);
 
 
-
-
     }
 
     private static class OVRP_1_94_0
@@ -13581,7 +14222,6 @@ public static partial class OVRPlugin
     {
         public static readonly System.Version version = new System.Version(1, 95, 0);
 
-
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetActionStateBoolean(string path, ref Bool value);
 
@@ -13592,11 +14232,7 @@ public static partial class OVRPlugin
         public static extern Result ovrp_GetActionStatePose(string path, ref Posef value);
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern Result ovrp_GetActionStatePose2(string path, Hand hand, ref Posef value);
-
-        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetDeveloperTelemetryConsent(Bool consent);
-
     }
 
     private static class OVRP_1_96_0
@@ -13678,16 +14314,67 @@ public static partial class OVRPlugin
     private static class OVRP_1_101_0
     {
         public static readonly System.Version version = new System.Version(1, 101, 0);
+
     }
 
     private static class OVRP_1_102_0
     {
         public static readonly System.Version version = new System.Version(1, 102, 0);
+
     }
 
     private static class OVRP_1_103_0
     {
         public static readonly System.Version version = new System.Version(1, 103, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SetHandSkeletonVersion(OVRHandSkeletonVersion handSkeletonVersion);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetHandState3(Step stepId, int frameIndex, Hand hand, out HandState3Internal handState);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_PollFuture(ulong future, out FutureState state);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_CancelFuture(ulong future);
+
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_StartColocationAdvertisement(
+            in ColocationSessionStartAdvertisementInfo info, out UInt64 requestId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_StopColocationAdvertisement(out UInt64 requestId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_StartColocationDiscovery(out UInt64 requestId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_StopColocationDiscovery(out UInt64 requestId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_ShareSpaces2(in ShareSpacesInfo info, out UInt64 requestId);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_QuerySpaces2(ref SpaceQueryInfo2 queryInfo, out UInt64 requestId);
+
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_CreateDynamicObjectTracker(out ulong tracker);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_DestroyDynamicObjectTracker(ulong tracker);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SetDynamicObjectTrackedClasses(ulong tracker, in DynamicObjectTrackedClassesSetInfo setInfo);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetSpaceDynamicObjectData(ref UInt64 space, out DynamicObjectData data);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetDynamicObjectTrackerSupported(out Bool value);
+
     }
 
     private static class OVRP_1_104_0

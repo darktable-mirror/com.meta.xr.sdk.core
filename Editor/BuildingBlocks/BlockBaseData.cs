@@ -150,7 +150,21 @@ namespace Meta.XR.BuildingBlocks.Editor
 
 
 
-        internal virtual bool CanBeAdded => !Utils.IsApplicationPlaying.Invoke();
+        /// <summary>
+        /// Block can be installed into the scene
+        /// </summary>
+        internal virtual bool IsInstallable => !Utils.IsApplicationPlaying.Invoke();
+
+        /// <summary>
+        /// User can try to install the block into the scene
+        /// </summary>
+        /// <remarks>
+        /// Note the difference with <see cref="IsInstallable"/>: it is possible for the user to try
+        /// even though <see cref="IsInstallable"/> is <code>false</code>, the UI may react and propose
+        /// to fix the missing links via a popup.
+        /// We recommend using this property in the front-end instead of <see cref="IsInstallable"/>
+        /// </remarks>
+        internal virtual bool IsInteractable => IsInstallable;
 
         internal abstract Task AddToProject(GameObject selectedGameObject = null, Action onInstall = null);
 

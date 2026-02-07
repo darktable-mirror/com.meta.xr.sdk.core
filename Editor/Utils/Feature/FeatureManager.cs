@@ -173,6 +173,19 @@ namespace Meta.XR.Editor.Features
 
             builder.Append("AudioFaceTracking:");
             builder.Append(runtimeSettings.RequestsAudioFaceTracking);
+            builder.Append(",");
+
+            builder.Append("HandSkeletonVersion:");
+            builder.Append(runtimeSettings.HandSkeletonVersion);
+            builder.Append(",");
+
+            builder.Append("UseISDKOpenXRHand:");
+#if ISDK_OPENXR_HAND
+            builder.Append(true);
+#else
+            builder.Append(false);
+#endif
+
             return builder.ToString();
         }
     }

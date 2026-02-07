@@ -583,28 +583,31 @@ public class OVRPassthroughLayer : MonoBehaviour
         {
             var entry = deferredSurfaceGameObjects[i];
             bool entryIsPassthroughObject = false;
-            if (surfaceGameObjects.ContainsKey(entry.gameObject))
+            if (entry.gameObject)
             {
-                entryIsPassthroughObject = true;
-            }
-            else
-            {
-                if (CreateAndAddMesh(entry.gameObject, out var meshHandle, out var instanceHandle,
-                        out var localToWorld))
+                if (surfaceGameObjects.ContainsKey(entry.gameObject))
                 {
-                    surfaceGameObjects.Add(entry.gameObject, new PassthroughMeshInstance
-                    {
-                        meshHandle = meshHandle,
-                        instanceHandle = instanceHandle,
-                        updateTransform = entry.updateTransform,
-                        localToWorld = localToWorld,
-                    });
                     entryIsPassthroughObject = true;
                 }
                 else
                 {
-                    Debug.LogWarning(
-                        "Failed to create internal resources for GameObject added to passthrough surface.");
+                    if (CreateAndAddMesh(entry.gameObject, out var meshHandle, out var instanceHandle,
+                            out var localToWorld))
+                    {
+                        surfaceGameObjects.Add(entry.gameObject, new PassthroughMeshInstance
+                        {
+                            meshHandle = meshHandle,
+                            instanceHandle = instanceHandle,
+                            updateTransform = entry.updateTransform,
+                            localToWorld = localToWorld,
+                        });
+                        entryIsPassthroughObject = true;
+                    }
+                    else
+                    {
+                        Debug.LogWarning(
+                            "Failed to create internal resources for GameObject added to passthrough surface.");
+                    }
                 }
             }
 
@@ -708,16 +711,30 @@ public class OVRPassthroughLayer : MonoBehaviour
         using var profile = new OVRProfilerScope(nameof(UpdateSurfaceGeometryTransforms));
 
         // Iterate through mesh instances and see if transforms need to be updated
-        foreach (var kvp in surfaceGameObjects)
+        using (new OVRObjectPool.ListScope<GameObject>(out var removedGameObjects))
         {
-            var instanceHandle = kvp.Value.instanceHandle;
-            if (instanceHandle == 0) continue;
+            foreach (var kvp in surfaceGameObjects)
+            {
+                if (kvp.Key == null)
+                {
+                    removedGameObjects.Add(kvp.Key);
+                    continue;
+                }
 
-            var localToWorld = kvp.Value.updateTransform
-                ? kvp.Key.transform.localToWorldMatrix
-                : kvp.Value.localToWorld;
+                var instanceHandle = kvp.Value.instanceHandle;
+                if (instanceHandle == 0) continue;
 
-            UpdateSurfaceGeometryTransform(instanceHandle, localToWorld);
+                var localToWorld = kvp.Value.updateTransform
+                    ? kvp.Key.transform.localToWorldMatrix
+                    : kvp.Value.localToWorld;
+
+                UpdateSurfaceGeometryTransform(instanceHandle, localToWorld);
+            }
+
+            foreach (var removedGameObject in removedGameObjects)
+            {
+                RemoveSurfaceGeometry(removedGameObject);
+            }
         }
     }
 

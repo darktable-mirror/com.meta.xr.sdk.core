@@ -23,11 +23,29 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="ScriptableObject"/> that's storing the style of the text used by Immersive Debugger.
+    /// Containing properties like alignment type, font, size and color.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class TextStyle : Style
     {
+        /// <summary>
+        /// Where the anchor of the text is placed. There are 9 possible alignment styles,
+        /// check out details in the <see cref="TextAnchor"/>.
+        /// </summary>
         public TextAnchor textAlignement;
+        /// <summary>
+        /// The font of the text using Unity's builtin <see cref="Font"/> type. Assign it with font assets.
+        /// </summary>
         public Font font;
+        /// <summary>
+        /// The font size of the text, by default to 14.
+        /// </summary>
         public int fontSize = 14;
+        /// <summary>
+        /// The color for the text with Unity's builtin <see cref="Color"/> type. by default using white color.
+        /// </summary>
         public Color color = Color.white;
     }
 }

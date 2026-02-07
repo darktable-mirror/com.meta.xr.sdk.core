@@ -28,6 +28,12 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
     public override int AllocatedTimeInMs => 10;
     private readonly OVRConfigurationTaskUpdaterSummary _summary;
 
+    private static Dictionary<(OVRConfigurationTask, BuildTargetGroup), DateTime> _lastTimeOutOfCooldown =
+        new Dictionary<(OVRConfigurationTask, BuildTargetGroup), DateTime>();
+
+    private static Dictionary<(OVRConfigurationTask, BuildTargetGroup), bool> _lastSeenDoneValues =
+        new Dictionary<(OVRConfigurationTask, BuildTargetGroup), bool>();
+
     protected override Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> OpenTasksFilter =>
         (Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>>)(tasksToFilter => tasksToFilter
             .Where(task => !task.IsIgnored(BuildTargetGroup))
@@ -54,9 +60,31 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
         base.PrepareTasks();
     }
 
+    protected override bool IsTaskInCooldown(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
+    {
+        if (!task.Tags.HasFlag(OVRProjectSetup.TaskTags.HeavyProcessing))
+        {
+            return false;
+        }
+        // only for heavy processing tasks
+        var isInCooldown = false;
+        if (_lastTimeOutOfCooldown.ContainsKey((task, buildTargetGroup)))
+        {
+            DateTime endOfCooldownTime = _lastTimeOutOfCooldown[(task, buildTargetGroup)].AddMinutes(2);
+            isInCooldown = DateTime.Now < endOfCooldownTime;
+        }
+
+        if (!isInCooldown)
+        {
+            _lastTimeOutOfCooldown[(task, buildTargetGroup)] = DateTime.Now;
+        }
+
+        return isInCooldown;
+    }
+
     protected override void ProcessTask(OVRConfigurationTask task)
     {
-        var changedState = task.UpdateAndGetStateChanged(BuildTargetGroup);
+        var changedState = CacheDoneResultAndReturnIfStateChanged(task, BuildTargetGroup);
         Summary.AddTask(task, changedState);
 
         if (task.IsDone(BuildTargetGroup))
@@ -69,6 +97,18 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
         {
             task.LogMessage(BuildTargetGroup);
         }
+    }
+
+    private static bool CacheDoneResultAndReturnIfStateChanged(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
+    {
+        var currentResult = task.IsDone(buildTargetGroup);
+        var didStateChange = true;
+        if (_lastSeenDoneValues.TryGetValue((task, buildTargetGroup), out var lastSeenResult))
+        {
+            didStateChange = currentResult != lastSeenResult;
+        }
+        _lastSeenDoneValues[(task, buildTargetGroup)] = currentResult;
+        return didStateChange;
     }
 
     public override void Complete()

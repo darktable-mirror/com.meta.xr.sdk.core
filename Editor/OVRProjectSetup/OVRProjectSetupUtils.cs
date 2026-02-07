@@ -20,18 +20,16 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
-using UnityEditor.PackageManager;
-using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 internal static class OVRProjectSetupUtils
 {
     internal const string ProjectSetupToolPublicName = "Project Setup Tool";
+
+    internal static readonly TextureContent.Category ProjectSetupToolIcons = new("OVRProjectSetup/Icons");
 
     public static T FindComponentInScene<T>() where T : Component
     {
@@ -82,69 +80,6 @@ internal static class OVRProjectSetupUtils
 
         var path = AssetDatabase.GUIDToAssetPath(guids[0]);
         return AssetDatabase.LoadAssetAtPath<T>(path);
-    }
-
-
-
-    private static ListRequest _packageManagerListRequest;
-
-    internal static readonly TextureContent.Category ProjectSetupToolIcons = new("OVRProjectSetup/Icons");
-
-    static OVRProjectSetupUtils()
-    {
-        RefreshPackageList(false);
-    }
-
-    public static bool PackageManagerListAvailable => _packageManagerListRequest.Status == StatusCode.Success;
-
-    public static PackageInfo GetPackage(string packageName)
-    {
-        if (!PackageManagerListAvailable || _packageManagerListRequest.Result == null)
-        {
-            return null;
-        }
-        // Package name might contain version info. E.g., com.meta.xr.example@1.0.0
-        var (name, version) = ParsePackageId(packageName);
-        return _packageManagerListRequest.Result.FirstOrDefault(package => package.name == name &&
-                                                                           (!version.Any() || package.version == version));
-    }
-
-    private static (string name, string version) ParsePackageId(string packageName)
-    {
-        var packageNameParts = packageName.Split("@");
-        return (packageNameParts[0], packageNameParts.Length > 1 ? packageNameParts[1] : "");
-    }
-
-    public static bool IsPackageInstalled(string packageName) => GetPackage(packageName) != null;
-
-    public static bool RefreshPackageList(bool blocking)
-    {
-        _packageManagerListRequest = Client.List(offlineMode: false, includeIndirectDependencies: true);
-        if (blocking)
-        {
-            while (!PackageManagerListAvailable)
-            {
-                Thread.Sleep(100);
-            }
-        }
-
-        return PackageManagerListAvailable;
-    }
-
-    public static bool UninstallPackage(string packageName)
-    {
-        var request = Client.Remove(packageName);
-
-        // TODO: make this async later
-        while (!request.IsCompleted)
-        {
-            Thread.Sleep(1);
-        }
-
-        // Refresh the Client list
-        RefreshPackageList(false);
-
-        return request.Status == StatusCode.Success;
     }
 
     public static BuildTarget GetBuildTarget(this BuildTargetGroup buildTargetGroup)

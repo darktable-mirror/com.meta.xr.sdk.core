@@ -29,7 +29,7 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
-    public static class WatchUtils
+    internal static class WatchUtils
     {
         internal static readonly Dictionary<Type, Type> Types = new Dictionary<Type, Type>();
 
@@ -101,7 +101,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
     }
 
-    public abstract class Watch : Hook
+    internal abstract class Watch : Hook
     {
         public abstract string Value { get; }
         public abstract string[] Values { get; }
@@ -114,7 +114,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
     // Before Unity 2022.1 there's no IL2CPP Full Generic Sharing feature so Watch<> would require "Faster(smaller) Build"
     // in IL2CPP Code Generation Build Settings to avoid IL2CPP Ahead Of Time (AOT) codegen error in runtime.
     // Separate class are created here for other non-registered types so in runtime Watch<> is not accessed by types without codegen.
-    public class WatchShared : Watch
+    internal class WatchShared : Watch
     {
         private static string[] _buffer = new string[1];
         public override int NumberOfValues => 1;
@@ -132,7 +132,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
     }
 #endif
 
-    public class Watch<T> : Watch
+    internal class Watch<T> : Watch
     {
         public delegate void ToDisplayStringSignature(T value, ref string[] valuesContainer);
         public static ToDisplayStringSignature ToDisplayStringsDelegate { get; private set; } = null;

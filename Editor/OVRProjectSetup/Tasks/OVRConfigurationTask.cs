@@ -20,15 +20,25 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
+using static Meta.XR.Editor.UserInterface.Styles.Colors;
+using static OVRProjectSetupDrawer.Styles;
+using static OVRProjectSetupDrawer.Styles.Contents;
 
 internal class OVRConfigurationTask
 {
     internal static readonly string ConsoleLinkHref = "OpenProjectSetupTool";
+    private static readonly GUIContent FixButtonContent = new GUIContent("Fix", "Fix with recommended settings");
+    private static readonly GUIContent ApplyButtonContent = new GUIContent("Apply", "Apply the recommended settings");
 
     public Hash128 Uid { get; }
+
     public OVRProjectSetup.TaskGroup Group { get; }
+
+    public OVRProjectSetup.TaskTags Tags { get; }
     public BuildTargetGroup Platform { get; }
 
     public OptionalLambdaType<BuildTargetGroup, bool> Valid { get; }
@@ -55,6 +65,7 @@ internal class OVRConfigurationTask
 
     private readonly Dictionary<BuildTargetGroup, bool> _isDoneCache = new Dictionary<BuildTargetGroup, bool>();
 
+
     public OVRConfigurationTask(
         OVRProjectSetup.TaskGroup group,
         BuildTargetGroup platform,
@@ -65,7 +76,24 @@ internal class OVRConfigurationTask
         OptionalLambdaType<BuildTargetGroup, string> fixMessage,
         OptionalLambdaType<BuildTargetGroup, string> url,
         OptionalLambdaType<BuildTargetGroup, bool> valid,
-        bool fixAutomatic = true)
+        bool fixAutomatic)
+        :
+        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, fix, level, message, fixMessage, url, valid, fixAutomatic)
+    {
+    }
+
+    public OVRConfigurationTask(
+        OVRProjectSetup.TaskGroup group,
+        OVRProjectSetup.TaskTags tags,
+        BuildTargetGroup platform,
+        Func<BuildTargetGroup, bool> isDone,
+        Action<BuildTargetGroup> fix,
+        OptionalLambdaType<BuildTargetGroup, OVRProjectSetup.TaskLevel> level,
+        OptionalLambdaType<BuildTargetGroup, string> message,
+        OptionalLambdaType<BuildTargetGroup, string> fixMessage,
+        OptionalLambdaType<BuildTargetGroup, string> url,
+        OptionalLambdaType<BuildTargetGroup, bool> valid,
+        bool fixAutomatic)
     {
         Platform = platform;
         Group = group;
@@ -73,6 +101,7 @@ internal class OVRConfigurationTask
         FixAction = fix;
         Level = level;
         Message = message;
+        Tags = tags;
         FixAutomatic = fixAutomatic;
 
         // If parameters are null, we're creating a OptionalLambdaType that points to default values
@@ -125,6 +154,7 @@ internal class OVRConfigurationTask
         Message.InvalidateCache(buildTargetGroup);
         URL.InvalidateCache(buildTargetGroup);
         Valid.InvalidateCache(buildTargetGroup);
+        _isDoneCache.Remove(buildTargetGroup);
     }
 
     public bool IsIgnored(BuildTargetGroup buildTargetGroup)
@@ -139,6 +169,8 @@ internal class OVRConfigurationTask
 
     public bool Fix(BuildTargetGroup buildTargetGroup)
     {
+        var fixEvent = OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Fix);
+        var previousResult = IsDone(buildTargetGroup);
         try
         {
             FixAction(buildTargetGroup);
@@ -147,9 +179,12 @@ internal class OVRConfigurationTask
         {
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
+            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
         }
+        InvalidateCache(buildTargetGroup);
+        var currentResult = IsDone(buildTargetGroup);
 
-        var hasChanged = UpdateAndGetStateChanged(buildTargetGroup);
+        var hasChanged = currentResult != previousResult;
         if (hasChanged)
         {
             var fixMessage = FixMessage.GetValue(buildTargetGroup);
@@ -158,19 +193,22 @@ internal class OVRConfigurationTask
                     ? $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\" : {fixMessage}"
                     : $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\"");
         }
+        else
+        {
+            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Cancel);
+        }
 
-        var isDone = IsDone(buildTargetGroup);
 
-        OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Fix)
+        fixEvent
             .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString())
             .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
                 Level.GetValue(buildTargetGroup).ToString())
             .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Group, Group.ToString())
             .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, buildTargetGroup.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, isDone ? "true" : "false")
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, currentResult ? "true" : "false")
             .Send();
 
-        return isDone;
+        return currentResult;
     }
 
     public string ComputeIgnoreUid(BuildTargetGroup buildTargetGroup)
@@ -186,20 +224,6 @@ internal class OVRConfigurationTask
         }
 
         return item;
-    }
-
-    internal bool UpdateAndGetStateChanged(BuildTargetGroup buildTargetGroup)
-    {
-        var newState = _isDone(buildTargetGroup);
-        var didStateChange = true;
-        if (_isDoneCache.TryGetValue(buildTargetGroup, out var previousState))
-        {
-            didStateChange = newState != previousState;
-        }
-
-        _isDoneCache[buildTargetGroup] = newState;
-
-        return didStateChange;
     }
 
     internal void LogMessage(BuildTargetGroup buildTargetGroup)
@@ -246,14 +270,161 @@ internal class OVRConfigurationTask
         {
             return cachedState;
         }
+        var result = _isDone(buildTargetGroup);
+        _isDoneCache[buildTargetGroup] = result;
+        return result;
+    }
 
-        return _isDone(buildTargetGroup);
+    internal void Draw(BuildTargetGroup buildTargetGroup, Action<OVRConfigurationTaskProcessor> onAfterFixed)
+    {
+        var ignored = IsIgnored(buildTargetGroup);
+        var cannotBeFixed = IsDone(buildTargetGroup) ||
+                            OVRProjectSetup.ProcessorQueue.BusyWith(OVRConfigurationTaskProcessor.ProcessorType.Fixer);
+        var disabled = cannotBeFixed || ignored;
+
+        // Note : We're not using scopes, because in this very case, we've got a cross of scopes
+        EditorGUI.BeginDisabledGroup(disabled);
+        var clickArea = EditorGUILayout.BeginHorizontal(GUIStyles.ListLabel);
+
+        // Icon
+        var (icon, color) = GetTaskIcon(buildTargetGroup);
+        using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, color))
+        {
+            GUILayout.Label(icon, Styles.GUIStyles.IconStyle);
+        }
+
+        // Message
+        GUILayout.Label(new GUIContent(Message.GetValue(buildTargetGroup)), GUIStyles.Wrap);
+
+        EditorGUI.EndDisabledGroup();
+
+        if (FixAction != null)
+        {
+            EditorGUI.BeginDisabledGroup(cannotBeFixed);
+            var content = Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required
+                ? FixButtonContent
+                : ApplyButtonContent;
+
+            var fixMessage = FixMessage.GetValue(buildTargetGroup);
+            var tooltip = fixMessage != null ? $"{content.tooltip} :\n{fixMessage}" : content.tooltip;
+            content = new GUIContent(content.text, tooltip);
+            if (GUILayout.Button(content, GUIStyles.FixButton))
+            {
+                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Fixed);
+
+                OVRProjectSetup.FixTask(buildTargetGroup, this, blocking: false, onCompleted: onAfterFixed);
+            }
+
+            EditorGUI.EndDisabledGroup();
+        }
+
+        var current = Event.current;
+        if (GUILayout.Button("", EditorStyles.foldoutHeaderIcon, GUILayout.Width(16.0f))
+            || (clickArea.Contains(current.mousePosition) && current.type == EventType.ContextClick))
+        {
+            ShowItemMenu(buildTargetGroup);
+            if (current.type == EventType.ContextClick)
+            {
+                current.Use();
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private (TextureContent, Color) GetTaskIcon(BuildTargetGroup buildTargetGroup)
+    {
+        return IsDone(buildTargetGroup)
+            ? (TestPassedIcon, SuccessColor)
+            : GetTaskIcon(Level.GetValue(buildTargetGroup));
+    }
+
+    public static (TextureContent, Color) GetTaskIcon(OVRProjectSetup.TaskLevel? taskLevel)
+    {
+        return taskLevel switch
+        {
+            OVRProjectSetup.TaskLevel.Required => (ErrorIcon, ErrorColor),
+            OVRProjectSetup.TaskLevel.Recommended => (WarningIcon, WarningColor),
+            OVRProjectSetup.TaskLevel.Optional => (InfoIcon, InfoColor),
+            _ => (TestPassedIcon, SuccessColor)
+        };
+    }
+
+    private void ShowItemMenu(BuildTargetGroup buildTargetGroup)
+    {
+        var menu = new GenericMenu();
+        var hasDocumentation = !string.IsNullOrEmpty(URL.GetValue(buildTargetGroup));
+        if (hasDocumentation)
+        {
+            menu.AddItem(new GUIContent("Documentation"), false, OnDocumentation,
+                new object[] { buildTargetGroup, this });
+        }
+
+        var hasSourceCode = SourceCode.Valid;
+        if (hasSourceCode)
+        {
+            menu.AddItem(new GUIContent("Go to Source Code"), false, OnGoToSourceCode,
+                new object[] { buildTargetGroup, this });
+        }
+
+        menu.AddItem(new GUIContent("Ignore"), IsIgnored(buildTargetGroup), OnIgnore,
+            new object[] { buildTargetGroup, this });
+
+        menu.ShowAsContext();
+    }
+
+
+    private static void OnIgnore(object args)
+    {
+        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
+
+        var ignore = !task.IsIgnored(buildTargetGroup);
+        if (ignore)
+        {
+            OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Ignored);
+        }
+
+        task?.SetIgnored(buildTargetGroup, ignore);
+    }
+
+    private static void OnDocumentation(object args)
+    {
+        OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction
+            .WentToDocumentation);
+
+        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
+        var url = task?.URL.GetValue(buildTargetGroup);
+
+        Application.OpenURL(url);
+    }
+
+    private static void OnGoToSourceCode(object args)
+    {
+        OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.WentToSource);
+
+        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
+        task?.SourceCode.Open();
+    }
+
+    private static void ReadContextMenuArguments(
+        object arg,
+        out BuildTargetGroup buildTargetGroup,
+        out OVRConfigurationTask task)
+    {
+        var args = arg as object[];
+        buildTargetGroup = args != null ? (BuildTargetGroup)args[0] : BuildTargetGroup.Unknown;
+        task = args?[1] as OVRConfigurationTask;
     }
 
 #if UNITY_XR_CORE_UTILS
     internal Unity.XR.CoreUtils.Editor.BuildValidationRule ToValidationRule(BuildTargetGroup platform)
     {
         if(FixAction == null)
+        {
+            return null;
+        }
+
+        if (Tags.HasFlag(OVRProjectSetup.TaskTags.HeavyProcessing))
         {
             return null;
         }

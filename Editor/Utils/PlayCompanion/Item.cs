@@ -23,6 +23,7 @@ using System.Linq;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
+using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.PlayCompanion
 {
@@ -37,6 +38,7 @@ namespace Meta.XR.Editor.PlayCompanion
         public Action OnSelect { get; set; }
         public Action OnEnteringPlayMode { get; set; }
         public Action OnExitingPlayMode { get; set; }
+        public Action OnEditorQuitting { get; set; }
         public Func<bool> ShouldBeSelected { get; set; }
         public Func<bool> ShouldBeUnselected { get; set; }
         public bool Show { get; set; }
@@ -50,7 +52,7 @@ namespace Meta.XR.Editor.PlayCompanion
 
             var rect = EditorGUILayout.BeginHorizontal(Styles.GUIStyles.MenuItemContainer);
             var hover = rect.Contains(Event.current.mousePosition);
-            using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, Color))
+            using (new ColorScope(ColorScope.Scope.Content, Color))
             {
                 GUILayout.Label(Icon, Styles.GUIStyles.MenuItemIcon);
             }

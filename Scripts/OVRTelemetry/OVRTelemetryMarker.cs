@@ -25,6 +25,10 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using static OVRTelemetry;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 internal struct OVRTelemetryMarker : IDisposable
 {
     internal struct OVRTelemetryMarkerState
@@ -83,57 +87,123 @@ internal struct OVRTelemetryMarker : IDisposable
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, string annotationValue)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, string annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        annotationValue ??= string.Empty;
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        }
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, bool annotationValue)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, bool annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        }
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, double annotationValue)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, double annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        }
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, long annotationValue)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, long annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
+        }
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, byte** annotationValues, int count)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, byte** annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        }
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, long* annotationValues, int count)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, long* annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        }
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, double* annotationValues, int count)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, double* annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        }
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, OVRPlugin.Bool* annotationValues, int count)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, OVRPlugin.Bool* annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        if (string.IsNullOrEmpty(annotationKey))
+        {
+            return this;
+        }
+
+        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
+        {
+            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
+        }
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotationIfNotNullOrEmpty(string annotationKey, string annotationValue)
+    public OVRTelemetryMarker AddAnnotationIfNotNullOrEmpty(string annotationKey, string annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
     {
-        return string.IsNullOrEmpty(annotationValue) ? this : AddAnnotation(annotationKey, annotationValue);
+        return string.IsNullOrEmpty(annotationValue) ? this : AddAnnotation(annotationKey, annotationValue, eAnnotationType);
     }
 
     private static string _applicationIdentifier;
@@ -145,12 +215,23 @@ internal struct OVRTelemetryMarker : IDisposable
     private static bool? _isBatchMode;
     private static bool IsBatchMode => _isBatchMode ??= Application.isBatchMode;
 
+    private const string TelemetryEnabledKey = "OVRTelemetry.TelemetryEnabled";
+
+    private bool GetOVRTelemetryConsent()
+    {
+        const bool defaultTelemetryStatus = false;
+#if !UNITY_EDITOR
+        return defaultTelemetryStatus;
+#else
+        return EditorPrefs.GetBool(TelemetryEnabledKey, defaultTelemetryStatus);
+#endif
+    }
+
     public OVRTelemetryMarker Send()
     {
 
-        AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProjectName, ApplicationIdentifier);
+        AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProjectName, ApplicationIdentifier, OVRTelemetryConstants.Editor.AnnotationVariant.Optional);
         AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProjectGuid, OVRRuntimeSettings.Instance.TelemetryProjectGuid);
-        AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.EngineVersion, UnityVersion);
         AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.BatchMode, IsBatchMode);
 
         State = new OVRTelemetryMarkerState(true, Result);

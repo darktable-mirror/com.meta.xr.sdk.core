@@ -84,7 +84,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             if (_isInstalled)
             {
-                throw new InvalidOperationException($"{BlockName}'s SDK is already installed");
+                throw new InstallationCancelledException($"{BlockName}'s SDK is already installed");
             }
 
 #if UNITY_2021_1_OR_NEWER
@@ -96,7 +96,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.BlockId, Id)
                 .Send();
 #else
-            throw new InvalidOperationException("Remote blocks installation is only available from Unity 2021");
+            throw new InstallationCancelledException("Remote blocks installation is only available from Unity 2021");
 #endif
         }
 
@@ -105,7 +105,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             if (!_isInstalled)
             {
-                throw new InvalidOperationException($"{BlockName}'s SDK is not installed");
+                throw new InstallationCancelledException($"{BlockName}'s SDK is not installed");
             }
 
             FileUtil.DeleteFileOrDirectory(InstallPath);

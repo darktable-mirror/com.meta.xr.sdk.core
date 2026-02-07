@@ -40,7 +40,7 @@ internal class OVREditorStart
         if (InitSession.Value)
         {
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.Start)
-                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.UsesProSkin, EditorGUIUtility.isProSkin)
+                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.UsesProSkin, EditorGUIUtility.isProSkin, OVRTelemetryConstants.Editor.AnnotationVariant.Optional)
                 .Send();
         }
     }

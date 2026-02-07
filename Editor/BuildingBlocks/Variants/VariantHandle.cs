@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using System.Reflection;
 using UnityEditor;
@@ -90,16 +91,20 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public bool Matches(VariantHandle variantHandle)
             => variantHandle.MemberInfo.Name == MemberInfo.Name
-           && variantHandle.Attribute.Group == Attribute.Group
-           && variantHandle.Attribute.Behavior == Attribute.Behavior;
+               && variantHandle.Attribute.Group == Attribute.Group
+               && variantHandle.Attribute.Behavior == Attribute.Behavior
+               && GetType(variantHandle.MemberInfo) == GetType(MemberInfo);
 
         public bool Fits(VariantHandle variant)
             => Matches(variant)
                && (variant.Attribute.Behavior == VariantBehavior.Parameter || Equals(variant.RawValue, RawValue));
 
+        public bool Matches(IEnumerable<VariantHandle> variants) => variants.Any(Matches);
+
         public abstract string ToJson();
+        public abstract void FromJson(string json);
         public abstract VariantHandle ToSelection(bool forceValue = true);
-        public abstract void DrawGUI(SerializedObject serializedObject = null);
+        public abstract void DrawGUI(SerializedObject serializedObject, out bool changed);
 
         internal static IReadOnlyList<VariantHandle> FetchVariants(InstallationRoutine routine, VariantBehavior behavior)
         {
@@ -116,6 +121,30 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             return variants;
+        }
+
+        internal bool NeedsChoice(VariantsSelection selection, out bool variantChanged)
+        {
+            variantChanged = false;
+            if (Attribute.Behavior != VariantBehavior.Definition)
+                return true;
+
+            // Maybe the PossibleRoutines have only one choice for this variant
+            foreach (var (block, routines) in selection.PossibleRoutines)
+
+            {
+                var fittingRoutines = routines.Where(routine => Matches(routine.DefinitionVariants)).ToList();
+                if (fittingRoutines.Count != 1) continue;
+
+                var mandatoryValue = fittingRoutines[0].DefinitionVariants.FirstOrDefault(this.Matches)?.RawValue;
+                if (RawValue == mandatoryValue) return false;
+
+                RawValue = mandatoryValue;
+                variantChanged = true;
+                return false;
+            }
+
+            return true;
         }
     }
 
@@ -137,10 +166,12 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
 
         public override string ToJson() => JsonUtility.ToJson(Value);
-        public override VariantHandle ToSelection(bool forceValue = true) => new VariantSelection<T>(this, forceValue);
+        public override void FromJson(string json) => RawValue = JsonUtility.FromJson<T>(json);
+        public override VariantHandle ToSelection(bool forceValue = true) => new VariantForSelection<T>(this, forceValue);
 
-        public override void DrawGUI(SerializedObject serializedObject = null)
+        public override void DrawGUI(SerializedObject serializedObject, out bool changed)
         {
+            changed = false;
             using var disabledScope = new EditorGUI.DisabledScope(!Condition());
             EditorGUILayout.BeginVertical(GUIStyles.ContentBox);
             EditorGUILayout.BeginHorizontal();
@@ -156,16 +187,16 @@ namespace Meta.XR.BuildingBlocks.Editor
                 switch (Value)
                 {
                     case int intValue:
-                        ApplyValue((T)(object)EditorGUILayout.IntField(intValue));
+                        ApplyValue((T)(object)EditorGUILayout.IntField(intValue), out changed);
                         break;
                     case string stringValue:
-                        ApplyValue((T)(object)EditorGUILayout.TextField(stringValue));
+                        ApplyValue((T)(object)EditorGUILayout.TextField(stringValue), out changed);
                         break;
                     case bool boolValue:
-                        ApplyValue((T)(object)EditorGUILayout.Toggle(boolValue));
+                        ApplyValue((T)(object)EditorGUILayout.Toggle(boolValue), out changed);
                         break;
                     case Enum enumValue:
-                        ApplyValue((T)(object)EditorGUILayout.EnumPopup(enumValue));
+                        ApplyValue((T)(object)EditorGUILayout.EnumPopup(enumValue), out changed);
                         break;
                 }
             }
@@ -180,10 +211,15 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void ApplyValue(T value)
+        internal void ApplyValue(T value, out bool changed)
         {
+            changed = false;
+
             if (!SetValueOnGUI) return;
 
+            if (Value.Equals(value)) return;
+
+            changed = true;
             Value = value;
         }
     }
@@ -253,13 +289,13 @@ namespace Meta.XR.BuildingBlocks.Editor
     /// VariantHandle not specifically attached to an InstallationRoutine
     /// Used to store a Value for the Variant
     /// </summary>
-    internal class VariantSelection<T> : VariantHandle<T>
+    internal class VariantForSelection<T> : VariantHandle<T>
     {
         protected override bool SetValueOnGUI => true;
 
         protected sealed override T Value { get; set; }
 
-        public VariantSelection(VariantHandle source, bool forceValue)
+        public VariantForSelection(VariantHandle source, bool forceValue)
             : base(source.MemberInfo, source.Attribute, source.Owner)
         {
             var copyValue = forceValue || (source.Attribute.Default == null);

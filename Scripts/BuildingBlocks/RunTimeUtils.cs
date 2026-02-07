@@ -24,6 +24,10 @@ namespace Meta.XR.BuildingBlocks
 {
     /// <summary>
     /// Static container class of utility methods used at runtime and related to <see cref="BuildingBlock"/>s.
+    /// See the [Multiplayer Building Blocks Setup Guide](https://developer.oculus.com/documentation/unity/bb-multiplayer-blocks) for more information.
+    /// This class features the <see cref="RunTimeUtils.GetInterfaceComponent{T}"/> method,
+    /// which you can use to query for <see cref="MonoBehaviour"/>s on a <see cref="GameObject"/>
+    /// that implement a particular namespace.
     /// </summary>
     public static class RunTimeUtils
     {
@@ -44,7 +48,27 @@ namespace Meta.XR.BuildingBlocks
                     return interfaceComponent;
                 }
             }
+
             return null;
+        }
+
+        public static string GenerateRandomString(int size, bool includeLowercase = true, bool includeUppercase = true, bool includeNumeric = true, bool includeSpecial = false)
+        {
+            const string lowercase = "abcdefghijklmnopqrstuvwxyz";
+            const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const string numeric = "0123456789";
+            const string special = "!@#$%^&*()_-+=[{]};:<>|./?";
+            var charSet = "";
+            if (includeLowercase) charSet += lowercase;
+            if (includeUppercase) charSet += uppercase;
+            if (includeNumeric) charSet += numeric;
+            if (includeSpecial) charSet += special;
+            var stringChars = new char[size];
+            for (var i = 0; i < size; i++)
+            {
+                stringChars[i] = charSet[Random.Range(0, charSet.Length)];
+            }
+            return new string(stringChars);
         }
     }
 }

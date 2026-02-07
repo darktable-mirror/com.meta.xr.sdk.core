@@ -40,6 +40,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                    && blocksInScene.Any(controller => controller.m_controller == OVRInput.Controller.RTouch);
         }
 
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
             var installedObjects = new List<GameObject>();
@@ -60,7 +61,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             return installedObjects;
 
         }
-
         private GameObject InstantiateController(OVRInput.Hand handedness)
         {
             var controllerType = handedness == OVRInput.Hand.HandLeft

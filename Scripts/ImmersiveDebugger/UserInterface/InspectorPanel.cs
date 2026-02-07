@@ -49,6 +49,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Vector3 _targetPosition;
         private readonly float _lerpSpeed = 10f;
         private bool _lerpCompleted = true;
+        private ImageStyle _categoryBackgroundImageStyle;
+        private DebugInterface _debugInterface;
 
         public ImageStyle CategoryBackgroundStyle
         {
@@ -64,6 +66,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             base.Setup(owner);
 
+            _debugInterface = FindObjectOfType<DebugInterface>();
+
             var div = Append<Flex>("div");
             div.LayoutStyle = Style.Load<LayoutStyle>("InspectorDivFlex");
 
@@ -73,7 +77,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // Left Tab Background
             _categoryBackground = categoryDiv.Append<Background>("background");
             _categoryBackground.LayoutStyle = Style.Load<LayoutStyle>("CategoriesDivBackground");
-            CategoryBackgroundStyle = Style.Load<ImageStyle>("CategoriesDivBackground");
+            _categoryBackgroundImageStyle = Style.Load<ImageStyle>("CategoriesDivBackground");
+            CategoryBackgroundStyle = _categoryBackgroundImageStyle;
 
             _categoryScrollView = categoryDiv.Append<ScrollView>("categories");
             _categoryScrollView.LayoutStyle = Style.Load<LayoutStyle>("CategoriesScrollView");
@@ -82,6 +87,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _scrollView = div.Append<ScrollView>("main");
             _scrollView.LayoutStyle = Style.Load<LayoutStyle>("PanelScrollView");
             Flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorMainFlex");
+        }
+
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            _categoryBackground.Color = Transparent ? _categoryBackgroundImageStyle.colorOff : _categoryBackgroundImageStyle.color;
         }
 
         public IInspector RegisterInspector(InstanceHandle instanceHandle, string category)
@@ -244,6 +255,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                         foreach (var inspector in typeRegistry.Value)
                         {
                             Flex.Remember(inspector.Value);
+
+                            if (_debugInterface)
+                            {
+                                _debugInterface.SetTransparencyRecursive(inspector.Value, !_debugInterface.OpacityOverride);
+                            }
                         }
                     }
                 }
@@ -254,11 +270,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         internal void SetPanelPosition(RuntimeSettings.DistanceOption distanceOption, bool skipAnimation = false)
         {
+            var inspectorPanelPositions = ValueContainer<Vector3>.Load("InspectorsPanelPositions");
             _targetPosition = distanceOption switch
             {
-                RuntimeSettings.DistanceOption.Close => Utils.InspectorsPanelClosePosition,
-                RuntimeSettings.DistanceOption.Far => Utils.InspectorsPanelFarPosition,
-                _ => Utils.InspectorsPanelDefaultPosition
+                RuntimeSettings.DistanceOption.Close => inspectorPanelPositions["Close"],
+                RuntimeSettings.DistanceOption.Far => inspectorPanelPositions["Far"],
+                _ => inspectorPanelPositions["Default"]
             };
 
             if (skipAnimation)
@@ -280,4 +297,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         }
     }
 }
-

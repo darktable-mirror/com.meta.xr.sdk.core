@@ -600,7 +600,8 @@ public static class OVRNodeStateProperties
 }
 
 /// <summary>
-/// An affine transformation built from a Unity position and orientation.
+/// OVRPose stores a position and orientation in the Unity coordinate system. Use <see cref="OVRPose.ToPosef"/> to convert the pose to
+/// <see cref="OVRPlugin.Posef"/>, which stores a pose in the XR coordinate system, for native XR API calls.
 /// </summary>
 [System.Serializable]
 public struct OVRPose

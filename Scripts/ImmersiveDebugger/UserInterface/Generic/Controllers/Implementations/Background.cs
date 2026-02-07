@@ -24,20 +24,38 @@ using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> used for generic background of UI element.
+    /// Allows using Sprite texture or pure Color, can set <see cref="PixelDensityMultiplier"/>.
+    /// Used in Immersive Debugger for all the UI elements' background.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Background : Controller
     {
         private Image _image;
 
+        /// <summary>
+        /// The sprite texture used for the <see cref="Image"/> of the background.
+        /// Can be null if not using it.
+        /// </summary>
         public Sprite Sprite
         {
             set => _image.sprite = value;
         }
 
+        /// <summary>
+        /// The Color used for the <see cref="Image"/> of the background.
+        /// Can work together with the <see cref="Sprite"/> property and change based on events like hover/click.
+        /// </summary>
         public Color Color
         {
             set => _image.color = value;
         }
 
+        /// <summary>
+        /// The pixelsPerUnitMultiplier property for the <see cref="Image"/> of the background.
+        /// Which is the pixel per unit modifier to change how sliced sprites are generated.
+        /// </summary>
         public float PixelDensityMultiplier
         {
             set => _image.pixelsPerUnitMultiplier = value;

@@ -23,9 +23,16 @@ using System;
 using Meta.XR.ImmersiveDebugger.Manager;
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the most high-level Panel UI of Immersive Debugger.
+    /// Containing UI elements of all the panels (for now 3 panels - debug bar, inspector, console) and
+    /// performs registration of the inter-links and control buttons between the panels.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class DebugInterface : Interface
     {
         private DebugBar _bar;
@@ -52,7 +59,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             set => _rotateButton.State = value;
         }
 
-        private bool OpacityOverride
+        public bool OpacityOverride
         {
             get => _opacityButton.State;
             set
@@ -61,15 +68,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
                 foreach (var child in Children)
                 {
-                    if (child is Panel panel)
+                    if (child is InteractableController controller)
                     {
-                        panel.Transparent = !OpacityOverride;
+                        SetTransparencyRecursive(controller, !OpacityOverride);
                     }
                 }
             }
         }
 
-        public override void Awake()
+        internal void SetTransparencyRecursive(Controller controller, bool transparent)
+        {
+            controller.Transparent = transparent;
+            if (controller.Children == null) return;
+
+            foreach (var child in controller.Children)
+            {
+                SetTransparencyRecursive(child, transparent);
+            }
+        }
+
+        internal override void Awake()
         {
             base.Awake();
 
@@ -152,4 +170,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         }
     }
 }
-

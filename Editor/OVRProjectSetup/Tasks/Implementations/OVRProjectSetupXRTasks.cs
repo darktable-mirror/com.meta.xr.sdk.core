@@ -18,31 +18,22 @@
  * limitations under the License.
  */
 
-using System;
 using System.Linq;
-using System.Reflection;
+using Meta.XR.Editor.Utils;
 using UnityEditor;
 using UnityEngine;
 
 #if USING_XR_MANAGEMENT
 using UnityEditor.XR.Management;
-#endif
-
-#if USING_XR_SDK_OCULUS
-using Unity.XR.Oculus;
-#endif
-
-#if USING_XR_SDK_OPENXR
-using UnityEngine.XR.OpenXR;
-using UnityEngine.XR.OpenXR.Features;
-using UnityEngine.XR.OpenXR.Features.Interactions;
+using UnityEngine.XR.Management;
 #endif
 
 [InitializeOnLoad]
 internal static class OVRProjectSetupXRTasks
 {
     private const string OculusXRPackageName = "com.unity.xr.oculus";
-    private const string XRPluginManagementPackageName = "com.unity.xr.management";
+    internal const string XRPluginManagementPackageName = "com.unity.xr.management";
+    internal const string XRSimulatorPackageName = "com.meta.xr.simulator";
     internal const string UnityXRPackage = "com.unity.xr.openxr";
     private const string UPMTitle = "Unity Package Manager";
 
@@ -50,196 +41,120 @@ internal static class OVRProjectSetupXRTasks
 
     static OVRProjectSetupXRTasks()
     {
+#if UNITY_EDITOR_OSX
         OVRProjectSetup.AddTask(
-            conditionalValidity: _ => OVRProjectSetupUtils.PackageManagerListAvailable,
+            conditionalValidity: _ => PackageList.PackageManagerListAvailable,
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
-            isDone: _ => OVRProjectSetupUtils.IsPackageInstalled(OculusXRPackageName) || OVRProjectSetupUtils.IsPackageInstalled(UnityXRPackage),
+            isDone: _ => PackageList.IsPackageInstalled(UnityXRPackage),
+            message: $"OpenXR Plugin ({UnityXRPackage}) package must be installed through the {UPMTitle}. Please note that not all Meta XR SDK features are currently supported when using the OpenXR plugin."
+        );
+#else
+        OVRProjectSetup.AddTask(
+            conditionalValidity: _ => PackageList.PackageManagerListAvailable,
+            level: OVRProjectSetup.TaskLevel.Required,
+            group: XRTaskGroup,
+            isDone: _ => PackageList.IsPackageInstalled(OculusXRPackageName) || PackageList.IsPackageInstalled(UnityXRPackage),
             message: $"Either the Oculus XR ({OculusXRPackageName}) or OpenXR Plugin ({UnityXRPackage}) package must be installed through the {UPMTitle}. Please note that not all Meta XR SDK features are currently supported when using the OpenXR plugin."
         );
+#endif
 
         OVRProjectSetup.AddTask(
-            conditionalValidity: _ => OVRProjectSetupUtils.PackageManagerListAvailable,
+            conditionalValidity: _ => PackageList.PackageManagerListAvailable,
             level: OVRProjectSetup.TaskLevel.Optional,
             group: XRTaskGroup,
-            isDone: _ => !OVRProjectSetupUtils.IsPackageInstalled(UnityXRPackage),
+            isDone: _ => !PackageList.IsPackageInstalled(UnityXRPackage),
             message: $"Some features in the Meta XR SDK are not yet supported when using the OpenXR plugin ({UnityXRPackage}). Switch to the Oculus XR plugin ({OculusXRPackageName}) to enable support for these features."
         );
 
         OVRProjectSetup.AddTask(
-            conditionalValidity: _ => OVRProjectSetupUtils.PackageManagerListAvailable,
+            conditionalValidity: _ => PackageList.PackageManagerListAvailable,
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
-            isDone: _ => OVRProjectSetupUtils.IsPackageInstalled(XRPluginManagementPackageName),
+            isDone: _ => PackageList.IsPackageInstalled(XRPluginManagementPackageName),
             message: $"The XR Plug-in Management ({XRPluginManagementPackageName}) package must be installed through the {UPMTitle}."
         );
 
         OVRProjectSetup.AddTask(
-            conditionalValidity: _ => OVRProjectSetupUtils.PackageManagerListAvailable,
+            conditionalValidity: _ => PackageList.PackageManagerListAvailable,
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
-            isDone: _ => !(OVRProjectSetupUtils.IsPackageInstalled(OculusXRPackageName) && OVRProjectSetupUtils.IsPackageInstalled(UnityXRPackage)),
+            isDone: _ => !(PackageList.IsPackageInstalled(OculusXRPackageName) && PackageList.IsPackageInstalled(UnityXRPackage)),
             fixAutomatic: false,
             message: $"It's not recommended to install Oculus XR Plugin and OpenXR Plugin at the same time, which may introduce unintentional conflicts.\nClick 'Edit' to open the Package Manager to uninstall one of the plugins. OpenXR Plugin is the recommended plugin to use.",
             fixMessage: $"Open Package Manager",
             fix: _ => { UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName); }
         );
-
-        AddXrPluginManagementTasks();
     }
 
-    private static void AddXrPluginManagementTasks()
+#if USING_XR_MANAGEMENT
+    internal static bool IsActiveLoader<T>(BuildTargetGroup buildTargetGroup)
     {
-#if USING_XR_MANAGEMENT && USING_XR_SDK_OCULUS && !USING_XR_SDK_OPENXR
-        OVRProjectSetup.AddTask(
-            conditionalValidity: _ =>
-                OVRProjectSetupUtils.IsPackageInstalled(XRPluginManagementPackageName),
-            level: OVRProjectSetup.TaskLevel.Required,
-            group: XRTaskGroup,
-            isDone: buildTargetGroup =>
-            {
-                var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, false);
-                return settings != null && settings.Manager != null && settings.Manager.activeLoaders.Any(loader => loader is OculusLoader);
-            },
-            message: "Oculus must be added to the XR Plugin active loaders",
-            fix: buildTargetGroup =>
-            {
-                var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, true);
-                if (settings == null)
-                {
-                    throw new OVRConfigurationTaskException("Could not find XR Plugin Manager settings");
-                }
-
-                var loadersList = AssetDatabase.FindAssets($"t: {nameof(OculusLoader)}")
-                    .Select(AssetDatabase.GUIDToAssetPath)
-                    .Select(AssetDatabase.LoadAssetAtPath<OculusLoader>).ToList();
-                OculusLoader oculusLoader;
-                if (loadersList.Count > 0)
-                {
-                    oculusLoader = loadersList[0];
-                }
-                else
-                {
-                    oculusLoader = ScriptableObject.CreateInstance<OculusLoader>();
-                    EnsureIsValidFolder("Assets/XR/Loaders");
-                    AssetDatabase.CreateAsset(oculusLoader, "Assets/XR/Loaders/Oculus Loader.asset");
-                }
-
-                settings.Manager.TryAddLoader(oculusLoader);
-                EditorUtility.SetDirty(settings);
-            },
-            fixMessage: "Add Oculus to the XR Plugin active loaders"
-        );
-#endif
-#if USING_XR_MANAGEMENT && USING_XR_SDK_OPENXR
-        OVRProjectSetup.AddTask(
-            conditionalValidity: buildTargetGroup =>
-                OVRProjectSetupUtils.IsPackageInstalled(XRPluginManagementPackageName),
-            level: OVRProjectSetup.TaskLevel.Required,
-            group: XRTaskGroup,
-            isDone: buildTargetGroup =>
-            {
-                var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, false);
-                if (settings == null)
-                {
-                    return false;
-                }
-
-                foreach (var loader in settings.Manager.activeLoaders)
-                {
-                    if (loader as OpenXRLoader != null)
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            },
-            message: "OpenXR must be added to the XR Plugin active loaders",
-            fix: buildTargetGroup =>
-            {
-                var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, true);
-                if (settings == null)
-                {
-                    throw new OVRConfigurationTaskException("Could not find XR Plugin Manager settings");
-                }
-#if USING_XR_SDK_OCULUS
-                var loadersListOculus = AssetDatabase.FindAssets($"t: {nameof(OculusLoader)}")
-                    .Select(AssetDatabase.GUIDToAssetPath)
-                    .Select(AssetDatabase.LoadAssetAtPath<OculusLoader>).ToList();
-                if (loadersListOculus.Count > 0)
-                {
-                    settings.Manager.TryRemoveLoader(loadersListOculus[0]);
-                }
-#endif
-
-                var loadersList = AssetDatabase.FindAssets($"t: {nameof(OpenXRLoader)}")
-                    .Select(AssetDatabase.GUIDToAssetPath)
-                    .Select(AssetDatabase.LoadAssetAtPath<OpenXRLoader>).ToList();
-                OpenXRLoader openXRLoader;
-                if (loadersList.Count > 0)
-                {
-                    openXRLoader = loadersList[0];
-                }
-                else
-                {
-                    openXRLoader = ScriptableObject.CreateInstance<OpenXRLoader>();
-                    EnsureIsValidFolder("Assets/XR/Loaders");
-                    AssetDatabase.CreateAsset(openXRLoader, "Assets/XR/Loaders/OpenXR Loader.asset");
-                }
-
-                settings.Manager.TryAddLoader(openXRLoader);
-                EditorUtility.SetDirty(settings);
-            },
-            fixMessage: "Add OpenXR to the XR Plugin active loaders"
-        );
-
-        OVRProjectSetup.AddTask(
-            conditionalValidity: BuildTargetGroup => OVRProjectSetupUtils.IsPackageInstalled(XRPluginManagementPackageName),
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            group: XRTaskGroup,
-            isDone: buildTargetGroup =>
-            {
-                var settings = OpenXRSettings.GetSettingsForBuildTargetGroup(buildTargetGroup);
-                if (settings == null)
-                {
-                    return false;
-                }
-
-                bool touchFeatureEnabled = false;
-                foreach(var feature in settings.GetFeatures<OpenXRInteractionFeature>())
-                {
-                    if (feature.enabled)
-                    {
-                        if (feature is OculusTouchControllerProfile)
-                        {
-                            touchFeatureEnabled = true;
-                        }
-                    }
-                }
-                return touchFeatureEnabled;
-            },
-            message: "When using OpenXR Plugin, Oculus Touch Interaction Profile should be included for full OVRInput support.",
-            fix: buildTargetGroup =>
-            {
-                var settings = OpenXRSettings.GetSettingsForBuildTargetGroup(buildTargetGroup);
-                if (settings == null)
-                {
-                    throw new OVRConfigurationTaskException("Could not find OpenXR Plugin settings");
-                }
-
-                var touchFeature = settings.GetFeature<OculusTouchControllerProfile>();
-                if (touchFeature == null)
-                {
-                    throw new OVRConfigurationTaskException("Could not find Oculus Touch Interaction Profile in OpenXR settings");
-                }
-                touchFeature.enabled = true;
-            }
-        );
-#endif
+        var settings = OVRProjectSetupXRTasks.GetXRGeneralSettingsForBuildTarget(buildTargetGroup, false);
+        return settings != null && settings.Manager != null &&
+               settings.Manager.activeLoaders.Any(loader => loader is T);
     }
 
-#if USING_XR_MANAGEMENT && (USING_XR_SDK_OCULUS || USING_XR_SDK_OPENXR)
+    internal static void AddLoader<T>(BuildTargetGroup buildTargetGroup)
+        where T : XRLoaderHelper
+    {
+        var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, true);
+        if (settings == null)
+        {
+            throw new OVRConfigurationTaskException("Could not find XR Plugin Manager settings");
+        }
+
+        var loader = GetLoader<T>(buildTargetGroup);
+
+        if(!settings.Manager.TryAddLoader(loader))
+        {
+            Debug.LogError("Failed to add loader, try doing it manually.");
+        }
+        EditorUtility.SetDirty(settings);
+    }
+
+    internal static void RemoveLoader<T>(BuildTargetGroup buildTargetGroup)
+        where T : XRLoaderHelper
+    {
+        var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, true);
+        if (settings == null)
+        {
+            throw new OVRConfigurationTaskException("Could not find XR Plugin Manager settings");
+        }
+
+        var loader = GetLoader<T>(buildTargetGroup);
+
+        if (!settings.Manager.TryRemoveLoader(loader))
+        {
+            Debug.LogError("Failed to remove loader, try doing it manually.");
+        }
+        EditorUtility.SetDirty(settings);
+    }
+
+    private static XRLoaderHelper GetLoader<T>(BuildTargetGroup buildTargetGroup)
+        where T : XRLoaderHelper
+    {
+        var expectedType = typeof(T);
+
+        var loadersList = AssetDatabase.FindAssets($"t: {expectedType.Name}")
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .Select(AssetDatabase.LoadAssetAtPath<T>).ToList();
+
+        T loader;
+        if (loadersList.Count > 0)
+        {
+            loader = loadersList[0];
+        }
+        else
+        {
+            loader = ScriptableObject.CreateInstance<T>();
+            EnsureIsValidFolder("Assets/XR/Loaders");
+            AssetDatabase.CreateAsset(loader, $"Assets/XR/Loaders/{expectedType.Name}.asset");
+        }
+
+        return loader;
+    }
+
     private static void EnsureIsValidFolder(string path)
     {
         var folders = path.Split('/');

@@ -67,8 +67,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b66a8d6897d994438ee91c220c67dc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  oculusId:
-    m_InternalValue: 0
 --- !u!114 &4241672352704102906
 MonoBehaviour:
   m_ObjectHideFlags: 0

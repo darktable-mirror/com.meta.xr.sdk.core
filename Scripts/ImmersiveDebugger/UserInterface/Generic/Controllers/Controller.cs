@@ -55,6 +55,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
     }
 
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> served as the base element of all UI elements of Immersive Debugger.
+    /// Manages common User Interface properties like visibility, transform etc. and provide generic ways to manage hierarchy
+    /// relationship and layouts.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Controller : MonoBehaviour
     {
         private bool _visibility = true;
@@ -67,14 +73,28 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         protected LayoutStyle _layoutStyle;
         protected List<Controller> _children;
 
-        public Controller Owner { get; set; }
+        protected Controller Owner { get; set; }
+        /// <summary>
+        /// Transform of the object, if the <see cref="RectTransform"/> is not specified,
+        /// it would be the <see cref="GameObject"/>'s transform. Otherwise it's the same with the <see cref="RectTransform"/>.
+        /// </summary>
         public Transform Transform { get; protected set; }
+        /// <summary>
+        /// As most of the UI elements are 2D rectangles, this RectTransform is representing the element's actual transform.
+        /// </summary>
         public RectTransform RectTransform { get; protected set; }
         protected GameObject GameObject { get; set; }
+        /// <summary>
+        /// All the children of this UI element.
+        /// </summary>
         public List<Controller> Children => _children;
 
         private RectMask2D _mask = null;
 
+        /// <summary>
+        /// The layout style of this UI element, specify how UI elements within this container should be arranged.
+        /// Upon setting this property, the UI will be refreshed to be reflected in the runtime.
+        /// </summary>
         public LayoutStyle LayoutStyle
         {
             get => _layoutStyle;
@@ -92,7 +112,36 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// Event that can be subscribed to when the visibility of this UI element is changed.
+        /// </summary>
         public event Action<Controller> OnVisibilityChangedEvent;
+
+        private bool _transparent;
+
+        /// <summary>
+        /// The boolean indicating the current panel is transparent or not.
+        /// In Immersive Debugger this could be controlled by one of the mini buttons on Debug Bar panel.
+        /// </summary>
+        public bool Transparent
+        {
+            get => _transparent;
+            set
+            {
+                if (_transparent == value)
+                {
+                    return;
+                }
+
+                _transparent = value;
+                OnTransparencyChanged();
+            }
+        }
+
+        protected virtual void OnTransparencyChanged()
+        {
+            // Place to setup transparency in child classes.
+        }
 
         protected virtual void Setup(Controller owner)
         {
@@ -111,7 +160,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _hasRectTransform = RectTransform != null;
         }
 
-        public T Append<T>(string childName)
+        internal T Append<T>(string childName)
             where T : Controller, new()
         {
             var childController = SetupChildController<T>(childName);
@@ -120,7 +169,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return childController;
         }
 
-        public T Prepend<T>(string childName)
+        internal T Prepend<T>(string childName)
             where T : Controller, new()
         {
             var childController = SetupChildController<T>(childName);
@@ -138,13 +187,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return childController;
         }
 
-        public void Append(Controller controller)
+        protected void Append(Controller controller)
         {
             _children?.Add(controller);
             controller.RefreshLayout();
         }
 
-        public void Remove(Controller controller, bool destroy)
+        internal void Remove(Controller controller, bool destroy)
         {
             _children?.Remove(controller);
             if (destroy)
@@ -161,7 +210,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             RefreshLayout();
         }
 
-        public void Clear(bool destroy)
+        protected void Clear(bool destroy)
         {
             while (_children.Count > 0)
             {
@@ -169,6 +218,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// Visibility of the UI component, when visibility changed it will automatically invoke the
+        /// <see cref="OnVisibilityChanged"/> event, and the game object's active status is also changed based on it.
+        /// </summary>
         public bool Visibility
         {
             get => _visibility;
@@ -182,22 +235,30 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// Hide the UI element, it will automatically invoke the <see cref="OnVisibilityChanged"/> event,
+        /// and the game object's active status would be changed to false.
+        /// </summary>
         public void Hide()
         {
             Visibility = false;
         }
 
+        /// <summary>
+        /// Show the UI element, it will automatically invoke the <see cref="OnVisibilityChanged"/> event,
+        /// and the game object's active status would be changed to true.
+        /// </summary>
         public void Show()
         {
             Visibility = true;
         }
 
-        public void ToggleVisibility()
+        internal void ToggleVisibility()
         {
             Visibility = !GameObject.activeSelf;
         }
 
-        public void OnVisibilityChanged()
+        private void OnVisibilityChanged()
         {
             GameObject.SetActive(Visibility);
             OnVisibilityChangedEvent?.Invoke(this);
@@ -232,7 +293,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             RefreshLayoutPostChildren();
         }
 
-        public void RefreshLayout()
+        internal void RefreshLayout()
         {
             // Request refresh flag
             _refreshLayoutRequested = true;
@@ -313,7 +374,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
-        public void OnDestroy()
+        private void OnDestroy()
         {
             if (Owner != null)
             {
@@ -321,17 +382,16 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
-        public void SetHeight(float height)
+        internal void SetHeight(float height)
         {
             if (!_layoutStyle.SetHeight(height)) return;
             RefreshLayout();
         }
 
-        public void SetWidth(float width)
+        internal void SetWidth(float width)
         {
             if (!_layoutStyle.SetWidth(width)) return;
             RefreshLayout();
         }
     }
 }
-

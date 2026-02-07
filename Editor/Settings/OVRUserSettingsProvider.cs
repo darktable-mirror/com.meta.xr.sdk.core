@@ -73,6 +73,13 @@ internal class OVRUserSettingsProvider : SettingsProvider
 
     public static void Register(string title, Action onSettingsGUIDelegate)
     {
-        SettingsRegistry.TryAdd(title, onSettingsGUIDelegate);
+        if (SettingsRegistry.ContainsKey(title))
+        {
+            SettingsRegistry[title] += onSettingsGUIDelegate;
+        }
+        else
+        {
+            SettingsRegistry[title] = onSettingsGUIDelegate;
+        }
     }
 }

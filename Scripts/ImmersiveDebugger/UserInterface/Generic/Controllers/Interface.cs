@@ -23,18 +23,23 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the UI element that can be interfaced with input & camera.
+    /// Used by the most high-level panel interface of Immersive Debugger, handling camera culling, cursor and following transform of the panels.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Interface : Controller
     {
         private ProxyInputModule _proxyInputModule;
         private ProxyCameraRig _proxyCameraRig;
-        public Cursor Cursor { get; private set; }
+        internal Cursor Cursor { get; private set; }
 
-        public Camera Camera => _proxyCameraRig.Camera;
+        internal Camera Camera => _proxyCameraRig.Camera;
 
         protected virtual bool FollowOverride { get; set; }
         protected virtual bool RotateOverride { get; set; }
 
-        public virtual void Awake()
+        internal virtual void Awake()
         {
             Setup(null);
 
@@ -112,7 +117,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return cullingMask;
         }
 
-        public virtual void LateUpdate()
+        internal virtual void LateUpdate()
         {
             UpdateRefreshLayout(false);
 

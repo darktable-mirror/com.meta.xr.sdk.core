@@ -34,6 +34,7 @@ namespace Meta.XR.BuildingBlocks
     /// It stores its <see cref="BlockId"/>, <see cref="InstanceId"/>, <see cref="Version"/>
     /// as well as <see cref="InstallationRoutineCheckpoint"/> which helps the Building Blocks system to keep track
     /// of which blocks are installed or not, specifically to properly manage dependency chains.
+    /// For more information, see [Building Blocks](https://developer.oculus.com/documentation/unity/bb-overview/)
     /// </summary>
     /// <remarks>
     /// In Editor, you can delete this component by right-clicking the object
@@ -78,6 +79,7 @@ namespace Meta.XR.BuildingBlocks
         /// typically the variants and interfaces choices required by the installation process.
         /// This data is serialized into the scene (or prefab) on the related <see cref="GameObject"/>.
         /// </summary>
+        /// <seealso cref="InstallationRoutineCheckpoint"/>
         public InstallationRoutineCheckpoint InstallationRoutineCheckpoint
         {
             get => installationRoutineCheckpoint;

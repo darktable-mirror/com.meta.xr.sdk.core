@@ -26,24 +26,39 @@ using Meta.XR.Util;
 using UnityEngine;
 using UnityEngine.Assertions;
 
+/// <summary>
+/// This class is responsible for managing the mapping between blend shapes of a character's mesh
+/// and the set of available <see cref="OVRFaceExpressions.FaceExpression"/>. Use this class to
+/// apply the generation of the mapping using <see cref="OVRCustomFaceExtensions.AutoGenerateMapping"/>,
+/// so that each blend shape has an associated face expression.
+/// For more information, see [Face Tracking for Movement SDK for Unity](https://developer.oculus.com/documentation/unity/move-face-tracking/).
+/// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/move-face-tracking/")]
 [Feature(Feature.FaceTracking)]
 public static class OVRCustomFaceExtensions
 {
     /// <summary>
-    /// Find the best matching blend shape for each facial expression based on their names
+    /// Find the best matching blend shape for each facial expression based on their names. Use this
+    /// function to create an association between a <see cref="SkinnedMeshRenderer"/>'s blend shapes
+    /// and <see cref="OVRFaceExpressions.FaceExpression"/> values.
     /// </summary>
     /// <remarks>
-    /// Auto generation idea is to tokenize expression enum strings and blend shape name strings and find matching tokens
-    /// We quantify the quality of the match by the total number of characters in the matching tokens
-    /// We require at least a total of more than 2 characters to match, to avoid matching just L/R LB/RB etc.
-    /// A better technique might be to use Levenshtein distance to match the tokens to allow some typos while still being loose on order of tokens
+    /// This function tokenizes face expression enum strings and blend shape name strings in order to
+    /// find an array of <see cref="OVRFaceExpressions.FaceExpression"/> to the blend shapes of a
+    /// model. It quantifies the quality of the match by the total number of characters
+    /// in the matching tokens. Furthermore, it requires at least a total of more than 2 characters
+    /// to match, to avoid matching just single characters. A better technique might be to use
+    /// Levenshtein distance to match the tokens to allow some typos while still being allowing
+    /// flexibility with respect to the order of tokens.
     /// </remarks>
     /// <param name="skinnedMesh">The mesh to find a mapping for.</param>
-    /// <param name="blendShapeNames">Array of blend shape names</param>
-    /// <param name="faceExpressions">Array of FaceExpression id for mapping to them</param>
+    /// <param name="blendShapeNames">Array of blend shape names.</param>
+    /// <param name="faceExpressions">Array of <see cref="OVRFaceExpressions.FaceExpression"> id
+    /// for mapping to them.</param>
     /// <param name="allowDuplicateMapping">Whether to allow duplicate mapping or not</param>
-    /// <returns>Returns an array of <see cref="OVRFaceExpressions.FaceExpression"/> of the same length as the number of blendshapes on the <paramref name="skinnedMesh"/> with each element identifying the closest found match</returns>
+    /// <returns>Returns an array of <see cref="OVRFaceExpressions.FaceExpression"/> of the same
+    /// length as the number of blend shapes on the <paramref name="skinnedMesh"/>, with each
+    /// element identifying the closest match found.</returns>
     public static OVRFaceExpressions.FaceExpression[] AutoGenerateMapping(
         Mesh skinnedMesh,
         string[] blendShapeNames,
@@ -88,7 +103,8 @@ public static class OVRCustomFaceExtensions
         string searchString, OVRFaceExpressions.FaceExpression[] expressions,
         OVRFaceExpressions.FaceExpression fallback)
     {
-        searchString = searchString.Substring(searchString.LastIndexOf('.') + 1); //remove model name prefix if present
+        // remove model name prefix if present
+        searchString = searchString.Substring(searchString.LastIndexOf('.') + 1);
         HashSet<string> blendShapeTokens = TokenizeString(searchString);
 
         OVRFaceExpressions.FaceExpression bestMatch = fallback;
@@ -100,8 +116,8 @@ public static class OVRCustomFaceExtensions
         {
             int thisMatchCount = 0;
             HashSet<string> thisSet = tokenizedOptions[j];
-            // Currently we only allow exact matches, using Levenshtein distance for fuzzy matches
-            // would allow for handling of common typos and other slight mismatches
+            // Only finds exact matches. The Levenshtein distance would be more "fuzzy" and
+            // would allow for handling of common typos and other slight mismatches.
             foreach (string matchingToken in blendShapeTokens.Intersect(thisSet))
             {
                 thisMatchCount += matchingToken.Length;
@@ -160,6 +176,13 @@ public static class OVRCustomFaceExtensions
         .Replace(input, "([A-Z])", " $1", System.Text.RegularExpressions.RegexOptions.Compiled).Trim();
 
 
+    /// <summary>
+    /// The extension method that generates a mapping between the <see cref="OVRCustomFace"/> blend shapes
+    /// and the <see cref="OVRFaceExpressions.FaceExpression"/>s. Use this function to
+    /// generate the mapping on the <see cref="OVRCustomFace"/> in order for face tracking to function
+    /// properly on the character's skinned mesh renderer.
+    /// /// </summary>
+    /// <param name="customFace">Custom face component.</param>
     public static void AutoMapBlendshapes(this OVRCustomFace customFace)
     {
         var type = customFace.retargetingType;
@@ -204,6 +227,14 @@ public static class OVRCustomFaceExtensions
         }
     }
 
+    /// <summary>
+    /// The extension method that clears the blend shape mappings on
+    /// a <see cref="OVRCustomFace"/> instance. Use this in case the mappings on the
+    /// instance are not correct. This could happen if the mapping algorithm did not
+    /// produce a satisfactory result when being driven by face tracking's
+    /// <see cref="OVRFaceExpressions.FaceExpression"/> values.
+    /// </summary>
+    /// <param name="customFace">custom face component</param>
     public static void ClearBlendshapes(this OVRCustomFace customFace)
     {
         var renderer = customFace.GetComponent<SkinnedMeshRenderer>();

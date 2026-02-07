@@ -24,13 +24,22 @@ using System.Runtime.InteropServices;
 using System;
 using UnityEngine;
 
-// Class that manages loading of Ktx Textures through OVRPlugin
+/// <summary>
+/// Helper class that loads KTX2 textures contained within GLTF (GL Transmission Format) models. This requires that the GLTF model supports the KHR_texture_basisu extension.
+/// Check the [KHR_texture_basisu](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_basisu/README.md) extension page for more details.
+/// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-runtime-controller/#use-apis-in-customized-scripts")]
 public class OVRKtxTexture
 {
     private const uint KTX_TTF_BC7_RGBA = 6;
     private const uint KTX_TTF_ASTC_4x4_RGBA = 10;
 
+    /// <summary>
+    /// Loads the given KTX2 texture data, as well as metadata, into a given <see cref="OVRTextureData"/> struct.
+    /// </summary>
+    /// <param name="data">Binary data that represents the KTX2 texture.</param>
+    /// <param name="ktxData">Output data for the KTX2 texture.</param>
+    /// <returns>True if the loading of the KTX2 texture was successful, otherwise false.</returns>
     public static bool Load(byte[] data, ref OVRTextureData ktxData)
     {
         int unmanagedSize = Marshal.SizeOf(data[0]) * data.Length;

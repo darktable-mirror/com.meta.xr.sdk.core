@@ -225,7 +225,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.LabelField(label, EditorStyles.miniLabel);
             foreach (var variant in variants)
             {
-                variant.DrawGUI(serializedObject);
+                variant.DrawGUI(serializedObject, out _);
             }
         }
     }

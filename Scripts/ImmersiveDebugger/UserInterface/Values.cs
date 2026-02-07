@@ -29,11 +29,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
     {
         protected readonly List<Value> _values = new List<Value>();
 
-        public List<Value> GetValues => _values;
+        internal List<Value> GetValues => _values;
 
-        public Watch Watch { get; private set; }
+        internal Watch Watch { get; private set; }
 
-        public ImageStyle BackgroundStyle
+        internal ImageStyle BackgroundStyle
         {
             set
             {
@@ -44,7 +44,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public TextStyle TextStyle
+        internal TextStyle TextStyle
         {
             set
             {
@@ -55,7 +55,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public void Setup(Watch watch)
+        internal void Setup(Watch watch)
         {
             if (watch == Watch) return;
             Watch = watch;
@@ -78,7 +78,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public void Update()
+        private void Update()
         {
             if (Watch == null) return;
 

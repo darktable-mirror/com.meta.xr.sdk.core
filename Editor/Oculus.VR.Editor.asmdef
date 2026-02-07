@@ -13,7 +13,9 @@
         "Meta.XR.BuildingBlocks",
         "Meta.XR.Editor.Callbacks",
         "Meta.XR.Editor.UserInterface",
-        "Meta.XR.Editor.StatusMenu"
+        "Meta.XR.Editor.StatusMenu",
+        "Unity.Addressables.Editor",
+        "Meta.XR.Editor.Reflection"
     ],
     "includePlatforms": [
         "Editor"
@@ -89,6 +91,16 @@
             "name": "com.unity.xr.management",
             "expression": "4.4.0",
             "define": "XR_MGMT_4_4_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.addressables",
+            "expression": "1.18.19",
+            "define": "ADDRESSABLES_1_18_19_OR_NEWER"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "14.0.0",
+            "define": "URP_14_OR_NEWER"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

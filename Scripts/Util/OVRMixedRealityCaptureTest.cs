@@ -30,6 +30,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// OVRMixedRealityCaptureTest is a helper class used by MixedRealityCapture scene in [Unity-StarterSamples](https://github.com/oculus-samples/Unity-StarterSamples/tree/main/Assets/StarterSamples).
+/// </summary>
+/// <remarks>
+/// Note: this class is provided as a coding reference for developers who want to integrate mixed reality capture
+/// to their own projects, instead of being used directly.
+/// </remarks>
+
 public class OVRMixedRealityCaptureTest : MonoBehaviour
 {
 #if SUPPORTED_PLATFORM

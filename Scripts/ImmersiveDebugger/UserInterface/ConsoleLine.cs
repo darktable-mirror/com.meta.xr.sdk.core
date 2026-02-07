@@ -25,6 +25,12 @@ using UnityEngine.Events;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the console line UI element on console panel of Immersive Debugger.
+    /// Contains UI elements like Pill, Background, Log label, Counter badge (representing multiple identical logs).
+    /// Display the content of the <see cref="LogEntry"/> and make sure layout is correct with clamping.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class ConsoleLine : InteractableController
     {
         private Label _label;
@@ -56,13 +62,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public string Label
+        internal string Label
         {
             get => _label.Content;
             set => _label.Content = value;
         }
 
-        public ImageStyle BackgroundStyle
+        internal ImageStyle BackgroundStyle
         {
             set
             {
@@ -72,7 +78,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public ImageStyle PillStyle
+        internal ImageStyle PillStyle
         {
             set
             {
@@ -119,6 +125,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _counterLabel.TextStyle = Style.Load<TextStyle>("ConsoleLogCounter");
         }
 
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            _backgroundImageStyle.colorHover.a = Transparent ? 0.6f : 1f;
+            _background.Color = Transparent ? _backgroundImageStyle.colorOff : _backgroundImageStyle.color;
+        }
+
         private void RefreshLogCounter()
         {
             if (_counterBackground == null || _counterLabel == null) return;
@@ -150,12 +163,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
+        /// <summary>
+        /// Handler for the OnPointerClick event, when clicked the console will display a stacktrace of the log entry.
+        /// </summary>
         public override void OnPointerClick() => Entry?.DisplayDetails();
 
         protected override void OnHoverChanged()
         {
             base.OnHoverChanged();
-            _background.Color = Hover ? _backgroundImageStyle.colorHover : _backgroundImageStyle.color;
+            _background.Color = Hover ? _backgroundImageStyle.colorHover : Transparent ? _backgroundImageStyle.colorOff : _backgroundImageStyle.color;
         }
     }
 

@@ -26,6 +26,11 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the Debug Bar UI panel (the bar on the bottom) of Immersive Debugger.
+    /// Containing UI elements of miniButtons, large buttons and the label for startup time. Allow registering buttons and callbacks.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class DebugBar : OverlayCanvasPanel
     {
         private List<DebugPanel> _panels = new List<DebugPanel>();
@@ -58,6 +63,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             SetExpectedPixelsPerUnit(1000.0f, 10.0f, 2.24f);
         }
 
+        /// <summary>
+        /// Registration of the large buttons for toggling different panels. Will display the Icon from the <see cref="DebugPanel"/>
+        /// and toggle its visibility upon clicking the icon on the debug bar.
+        /// </summary>
+        /// <param name="panel">The <see cref="DebugPanel"/> that is registered on the debug bar</param>
         public void RegisterPanel(DebugPanel panel)
         {
             if (panel == null) return;
@@ -74,6 +84,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _panelToggles.Add(panel, toggle);
         }
 
+        /// <summary>
+        /// Registration of the mini buttons for performing certain controls.
+        /// </summary>
+        /// <param name="buttonName">String for the name of the button</param>
+        /// <param name="icon"><see cref="Texture2D"/> of the icon that's used for displaying the button</param>
+        /// <param name="callback"><see cref="Action"/> that's invoked upon clicking the button</param>
+        /// <returns><see cref="Toggle"/> component of the mini button itself</returns>
+        /// <exception cref="ArgumentNullException">Throws when any of the parameters is null</exception>
         public Toggle RegisterControl(string buttonName, Texture2D icon, Action callback)
         {
             if (buttonName == null) throw new ArgumentNullException(nameof(buttonName));

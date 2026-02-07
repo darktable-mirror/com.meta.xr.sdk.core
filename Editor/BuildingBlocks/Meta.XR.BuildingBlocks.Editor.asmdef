@@ -12,7 +12,17 @@
         "Meta.XR.Editor.StatusMenu",
         "Meta.XR.Editor.Callbacks",
         "Meta.XR.Guides.Editor",
-        "Meta.XR.Audio"
+        "Meta.XR.Audio",
+        "Meta.XR.Editor.Reflection",
+        "VoiceSDK.Editor",
+        "VoiceSDK.Dictation.Editor",
+        "VoiceSDK.Dictation.Runtime",
+        "Meta.Wit.Dictation",
+        "Meta.WitAi",
+        "Meta.WitAi.Editor",
+        "Meta.WitAi.TTS",
+        "Meta.WitAi.TTS.Editor",
+        "Oculus.Haptics"
     ],
     "includePlatforms": [
         "Editor"
@@ -33,6 +43,16 @@
             "name": "com.meta.xr.sdk.audio",
             "expression": "",
             "define": "USING_META_XR_AUDIO_SDK"
+        },
+        {
+            "name": "com.meta.xr.sdk.voice",
+            "expression": "",
+            "define": "USING_META_XR_VOICE_SDK"
+        },
+        {
+            "name": "com.meta.xr.sdk.haptics",
+            "expression": "72.0.0",
+            "define": "USING_META_XR_HAPTICS_SDK"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

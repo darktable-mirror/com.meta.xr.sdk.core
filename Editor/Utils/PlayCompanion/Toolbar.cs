@@ -18,22 +18,28 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.Reflection;
 using UnityEditor;
 using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
+using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.PlayCompanion
 {
     [InitializeOnLoad]
+    [Reflection]
     internal static class Toolbar
     {
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.Toolbar")]
+        internal static readonly TypeHandle ToolbarType = new();
+
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.Toolbar", Name = "m_Root")]
+        internal static readonly FieldInfoHandle<VisualElement> Root = new();
+
         private const string StripElementClass = "unity-editor-toolbar__button-strip-element";
         private const string StripElementLeftClass = "unity-editor-toolbar__button-strip-element--left";
         private const string StripElementRightClass = "unity-editor-toolbar__button-strip-element--right";
@@ -47,8 +53,6 @@ namespace Meta.XR.Editor.PlayCompanion
             "Meta XR Toolbar\nAdditional settings available in Edit > Preferences > Meta XR";
 #endif
 
-        internal static readonly Type ToolbarType;
-        internal static readonly FieldInfo Root;
         internal static readonly VisualElement DummyOffset;
         internal static readonly VisualElement MarginOffset;
         internal static readonly VisualElement MetaIcon;
@@ -57,16 +61,12 @@ namespace Meta.XR.Editor.PlayCompanion
         internal static readonly List<(Item, EditorToolbarButton)> Buttons = new();
         internal static bool Enabled { get; set; }
 
+        private static Object _toolbar;
         private static VisualElement _parent;
 
         static Toolbar()
         {
-            if (!Utils.IsMainEditor()) return;
-
-            var editorAssembly = typeof(UnityEditor.Editor).Assembly;
-            const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
-            ToolbarType = editorAssembly.GetType("UnityEditor.Toolbar");
-            Root = ToolbarType?.GetField("m_Root", bindingFlags);
+            if (!ShouldRenderEditorUI()) return;
 
             MetaIcon = new EditorToolbarButton()
             {
@@ -120,13 +120,13 @@ namespace Meta.XR.Editor.PlayCompanion
 
         private static void Update()
         {
-            if (!Manager.Enabled.Value && Enabled)
+            if (!Manager.Enabled.Value)
             {
                 Disable();
                 return;
             }
 
-            if (Manager.Enabled.Value && !Enabled)
+            if (Manager.Enabled.Value)
             {
                 Enable();
             }
@@ -137,16 +137,33 @@ namespace Meta.XR.Editor.PlayCompanion
             Buttons.ForEach(UpdateButton);
         }
 
+        private static VisualElement FetchParent()
+        {
+            if (_toolbar == null)
+            {
+                var toolbars = Resources.FindObjectsOfTypeAll(ToolbarType.Target);
+                _toolbar = toolbars.FirstOrDefault();
+            }
+
+            if (_toolbar != null)
+            {
+                var root = Root.Get(_toolbar);
+                var toolbarZone = root?.Q(PlayModeGroupId);
+                return toolbarZone?.Children().FirstOrDefault();
+            }
+
+            return null;
+        }
+
         private static void Enable()
         {
-            var unityEditorToolbar = Resources.FindObjectsOfTypeAll(ToolbarType).FirstOrDefault();
+            var parent = FetchParent();
 
-            if (unityEditorToolbar != null)
-            {
-                var root = Root.GetValue(unityEditorToolbar) as VisualElement;
-                var toolbarZone = root?.Q(PlayModeGroupId);
-                _parent = toolbarZone?.Children().FirstOrDefault();
-            }
+            if (_parent == parent && Enabled) return;
+
+            Disable();
+
+            _parent = parent;
 
             var wouldHaveAnyButton = Manager.RegisteredItems.Count(item => item.Show) > 0;
             if (wouldHaveAnyButton)
@@ -165,6 +182,8 @@ namespace Meta.XR.Editor.PlayCompanion
 
         private static void Disable()
         {
+            if (!Enabled) return;
+
             Buttons.ForEach(button => button.Item2.RemoveFromHierarchy());
             Buttons.Clear();
             Items.Clear();

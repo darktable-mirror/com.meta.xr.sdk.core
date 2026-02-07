@@ -27,10 +27,6 @@ using UnityEngine;
 using OVRSimpleJSON;
 using System.Threading.Tasks;
 
-/// <summary>
-/// This is a lightweight glTF model loader that is guaranteed to work with models loaded from the Oculus runtime
-/// using OVRPlugin.LoadRenderModel. It is not recommended to be used as a general purpose glTF loader.
-/// </summary>
 public enum OVRChunkType
 {
     JSON = 0x4E4F534A,
@@ -61,6 +57,9 @@ public enum OVRTextureQualityFiltering
     Aniso16x = 5,
 }
 
+/// <summary>
+/// Struct that contains mesh data loaded from a GLTF (GL Transmission Format file). This includes the mesh object, material of the mesh, mesh attributes, and the morph targets of the mesh.
+/// </summary>
 public struct OVRMeshData
 {
     public Mesh mesh;
@@ -69,6 +68,9 @@ public struct OVRMeshData
     public OVRMeshAttributes[] morphTargets;
 }
 
+/// <summary>
+/// Struct that contains material data from a GLTF (GL Transmission Format file) required for creating a Unity material. This includes the shader, texture data, and base color.
+/// </summary>
 public struct OVRMaterialData
 {
     public Shader shader;
@@ -77,6 +79,9 @@ public struct OVRMaterialData
     public Color baseColorFactor;
 }
 
+/// <summary>
+/// Struct that contains the overall GLTF (GL Transmission Format) scene structure. This includes the root of the scene as a game object as well as all the animation and morph target data for the scene.
+/// </summary>
 public struct OVRGLTFScene
 {
     public GameObject root;
@@ -85,6 +90,9 @@ public struct OVRGLTFScene
     public List<OVRGLTFAnimationNodeMorphTargetHandler> morphTargetHandlers;
 }
 
+/// <summary>
+/// Struct that contains data on a texture loaded from a GLTF (GL Transmission Format file). This includes the raw data of the texture as well as metadata like width, height, format, and uri.
+/// </summary>
 public struct OVRTextureData
 {
     public byte[] data;
@@ -95,6 +103,9 @@ public struct OVRTextureData
     public string uri;
 }
 
+/// <summary>
+/// Struct that contains the mesh attribute data for each mesh loaded from a GLTF (GL Transmission Format file). This includes the verts, normals, tangets, UVs, colors, and bone weights.
+/// </summary>
 public struct OVRMeshAttributes
 {
     public Vector3[] vertices;
@@ -105,6 +116,11 @@ public struct OVRMeshAttributes
     public BoneWeight[] boneWeights;
 }
 
+/// <summary>
+/// This is a lightweight [GLTF model](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) loader that is guaranteed to work with models loaded from the Meta Quest runtime
+/// using OVRPlugin.LoadRenderModel <see cref="OVRPlugin.LoadRenderModel"/>. The loader only accepts GLTF files/data in the [GLB format](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification).
+/// We do not recommended using this class as a general purpose GLTF loader.
+/// </summary>
 public class OVRGLTFLoader
 {
     private const float LoadingMaxTimePerFrame = 1.0f / 70f;
@@ -152,22 +168,39 @@ public class OVRGLTFLoader
     private float m_processingNodesStart;
     private OVRGLTFAccessor _dataAccessor;
 
-
+    /// <summary>
+    /// Creates a new GLTF loader using a file path.
+    /// </summary>
+    /// <param name="fileName">Path to GLB file</param>
     public OVRGLTFLoader(string fileName)
     {
         m_glbStream = File.Open(fileName, FileMode.Open);
     }
 
+    /// <summary>
+    /// Creates a new GLTF loader using a binary data array.
+    /// </summary>
+    /// <param name="data">GLB byte data</param>
     public OVRGLTFLoader(byte[] data)
     {
         m_glbStream = new MemoryStream(data, 0, data.Length, false, true);
     }
 
+    /// <summary>
+    /// Creates a new GLTF loader with a deferred data stream. This should be used with <see cref="OVRGLTFLoader.LoadGLBCoroutine"/> to allow for async loading of the GLTF model. This can help prevent stalling on complex GLTF models.
+    /// </summary>
+    /// <param name="deferredStream">GLB data as a Stream</param>
     public OVRGLTFLoader(Func<Stream> deferredStream)
     {
         m_deferredStream = deferredStream;
     }
 
+    /// <summary>
+    /// Starts the loading process for the full GLTF file into Unity.
+    /// </summary>
+    /// <param name="supportAnimation">Load GLTF animations.</param>
+    /// <param name="loadMips">Load GLTF textures with mip maps.</param>
+    /// <returns>Full GLTF scene</returns>
     public OVRGLTFScene LoadGLB(bool supportAnimation, bool loadMips = true)
     {
         var loadGltfCoroutine = LoadGLBCoroutine(supportAnimation, loadMips);
@@ -178,6 +211,12 @@ public class OVRGLTFLoader
         return scene;
     }
 
+    /// <summary>
+    /// Starts the loading process for the full GLTF file into Unity as a coroutine. This can help prevent stalling as loading will be spread out over multiple frames.
+    /// </summary>
+    /// <param name="supportAnimation">Load GLTF animations</param>
+    /// <param name="loadMips">Load GLTF textures with mip maps.</param>
+    /// <returns>IEnumerator that can be yielded on.</returns>
     public IEnumerator LoadGLBCoroutine(bool supportAnimation, bool loadMips = true)
     {
         scene = new OVRGLTFScene();
@@ -250,18 +289,26 @@ public class OVRGLTFLoader
         return null;
     }
 
+    /// <summary>
+    /// Sets the shader that should be used by the GLTF loader on materials.
+    /// </summary>
+    /// <param name="shader">Shader to be used.</param>
     public void SetModelShader(Shader shader)
     {
         m_Shader = shader;
     }
 
+    /// <summary>
+    /// Sets the alpha blending shader that should be used by the GLTF loader on materials.
+    /// </summary>
+    /// <param name="shader">Shader to be used.</param>
     public void SetModelAlphaBlendShader(Shader shader)
     {
         m_AlphaBlendShader = shader;
     }
 
     /// <summary>
-    /// All textures in the glb will be loaded with the following setting. The default is Bilinear.
+    /// Sets the texture quality for loading all textures in the GLTF model. The default is Bilinear.
     /// Once loaded, textures will be read-only on GPU memory.
     /// </summary>
     /// <param name="loadedTexturesQuality">The quality setting.</param>
@@ -271,7 +318,7 @@ public class OVRGLTFLoader
     }
 
     /// <summary>
-    /// All textures in the glb will be preset with this MipMap value. The default is 0.
+    /// Sets the MipMap bias value for loading all textures in the GLTF model. The default is 0.
     /// Only supported when MipMaps are loaded and the provided shader has a property named "_MainTexMMBias"
     /// </summary>
     /// <param name="loadedTexturesMipmapBiasing">The value for bias. Value is clamped between [-1,1]</param>
@@ -351,6 +398,11 @@ public class OVRGLTFLoader
         }
     }
 
+    /// <summary>
+    /// Checks the GLB data stream to check if it is a valid GLTF file.
+    /// </summary>
+    /// <param name="glbStream">Data stream of the GLB file.</param>
+    /// <returns>If the stream is a valid GLTF file.</returns>
     static public bool ValidateGLB(Stream glbStream)
     {
         if (glbStream == null)
@@ -391,6 +443,12 @@ public class OVRGLTFLoader
         return true;
     }
 
+    /// <summary>
+    /// Reads a chunk of binary data from the stream that either represents the JSON or BIN part of the GLTF file.
+    /// </summary>
+    /// <param name="glbStream">The binary stream of the GLTF file.</param>
+    /// <param name="type">Type indicating which part of the GLTF file should be read.</param>
+    /// <returns></returns>
     public static byte[] ReadChunk(Stream glbStream, OVRChunkType type)
     {
         uint chunkLength;
@@ -404,7 +462,7 @@ public class OVRGLTFLoader
         return null;
     }
 
-    public static bool ValidateChunk(Stream glbStream, OVRChunkType type, out uint chunkLength)
+    private static bool ValidateChunk(Stream glbStream, OVRChunkType type, out uint chunkLength)
     {
         int uint32Size = sizeof(uint);
         byte[] buffer = new byte[uint32Size];

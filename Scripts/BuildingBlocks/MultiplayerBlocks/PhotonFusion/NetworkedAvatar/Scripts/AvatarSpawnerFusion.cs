@@ -43,6 +43,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
         [SerializeField]
         private bool loadAvatarWhenConnected = true;
         [SerializeField] private GameObject avatarBehavior;
+        [SerializeField] private GameObject avatarBehaviorSdk28Plus;
         [Tooltip("If you're using Avatar Sample Assets as fallback avatars, and has manually adapted the preset zip file " +
                  "for optimizing app size. Change this to the size of available avatars count in the preset zip file.")]
         // developer might want to delete some avatars from the sample asset zip
@@ -139,7 +140,11 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
 
             // Spawn Avatar
             _networkRunner.Spawn(
+#if META_AVATAR_SDK_28_OR_NEWER
+                avatarBehaviorSdk28Plus,
+#else
                 avatarBehavior,
+#endif
                 Vector3.zero,
                 Quaternion.identity,
                 _networkRunner.LocalPlayer,

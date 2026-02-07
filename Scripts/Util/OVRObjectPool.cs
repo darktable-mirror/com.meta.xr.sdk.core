@@ -171,6 +171,24 @@ internal static class OVRObjectPool
         public void Dispose() => Return(_list);
     }
 
+    public struct TaskScope<T> : IDisposable
+    {
+        ListScope<OVRTask<T>> _tasks;
+        ListScope<T> _results;
+
+        public TaskScope(out List<OVRTask<T>> tasks, out List<T> results)
+        {
+            _tasks = new ListScope<OVRTask<T>>(out tasks);
+            _results = new ListScope<T>(out results);
+        }
+
+        public void Dispose()
+        {
+            _tasks.Dispose();
+            _results.Dispose();
+        }
+    }
+
     public readonly struct DictionaryScope<TKey, TValue> : IDisposable
     {
         readonly Dictionary<TKey, TValue> _dictionary;

@@ -25,11 +25,26 @@ using System.Collections.Generic;
 using System.Text;
 using Meta.XR.Util;
 
+/// <summary>
+/// Use this class to help with debugging the state of <see cref="OVRInput"/> in sample scenes such as "HandTest" (in Assets/Oculus/VR/Scenes/HandTest.unity).
+/// <summary>
+/// <remarks>
+/// This script logs <see cref="OVRPlugin.HandState">HandState</see>, <see cref="OVRPlugin.Skeleton">Skeletons</see>, and <see cref="OVRPlugin.Mesh">Meshes</see> for the left and right hand.
+/// Access <see cref="uiText"/> to get the logging data.
+/// </remarks>
 [Feature(Feature.Hands)]
 public class OVRHandTest : MonoBehaviour
 {
+    /// <summary>
+    /// This class monitors a bool with the intention of recording its value and whether this value has changed. The record
+    /// can be used by UI elements (including <see cref="OVRHandTest.uiText"/>) to output the bool's value as a tool for debugging.
+    /// </summary>
     public class BoolMonitor
     {
+        /// <summary>
+        /// This is a delegate that represents a function where a bool value is being turned on or off. This is the bool the
+        /// class will be monitoring.
+        /// </summary>
         public delegate bool BoolGenerator();
 
         private string m_name = "";
@@ -47,6 +62,10 @@ public class OVRHandTest : MonoBehaviour
             m_displayTimeout = displayTimeout;
         }
 
+        /// <summary>
+        /// This method checks if the previous value of the bool is different from the current value and updates
+        /// the display timer accordingly.  Used by <see cref="OVRHandTest.Update"/>.
+        /// </summary>
         public void Update()
         {
             m_prevValue = m_currentValue;
@@ -70,6 +89,11 @@ public class OVRHandTest : MonoBehaviour
             }
         }
 
+        /// <summary>
+        /// Given a string builder, this appends the current value of the bool onto the string builder. If the value is
+        /// different from the previous value, it adds asterisks around it.
+        /// </summary>
+        /// <param name="sb">The string builder you want to append to.</param>
         public void AppendToStringBuilder(ref StringBuilder sb)
         {
             sb.Append(m_name);
@@ -85,6 +109,9 @@ public class OVRHandTest : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The UI text used in outputting the debug records related to the bools that are being monitored (<see cref="OVRPlugin.HandState">HandState</see>, <see cref="OVRPlugin.Skeleton">Skeletons</see>, and <see cref="OVRPlugin.Mesh">Meshes</see>).
+    /// </summary>
     public Text uiText;
     private List<BoolMonitor> monitors;
     private StringBuilder data;

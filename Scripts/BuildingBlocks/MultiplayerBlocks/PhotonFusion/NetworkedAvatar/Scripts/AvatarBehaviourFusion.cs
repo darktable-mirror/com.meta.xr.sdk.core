@@ -33,7 +33,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
     public class AvatarBehaviourFusion : NetworkBehaviour, IAvatarBehaviour
     {
         private const float LERP_TIME = 0.5f;
-        private const int AvatarDataStreamMaxCapacity = 800; // Enough storage for an avatar in high LOD
+        private const int AvatarDataStreamMaxCapacity = 900; // Enough storage for an avatar in high LOD
         private Transform _cameraRig;
         private byte[] _buffer;
 
@@ -44,12 +44,16 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
         [Networked]
         [Capacity(AvatarDataStreamMaxCapacity)]
         [OnChangedRender(nameof(OnAvatarDataStreamChanged))]
-        private NetworkArray<byte> AvatarDataStream { get; } = MakeInitializer(Array.Empty<byte>());
+        private NetworkArray<byte> AvatarDataStream => default;
 
 #if META_AVATAR_SDK_DEFINED
         private AvatarEntity _avatar;
 #endif // META_AVATAR_SDK_DEFINED
 
+        /// <summary>
+        /// Called by the Photon Fusion networking framework when the network object is spawned.
+        /// This method does the required setup for the Avatar state synchronization.
+        /// </summary>
         public override void Spawned()
         {
             if (OVRManager.instance)
@@ -93,6 +97,10 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
 #endif // META_AVATAR_SDK_DEFINED
         }
 
+        /// <summary>
+        /// Called by the Photon Fusion networking framework on every network update tick.
+        /// This method syncs the Avatar position to the player's Camera Rig.
+        /// </summary>
         public override void FixedUpdateNetwork()
         {
             if (!Object.HasStateAuthority)

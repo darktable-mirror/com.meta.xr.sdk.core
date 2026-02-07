@@ -36,8 +36,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             var virtualKeyboard = virtualKeyboardGo.GetComponent<OVRVirtualKeyboard>();
             if (virtualKeyboard == null)
             {
-                throw new InvalidOperationException(
-                    "The Virtual Keyboard component is missing.");
+                throw new InvalidOperationException("The Virtual Keyboard component is missing.");
             }
 
             var controllerBuildingBlocks = Utils.GetBlocksWithType<OVRControllerHelper>();

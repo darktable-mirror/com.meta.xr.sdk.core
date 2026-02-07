@@ -29,7 +29,8 @@ namespace Meta.XR.Editor.Tags
         internal enum TagListType
         {
             Overlays,
-            Filters
+            Filters,
+            Description,
         }
 
         internal static readonly TagArray Registry = new TagArray();
@@ -44,10 +45,17 @@ namespace Meta.XR.Editor.Tags
             OnValidate();
         }
 
-        public void OnValidate()
+        public void OnValidate(bool update = false)
         {
             if (!Valid) return;
             _behavior = TagBehavior.GetBehavior(this);
+
+            if (update)
+            {
+                Registry.Update(this);
+                return;
+            }
+
             Registry.Add(this);
         }
 

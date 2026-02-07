@@ -20,6 +20,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
@@ -49,8 +50,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             ShowThumbnail();
-            ShowBlock(_blockData, _block, false, false, true);
-            ShowTagList(_blockData.Tags, Tag.TagListType.Filters);
+            DrawBlockHeader();
             ShowAdditionals();
 
             EditorGUILayout.Space();
@@ -68,6 +68,79 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             // A placeholder for adding more details. E.g., Info box from GuidedSetup.
             // Override this function to implement your additional details.
+        }
+
+        private void DrawBlockHeader()
+        {
+            EditorGUILayout.BeginHorizontal();
+
+            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+
+            // Label
+            EditorGUILayout.LabelField(_blockData.BlockName, Styles.GUIStyles.LabelStyle);
+
+            // Tags
+            ShowTagList(_blockData.Tags, Tag.TagListType.Description);
+
+            // Description
+            EditorGUILayout.LabelField(_blockData.Description, Styles.GUIStyles.InfoStyle);
+
+            EditorGUILayout.EndVertical();
+
+            DrawDocumentation();
+
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.FlexibleSpace();
+        }
+
+        private void DrawDocumentation()
+        {
+
+            EditorGUILayout.BeginVertical(Styles.GUIStyles.DocumentationBox);
+
+            // Label
+            EditorGUILayout.LabelField("Documentation", Styles.GUIStyles.DocumentationLabelStyle);
+
+            // Generic Documentation
+            var commonDocs = BlocksContentManager.GetCommonDocs();
+            foreach (var doc in commonDocs)
+            {
+                DrawLink(doc.title, doc.url);
+            }
+
+            // Feature Documentation
+            DrawLink(_blockData.FeatureDocumentationName, _blockData.FeatureDocumentationUrl);
+
+            foreach (var tag in _blockData.Tags)
+            {
+                var docUrls = BlocksContentManager.GetBlockUrls(tag);
+                foreach (var docUrl in docUrls)
+                {
+                    DrawLink(docUrl.title, docUrl.url);
+                }
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private static void DrawLink(string label, string url)
+        {
+            if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(label)) return;
+
+            if (LinkButton(label, Styles.GUIStyles.DocumentationLinkStyle))
+            {
+                Application.OpenURL(url);
+            }
+        }
+
+
+        private static bool LinkButton(string label, GUIStyle style)
+        {
+            var content = new GUIContent(label);
+            var position = GUILayoutUtility.GetRect(content, style);
+            EditorGUIUtility.AddCursorRect(position, MouseCursor.Link);
+            return GUI.Button(position, content, style);
         }
 
         private void ShowVersionInfo()
@@ -100,6 +173,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
+
+
         private void ShowInstructions()
         {
             if (string.IsNullOrEmpty(_blockData.UsageInstructions)) return;
@@ -125,11 +200,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             rect.width += 40;
             rect.y -= 4;
             GUI.DrawTexture(rect, _blockData.Thumbnail, ScaleMode.ScaleAndCrop);
-
-            GUILayout.BeginArea(new Rect(Styles.GUIStyles.TagStyle.margin.left,
-                Styles.GUIStyles.TagStyle.margin.top, currentWidth, expectedHeight));
-            ShowTagList(_blockData.Tags, Tag.TagListType.Overlays);
-            GUILayout.EndArea();
 
             // Separator
             rect = GUILayoutUtility.GetRect(currentWidth, 1);
@@ -216,7 +286,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
-        private async void ShowBlock(BlockData data, BuildingBlock block, bool asGridItem,
+        private void ShowBlock(BlockData data, BuildingBlock block, bool asGridItem,
             bool showAction, bool showBuildingBlock)
         {
             var previousIndent = EditorGUI.indentLevel;
@@ -288,7 +358,9 @@ namespace Meta.XR.BuildingBlocks.Editor
                 {
                     if (ShowLargeButton(Utils.AddIcon))
                     {
-                        await data.AddToProject();
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                        data.AddToProject();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     }
                 }
             }
@@ -310,8 +382,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUI.indentLevel = previousIndent;
         }
 
-        private static void AddBlockHighlightListeners(BuildingBlock buildingBlock)
+        internal static void AddBlockHighlightListeners(BuildingBlock buildingBlock)
         {
+            if (buildingBlock == null) return;
+
             var rect = GUILayoutUtility.GetLastRect();
             EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
 

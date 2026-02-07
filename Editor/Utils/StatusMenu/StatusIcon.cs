@@ -18,132 +18,180 @@
  * limitations under the License.
  */
 
-using System;
-using System.Reflection;
+using System.Linq;
+using Meta.XR.Editor.Reflection;
+using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
+using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Object = UnityEngine.Object;
+using static Meta.XR.Editor.UserInterface.Styles.Constants;
 
 namespace Meta.XR.Editor.StatusMenu
 {
     [InitializeOnLoad]
+    [Reflection]
     internal static class StatusIcon
     {
-        private static readonly Type _toolbarType;
-        private static readonly PropertyInfo _guiBackend;
-        private static readonly PropertyInfo _visualTree;
-        private static readonly FieldInfo _onGuiHandler;
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.Toolbar")]
+        private static readonly TypeHandle ToolbarType = new();
 
-        private static GUIStyle _iconStyle;
-        private static TextureContent _currentIcon;
-        private static Object _appStatusBar;
-        private static VisualElement _container;
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.Toolbar", Name = "m_Root")]
+        private static readonly FieldInfoHandle<VisualElement> Root = new();
+
+        private const string ElementClass = "unity-editor-toolbar-element";
+        private const string PlayModeGroupId = "ToolbarZoneLeftAlign";
+        private const string Title = "Meta XR Tools";
+
+        private static bool Enabled { get; set; }
+        private static readonly Bool StatusIconEnabled = new UserBool("StatusIcon.Enabled", true);
+
+        private static Object _toolbar;
+        private static readonly EditorToolbarButton MetaIcon;
+        private static readonly VisualElement Pill;
 
         static StatusIcon()
         {
-            if (!Utils.IsMainEditor()) return;
+            if (!Utils.ShouldRenderEditorUI()) return;
 
-            var editorAssembly = typeof(UnityEditor.Editor).Assembly;
-            var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            MetaIcon = new EditorToolbarButton()
+            {
+                icon = Styles.Contents.MetaIcon.Image as Texture2D,
+                text = Title,
+                style =
+                {
+                    paddingLeft = Margin,
+                    paddingRight = Padding
+                }
+            };
+            MetaIcon.AddToClassList(ElementClass);
+            MetaIcon.clicked += () => StatusMenu.ShowDropdown(ComputeCurrentRect());
 
-            _toolbarType = editorAssembly.GetType("UnityEditor.AppStatusBar");
-            var guiViewType = editorAssembly.GetType("UnityEditor.GUIView");
-            var backendType = editorAssembly.GetType("UnityEditor.IWindowBackend");
-            var containerType = typeof(IMGUIContainer);
+            var arrowIcon = new VisualElement();
+            arrowIcon.AddToClassList("unity-icon-arrow");
+            arrowIcon.style.marginLeft = Padding;
+            MetaIcon.Add(arrowIcon);
 
-            _guiBackend = guiViewType?.GetProperty("windowBackend", bindingFlags);
-            _visualTree = backendType?.GetProperty("visualTree", bindingFlags);
-            _onGuiHandler = containerType?.GetField("m_OnGUIHandler", bindingFlags);
+            Pill = new VisualElement
+            {
+                style =
+                {
+                    position = Position.Absolute,
+                    top = 3,
+                    left = 18,
+                    width = 6,
+                    height = 6,
+                    borderBottomLeftRadius = 50,
+                    borderBottomRightRadius = 50,
+                    borderTopLeftRadius = 50,
+                    borderTopRightRadius = 50
+                }
+            };
+            MetaIcon.Add(Pill);
+
+            if (MetaIcon.Children().FirstOrDefault() is UnityEngine.UIElements.Image image)
+            {
+                image.style.marginRight = Padding;
+                image.tintColor = UserInterface.Styles.Colors.UnselectedWhite;
+            }
 
             EditorApplication.update += Update;
         }
 
+        private static Rect ComputeCurrentRect()
+        {
+            var rawPosition = GUIUtility.GUIToScreenPoint(Vector2.zero);
+
+            var rect = StatusIcon.MetaIcon.layout;
+            var parentRect = StatusIcon.MetaIcon.parent.layout;
+            var position = rawPosition + parentRect.position + rect.position;
+            return new Rect(position, StatusIcon.MetaIcon.layout.size);
+        }
+
         private static void Update()
         {
-            if (_appStatusBar == null)
+            if (!StatusIconEnabled.Value)
             {
-                Refresh();
+                Disable();
+                return;
             }
+
+            if (StatusIconEnabled.Value)
+            {
+                Enable();
+            }
+
+            UpdatePill();
         }
 
-        private static void Refresh()
+        private static VisualElement FetchParent()
         {
-            var toolbars = Resources.FindObjectsOfTypeAll(_toolbarType);
-            if (toolbars == null || toolbars.Length == 0)
+            if (_toolbar == null)
             {
-                return;
+                var toolbars = Resources.FindObjectsOfTypeAll(ToolbarType.Target);
+                _toolbar = toolbars.FirstOrDefault();
             }
 
-            _appStatusBar = toolbars[0];
-
-            var backend = _guiBackend?.GetValue(_appStatusBar);
-            if (backend == null)
+            if (_toolbar != null)
             {
-                return;
+                var root = Root.Get(_toolbar);
+                return root?.Q(PlayModeGroupId);
             }
 
-            var elements = _visualTree?.GetValue(backend, null) as VisualElement;
-            _container = elements?[0];
-            if (_container == null)
-            {
-                return;
-            }
-
-            var handler = _onGuiHandler?.GetValue(_container) as Action;
-            if (handler == null)
-            {
-                return;
-            }
-
-            handler -= RefreshGUI;
-            handler += RefreshGUI;
-            _onGuiHandler.SetValue(_container, handler);
+            return null;
         }
 
-        private static void RefreshGUI()
+        private static void Enable()
         {
-            var screenWidth = _container.layout.width;
-            // Hardcoded position
-            // Currently overlaps with progress bar, and works with 2020 status bar icons
-            // TODO: Better hook to dynamically position the button
-            var currentRect = new Rect(screenWidth - 130, 0, 26, 30); // Hardcoded position
-            GUILayout.BeginArea(currentRect);
-            {
-                if (ShowIcon(currentRect))
-                {
-                    StatusMenu.ShowDropdown(GUIUtility.GUIToScreenPoint(Vector2.zero));
-                }
-            }
-            GUILayout.EndArea();
+            var parent = FetchParent();
+
+            if (MetaIcon.parent == parent && Enabled) return;
+
+            Disable();
+
+            parent?.Add(MetaIcon);
+
+            Enabled = true;
         }
 
-        private static bool ShowIcon(Rect rect)
+
+        private static void Disable()
         {
-            var clicked = GUILayout.Button(Styles.Contents.StatusIcon, Styles.GUIStyles.StatusIconStyle);
-            var buttonRect = GUILayoutUtility.GetLastRect();
-            EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
-            ShowPill(rect);
-            return clicked;
+            if (!Enabled) return;
+
+            MetaIcon.RemoveFromHierarchy();
+
+            Enabled = false;
         }
 
-        private static void ShowPill(Rect rect)
+        private static void UpdatePill()
         {
             var item = StatusMenu.GetHighestItem();
-
-            if (item == null || item.PillIcon == null) return;
+            if (item?.PillIcon == null)
+            {
+                Pill.style.opacity = 0.0f;
+                return;
+            }
 
             var (_, color, showNotification) = item.PillIcon();
-
-            if (color == null || !showNotification) return;
-
-            rect.x = 12;
-            rect.width = Styles.GUIStyles.StatusPillIconStyle.fixedWidth;
-            rect.height = Styles.GUIStyles.StatusPillIconStyle.fixedHeight;
-            using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, color ?? Color.white))
+            if (color == null || !showNotification)
             {
-                GUI.Label(rect, Styles.Contents.StatusPillIcon, Styles.GUIStyles.StatusPillIconStyle);
+                Pill.style.opacity = 0.0f;
+                return;
+            }
+
+            Pill.style.opacity = 1.0f;
+            Pill.style.backgroundColor = color ?? Color.white;
+        }
+
+        public static void OnSettingsGUI()
+        {
+            EditorGUI.BeginChangeCheck();
+            var value = EditorGUILayout.Toggle("Enable Toolbar Menu", StatusIconEnabled.Value);
+            if (EditorGUI.EndChangeCheck())
+            {
+                StatusIconEnabled.Value = value;
             }
         }
     }

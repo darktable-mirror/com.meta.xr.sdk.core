@@ -40,7 +40,6 @@ using Debug = UnityEngine.Debug;
 [Feature(Feature.Scene)]
 public class OVRSceneRoom : MonoBehaviour, IOVRSceneComponent
 {
-
     /// <summary>
     /// The <see cref="OVRScenePlane"/> representing the floor of the room.
     /// </summary>

@@ -13,10 +13,9 @@ MonoBehaviour:
   m_Name: NetworkManagerNGOInstallationRoutine
   m_EditorClassIdentifier: 
   id: 45364db4-f880-45c3-9d76-d366c46500d3
-  routineName: NetworkManagerNGOInstallationRoutine
-  description: Installation routine for network manager setup for NGO
   targetBlockDataId: 1d8db162-54f6-43df-b4ef-b499df1f6769
   prefab: {fileID: 3576742687292369074, guid: 58441157858c39541b101ea446f3da34, type: 3}
   packageDependencies:
-  - com.unity.netcode.gameobjects
+  - com.unity.netcode.gameobjects@^1.7.1
   implementation: 0
+  installMatchmaking: 0

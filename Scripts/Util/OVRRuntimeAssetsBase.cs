@@ -62,7 +62,7 @@ public class OVRRuntimeAssetsBase : ScriptableObject
 
 
 
-    internal static void LoadAsset<T>(out T assetInstance, string assetName) where T : OVRRuntimeAssetsBase
+    internal static void LoadAsset<T>(out T assetInstance, string assetName, Action<T> onCreateAsset = null) where T : OVRRuntimeAssetsBase
     {
         assetInstance = null;
 #if UNITY_EDITOR
@@ -83,6 +83,7 @@ public class OVRRuntimeAssetsBase : ScriptableObject
             assetInstance = ScriptableObject.CreateInstance<T>();
 
             AssetDatabase.CreateAsset(assetInstance, GetAssetPath(assetName));
+            onCreateAsset?.Invoke(assetInstance);
         }
 #else
         assetInstance = Resources.Load<T>(assetName);

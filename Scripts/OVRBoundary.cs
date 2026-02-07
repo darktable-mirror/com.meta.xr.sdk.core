@@ -35,8 +35,22 @@ using Boundary = UnityEngine.Experimental.XR.Boundary;
 #endif
 
 /// <summary>
-/// Provides access to the Oculus boundary system.
+/// OVRBoundary provides access to the boundary system, which ensures user
+/// safety and offers an uninterrupted experience whenever the user puts on the
+/// headset in a new environment.
+/// You can query the geometry and dimension of the boundary, get and set its
+/// visiblity status, and test if a tracking node or 3d point is inside the
+/// boundary.
+/// Please visit [Integrate Boundary](https://developer.oculus.com/documentation/unity/unity-ovrboundary/)
+/// to learn more about the boundary system.
 /// </summary>
+/// <remarks>
+/// Note: With Oculus Integration v31 to v57 and Meta XR Core SDK v59 and up,
+/// there are some APIs that are deprecated for the OpenXR backend.
+/// We strongly discourage you from using the deprecated APIs as we will no longer
+/// upgrade or support them. They will continue to remain available for legacy apps
+/// and produce compiler warnings.
+/// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-ovrboundary/")]
 public class OVRBoundary
 {
@@ -154,7 +168,7 @@ public class OVRBoundary
 
     /// <summary>
     /// Returns an array of 3d points (in clockwise order) that define the specified boundary type.
-    /// All points are returned in local tracking space shared by tracked nodes and accessible through OVRCameraRig's trackingSpace anchor.
+    /// All points are returned in local tracking space shared by tracked nodes and accessible through <see cref="OVRCameraRig">OVRCameraRig's</see> trackingSpace anchor.
     /// </summary>
     public Vector3[] GetGeometry(OVRBoundary.BoundaryType boundaryType)
     {

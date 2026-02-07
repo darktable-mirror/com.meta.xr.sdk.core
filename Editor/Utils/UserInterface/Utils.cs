@@ -29,9 +29,11 @@ namespace Meta.XR.Editor.UserInterface
     {
         private static readonly HashSet<object> Foldouts = new HashSet<object>();
 
-        public static bool IsMainEditor()
+        public static bool ShouldRenderEditorUI()
+            => !Application.isBatchMode && IsMainEditorProcess();
+
+        public static bool IsMainEditorProcess()
         {
-            // Early Return when the process service is not the Editor itself
 #if UNITY_2021_1_OR_NEWER
             return (uint)UnityEditor.MPE.ProcessService.level != (uint)UnityEditor.MPE.ProcessLevel.Secondary;
 #else

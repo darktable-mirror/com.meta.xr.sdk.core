@@ -26,19 +26,37 @@ using UnityEngine;
 using UnityEngine.Assertions;
 
 /// <summary>
-/// OVR Component to drive blend shapes on a <c>SkinnedMeshRenderer</c> based on Face Tracking provided by <c>OVRFaceExpressions</c>.
+/// The component that drives blend shapes on a <see cref="SkinnedMeshRenderer"/> based on
+/// the values provided by <see cref="OVRFaceExpressions"/> due to face tracking being used on the face.
+/// For more information, please see [Face Tracking for Movement SDK for Unity](https://developer.oculus.com/documentation/unity/move-face-tracking/).
 /// </summary>
 /// <remarks>
-/// See <see cref="OVRFace"/> for more information.
-/// This specialization of <see cref="OVRFace"/> provides mapping based on an array, configurable from the editor
-/// This component comes with a custom editor that supports attempting to auto populate the mapping array based on string matching
-/// See <see cref="OVRCustomFaceEditor"/> for more information.
+/// See <see cref="OVRFace"/> for the base class. This specialization of <see cref="OVRFace"/> provides
+/// a mapping based on an array, which is configurable from the editor. This component comes with a custom
+/// editor that supports attempting to auto populate the mapping array based on string matching.
 /// </remarks>
 [RequireComponent(typeof(SkinnedMeshRenderer))]
 [HelpURL("https://developer.oculus.com/documentation/unity/move-face-tracking/")]
 [Feature(Feature.FaceTracking)]
 public class OVRCustomFace : OVRFace
 {
+    /// <summary>
+    /// The type of retargeting used to map the <see cref="OVRFaceExpressions"/> to
+    /// the blend shapes that exist on a model being driven by face tracking. Use this to
+    /// in case you wish to change the default retargeting behavior.
+    /// </summary>
+    public enum RetargetingType
+    {
+        OculusFace = 0,
+        Custom = 1,
+    }
+
+    /// <summary>
+    /// Returns the mapping from blend shape to <see cref="OVRFaceExpressions"/> value,
+    /// accessed via the index of the blend shape <see cref="SkinnedMeshRenderer"/> being
+    /// animated. Set this field to map a blend shape to a different <see cref="OVRFaceExpressions"/>
+    /// value.
+    /// </summary>
     public OVRFaceExpressions.FaceExpression[] Mappings
     {
         get => _mappings;
@@ -46,7 +64,7 @@ public class OVRCustomFace : OVRFace
     }
 
     [SerializeField]
-    [Tooltip("The mapping between Face Expressions to the blendshapes available " +
+    [Tooltip("The mapping between Face Expressions to the blend shapes available " +
              "on the shared mesh of the skinned mesh renderer")]
     internal OVRFaceExpressions.FaceExpression[] _mappings;
 
@@ -60,7 +78,7 @@ public class OVRCustomFace : OVRFace
     }
 
     [SerializeField]
-    [Tooltip("Allow duplicates when mapping blendshapes to Face Expressions")]
+    [Tooltip("Allow duplicates when mapping blend shapes to Face Expressions")]
     internal bool _allowDuplicateMapping = true;
 
     protected bool AllowDuplicateMapping
@@ -98,11 +116,5 @@ public class OVRCustomFace : OVRFace
         OVRFaceExpressions.FaceExpression[] oculusFaceExpressions =
             (OVRFaceExpressions.FaceExpression[])Enum.GetValues(typeof(OVRFaceExpressions.FaceExpression));
         return (oculusBlendShapeNames, oculusFaceExpressions);
-    }
-
-    public enum RetargetingType
-    {
-        OculusFace = 0,
-        Custom = 1,
     }
 }

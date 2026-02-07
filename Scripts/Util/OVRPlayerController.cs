@@ -27,50 +27,85 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// Controls the player's movement in virtual reality.
 /// </summary>
+/// <remarks>
+/// Specifically, this class builds on the functionality of Unity's built-in CharacterController type to
+/// permit movement paradigms suitable for virtual reality, such as teleportation. These capabilities are
+/// leveraged by <see cref="OVRSceneSampleController"/> to control functionality in the sample.
+/// </remarks>
 [RequireComponent(typeof(CharacterController))]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-sf-distancegrab/")]
 public class OVRPlayerController : MonoBehaviour
 {
     /// <summary>
-    /// The rate acceleration during movement.
+    /// Controls the rate of acceleration during continuous movement (as opposed to teleportation).
     /// </summary>
+    /// <remarks>
+    /// Well-tuned movement settings in VR play a significant role in user comfort and should be adjusted
+    /// carefully.  For more information, see
+    /// [Locomotion Best Practices](https://developer.oculus.com/resources/locomotion-design-techniques-best-practices/).
+    /// </remarks>
     public float Acceleration = 0.1f;
 
     /// <summary>
-    /// The rate of damping on movement.
+    /// Controls the rate of damping during continuous movement (as opposed to teleportation).
     /// </summary>
+    /// <remarks>
+    /// Well-tuned movement settings in VR play a significant role in user comfort and should be adjusted
+    /// carefully.
+    /// </remarks>
     public float Damping = 0.3f;
 
     /// <summary>
-    /// The rate of additional damping when moving sideways or backwards.
+    /// Controls the rate of additional damping when moving sideways or backwards during continuous
+    /// movement (as opposed to teleportation).
     /// </summary>
+    /// <remarks>
+    /// Well-tuned movement settings in VR play a significant role in user comfort and should be adjusted
+    /// carefully.
+    /// </remarks>
     public float BackAndSideDampen = 0.5f;
 
     /// <summary>
-    /// The force applied to the character when jumping.
+    /// Controls the force applied to the character when jumping.
     /// </summary>
+    /// <remarks>
+    /// Well-tuned movement settings in VR play a significant role in user comfort and should be adjusted
+    /// carefully.
+    /// </remarks>
     public float JumpForce = 0.3f;
 
     /// <summary>
-    /// The rate of rotation when using a gamepad.
+    /// Controls the rate of rotation when continuous-rotating (as opposed to snap-rotating) using a gamepad.
+    /// If <see cref="SnapRotation"/> is enabled, <see cref="RotationRatchet"/> is used instead.
     /// </summary>
+    /// <remarks>
+    /// Well-tuned movement settings in VR play a significant role in user comfort and should be adjusted
+    /// carefully.
+    /// </remarks>
     public float RotationAmount = 1.5f;
 
     /// <summary>
-    /// The rate of rotation when using the keyboard.
+    /// Controls the rate of rotation when turning using the keyboard.
     /// </summary>
+    /// <remarks>
+    /// Well-tuned movement settings in VR play a significant role in user comfort and should be adjusted
+    /// carefully.
+    /// </remarks>
     public float RotationRatchet = 45.0f;
 
     /// <summary>
-    /// The player will rotate in fixed steps if Snap Rotation is enabled.
+    /// Determines whether rotation will be applied in a single large "snap" (snap-rotating) as opposed
+    /// to more slowly over time (continuous-rotating).
     /// </summary>
     [Tooltip("The player will rotate in fixed steps if Snap Rotation is enabled.")]
     public bool SnapRotation = true;
 
     /// <summary>
-    /// [Deprecated] When enabled, snap rotation will happen about the guardian rather
-    /// than the player/camera viewpoint.
+    /// [Deprecated] When enabled, snap rotation will happen about the guardian rather than the
+    /// player/camera viewpoint. This (legacy) option should be left off except for edge cases that
+    /// require extreme behavioral backwards compatibility.
     /// </summary>
+    [Obsolete]
     [Tooltip("[Deprecated] When enabled, snap rotation will happen about the center of the " +
              "guardian rather than the center of the player/camera viewpoint. This (legacy) " +
              "option should be left off except for edge cases that require extreme behavioral " +
@@ -78,24 +113,40 @@ public class OVRPlayerController : MonoBehaviour
     public bool RotateAroundGuardianCenter = false;
 
     /// <summary>
-    /// How many fixed speeds to use with linear movement? 0=linear control
+    /// Sets the number of discrete speeds that will be used in continuous motion. If 0, motion speed is
+    /// not discretized.
     /// </summary>
-    [Tooltip("How many fixed speeds to use with linear movement? 0=linear control")]
+    /// <remarks>
+    /// Well-tuned movement settings in VR play a significant role in user comfort and should be adjusted
+    /// carefully.
+    /// </remarks>
+    [Tooltip("Sets the number of discrete speeds that will be used in continuous motion. If 0, motion " +
+        "speed is not discretized.")]
     public int FixedSpeedSteps;
 
     /// <summary>
     /// If true, reset the initial yaw of the player controller when the Hmd pose is recentered.
     /// </summary>
+    /// <remarks>
+    /// Enabling this feature allows users to change the real-to-virtual spatial correspondence with
+    /// respect to orientation --- changing how "north" in the virtual world corresponds with "north"
+    /// in the real world, for example.
+    /// </remarks>
     public bool HmdResetsY = true;
 
     /// <summary>
-    /// If true, tracking data from a child OVRCameraRig will update the direction of movement.
+    /// If true, tracking data from a child OVRCameraRig will update the direction of movement. This
+    /// capability is sometimes referred to as "head-oriented movement."
     /// </summary>
     public bool HmdRotatesY = true;
 
     /// <summary>
     /// Modifies the strength of gravity.
     /// </summary>
+    /// <remarks>
+    /// This value does not _set_ gravity, but merely modifies it. The underlying value used for gravity
+    /// is retrieved from Unity's Physics system.
+    /// </remarks>
     public float GravityModifier = 0.379f;
 
     /// <summary>
@@ -104,51 +155,55 @@ public class OVRPlayerController : MonoBehaviour
     public bool useProfileData = true;
 
     /// <summary>
-    /// The CameraHeight is the actual height of the HMD and can be used to adjust the height of the character controller, which will affect the
-    /// ability of the character to move into areas with a low ceiling.
+    /// The CameraHeight is the actual height of the HMD and can be used to adjust the height of the
+    /// character controller, which will affect the ability of the character to move into areas with a low
+    /// ceiling.
     /// </summary>
     [NonSerialized]
     public float CameraHeight;
 
     /// <summary>
-    /// This event is raised after the character controller is moved. This is used by the OVRAvatarLocomotion script to keep the avatar transform synchronized
-    /// with the OVRPlayerController.
+    /// This event is raised after the character controller is moved. This is used by the OVRAvatarLocomotion
+    /// script to keep the avatar transform synchronized with the OVRPlayerController.
     /// </summary>
     public event Action<Transform> TransformUpdated;
 
     /// <summary>
-    /// This bool is set to true whenever the player controller has been teleported. It is reset after every frame. Some systems, such as
-    /// CharacterCameraConstraint, test this boolean in order to disable logic that moves the character controller immediately
-    /// following the teleport.
+    /// This bool is set to true whenever the player controller has been teleported. It is reset after every
+    /// frame. Some systems, such as CharacterCameraConstraint, test this boolean in order to disable logic
+    /// that moves the character controller immediately following the teleport.
     /// </summary>
     [NonSerialized] // This doesn't need to be visible in the inspector.
     public bool Teleported;
 
     /// <summary>
-    /// This event is raised immediately after the camera transform has been updated, but before movement is updated.
+    /// This event is raised immediately after the camera transform has been updated, but before movement is
+    /// updated.
     /// </summary>
     public event Action CameraUpdated;
 
     /// <summary>
-    /// This event is raised right before the character controller is actually moved in order to provide other systems the opportunity to
-    /// move the character controller in response to things other than user input, such as movement of the HMD. See CharacterCameraConstraint.cs
-    /// for an example of this.
+    /// This event is raised right before the character controller is actually moved in order to provide
+    /// other systems the opportunity to move the character controller in response to things other than user
+    /// input, such as movement of the HMD. See CharacterCameraConstraint.cs for an example of this.
     /// </summary>
     public event Action PreCharacterMove;
 
     /// <summary>
-    /// When true, user input will be applied to linear movement. Set this to false whenever the player controller needs to ignore input for
-    /// linear movement.
+    /// When true, user input will be applied to linear movement. Set this to false whenever the player
+    /// controller needs to ignore input for linear movement.
     /// </summary>
     public bool EnableLinearMovement = true;
 
     /// <summary>
-    /// When true, user input will be applied to rotation. Set this to false whenever the player controller needs to ignore input for rotation.
+    /// When true, user input will be applied to rotation. Set this to false whenever the player controller
+    /// needs to ignore input for rotation.
     /// </summary>
     public bool EnableRotation = true;
 
     /// <summary>
-    /// Rotation defaults to secondary thumbstick. You can allow either here. Note that this won't behave well if EnableLinearMovement is true.
+    /// Rotation defaults to secondary thumbstick. You can allow either here. Note that this won't behave
+    /// well if EnableLinearMovement is true.
     /// </summary>
     public bool RotationEitherThumbstick = false;
 
@@ -379,7 +434,10 @@ public class OVRPlayerController : MonoBehaviour
             MoveThrottle += (actualXZ - predictedXZ) / (SimulationRate * Time.deltaTime);
     }
 
-
+    /// <summary>
+    /// Performs the movement updates for this character controller. This is a core part of the OVRPlayerController's
+    /// update logic and should not be invoked directly.
+    /// </summary>
     public virtual void UpdateMovement()
     {
         //todo: enable for Unity Input System
@@ -573,7 +631,8 @@ public class OVRPlayerController : MonoBehaviour
 
 
     /// <summary>
-    /// Invoked by OVRCameraRig's UpdatedAnchors callback. Allows the Hmd rotation to update the facing direction of the player.
+    /// Invoked by <see cref="OVRCameraRig"/>'s UpdatedAnchors callback. Allows the Hmd rotation to
+    /// update the facing direction of the player (assuming <see cref="HmdRotatesY"/> is enabled).
     /// </summary>
     public void UpdateTransform(OVRCameraRig rig)
     {
@@ -599,7 +658,8 @@ public class OVRPlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Jump! Must be enabled manually.
+    /// Causes the player to jump, unless the Unity Controller associated with this instance has its
+    /// isGrounded property set to true.
     /// </summary>
     public bool Jump()
     {
@@ -612,8 +672,12 @@ public class OVRPlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Stop this instance.
+    /// Causes the player to immediately stop moving, losing all speed and inertia.
     /// </summary>
+    /// <remarks>
+    /// Stopping merely eliminates all ongoing motion and does not lock the player in place; motion can
+    /// resume as early as the next update.
+    /// </remarks>
     public void Stop()
     {
         Controller.Move(Vector3.zero);
@@ -622,72 +686,77 @@ public class OVRPlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Gets the move scale multiplier.
+    /// Accessor for the move scale multiplier, populating that value into the ref float argument.
     /// </summary>
-    /// <param name="moveScaleMultiplier">Move scale multiplier.</param>
+    /// <param name="moveScaleMultiplier">Move scale multiplier output argument</param>
     public void GetMoveScaleMultiplier(ref float moveScaleMultiplier)
     {
         moveScaleMultiplier = MoveScaleMultiplier;
     }
 
     /// <summary>
-    /// Sets the move scale multiplier.
+    /// Setter for the move scale multiplier.
     /// </summary>
-    /// <param name="moveScaleMultiplier">Move scale multiplier.</param>
+    /// <param name="moveScaleMultiplier">New move scale multiplier value</param>
     public void SetMoveScaleMultiplier(float moveScaleMultiplier)
     {
         MoveScaleMultiplier = moveScaleMultiplier;
     }
 
     /// <summary>
-    /// Gets the rotation scale multiplier.
+    /// Accessor for the rotation scale multiplier, populating that value into the ref float argument.
     /// </summary>
-    /// <param name="rotationScaleMultiplier">Rotation scale multiplier.</param>
+    /// <param name="rotationScaleMultiplier">Rotation scale multiplier output argument</param>
     public void GetRotationScaleMultiplier(ref float rotationScaleMultiplier)
     {
         rotationScaleMultiplier = RotationScaleMultiplier;
     }
 
     /// <summary>
-    /// Sets the rotation scale multiplier.
+    /// Setter for the rotation scale multiplier.
     /// </summary>
-    /// <param name="rotationScaleMultiplier">Rotation scale multiplier.</param>
+    /// <param name="rotationScaleMultiplier">New rotation scale multiplier value</param>
     public void SetRotationScaleMultiplier(float rotationScaleMultiplier)
     {
         RotationScaleMultiplier = rotationScaleMultiplier;
     }
 
     /// <summary>
-    /// Gets the allow mouse rotation.
+    /// Accessor for the "skip mouse rotation" setting, populating the value into the ref bool argument.
     /// </summary>
-    /// <param name="skipMouseRotation">Allow mouse rotation.</param>
+    /// <param name="skipMouseRotation">Skip mouse rotation output argument</param>
     public void GetSkipMouseRotation(ref bool skipMouseRotation)
     {
         skipMouseRotation = SkipMouseRotation;
     }
 
     /// <summary>
-    /// Sets the allow mouse rotation.
+    /// Setter for the "skip mouse rotation" setting, which determines whether mouse movement is excluded
+    /// from turning logic.
     /// </summary>
-    /// <param name="skipMouseRotation">If set to <c>true</c> allow mouse rotation.</param>
+    /// <param name="skipMouseRotation">New setting for skipping mouse rotation</param>
+    /// <remarks>
+    /// Mouse rotation in VR can be extremely uncomfortable for users and is disabled by default.
+    /// </remarks>
     public void SetSkipMouseRotation(bool skipMouseRotation)
     {
         SkipMouseRotation = skipMouseRotation;
     }
 
     /// <summary>
-    /// Gets the halt update movement.
+    /// Accessor for the "halt update movement" setting, populating the value into the ref bool argument.
     /// </summary>
-    /// <param name="haltUpdateMovement">Halt update movement.</param>
+    /// <param name="haltUpdateMovement">Halt update movement output argument</param>
     public void GetHaltUpdateMovement(ref bool haltUpdateMovement)
     {
         haltUpdateMovement = HaltUpdateMovement;
     }
 
     /// <summary>
-    /// Sets the halt update movement.
+    /// Setter for the "halt update movement" setting, which determines whether user movement updating will
+    /// be paused.
     /// </summary>
-    /// <param name="haltUpdateMovement">If set to <c>true</c> halt update movement.</param>
+    /// <param name="haltUpdateMovement">New setting for halting the movement update</param>
     public void SetHaltUpdateMovement(bool haltUpdateMovement)
     {
         HaltUpdateMovement = haltUpdateMovement;

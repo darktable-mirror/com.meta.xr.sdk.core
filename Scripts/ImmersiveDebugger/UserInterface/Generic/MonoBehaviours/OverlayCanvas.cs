@@ -23,6 +23,13 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> used by all the panels for Immersive Debugger.
+    /// It makes use of <see cref="OVROverlay"/>) and set it up for the corresponding camera.
+    /// so the rendering is done in overlay layer (composition layer) instead of projection layer.
+    /// It could help the panels display much sharper text. See more in the [OVROverlay doc](https://developer.oculus.com/documentation/unity/unity-ovroverlay/).
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     [RequireComponent(typeof(Canvas))]
     public sealed class OverlayCanvas : MonoBehaviour
     {
@@ -47,6 +54,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private readonly bool _scaleViewport = Application.isMobilePlatform;
 
+        /// <summary>
+        /// The panel this canvas is used upon, the overlay camera object will be children of this Panel
+        /// </summary>
         public OverlayCanvasPanel Panel { get; set; }
 
         // Start is called before the first frame update

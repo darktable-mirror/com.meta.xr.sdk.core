@@ -124,6 +124,8 @@ public static partial class OVRTask
     /// \cond
     internal static OVRTask<TResult> FromGuid<TResult>(Guid id) => Create<TResult>(id);
     internal static OVRTask<TResult> FromRequest<TResult>(ulong id) => Create<TResult>(GetId(id));
+    internal static OVRTask<TResult> FromRequest<TResult>(ulong id, OVRPlugin.EventType eventType)
+        => Create<TResult>(GetId(id, eventType));
     /// \endcond
 
     /// <summary>
@@ -212,7 +214,7 @@ public static partial class OVRTask
     /// you later set its result with <see cref="SetResult{TResult}"/>.
     ///
     /// The <paramref name="taskId"/> must be unique to the new task. You may use any `Guid` as long as it has not
-    /// previously been used to create a task. Use <code>Guid.NewGuid()</code> to generate a random task id.
+    /// previously been used to create a task. Use `Guid.NewGuid()` to generate a random task id.
     /// </remarks>
     /// <param name="taskId">The id used to assign the new task.</param>
     /// <typeparam name="TResult">The type of the result.</typeparam>

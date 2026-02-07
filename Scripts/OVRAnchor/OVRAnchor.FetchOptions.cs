@@ -124,7 +124,6 @@ public partial struct OVRAnchor
         /// </remarks>
         public IEnumerable<Type> ComponentTypes;
 
-
         // DiscoverSpaces has an upper limit, requiring batching if exceeded
         private const int MaximumUuidCount = 50;
 
@@ -181,7 +180,6 @@ public partial struct OVRAnchor
             }
             telemetryMarker.AddAnnotation(Telemetry.Annotation.ComponentTypes, spaceComponentTypes.Data,
                 spaceComponentTypes.Count);
-
 
             using var uuidsList = Uuids.ToNativeList(Allocator.Temp);
             if (SingleUuid.HasValue)
@@ -275,6 +273,7 @@ public partial struct OVRAnchor
         { typeof(OVRRoomLayout), SpaceComponentType.RoomLayout },
         { typeof(OVRAnchorContainer), SpaceComponentType.SpaceContainer },
         { typeof(OVRTriangleMesh), SpaceComponentType.TriangleMesh },
+        { typeof(OVRDynamicObject), SpaceComponentType.DynamicObject },
     };
 
     [StructLayout(LayoutKind.Explicit)]

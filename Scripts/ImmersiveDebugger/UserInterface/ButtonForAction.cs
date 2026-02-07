@@ -23,11 +23,11 @@ using Meta.XR.ImmersiveDebugger.Manager;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
-    public class ButtonForAction : ButtonWithLabel
+    internal class ButtonForAction : ButtonWithLabel
     {
         private ActionHook _hook;
 
-        public ActionHook Action
+        internal ActionHook Action
         {
             get => _hook;
             set

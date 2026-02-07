@@ -20,6 +20,7 @@
 
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 
 [CustomEditor(typeof(OVRManager))]
 public class OVRManagerEditor : Editor
@@ -46,6 +47,9 @@ public class OVRManagerEditor : Editor
             serializedObject.FindProperty(nameof(OVRManager.requestScenePermissionOnStartup));
         _requestRecordAudioPermissionOnStartup =
             serializedObject.FindProperty(nameof(OVRManager.requestRecordAudioPermissionOnStartup));
+
+        OVRManager manager = target as OVRManager;
+        manager?.UpdateDynamicResolutionVersion();
     }
 
     public override void OnInspectorGUI()
@@ -232,6 +236,26 @@ public class OVRManagerEditor : Editor
         }
         EditorGUI.indentLevel--; // PT section
 
+        // Common Hand Tracking section header
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Hand Tracking", EditorStyles.boldLabel);
+        EditorGUI.indentLevel++;
+
+        // Hand Tracking Settings
+        EditorGUI.BeginDisabledGroup(projectConfig.handTrackingSupport == OVRProjectConfig.HandTrackingSupport.ControllersOnly);
+        OVRHandSkeletonVersion handSkeletonVersion = runtimeSettings.HandSkeletonVersion;
+        OVREditorUtil.SetupEnumField(target, new GUIContent("Hand Skeleton Version",
+                "The version of the hand skeleton"), ref handSkeletonVersion, ref modified);
+
+        if (modified)
+        {
+            runtimeSettings.HandSkeletonVersion = handSkeletonVersion;
+            OVRRuntimeSettings.CommitRuntimeSettings(runtimeSettings);
+        }
+        EditorGUI.EndDisabledGroup();
+
+        // Common Hand Tracking section footer
+        EditorGUI.indentLevel--;
 
         // Common Movement Tracking section header
         EditorGUILayout.Space();
@@ -321,6 +345,14 @@ public class OVRManagerEditor : Editor
         // Common Movement Tracking section footer
         EditorGUI.indentLevel--;
 #endif
+
+        #region DynamicResolution
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Dynamic Resolution", EditorStyles.boldLabel);
+        OVREditorUtil.SetupBoolField(target, "Enable Dynamic Resolution", ref manager.enableDynamicResolution, ref modified);
+        OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 2/Pro Range", "Quest2/Pro resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest2MinDynamicResolutionScale, ref manager.quest2MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
+        OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 3/3S Range", "Quest3/3S Resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest3MinDynamicResolutionScale, ref manager.quest3MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
+        #endregion
 
         #region PermissionRequests
 

@@ -401,8 +401,18 @@ public class OVRVirtualKeyboard : MonoBehaviour
 
             if (_keyboard.handDirectInteraction && _skeleton && _skeleton.IsDataValid)
             {
-                var indexTip = _skeleton.Bones.First(b => b.Id == OVRSkeleton.BoneId.Hand_IndexTip);
-                var interactorRoot = _skeleton.Bones.First(b => b.Id == OVRSkeleton.BoneId.Hand_WristRoot);
+                OVRSkeleton.BoneId indexTipJoint =
+                    _skeleton.GetSkeletonType() == OVRSkeleton.SkeletonType.XRHandLeft ||
+                    _skeleton.GetSkeletonType() == OVRSkeleton.SkeletonType.XRHandRight ?
+                    OVRSkeleton.BoneId.XRHand_IndexTip : OVRSkeleton.BoneId.Hand_IndexTip;
+
+                OVRSkeleton.BoneId wristRootJoint =
+                    _skeleton.GetSkeletonType() == OVRSkeleton.SkeletonType.XRHandLeft ||
+                    _skeleton.GetSkeletonType() == OVRSkeleton.SkeletonType.XRHandRight ?
+                    OVRSkeleton.BoneId.XRHand_Wrist : OVRSkeleton.BoneId.Hand_WristRoot;
+
+                var indexTip = _skeleton.Bones.First(b => b.Id == indexTipJoint);
+                var interactorRoot = _skeleton.Bones.First(b => b.Id == wristRootJoint);
                 _keyboard.SendVirtualKeyboardDirectInput(
                     indexTip.Transform.position,
                     _inputSource, _hand.GetFingerIsPinching(OVRHand.HandFinger.Index), interactorRoot.Transform);

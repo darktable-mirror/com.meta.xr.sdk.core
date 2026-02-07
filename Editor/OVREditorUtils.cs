@@ -50,6 +50,8 @@ internal static class OVREditorUtils
         EditorApplication.update += UpdateEditor;
 
         StatusMenu.RegisterItem(SettingsItem);
+
+        OVRUserSettingsProvider.Register("Toolbar", StatusIcon.OnSettingsGUI);
     }
 
     internal static void UpdateEditor()

@@ -1054,6 +1054,21 @@ public class OVROverlay : MonoBehaviour
 
     void OnDisable()
     {
+        if (gameObject.scene.name == "DontDestroyOnLoad")
+        {
+            // Because scene loads can trigger OnDisable/OnEnable
+            // for objects that shouldn't destroy on load,
+            // we will wait for the next render update
+            // to disable those objects
+            return;
+        }
+
+        DisableImmediately();
+    }
+
+    void DisableImmediately()
+    {
+
 #if UNITY_EDITOR
         if (previewObject != null)
         {
@@ -1063,9 +1078,6 @@ public class OVROverlay : MonoBehaviour
 
         Camera.onPreRender -= HandlePreRender;
         RenderPipelineManager.beginCameraRendering -= HandleBeginCameraRendering;
-
-        if ((gameObject.hideFlags & HideFlags.DontSaveInBuild) != 0)
-            return;
 
         if (!OVRManager.OVRManagerinitialized)
             return;
@@ -1098,6 +1110,7 @@ public class OVROverlay : MonoBehaviour
 
     void OnDestroy()
     {
+        DisableImmediately();
         DestroyLayerTextures();
         DestroyLayer();
 
@@ -1264,6 +1277,12 @@ public class OVROverlay : MonoBehaviour
 
     bool TrySubmitLayer()
     {
+        if (!enabled)
+        {
+            DisableImmediately();
+            return false;
+        }
+
         if (!OVRManager.OVRManagerinitialized || !OVRPlugin.userPresent)
             return false;
 

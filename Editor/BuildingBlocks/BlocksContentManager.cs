@@ -36,6 +36,8 @@ namespace Meta.XR.BuildingBlocks.Editor
     internal static class BlocksContentManager
     {
         private const double CacheDurationInHours = 6;
+        private const string CommonTag = "Common";
+
         private static string CacheDirectory => Path.Combine(Path.GetTempPath(), "Meta", "Unity", "Editor");
         private static string CacheFilePath => Path.Combine(CacheDirectory, "bb_content.json");
 
@@ -43,8 +45,11 @@ namespace Meta.XR.BuildingBlocks.Editor
             $"BlocksContentManager.LastDownloadTimestamp.{SdkVersion.GetValueOrDefault(0)}";
 
         private static BlockData[] _contentFilter;
+        private static Dictionary<Tag, BlockUrl[]> _documentationsData;
+
         private static OVRPlatformTool.EditorCoroutine _editorCoroutine;
         private static readonly Version VersionZero = new(0, 0, 0);
+
         private static int? SdkVersion
         {
             get
@@ -72,6 +77,17 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             StartDownload(onComplete: RecordCache);
         }
+
+        internal static BlockUrl[] GetBlockUrls(Tag tag)
+        {
+            if (_documentationsData == null)
+                return Array.Empty<BlockUrl>();
+
+            return _documentationsData.TryGetValue(tag, out var urls) ? urls : Array.Empty<BlockUrl>();
+        }
+
+        // For common / generic docs related to building blocks.
+        internal static BlockUrl[] GetCommonDocs() => GetBlockUrls(CommonTag);
 
         #region Data Caching
 
@@ -124,23 +140,43 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
 
         [Serializable]
+        internal struct BlockDocumentation
+        {
+            public string tag;
+            public BlockUrl[] urls;
+        }
+
+        [Serializable]
+        internal struct BlockUrl
+        {
+            public string title;
+            public string url;
+        }
+
+        [Serializable]
         internal struct BlockDataResponse
         {
             public BlockData[] content;
+            public BlockDocumentation[] docs;
         }
         // ReSharper restore InconsistentNaming
 
-        internal static BlockData[] ParseJsonData(string jsonData)
+        internal static BlockDataResponse ParseJsonData(string jsonData)
         {
+            BlockDataResponse response;
             try
             {
-                var response = JsonUtility.FromJson<BlockDataResponse>(jsonData);
-                return response.content;
+                response = JsonUtility.FromJson<BlockDataResponse>(jsonData);
             }
             catch (Exception)
             {
-                return null;
+                response = default;
             }
+
+            response.content ??= Array.Empty<BlockData>();
+            response.docs ??= Array.Empty<BlockDocumentation>();
+
+            return response;
         }
 
         #endregion
@@ -149,13 +185,22 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal static bool SetContentJsonData(string jsonData)
         {
-            _contentFilter = ParseJsonData(jsonData);
-            return _contentFilter != null;
+            var response = ParseJsonData(jsonData);
+
+            _contentFilter = response.content;
+            _documentationsData = new Dictionary<Tag, BlockUrl[]>();
+            foreach (var doc in response.docs)
+            {
+                _documentationsData[doc.tag] = doc.urls;
+            }
+
+            return _contentFilter is { Length: > 0 };
         }
 
         internal static void ClearContent()
         {
             _contentFilter = null;
+            _documentationsData = null;
             ClearCache();
         }
 
@@ -177,7 +222,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static IReadOnlyList<BlockBaseData> FilterBlockWindowContent(IReadOnlyList<BlockBaseData> content,
             BlockData[] contentFilter)
         {
-            if (contentFilter == null)
+            if (contentFilter == null || contentFilter.Length == 0)
             {
                 ClearOverrides(content);
                 return content;

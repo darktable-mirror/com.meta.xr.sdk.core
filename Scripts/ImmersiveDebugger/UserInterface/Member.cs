@@ -38,6 +38,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Switch _switch;
         private ToggleForGizmo _gizmo;
         private Background _pill;
+        private ImageStyle _pillBackgroundStyle;
+
+        private Color _defaultPillColor;
+        private Color _transparentPillColor;
 
         public string Title
         {
@@ -47,7 +51,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public Color PillColor
         {
-            set => _pill.Color = value;
+            set
+            {
+                _defaultPillColor = value;
+                _transparentPillColor = value;
+                _transparentPillColor.a = 0.8f;
+
+                _pill.Color = Transparent ? _transparentPillColor : _defaultPillColor;
+            }
         }
 
         public ImageStyle PillStyle
@@ -71,7 +82,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // Pill
             _pill = _flex.Append<Background>("pill");
             _pill.LayoutStyle = Style.Load<LayoutStyle>("PillVertical");
-            PillStyle = Style.Load<ImageStyle>("PillInfo");
+            _pillBackgroundStyle = Style.Load<ImageStyle>("PillInfo");
+            PillStyle = _pillBackgroundStyle;
 
             // Label
             _title = _flex.Append<Label>("title");
@@ -81,6 +93,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // Flex
             _valueFlex = Append<Flex>("values");
             _valueFlex.LayoutStyle = Style.Load<LayoutStyle>("MemberValueFlex");
+        }
+
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            _pill.Color = Transparent ? _transparentPillColor : _defaultPillColor;
         }
 
         public ActionHook GetAction()
@@ -184,4 +202,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         }
     }
 }
-

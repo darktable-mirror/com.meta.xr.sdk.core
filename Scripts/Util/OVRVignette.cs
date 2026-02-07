@@ -27,7 +27,7 @@ using UnityEngine.Rendering;
 /// A component to apply a Colored vignette effect to the camera
 /// </summary>
 [RequireComponent(typeof(Camera))]
-[ExecuteInEditMode]
+[ExecuteAlways]
 [HelpURL("https://developer.oculus.com/reference/unity/latest/class_o_v_r_vignette")]
 public class OVRVignette : MonoBehaviour
 {
@@ -293,6 +293,14 @@ public class OVRVignette : MonoBehaviour
 
     private void Awake()
     {
+        Initialize();
+    }
+
+    private void Initialize()
+    {
+        if (_OpaqueMeshRenderer != null && _TransparentMeshRenderer != null)
+            return;
+
         _Camera = GetComponent<Camera>();
         _ShaderScaleAndOffset0Property = Shader.PropertyToID("_ScaleAndOffset0");
         _ShaderScaleAndOffset1Property = Shader.PropertyToID("_ScaleAndOffset1");
@@ -453,14 +461,17 @@ public class OVRVignette : MonoBehaviour
 
     private void EnableRenderers()
     {
+        Initialize();
         _OpaqueMeshRenderer.enabled = _OpaqueVignetteVisible;
         _TransparentMeshRenderer.enabled = _TransparentVignetteVisible;
     }
 
     private void DisableRenderers()
     {
-        _OpaqueMeshRenderer.enabled = false;
-        _TransparentMeshRenderer.enabled = false;
+        if (_OpaqueMeshRenderer != null)
+            _OpaqueMeshRenderer.enabled = false;
+        if (_TransparentMeshRenderer != null)
+            _TransparentMeshRenderer.enabled = false;
     }
 
     // Objects are enabled on pre cull and disabled on post render so they only draw in this camera

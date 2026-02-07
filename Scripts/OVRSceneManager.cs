@@ -137,7 +137,6 @@ public class OVRSceneManager : MonoBehaviour
 
     #region Events
 
-
     /// <summary>
     /// This event fires when the <see cref="OVRSceneManager"/> has instantiated prefabs
     /// for the Scene Anchors in a Scene Model.
@@ -369,7 +368,6 @@ public class OVRSceneManager : MonoBehaviour
         ".",
         false)]
     public RoomLayoutInformation RoomLayout;
-
 
     #region Private Vars
 
@@ -956,6 +954,7 @@ public class OVRSceneManager : MonoBehaviour
     /// </summary>
     /// <param name="requestedAnchorClassifications">A list of <see cref="OVRSceneManager.Classification"/>.</param>
     /// <returns>Returns true if scene capture succeeded, otherwise false.</returns>
+    [Obsolete("Requesting space setup with labels is deprecated (v71) with no replacement.")]
     public bool RequestSceneCapture(IEnumerable<string> requestedAnchorClassifications)
     {
         CheckIfClassificationsAreValid(requestedAnchorClassifications);
@@ -1171,9 +1170,7 @@ public class OVRSceneManager : MonoBehaviour
         {
             _cameraRig.TrackingSpaceChanged += OnTrackingSpaceChanged;
         }
-
     }
-
 
     private void OnDisable()
     {
@@ -1189,7 +1186,6 @@ public class OVRSceneManager : MonoBehaviour
         {
             _cameraRig.TrackingSpaceChanged -= OnTrackingSpaceChanged;
         }
-
     }
 
     /// <summary>

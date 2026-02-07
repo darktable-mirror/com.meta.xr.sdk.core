@@ -23,6 +23,8 @@ using System.Collections.Generic;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
+using static Meta.XR.Editor.UserInterface.Utils;
+using static Meta.XR.Editor.UserInterface.Styles.GUIStylesContainer;
 
 namespace Meta.XR.Editor.Tags
 {
@@ -30,15 +32,15 @@ namespace Meta.XR.Editor.Tags
     {
         public static readonly Dictionary<Tag, TagBehavior> Registry = new();
 
-        private Tag _tag;
+        protected Tag _tag;
 
         public int Order { get; set; }
         public bool Automated { get; set; }
-        public Color Color { get; set; } = Utils.HexToColor("#DDDDDD");
+        public Color Color { get; set; } = HexToColor("#DDDDDD");
         public TextureContent Icon { get; set; }
 
         /// <summary>
-        /// Show : Whether or not the tag is visually represented in the UI
+        /// Show : Whether the tag is visually represented in the UI
         /// Some tags are purely for internal system use and not meant to be shown in the UI
         /// </summary>
         public bool Show { get; set; } = true;
@@ -46,7 +48,7 @@ namespace Meta.XR.Editor.Tags
         public bool CanFilterBy { get; set; }
 
         /// <summary>
-        /// Visibility : Wether or not the block is actually visible
+        /// Visibility : Whether the block is actually visible
         /// These tags let us hide blocks, if they're for instance : Hidden, Obsolete, Internal
         /// </summary>
         public bool ToggleableVisibility { get; set; }
@@ -59,9 +61,12 @@ namespace Meta.XR.Editor.Tags
         private GUIStyle _style;
         private GUIContent _content;
         private float? _styleWidth;
-        private GUIStyle Style => _style ??= Icon != null ? Styles.GUIStyles.TagStyleWithIcon : Styles.GUIStyles.TagStyle;
-        private GUIContent Content => _content ??= new GUIContent(_tag.Name);
-        public float StyleWidth => _styleWidth ??= Style.CalcSize(Content).x + 1;
+        private Tag.TagListType _listType;
+
+        protected virtual GUIStyle Style => _style ??= Icon != null ? Styles.GUIStyles.TagStyleWithIcon : Styles.GUIStyles.TagStyle;
+        protected virtual ColorStates BackgroundColorState => _listType == Tag.TagListType.Overlays ? Styles.GUIStyles.TagOverlayBackgroundColors : Styles.GUIStyles.TagBackgroundColors;
+        protected GUIContent Content => _content ??= new GUIContent(_tag.Name);
+        public virtual float StyleWidth => _styleWidth ??= Style.CalcSize(Content).x + 1;
 
         public static TagBehavior GetBehavior(Tag tag)
         {
@@ -77,19 +82,19 @@ namespace Meta.XR.Editor.Tags
             return tagBehavior;
         }
 
-        private TagBehavior(Tag tag)
+        protected TagBehavior(Tag tag)
         {
             _tag = tag;
             Registry[tag] = this;
         }
 
-        private void DrawIcon(Rect rect)
+        protected virtual void DrawIcon(Rect rect)
         {
             if (Icon == null) return;
             GUI.Label(rect, Icon, Styles.GUIStyles.TagIcon);
         }
 
-        private bool DrawButton(string id, Rect rect, out bool hover)
+        protected virtual bool DrawButton(string id, Rect rect, out bool hover)
         {
             return OVREditorUtils.HoverHelper.Button(id, rect, Content, Style, out hover);
         }
@@ -116,18 +121,19 @@ namespace Meta.XR.Editor.Tags
             return true;
         }
 
-        public bool Draw(string controlId, Tag.TagListType listType, bool active, out bool hover, out bool clicked)
+        public virtual bool Draw(string controlId, Tag.TagListType listType, bool active, out bool hover, out bool clicked)
         {
             hover = false;
             clicked = false;
-            if (!ShouldDraw(listType)) return false;
+            _listType = listType;
+
+            if (!ShouldDraw(_listType)) return false;
 
             var id = controlId + _tag.Name;
-            var backgroundColors = listType == Tag.TagListType.Overlays ? Styles.GUIStyles.TagOverlayBackgroundColors : Styles.GUIStyles.TagBackgroundColors;
-            var color = backgroundColors.GetColor(active, OVREditorUtils.HoverHelper.IsHover(id));
+            var color = BackgroundColorState.GetColor(active, OVREditorUtils.HoverHelper.IsHover(id));
             var rect = GUILayoutUtility.GetRect(Content, Style, GUILayout.Width(StyleWidth));
-            using var backgroundColorScope = new Utils.ColorScope(Utils.ColorScope.Scope.Background, color);
-            using var contentColorScope = new Utils.ColorScope(Utils.ColorScope.Scope.Content, Color);
+            using var backgroundColorScope = new ColorScope(ColorScope.Scope.Background, color);
+            using var contentColorScope = new ColorScope(ColorScope.Scope.Content, Color);
             clicked = DrawButton(id, rect, out hover);
             DrawIcon(rect);
             EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);

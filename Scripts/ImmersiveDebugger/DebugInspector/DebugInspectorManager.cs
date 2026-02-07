@@ -90,6 +90,7 @@ namespace Meta.XR.ImmersiveDebugger
                 var tweak = member.GetTweak();
                 if (!tweak?.Matches(memberInfo, handle.Instance) ?? true)
                 {
+                    TweakUtils.ProcessMinMaxRange(memberInfo, memberAttribute, handle.Instance);
                     member.RegisterTweak(TweakUtils.Create(memberInfo, memberAttribute, handle.Instance));
                 }
                 return true;

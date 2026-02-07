@@ -41,7 +41,7 @@ using UnityEngine.Experimental.XR;
 /// To use it, create a game object in your scene and drag your CameraRig to be a child
 /// of the game object. Then, add the OVRDebugHeadController behavior to the game object.
 /// Alternatively, this behavior can be placed directly on the OVRCameraRig object, but
-/// that is not guaranteed to work if OVRCameraRig functionality changes in the future.
+/// that is not guaranteed to work if <see cref="OVRCameraRig"/> functionality changes in the future.
 /// In the parent case, the object with OVRDebugHeadController can be thougt of as a
 /// platform that your camera is attached to. When the platform moves or rotates, the
 /// camera moves or rotates, but the camera can still move independently while "on" the
@@ -51,27 +51,61 @@ using UnityEngine.Experimental.XR;
 [HelpURL("https://developer.oculus.com/reference/unity/latest/class_o_v_r_debug_head_controller")]
 public class OVRDebugHeadController : MonoBehaviour
 {
+    /// <summary>
+    /// Allows gamepad input to control camera pitch, meaning the ability to look up and down. By
+    /// default, this is disabled.
+    /// </summary>
     [SerializeField]
     public bool AllowPitchLook = false;
 
+    /// <summary>
+    /// Allows gamepad input to control camera yaw, meaning the ability to look left and right. By
+    /// default, this is enabled.
+    /// </summary>
     [SerializeField]
     public bool AllowYawLook = true;
 
+    /// <summary>
+    /// Inverts gamepad input when controlling camera pitch relative to the default behavior, meaning
+    /// the same input will have the opposite effect on pitch when this is enabled versus when it's
+    /// disabled. This setting is disabled by default, and it has no effect if <see cref="AllowPitchLook"/>
+    /// is disabled.
+    /// </summary>
     [SerializeField]
     public bool InvertPitch = false;
 
+    /// <summary>
+    /// Controls the maximum rate, in degrees per second, at which gamepad input can change the camera's
+    /// pitch. Has no effect if <see cref="AllowPitchLook"/> is disabled.
+    /// </summary>
     [SerializeField]
     public float GamePad_PitchDegreesPerSec = 90.0f;
 
+    /// <summary>
+    /// Controls the maximum rate, in degrees per second, at which gamepad input can change the camera's
+    /// yaw. Has no effect if <see cref="AllowYawLook"/> is disabled.
+    /// </summary>
     [SerializeField]
     public float GamePad_YawDegreesPerSec = 90.0f;
 
+    /// <summary>
+    /// Allows gamepad input to control movement; if enabled, the gamepad will be able to translate the
+    /// camera rig continuously (as opposed to via teleport).
+    /// </summary>
     [SerializeField]
     public bool AllowMovement = false;
 
+    /// <summary>
+    /// Controls the maximum speed, in meters per second, that gamepad input can move the camera rig along
+    /// its forward/back axis. Has no effect if <see cref="AllowMovement"/> is disabled.
+    /// </summary>
     [SerializeField]
     public float ForwardSpeed = 2.0f;
 
+    /// <summary>
+    /// Controls the maximum speed, in meters per second, that gamepad input can move the camera rig along
+    /// its left/right axis. Has no effect if <see cref="AllowMovement"/> is disabled.
+    /// </summary>
     [SerializeField]
     public float StrafeSpeed = 2.0f;
 

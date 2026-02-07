@@ -188,12 +188,8 @@ internal class OVRProjectSetupDrawer
     private static readonly GUIContent Filter =
         new GUIContent("Filter by Group :", "Filters the task to the selected group.");
 
-    private static readonly GUIContent FixButtonContent = new GUIContent("Fix", "Fix with recommended settings");
-
     private static readonly GUIContent FixAllButtonContent =
         new GUIContent("Fix All", "Fix all the issues from this category");
-
-    private static readonly GUIContent ApplyButtonContent = new GUIContent("Apply", "Apply the recommended settings");
 
     private static readonly GUIContent ApplyAllButtonContent =
         new GUIContent("Apply All", "Apply the recommended settings for all the items in this category");
@@ -290,21 +286,7 @@ internal class OVRProjectSetupDrawer
         return newValue;
     }
 
-    private (TextureContent, Color) GetTaskIcon(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
-    {
-        return task.IsDone(buildTargetGroup) ? (Styles.Contents.TestPassedIcon, SuccessColor) : GetTaskIcon(task.Level.GetValue(buildTargetGroup));
-    }
 
-    private (TextureContent, Color) GetTaskIcon(OVRProjectSetup.TaskLevel? taskLevel)
-    {
-        return taskLevel switch
-        {
-            OVRProjectSetup.TaskLevel.Required => (Styles.Contents.ErrorIcon, ErrorColor),
-            OVRProjectSetup.TaskLevel.Recommended => (Styles.Contents.WarningIcon, WarningColor),
-            OVRProjectSetup.TaskLevel.Optional => (Styles.Contents.InfoIcon, InfoColor),
-            _ => (Styles.Contents.TestPassedIcon, SuccessColor)
-        };
-    }
 
     private string GenerateReport(BuildTargetGroup buildTargetGroup, string outputPath)
     {
@@ -346,28 +328,6 @@ internal class OVRProjectSetupDrawer
         menu.ShowAsContext();
     }
 
-    private void ShowItemMenu(BuildTargetGroup buildTargetGroup, OVRConfigurationTask task)
-    {
-        var menu = new GenericMenu();
-        var hasDocumentation = !string.IsNullOrEmpty(task.URL.GetValue(buildTargetGroup));
-        if (hasDocumentation)
-        {
-            menu.AddItem(new GUIContent("Documentation"), false, OnDocumentation,
-                new object[] { buildTargetGroup, task });
-        }
-
-        var hasSourceCode = task.SourceCode.Valid;
-        if (hasSourceCode)
-        {
-            menu.AddItem(new GUIContent("Go to Source Code"), false, OnGoToSourceCode,
-                new object[] { buildTargetGroup, task });
-        }
-
-        menu.AddItem(new GUIContent("Ignore"), task.IsIgnored(buildTargetGroup), OnIgnore,
-            new object[] { buildTargetGroup, task });
-        menu.ShowAsContext();
-    }
-
     internal void OnGUI()
     {
         EditorGUILayout.BeginHorizontal(GUIStyles.DialogBox);
@@ -388,7 +348,7 @@ internal class OVRProjectSetupDrawer
                 GUILayout.Label(SummaryLabel, Styles.GUIStyles.NormalStyle);
                 if (enabled)
                 {
-                    var (icon, color) = GetTaskIcon(_lastSummary?.HighestFixLevel);
+                    var (icon, color) = OVRConfigurationTask.GetTaskIcon(_lastSummary?.HighestFixLevel);
                     using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, color))
                     {
                         GUILayout.Label(icon, Styles.GUIStyles.InlinedIconStyle);
@@ -494,7 +454,7 @@ internal class OVRProjectSetupDrawer
     private void DrawCategory(OVRProjectSetupSettingBool key, Func<IEnumerable<OVRConfigurationTask>,
         List<OVRConfigurationTask>> filter, BuildTargetGroup buildTargetGroup, string title, bool fixAllButton)
     {
-        var tasks = filter(OVRProjectSetup.GetTasks(buildTargetGroup, false));
+        var tasks = filter(OVRProjectSetup.GetTasks(buildTargetGroup));
 
         if (key == null || tasks == null || tasks.Count == 0)
         {
@@ -550,65 +510,8 @@ internal class OVRProjectSetupDrawer
     {
         foreach (var task in tasks)
         {
-            DrawIssue(task, buildTargetGroup);
+            task.Draw(buildTargetGroup, AfterFixApply);
         }
-    }
-
-    private void DrawIssue(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
-    {
-        var ignored = task.IsIgnored(buildTargetGroup);
-        var cannotBeFixed = task.IsDone(buildTargetGroup) ||
-                            OVRProjectSetup.ProcessorQueue.BusyWith(OVRConfigurationTaskProcessor.ProcessorType.Fixer);
-        var disabled = cannotBeFixed || ignored;
-
-        // Note : We're not using scopes, because in this very case, we've got a cross of scopes
-        EditorGUI.BeginDisabledGroup(disabled);
-        var clickArea = EditorGUILayout.BeginHorizontal(Styles.GUIStyles.ListLabel);
-
-        // Icon
-        var (icon, color) = GetTaskIcon(task, buildTargetGroup);
-        using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, color))
-        {
-            GUILayout.Label(icon, Styles.GUIStyles.IconStyle);
-        }
-
-        // Message
-        GUILayout.Label(new GUIContent(task.Message.GetValue(buildTargetGroup)), Styles.GUIStyles.Wrap);
-
-        EditorGUI.EndDisabledGroup();
-
-        if (task.FixAction != null)
-        {
-            EditorGUI.BeginDisabledGroup(cannotBeFixed);
-            var content = task.Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required
-                ? FixButtonContent
-                : ApplyButtonContent;
-
-            var fixMessage = task.FixMessage.GetValue(buildTargetGroup);
-            var tooltip = fixMessage != null ? $"{content.tooltip} :\n{fixMessage}" : content.tooltip;
-            content = new GUIContent(content.text, tooltip);
-            if (GUILayout.Button(content, Styles.GUIStyles.FixButton))
-            {
-                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Fixed);
-
-                OVRProjectSetup.FixTask(buildTargetGroup, task, blocking: false, onCompleted: AfterFixApply);
-            }
-
-            EditorGUI.EndDisabledGroup();
-        }
-
-        var current = Event.current;
-        if (GUILayout.Button("", EditorStyles.foldoutHeaderIcon, GUILayout.Width(16.0f))
-            || (clickArea.Contains(current.mousePosition) && current.type == EventType.ContextClick))
-        {
-            ShowItemMenu(buildTargetGroup, task);
-            if (current.type == EventType.ContextClick)
-            {
-                current.Use();
-            }
-        }
-
-        EditorGUILayout.EndHorizontal();
     }
 
     private void DrawMoreActionsMenuList(BuildTargetGroup buildTargetGroup)
@@ -625,48 +528,6 @@ internal class OVRProjectSetupDrawer
                 current.Use();
             }
         }
-    }
-
-    private void ReadContextMenuArguments(
-        object arg,
-        out BuildTargetGroup buildTargetGroup,
-        out OVRConfigurationTask task)
-    {
-        var args = arg as object[];
-        buildTargetGroup = args != null ? (BuildTargetGroup)args[0] : BuildTargetGroup.Unknown;
-        task = args?[1] as OVRConfigurationTask;
-    }
-
-    private void OnIgnore(object args)
-    {
-        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
-
-        var ignore = !task.IsIgnored(buildTargetGroup);
-        if (ignore)
-        {
-            OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Ignored);
-        }
-
-        task?.SetIgnored(buildTargetGroup, ignore);
-    }
-
-    private void OnDocumentation(object args)
-    {
-        OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction
-            .WentToDocumentation);
-
-        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
-        var url = task?.URL.GetValue(buildTargetGroup);
-
-        Application.OpenURL(url);
-    }
-
-    private void OnGoToSourceCode(object args)
-    {
-        OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.WentToSource);
-
-        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
-        task?.SourceCode.Open();
     }
 
     private void OnGenerateReport(object arg)

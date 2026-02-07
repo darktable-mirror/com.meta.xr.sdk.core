@@ -25,27 +25,38 @@ using Meta.XR.Util;
 using UnityEngine;
 
 /// <summary>
-/// This class manages the face expressions data.
+/// This class manages the face expressions data provided per frame, and is responsible for stopping and
+/// starting face tracking. Use this class to read face tracking data, accessible via <see cref="OVRFaceExpressions.this"/>
+/// and <see cref="OVRFaceExpressions.GetWeight"/> to drive the blend shapes on a <see cref="SkinnedMeshRenderer"/>.
+/// For more information, see [Face Tracking for Movement SDK for Unity](https://developer.oculus.com/documentation/unity/move-face-tracking/).
 /// </summary>
 /// <remarks>
-/// Refers to the <see cref="OVRFaceExpressions.FaceExpression"/> enum for the list of face expressions.
+/// Refer to the <see cref="OVRFaceExpressions.FaceExpression"/> enum for the list of face expressions that contain
+/// weights that can be applied to blend shapes.
 /// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/move-face-tracking/")]
 [Feature(Feature.FaceTracking)]
 public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVRFaceExpressions.WeightProvider
 {
     /// <summary>
-    /// True if face tracking is enabled, otherwise false.
+    /// The interface for the weight provider that <see cref="OVRFaceExpressions"/> uses to expose information
+    /// about the face expressions weights available from face tracking.
     /// </summary>
-    public bool FaceTrackingEnabled => OVRPlugin.faceTracking2Enabled;
-
     public interface WeightProvider
     {
         float GetWeight(FaceExpression expression);
     }
 
     /// <summary>
-    /// True if the facial expressions are valid, otherwise false.
+    /// This will be true if face tracking is enabled, otherwise false. This is returning the current face tracking
+    /// enabled state from <see cref="OVRPlugin"/> - to enable/disable face tracking, please refer to
+    /// <see cref="OVRPlugin.StartFaceTracking2"/> and <see cref="OVRPlugin.StopFaceTracking"/>.
+    /// </summary>
+    public bool FaceTrackingEnabled => OVRPlugin.faceTracking2Enabled;
+
+    /// <summary>
+    /// True if the facial expressions returned from the current face tracking data are valid, otherwise false. This
+    /// is equivalent to checking if the <see cref="OVRPlugin.FaceState"/> is valid on this frame.
     /// </summary>
     /// <remarks>
     /// This value gets updated in every frame. You should check this
@@ -190,11 +201,12 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
 
 
     /// <summary>
-    /// This will return the weight of the given expression.
+    /// This will return the weight of the specified <see cref="FaceExpression"/> present in the expression weights array.
     /// </summary>
-    /// <returns>Returns weight of expression ranged between 0.0 to 100.0.</returns>
+    /// <returns>Returns weight of the specified <see cref="FaceExpression"/>,
+    /// which will be within the range of 0.0f to 1.0f inclusive.</returns>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when <see cref="OVRFaceExpressions.ValidExpressions"/> is false.
+    /// Thrown when <see cref="ValidExpressions"/> is false.
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="expression"/> value is not in range.
@@ -216,14 +228,22 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
         }
     }
 
+    /// <summary>
+    /// Returns the weight of the specified <see cref="FaceExpression"/> by accessing the expression weights array
+    /// present through <see cref="this"/>.
+    /// </summary>
+    /// <param name="expression">The specified <see cref="FaceExpression"/> to get the weight for.</param>
+    /// <returns>The weight of the specified <see cref="FaceExpression"/>.</returns>
     public float GetWeight(FaceExpression expression) => this[expression];
 
     /// <summary>
-    /// This method tries to gets the weight of the given expression if it's available.
+    /// This method will try to get the weight of the specified <see cref="FaceExpression"/> if it's
+    /// valid. This can be used if it isn't certain that the specified <see cref="FaceExpression"/>
+    /// is a valid expression, or if the facial expressions on this frame are valid.
     /// </summary>
     /// <param name="expression" cref="FaceExpression">The expression to get the weight of.</param>
-    /// <param name="weight">The output argument that will contain the expression weight or 0.0 if it's not available.</param>
-    /// <returns>Returns true if the expression weight is available, false otherwise</returns>
+    /// <param name="weight">The output argument that will contain the expression weight or 0.0 if it's not valid.</param>
+    /// <returns>Returns true if the expression weight is valid, false otherwise.</returns>
     public bool TryGetFaceExpressionWeight(FaceExpression expression, out float weight)
     {
         if (!ValidExpressions || expression < 0 || expression >= FaceExpression.Max)
@@ -238,7 +258,7 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
 
 
     /// <summary>
-    /// List of face parts used for getting the face tracking confidence weight in <see cref="TryGetWeightConfidence"/>.
+    /// The face part type used for getting the face tracking confidence weight in <see cref="TryGetWeightConfidence"/>.
     /// </summary>
     public enum FaceRegionConfidence
     {
@@ -248,7 +268,7 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
         Lower = OVRPlugin.FaceRegionConfidence.Lower,
 
         /// <summary>
-        /// Represents the upper part of the face. It includes the eyes, eye brows and a portion of the nose and cheek.
+        /// Represents the upper part of the face. It includes the eyes, eyebrows and a portion of the nose and cheek.
         /// </summary>
         Upper = OVRPlugin.FaceRegionConfidence.Upper,
 
@@ -259,11 +279,12 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
     }
 
     /// <summary>
-    /// This method tries to gets the confidence weight of the given face part if it's available.
+    /// This method tries to get the confidence weight of the given face part if it's available. This can be used
+    /// if it isn't certain that the facial expressions on this frame are valid.
     /// </summary>
     /// <param name="region" cref="FaceRegionConfidence">The part of the face to get the confidence weight of.</param>
-    /// <param name="weightConfidence">The output argument that will contain the weight confidence or 0.0 if it's not available.</param>
-    /// <returns>Returns true if the weight confidence is available, false otherwise</returns>
+    /// <param name="weightConfidence">The output argument that will contain the weight confidence or 0.0 if it's not valid.</param>
+    /// <returns>Returns true if the weight confidence is valid, false otherwise.</returns>
     public bool TryGetWeightConfidence(FaceRegionConfidence region, out float weightConfidence)
     {
         if (!ValidExpressions || region < 0 || region >= FaceRegionConfidence.Max)
@@ -276,14 +297,37 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
         return true;
     }
 
+    /// <summary>
+    /// The source type that the face tracking data is currently based off of. This is part of the data contained
+    /// in <see cref="OVRPlugin.FaceState"/>.
+    /// </summary>
     public enum FaceTrackingDataSource
     {
+        /// <summary>
+        /// Represents visual based face tracking. This is the case if the face tracking data came from
+        /// visual based face tracking.
+        /// </summary>
         Visual = OVRPlugin.FaceTrackingDataSource.Visual,
+
+        /// <summary>
+        /// Represents audio based face tracking. if the face tracking data came from audio based face tracking.
+        /// </summary>
         Audio = OVRPlugin.FaceTrackingDataSource.Audio,
+
+        /// <summary>
+        /// Used to determine the size of the <see cref="FaceTrackingDataSource"/> enum.
+        /// </summary>
         [InspectorName(null)]
         Count = OVRPlugin.FaceTrackingDataSource.Count,
     }
 
+    /// <summary>
+    /// This method tries to get the data source that was used for the current frame for face tracking data. This
+    /// can be used if it isn't certain that the facial expressions on this frame are valid.
+    /// </summary>
+    /// <param name="dataSource" cref="FaceTrackingDataSource">The output argument that will contain the tracking
+    /// data source.</param>
+    /// <returns>Returns true if the face tracking data source is valid, false otherwise.</returns>
     public bool TryGetFaceTrackingDataSource(out FaceTrackingDataSource dataSource)
     {
         dataSource = (FaceTrackingDataSource)_currentFaceState.DataSource;
@@ -356,7 +400,7 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
     }
 
     /// <summary>
-    /// List of face expressions.
+    /// List of face expressions, based off of the Facial Action Coding System (FACS).
     /// </summary>
     public enum FaceExpression
     {
@@ -438,6 +482,11 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
 
     #region Face expressions enumerator
 
+    /// <summary>
+    /// Gets the face expressions enumerator, used for enumerating over <see cref="OVRFaceExpressions"/>
+    /// as a collection to read data in this collection of facial expressions by accessing <see cref="this"/>.
+    /// </summary>
+    /// <returns></returns>
     public FaceExpressionsEnumerator GetEnumerator() =>
         new FaceExpressionsEnumerator(_currentFaceState.ExpressionWeights);
 
@@ -445,8 +494,16 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <summary>
+    /// The number of items in <see cref="this"/> collection (facial expression weights).
+    /// </summary>
     public int Count => _currentFaceState.ExpressionWeights?.Length ?? 0;
 
+    /// <summary>
+    /// The implementation of IEnumerator for face expressions weights, used for enumerating directly over
+    /// <see cref="OVRFaceExpressions"/>. This is used when reading this data as a collection of facial expressions
+    /// by accessing <see cref="this"/>.
+    /// </summary>
     public struct FaceExpressionsEnumerator : IEnumerator<float>
     {
         private float[] _faceExpressions;
@@ -462,12 +519,23 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
             _count = _faceExpressions?.Length ?? 0;
         }
 
+        /// <summary>
+        /// Advances the enumerator to the next element of the collection.
+        /// </summary>
+        /// <returns>Returns true if the enumerator was successfully advanced to the next element in this collection,
+        /// false otherwise.</returns>
         public bool MoveNext() => ++_index < _count;
 
+        /// <summary>
+        /// Gets the element of this collection at the current position of the enumerator.
+        /// </summary>
         public float Current => _faceExpressions[_index];
 
         object IEnumerator.Current => Current;
 
+        /// <summary>
+        /// Sets the enumerator to its initial position, which is before the first element in the collection.
+        /// </summary>
         public void Reset() => _index = -1;
 
         public void Dispose()

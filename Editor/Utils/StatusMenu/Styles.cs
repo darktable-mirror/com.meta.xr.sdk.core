@@ -23,6 +23,7 @@ using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
+using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.StatusMenu
 {
@@ -33,7 +34,7 @@ namespace Meta.XR.Editor.StatusMenu
             internal readonly GUIStyle BackgroundAreaStyle = new GUIStyle()
             {
                 stretchHeight = true,
-                padding = new RectOffset(Border, Border, Border, Border),
+                padding = new RectOffset(Border, Border, Border, 0),
                 normal =
                 {
                     background = CharcoalGray.ToTexture()
@@ -57,9 +58,21 @@ namespace Meta.XR.Editor.StatusMenu
                 }
             };
 
+            public readonly GUIStyle BoldLabel = new GUIStyle(UserInterface.Styles.GUIStyles.BoldLabel)
+            {
+                alignment = TextAnchor.LowerLeft,
+            };
+
+            public readonly GUIStyle BoldLabelHover = new GUIStyle(UserInterface.Styles.GUIStyles.BoldLabel)
+            {
+                alignment = TextAnchor.LowerLeft,
+                normal = { textColor = Color.white },
+            };
+
             internal readonly GUIStyle SubtitleStyle = new GUIStyle(EditorStyles.label)
             {
-                fontStyle = FontStyle.Italic
+                fontStyle = FontStyle.Italic,
+                alignment = TextAnchor.UpperLeft,
             };
 
             internal readonly GUIStyle IconStyle = new GUIStyle(EditorStyles.label)
@@ -96,6 +109,9 @@ namespace Meta.XR.Editor.StatusMenu
 
             internal static readonly TextureContent StatusPillIcon =
                 TextureContent.CreateContent("ovr_icon_pill.png", TextureContent.Categories.Generic, null);
+
+            public static readonly TextureContent MetaIcon =
+                TextureContent.CreateContent("ovr_icon_meta_white.png", TextureContent.Categories.Generic);
         }
 
         public static class Constants

@@ -27,6 +27,11 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the console panel of Immersive Debugger.
+    /// Act as the container for all the UI elements within the console and consumes logs data from <see cref="ConsoleLogsCache"/>.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     [DefaultExecutionOrder(1)] // After UI Elements
     public class Console : DebugPanel
     {
@@ -65,9 +70,21 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Vector3 _targetPosition;
         private readonly float _lerpSpeed = 10f;
         private bool _lerpCompleted = true;
+        private Background _logDetailPaneBackground;
+        private ImageStyle _logDetailPaneBackgroundImageStyle;
 
         internal bool LogCollapseMode { get; private set; }
         internal int MaximumNumberOfLogEntries { get; private set; }
+
+        public ImageStyle LogDetailBackgroundStyle
+        {
+            set
+            {
+                _logDetailPaneBackground.Sprite = value.sprite;
+                _logDetailPaneBackground.Color = value.color;
+                _logDetailPaneBackground.PixelDensityMultiplier = value.pixelDensityMultiplier;
+            }
+        }
 
         protected override void Setup(Controller owner)
         {
@@ -119,6 +136,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _proxyFlex = new ProxyFlex<ConsoleLine, ProxyConsoleLine>(NumberOfLines, MaximumNumberOfLogEntries, Style.Load<LayoutStyle>("ConsoleLine"), _scrollView);
 
             // Log detail panel
+            _logDetailPaneBackground = Append<Background>("background");
+            _logDetailPaneBackground.LayoutStyle = Style.Load<LayoutStyle>("LogDetailsPaneBackground");
+            _logDetailPaneBackgroundImageStyle = Style.Load<ImageStyle>("LogDetailPaneBackground");
+            LogDetailBackgroundStyle = _logDetailPaneBackgroundImageStyle;
+
             _scrollViewLogDetails = Append<ScrollView>("details");
             _scrollViewLogDetails.LayoutStyle = Style.Load<LayoutStyle>("LogDetailsScrollView");
             _scrollViewLogDetails.Flex.LayoutStyle = Style.Load<LayoutStyle>("ConsoleLogDetails");
@@ -154,7 +176,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             ConsoleLogsCache.OnLogReceived -= EnqueueLogEntry;
         }
 
-        public Label RegisterCount()
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            _logDetailPaneBackground.Color = Transparent ? _logDetailPaneBackgroundImageStyle.colorOff : _logDetailPaneBackgroundImageStyle.color;
+        }
+
+        internal Label RegisterCount()
         {
             var label = _buttonsAnchor.Append<Label>("");
             label.LayoutStyle = Style.Load<LayoutStyle>("ConsoleButtonCount");
@@ -162,7 +190,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             return label;
         }
 
-        public Toggle RegisterControl(string buttonName, Texture2D icon, ImageStyle style, Action callback)
+        internal Toggle RegisterControl(string buttonName, Texture2D icon, ImageStyle style, Action callback)
         {
             if (buttonName == null) throw new ArgumentNullException(nameof(buttonName));
             if (icon == null) throw new ArgumentNullException(nameof(icon));
@@ -176,7 +204,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             return toggle;
         }
 
-        public void ToggleCollapseMode()
+        private void ToggleCollapseMode()
         {
             LogCollapseMode = !LogCollapseMode;
             _collapseBtn.Icon = LogCollapseMode ? _collapseInactiveIcon : _collapseActiveIcon;
@@ -360,6 +388,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             _scrollViewLogDetails.Show();
             _logDetailPaneCloseBtn.Show();
+            _logDetailPaneBackground.Show();
             _scrollView.LayoutStyle.bottomRightMargin.y = ContractedLogPanelBottomMargin;
             _scrollView.RefreshLayout();
         }
@@ -370,6 +399,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             _scrollViewLogDetails.Hide();
             _logDetailPaneCloseBtn.Hide();
+            _logDetailPaneBackground.Hide();
             _scrollView.LayoutStyle.bottomRightMargin.y = FullLogPanelBottomMargin;
             _scrollView.RefreshLayout();
         }
@@ -384,11 +414,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         internal void SetPanelPosition(RuntimeSettings.DistanceOption distanceOption, bool skipAnimation = false)
         {
+            var consolePanelPositions = ValueContainer<Vector3>.Load("ConsolePanelPositions");
             _targetPosition = distanceOption switch
             {
-                RuntimeSettings.DistanceOption.Close => Utils.ConsolePanelClosePosition,
-                RuntimeSettings.DistanceOption.Far => Utils.ConsolePanelFarPosition,
-                _ => Utils.ConsolePanelDefaultPosition
+                RuntimeSettings.DistanceOption.Close => consolePanelPositions["Close"],
+                RuntimeSettings.DistanceOption.Far => consolePanelPositions["Far"],
+                _ => consolePanelPositions["Default"]
             };
 
             if (skipAnimation)

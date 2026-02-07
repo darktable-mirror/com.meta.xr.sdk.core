@@ -59,7 +59,7 @@ namespace Meta.XR.Editor.StatusMenu
             return default;
         }
 
-        public static void ShowDropdown(Vector2 position)
+        public static void ShowDropdown(Rect source)
         {
             if (_instance != null)
             {
@@ -72,7 +72,7 @@ namespace Meta.XR.Editor.StatusMenu
             }
 
             _instance = CreateInstance<StatusMenu>();
-            _instance.ShowAsDropDown(new Rect(position, Vector2.zero),
+            _instance.ShowAsDropDown(source,
                 new Vector2(Styles.Constants.Width, _instance.ComputeHeight()));
             _instance.wantsMouseMove = true;
             _instance.Focus();
@@ -80,7 +80,11 @@ namespace Meta.XR.Editor.StatusMenu
 
         private float ComputeHeight()
         {
-            return ItemHeight * Items.Count + 2;
+            return ItemHeight * Items.Count // Item Heights
+                   + (Styles.GUIStyles.DescriptionAreaStyle.margin.top
+                      + Styles.GUIStyles.DescriptionAreaStyle.margin.bottom) * Items.Count // Margins
+                   + (Styles.GUIStyles.BackgroundAreaStyle.padding.bottom
+                      + Styles.GUIStyles.BackgroundAreaStyle.padding.top); // Main Area Padding
         }
 
         private void OnGUI()

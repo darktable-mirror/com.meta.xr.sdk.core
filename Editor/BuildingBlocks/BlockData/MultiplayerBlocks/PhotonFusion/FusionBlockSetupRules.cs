@@ -23,46 +23,33 @@ using System.Linq;
 using Fusion;
 using Fusion.Editor;
 using UnityEditor;
-using Meta.XR.BuildingBlocks.Editor;
-using Meta.XR.MultiplayerBlocks.Shared.Editor;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
     [InitializeOnLoad]
     internal static class FusionBlockSetupRules
     {
-        private const string FUSION_BB_ASSEMBLY_NAME = "Meta.XR.MultiplayerBlocks.Fusion";
+        private const string FusionBbAssemblyName = "Meta.XR.MultiplayerBlocks.Fusion";
         static FusionBlockSetupRules()
         {
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Features,
-                isDone: _ =>
-                    NetworkProjectConfig.Global.AssembliesToWeave.Contains(FUSION_BB_ASSEMBLY_NAME) ||
-                    !Utils.GetBlocksInScene().Any(block =>
-                    {
-                        var routineId = block.InstallationRoutineCheckpoint?.InstallationRoutineId;
-                        if (routineId == "") return false;
-                        if (Utils.GetInstallationRoutine(routineId) is NetworkInstallationRoutine routine)
-                        {
-                            return routine.implementation == NetworkInstallationRoutine.NetworkImplementation.PhotonFusion;
-                        }
-                        return false;
-                    }),
+                isDone: _ => NetworkProjectConfig.Global.AssembliesToWeave.Contains(FusionBbAssemblyName),
             message:
-                "When using Fusion Multiplayer blocks in your project it's required to add blocks assembly to Fusion AssembliesToWeave",
+                "When using Fusion in your project it's required to add the blocks assembly to Fusion AssembliesToWeave",
                 fix: _ =>
                 {
                     var current = NetworkProjectConfig.Global.AssembliesToWeave;
                     NetworkProjectConfig.Global.AssembliesToWeave = new string[current.Length + 1];
-                    for (int i = 0; i < current.Length; i++)
+                    for (var i = 0; i < current.Length; i++)
                     {
                         NetworkProjectConfig.Global.AssembliesToWeave[i] = current[i];
                     }
-                    NetworkProjectConfig.Global.AssembliesToWeave[current.Length] = FUSION_BB_ASSEMBLY_NAME;
+                    NetworkProjectConfig.Global.AssembliesToWeave[current.Length] = FusionBbAssemblyName;
                     NetworkProjectConfigUtilities.SaveGlobalConfig();
                 },
-                fixMessage: $"Add blocks assembly {FUSION_BB_ASSEMBLY_NAME} to Fusion project config's AssembliesToWeave"
+                fixMessage: $"Add the blocks assembly {FusionBbAssemblyName} to Fusion project config's AssembliesToWeave"
             );
         }
     }

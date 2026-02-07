@@ -21,7 +21,10 @@
 using UnityEngine;
 
 /// <summary>
-/// Logs when the application enters power save mode and allows you to a low-power CPU/GPU level with a button press.
+/// Place this script on a GameObject to log when the application enters power saving mode.
+/// This script can also simulate power saving mode with a gamepad or controller button press by forcing
+/// CPU level to power saving and the GPU level to sustained low. Refer to [CPU/GPU Level](https://developer.oculus.com/resources/os-cpu-gpu-levels/)
+/// documentation for more information. This is not intended to use with other scripts.
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-core-overview/#scripts")]
 public class OVRModeParms : MonoBehaviour
@@ -29,14 +32,14 @@ public class OVRModeParms : MonoBehaviour
     #region Member Variables
 
     /// <summary>
-    /// The gamepad button that will switch the application to CPU level 0 and GPU level 1.
+    /// The <see cref="OVRInput.RawButton"/> that will trigger the power saving mode simulation. You can change this to any other button.
     /// </summary>
     public OVRInput.RawButton resetButton = OVRInput.RawButton.X;
 
     #endregion
 
     /// <summary>
-    /// Invoke power state mode test.
+    /// Starts a repeating call to check for power saving mode every 10 seconds.
     /// </summary>
     void Start()
     {
@@ -52,7 +55,7 @@ public class OVRModeParms : MonoBehaviour
     }
 
     /// <summary>
-    /// Change default vr mode parms dynamically.
+    /// Changes default VR mode parameters dynamically when the <see cref="OVRModeParms.resetButton"/> is pressed.  This may cause 1 frame of flicker as it leaves and re-enters VR mode.
     /// </summary>
     void Update()
     {
@@ -70,7 +73,7 @@ public class OVRModeParms : MonoBehaviour
     }
 
     /// <summary>
-    /// Check current power state mode.
+    /// Checks if power saving mode is active and prints a log if it is active.
     /// </summary>
     void TestPowerStateMode()
     {

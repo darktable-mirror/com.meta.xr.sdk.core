@@ -19,7 +19,6 @@
  */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -27,13 +26,29 @@ using UnityEngine.Events;
 
 namespace Meta.XR.BuildingBlocks
 {
+    /// <summary>
+    /// A helper class for creating, loading, erasing, and sharing a <see cref="OVRSpatialAnchor"/> easily.
+    /// </summary>
+    /// <remarks>
+    /// Use <see cref="LoadAndInstantiateAnchors"/> to load an instantiate a list of anchors, and <see cref="OnSharedSpatialAnchorsLoadCompleted"/> to be notified when the loading is completed.
+    /// Use <see cref="InstantiateSpatialAnchor"/> to create an instantiate a single anchor based on a prefab.
+    /// Use <see cref="ShareSpatialAnchors"/> to share a list of anchors, and <see cref="OnSpatialAnchorsShareCompleted"/> to be notified when the sharing is completed.
+    /// See <a href="https://developer.oculus.com/documentation/unity/bb-multiplayer-blocks">Building Blocks</a> for more information.
+    /// </remarks>
     public class SharedSpatialAnchorCore : SpatialAnchorCoreBuildingBlock
     {
+        /// <summary>
+        /// This event will be triggered when the sharing of a list of <see cref="OVRSpatialAnchor"/>(s) is completed.
+        /// </summary>
         public UnityEvent<List<OVRSpatialAnchor>, OVRSpatialAnchor.OperationResult> OnSpatialAnchorsShareCompleted
         {
             get => _onSpatialAnchorsShareCompleted;
             set => _onSpatialAnchorsShareCompleted = value;
         }
+
+        /// <summary>
+        /// This event will be triggered when the loading of a list of shared <see cref="OVRSpatialAnchor"/>(s) is completed.
+        /// </summary>
         public UnityEvent<List<OVRSpatialAnchor>, OVRSpatialAnchor.OperationResult> OnSharedSpatialAnchorsLoadCompleted
         {
             get => _onSharedSpatialAnchorsLoadCompleted;
@@ -47,6 +62,12 @@ namespace Meta.XR.BuildingBlocks
 
         private void Start() => _onShareCompleted += OnShareCompleted;
 
+        /// <summary>
+        /// Create and instantiate an <see cref="OVRSpatialAnchor"/>.
+        /// </summary>
+        /// <param name="prefab">A prefab to instantiate as a <see cref="OVRSpatialAnchor"/>.</param>
+        /// <param name="position">Initial position of instantiated GameObject.</param>
+        /// <param name="rotation">Initial rotation of instantiated GameObject.</param>
         public async new void InstantiateSpatialAnchor(GameObject prefab, Vector3 position, Quaternion rotation)
         {
             if (prefab == null)
@@ -78,6 +99,16 @@ namespace Meta.XR.BuildingBlocks
             OnAnchorCreateCompleted?.Invoke(anchor, Result);
         }
 
+        /// <summary>
+        /// Loads and instantiates <see cref="OVRSpatialAnchor"/>(s) from a list of <see cref="Guid"/>s.
+        /// </summary>
+        /// <remarks>
+        /// Use <see cref="OnSharedSpatialAnchorsLoadCompleted"/> to be notified when the loading is completed.
+        /// </remarks>
+        /// <param name="prefab">A prefab to instantiate as a <see cref="OVRSpatialAnchor"/>.</param>
+        /// <param name="uuids">A list of <see cref="Guid"/>(s) to load.</param>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="uuids"/> is null.</exception>
+        /// <exception cref="ArgumentException">Throws when <paramref name="uuids"/> list is empty.</exception>
         public new void LoadAndInstantiateAnchors(GameObject prefab, List<Guid> uuids)
         {
             if (uuids == null)
@@ -143,6 +174,19 @@ namespace Meta.XR.BuildingBlocks
             OnSharedSpatialAnchorsLoadCompleted?.Invoke(new List<OVRSpatialAnchor>(loadedAnchors), result.Status);
         }
 
+        /// <summary>
+        /// Shares a list of <see cref="OVRSpatialAnchor"/>(s) with a list of <see cref="OVRSpaceUser"/>(s).
+        /// </summary>
+        /// <remarks>
+        /// Use <see cref="OnSpatialAnchorsShareCompleted"/> to be notified when the sharing is completed.
+        /// </remarks>
+        /// <remarks>
+        /// Use <see cref="OnSpatialAnchorsShareCompleted"/> to be notified when the sharing is completed.
+        /// </remarks>
+        /// <param name="anchors">A list of <see cref="OVRSpatialAnchor"/>(s) to share.</param>
+        /// <param name="users">A list of <see cref="OVRSpaceUser"/> to share <see cref="OVRSpatialAnchor"/>(s) with.</param>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="anchors"/> or <paramref name="users"/> is null.</exception>
+        /// <exception cref="ArgumentException">Throws when <paramref name="anchors"/> or <paramref name="users"/> list is empty.</exception>
         public void ShareSpatialAnchors(List<OVRSpatialAnchor> anchors, List<OVRSpaceUser> users)
         {
             if (anchors == null || users == null)

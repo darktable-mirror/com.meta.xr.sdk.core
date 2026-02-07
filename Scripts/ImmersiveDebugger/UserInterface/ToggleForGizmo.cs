@@ -23,7 +23,7 @@ using Meta.XR.ImmersiveDebugger.Manager;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
-    public class ToggleForGizmo : Toggle
+    internal class ToggleForGizmo : Toggle
     {
         private GizmoHook _hook;
 

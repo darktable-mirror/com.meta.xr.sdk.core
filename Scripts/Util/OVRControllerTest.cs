@@ -24,10 +24,35 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
+/// <summary>
+/// Helper/diagnostic class which reads controller state and serializes it to a Unity Text asset on a
+/// per-frame basis.
+/// </summary>
+/// <remarks>
+/// Rather than being bound to a specific controller, instances of this class invoke
+/// <see cref="OVRInput.GetActiveController"/> each frame to report information on whichever controller
+/// is currently considered active. Consequently, there is no reason to ever have more than one
+/// OVRControllerTest active at the same time.
+/// </remarks>
 public class OVRControllerTest : MonoBehaviour
 {
+    /// <summary>
+    /// Simple helper class used to observe a simple closure and report its behavior over time.
+    /// </summary>
+    /// <remarks>
+    /// BoolMonitor is used by <see cref="OVRControllerTest"/> to conveniently serialize controller behavior
+    /// into a human-readable format. For example, a test of <see cref="OVRInput.Button.One"/> will observe
+    /// <see cref="OVRInput.Get(OVRInput.Button, OVRInput.Controller)"/> with that input, displaying the
+    /// monitor's name and current state in the format, "One: *True*," etc.
+    /// </remarks>
     public class BoolMonitor
     {
+        /// <summary>
+        /// The closure type observed by by this BoolMonitor over time.
+        /// <see cref="BoolMonitor(string, BoolGenerator, float)"/> is typically invoked with an
+        /// anonymous function as its second argument, which will be interpreted as this type.
+        /// </summary>
+        /// <returns></returns>
         public delegate bool BoolGenerator();
 
         private string m_name = "";
@@ -38,6 +63,15 @@ public class OVRControllerTest : MonoBehaviour
         private float m_displayTimeout = 0.0f;
         private float m_displayTimer = 0.0f;
 
+        /// <summary>
+        /// Constructor for BoolMonitor.
+        /// </summary>
+        /// <param name="name">The display name of the closure being monitored</param>
+        /// <param name="generator">The closure to be monitored</param>
+        /// <param name="displayTimeout">
+        /// Optional parameter controlling how long after changing the display text for this monitor will
+        /// remain emphasized
+        /// </param>
         public BoolMonitor(string name, BoolGenerator generator, float displayTimeout = 0.5f)
         {
             m_name = name;
@@ -45,6 +79,11 @@ public class OVRControllerTest : MonoBehaviour
             m_displayTimeout = displayTimeout;
         }
 
+        /// <summary>
+        /// Updates the BoolMonitor's state. This invokes the <see cref="BoolGenerator"/> closure passed
+        /// to this instance at construction, then updates the monitor's internal state based on whether and
+        /// when the result of the closure changed.
+        /// </summary>
         public void Update()
         {
             m_prevValue = m_currentValue;
@@ -68,6 +107,14 @@ public class OVRControllerTest : MonoBehaviour
             }
         }
 
+        /// <summary>
+        /// Serializes the current state of the monitor into a StringBuilder to be displayed.
+        /// </summary>
+        /// <param name="sb">The string builder to which the serialization should be appended</param>
+        /// <remarks>
+        /// This is a non-modifying function and does not actually update the current state; to
+        /// update state, a separate call to <see cref="Update"/> must be made.
+        /// </remarks>
         public void AppendToStringBuilder(ref StringBuilder sb)
         {
             sb.Append(m_name);
@@ -83,6 +130,15 @@ public class OVRControllerTest : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The Unity Text object in which to display the results of the various tests this instance
+    /// monitors.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="BoolMonitor"/> reflecting input state as well as specific controller information
+    /// (battery percentage, position/orientation, etc.) are serialized to this text on a per-frame
+    /// basis.
+    /// </remarks>
     public Text uiText;
     private List<BoolMonitor> monitors;
     private StringBuilder data;

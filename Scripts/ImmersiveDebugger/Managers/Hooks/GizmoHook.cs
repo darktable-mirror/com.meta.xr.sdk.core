@@ -24,7 +24,7 @@ using System.Reflection;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
-    public class GizmoHook : Hook
+    internal class GizmoHook : Hook
     {
         public Action<bool> SetState { get; }
         public Func<bool> GetState { get; }

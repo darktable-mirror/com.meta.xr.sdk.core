@@ -44,20 +44,6 @@ internal class OVRConfigurationTaskSourceCode
 
     private static IEnumerable<MethodInfo> _expectedMethods;
 
-    private static IEnumerable<MethodInfo> ExpectedMethods
-    {
-        get
-        {
-            if (_expectedMethods == null)
-            {
-                _expectedMethods = typeof(OVRProjectSetup).GetMethods(BindingFlags.Public | BindingFlags.Static)
-                    .Where(method => method.Name == "AddTask");
-            }
-
-            return _expectedMethods;
-        }
-    }
-
     private OVRConfigurationTask _task;
     private readonly StackTrace _stackTrace;
     private Object _object;
@@ -127,16 +113,18 @@ internal class OVRConfigurationTaskSourceCode
 
     private StackFrame FindStackFrame()
     {
-        // Depth 2, Just before the constructor
-        StackFrame frame = _stackTrace.GetFrame(2);
-        var method = frame.GetMethod();
-        if (ExpectedMethods.Contains(method))
+        // Find method before the ovrconfigurationTask constructor
+        for (int i = 2; i < 6; i++)
         {
-            // Depth 3, Just before OVRProjectSetup AddTask
-            frame = _stackTrace.GetFrame(3);
-        }
+            StackFrame frame = _stackTrace.GetFrame(i);
+            var type = frame.GetMethod().ReflectedType;
+            if (type != typeof(OVRConfigurationTask) && type != typeof(OVRProjectSetup))
+            {
+                return frame;
+            }
 
-        return frame;
+        }
+        return null;
     }
 
     private bool FindPathAndLine(out string path, out int line)

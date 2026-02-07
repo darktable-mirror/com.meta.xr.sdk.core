@@ -25,11 +25,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
     public class OcclusionBlockData : BlockData
     {
+
 
         protected override async Task<List<GameObject>> InstallRoutineAsync(GameObject selectedGameObject)
         {
@@ -49,7 +51,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (!selectedGameObject.TryGetComponent<Renderer>(out var renderer))
             {
-                throw new Exception("A Renderer component is missing. Unable to use this surface for occlusion.");
+                throw new InstallationCancelledException("A Renderer component is missing. Unable to use this surface for occlusion.");
             }
             renderer.sharedMaterial = Prefab.GetComponentsInChildren<MeshRenderer>(true).First().sharedMaterial;
 
@@ -58,7 +60,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             return gameObjects;
 #else
             Undo.PerformUndo();
-            throw new Exception($"Dependencies are not met for {BlockName} block. Requires Oculus XR Plugin 4.2.0, Unity editor version at least 2022.3.1 or 2023.2.");
+            throw new InstallationCancelledException($"Dependencies are not met for {BlockName} block. Requires Oculus XR Plugin 4.2.0, Unity editor version at least 2022.3.1 or 2023.2.");
 #endif // DEPTH_API_SUPPORTED && UNITY_2022_3_OR_NEWER
         }
 

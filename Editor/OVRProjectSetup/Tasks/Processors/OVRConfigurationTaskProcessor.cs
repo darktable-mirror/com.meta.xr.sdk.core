@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using System;
 using System.Linq;
+using System.Threading;
 
 internal abstract class OVRConfigurationTaskProcessor
 {
@@ -73,11 +74,23 @@ internal abstract class OVRConfigurationTaskProcessor
         OnComplete += onCompleted;
     }
 
+    protected virtual bool IsTaskInCooldown(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
+    {
+        return false;
+    }
+
     protected virtual void PrepareTasks()
     {
-        // Get all the tasks from the Setup Tool
-        var tasks = _registry.GetTasks(_buildTargetGroup, true);
-
+        // Get all the tasks to process from the Setup Tool
+        var tasks = _registry.GetTasks(_buildTargetGroup).Where(task => !IsTaskInCooldown(task, _buildTargetGroup));
+        // Refresh them
+        tasks = tasks.Select(task =>
+        {
+            task.InvalidateCache(_buildTargetGroup);
+            return task;
+        });
+        // Only take the valid ones
+        tasks = tasks.Where(task => task.Valid.GetValue(_buildTargetGroup));
         // Apply the caller-provided filter
         _tasks = _filter != null ? _filter(tasks) : tasks.ToList();
         // When not forced, apply the OpenTaskFilter as well
@@ -123,5 +136,15 @@ internal abstract class OVRConfigurationTaskProcessor
     {
         _enumerator = null;
         OnComplete?.Invoke(this);
+    }
+
+    internal OVRConfigurationTaskProcessor WaitForCompletion()
+    {
+        while (!Completed)
+        {
+            Thread.Yield();
+        }
+
+        return this;
     }
 }

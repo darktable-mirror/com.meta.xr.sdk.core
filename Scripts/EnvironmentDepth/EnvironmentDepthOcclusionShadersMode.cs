@@ -20,6 +20,9 @@
 
 namespace Meta.XR.EnvironmentDepth
 {
+    /// <summary>
+    /// Specifies which global shader keyword should be enabled: <see cref="EnvironmentDepthManager.HardOcclusionKeyword"/>, <see cref="EnvironmentDepthManager.SoftOcclusionKeyword"/> or none.
+    /// </summary>
     public enum OcclusionShadersMode
     {
         None,

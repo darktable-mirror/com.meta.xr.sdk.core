@@ -21,7 +21,7 @@
 #if USING_META_XR_AUDIO_SDK
 
 using System.Linq;
-using System.Reflection;
+using Meta.XR.Editor.Reflection;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -29,8 +29,18 @@ using Object = UnityEngine.Object;
 namespace Meta.XR.BuildingBlocks.Editor
 {
     [InitializeOnLoad]
+    [Reflection]
     internal static class SpatialAudioSetupRules
     {
+        [Reflection(Type = typeof(AudioSettings), Name = "SetConfiguration")]
+        private static readonly StaticMethodInfoHandleWithWrapper<AudioConfiguration, bool> SetConfiguration = new();
+
+        [Reflection(Type = typeof(AudioSettings), Name = "SetAmbisonicDecoderPluginName")]
+        private static readonly StaticMethodInfoHandleWithWrapperAction<string> SetAmbisonicDecoderPluginName = new();
+
+        [Reflection(Type = typeof(AudioSettings), Name = "GetAmbisonicDecoderPluginName")]
+        private static readonly StaticMethodInfoHandleWithWrapper<string> GetAmbisonicDecoderPluginName = new();
+
         private const string PluginName = "Meta XR Audio";
         private const int BestLatencyDSPBufferSize = 256;
 
@@ -146,13 +156,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     var audioConfig = AudioSettings.GetConfiguration();
                     audioConfig.dspBufferSize = BestLatencyDSPBufferSize;
                     audioConfig.speakerMode = AudioSpeakerMode.Stereo;
-
-                    var setConfigMethod = typeof(AudioSettings).GetMethod("SetConfiguration",
-                        BindingFlags.NonPublic | BindingFlags.Static);
-                    if (setConfigMethod != null)
-                    {
-                        setConfigMethod.Invoke(null, new object[] { audioConfig });
-                    }
+                    SetConfiguration.Invoke(audioConfig);
 
                     FixPluginNameSettings();
                 },
@@ -168,13 +172,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             AudioSettings.SetSpatializerPluginName(PluginName);
-
-            var setAmbisonicDecoderPluginNameMethod = typeof(AudioSettings).GetMethod("SetAmbisonicDecoderPluginName",
-                BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(string) }, null);
-            if (setAmbisonicDecoderPluginNameMethod != null)
-            {
-                setAmbisonicDecoderPluginNameMethod.Invoke(null, new object[] { PluginName });
-            }
+            SetAmbisonicDecoderPluginName.Invoke(PluginName);
         }
 
         private static bool ValidatePluginNameSettings()
@@ -189,16 +187,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 return false;
             }
 
-            var getAmbisonicDecoderPluginNameMethod = typeof(AudioSettings).GetMethod(
-                "GetAmbisonicDecoderPluginName",
-                BindingFlags.NonPublic | BindingFlags.Static);
-
-            if (getAmbisonicDecoderPluginNameMethod == null)
-            {
-                return true;
-            }
-
-            var ambisonicDecoderPluginName = (string)getAmbisonicDecoderPluginNameMethod.Invoke(null, null);
+            var ambisonicDecoderPluginName = GetAmbisonicDecoderPluginName.Invoke();
             return ambisonicDecoderPluginName == PluginName;
         }
 

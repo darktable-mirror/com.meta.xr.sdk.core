@@ -41,18 +41,25 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         [Tooltip("Control when you want to load the avatar.")]
         [SerializeField]
         private bool loadAvatarWhenConnected = true;
+
         [SerializeField] internal GameObject avatarPrefab;
-        [Tooltip("If you're using Avatar Sample Assets as fallback avatars, and has manually adapted the preset zip file " +
-                 "for optimizing app size. Change this to the size of available avatars count in the preset zip file.")]
+        [SerializeField] internal GameObject avatarPrefabSdk28Plus;
+
+        [Tooltip(
+            "If you're using Avatar Sample Assets as fallback avatars, and has manually adapted the preset zip file " +
+            "for optimizing app size. Change this to the size of available avatars count in the preset zip file.")]
         // developer might want to delete some avatars from the sample asset zip
         // e.g. the game has a maximum player count, they won't need more unique sample avatars
-        [SerializeField] private int preloadedSampleAvatarSize = 32;
+        [SerializeField]
+        private int preloadedSampleAvatarSize = 32;
 
         [Tooltip("Adjust the level of detail used when streaming the avatars.")]
-        [SerializeField] private AvatarStreamLOD avatarStreamLOD = AvatarStreamLOD.Medium;
+        [SerializeField]
+        private AvatarStreamLOD avatarStreamLOD = AvatarStreamLOD.Medium;
 
         [Tooltip("Adjust the update interval used when streaming the avatars.")]
-        [SerializeField] private float avatarUpdateIntervalInSec = 0.08f;
+        [SerializeField]
+        private float avatarUpdateIntervalInSec = 0.08f;
 #pragma warning restore CS0414
 
 #if META_AVATAR_SDK_DEFINED
@@ -100,7 +107,8 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         private void OnEntitlementFinished(PlatformInfo info)
         {
             _platformInfo = info;
-            Debug.Log($"Entitlement callback: isEntitled: {info.IsEntitled} Name: {info.OculusUser?.OculusID} UserID: {info.OculusUser?.ID}");
+            Debug.Log(
+                $"Entitlement callback: isEntitled: {info.IsEntitled} Name: {info.OculusUser?.OculusID} UserID: {info.OculusUser?.ID}");
 
             if (info.IsEntitled)
             {
@@ -133,7 +141,12 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         [ServerRpc(RequireOwnership = false)]
         private void SpawnAvatarServerRpc(ulong oculusId, ServerRpcParams serverRpcParams = default)
         {
+#if META_AVATAR_SDK_28_OR_NEWER
+            var go = Instantiate(avatarPrefabSdk28Plus);
+#else
             var go = Instantiate(avatarPrefab);
+#endif
+
             go.GetComponent<NetworkObject>().SpawnWithOwnership(serverRpcParams.Receive.SenderClientId);
             go.GetComponent<AvatarBehaviourNGO>().LocalAvatarIndex = Random.Range(0, preloadedSampleAvatarSize - 1);
             go.GetComponent<AvatarBehaviourNGO>().OculusId = oculusId;

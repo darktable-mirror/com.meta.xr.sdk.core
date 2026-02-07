@@ -28,7 +28,7 @@ using UnityEditor;
 namespace Meta.XR.Samples
 {
     [ExecuteAlways]
-    public class SampleMetadata : MonoBehaviour
+    internal class SampleMetadata : MonoBehaviour
     {
 #if UNITY_EDITOR
         private static bool _scriptReloaded;
@@ -52,7 +52,7 @@ namespace Meta.XR.Samples
 
         private float _timestampOpen;
 
-        public void Awake()
+        private void Awake()
         {
             _timestampOpen = Time.realtimeSinceStartup;
 
@@ -61,14 +61,14 @@ namespace Meta.XR.Samples
 #endif
         }
 
-        public void OnDestroy()
+        private void OnDestroy()
         {
 #if UNITY_EDITOR
             Meta.XR.Editor.Callbacks.Shutdown.editorShutdown -= OnEditorShutdown;
 #endif
         }
 
-        public void Start()
+        private void Start()
         {
             if (Application.isPlaying)
             {

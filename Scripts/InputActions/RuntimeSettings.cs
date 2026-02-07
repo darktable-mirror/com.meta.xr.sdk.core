@@ -141,9 +141,17 @@ namespace Meta.XR.InputActions
     [System.Serializable]
     public class UserInputActionSet
     {
+        /// <summary>
+        /// The Interaction Profile these actions should be used with.
+        /// See the OpenXR spec for info on Interaction Profiles and the Action system in general.
+        /// </summary>
         [InlineLink("https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#semantic-path-interaction-profiles")]
-        [Tooltip("The interaction profile of the devices these actions should be applied to.")]
+        [Tooltip("The interaction profile of the device these actions should be applied to.")]
         public string InteractionProfile;
+
+        /// <summary>
+        /// A list of Input Actions.
+        /// </summary>
         [Tooltip("A list of the different Input Actions that this device supports.")]
         public List<InputActionDefinition> InputActionDefinitions = new List<InputActionDefinition>();
 
@@ -156,10 +164,22 @@ namespace Meta.XR.InputActions
     [System.Serializable]
     public class InputActionDefinition
     {
+        /// <summary>
+        /// The name of the action, to be used in conjuction with OVRPlugin.GetActionStateBoolean and other such functions.
+        /// </summary>
         [Tooltip("The name of this action. This is used in functions like OVRPlugin.GetActionStateBoolean to identify this specific action.")]
         public string ActionName;
+
+        /// <summary>
+        /// The action type.
+        /// </summary>
         [Tooltip("The type of this action. Does it return a bool, pose, vector2, float or trigger a vibration?")]
         public OVRPlugin.ActionTypes Type;
+
+        /// <summary>
+        /// Paths determine how this data is retrieved within the target controller.
+        /// For most devices, this should include a left & right hand path.
+        /// </summary>
         [Tooltip("Paths: the path from where this action will get its data. This is based on the OpenXR specification for the device.")]
         [FormerlySerializedAs("Path")]
         public string[] Paths;

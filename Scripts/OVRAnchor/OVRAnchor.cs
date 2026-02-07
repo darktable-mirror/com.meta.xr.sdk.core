@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
@@ -65,17 +66,23 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         Success = Result.Success,
 
         /// <summary>
-        /// The operation failed.
+        /// The operation failed in an unexpected way.
         /// </summary>
         Failure = Result.Failure,
 
         /// <summary>
         /// At least one anchor is invalid.
         /// </summary>
+        /// <remarks>
+        /// An <see cref="OVRAnchor"/> is invalid if it is default constructed,
+        /// which is often the case before an <see cref="OVRSpatialAnchor"/> gets properly bound, or before it has
+        /// a chance to invoke its <c>Start()</c> method.
+        /// </remarks>
         FailureInvalidAnchor = Result.Failure_HandleInvalid,
 
         /// <summary>
-        /// Invalid data.
+        /// Typically indicates an uninitialized <see cref="OVRResult"/>, or a pending <see cref="OVRTask"/> which
+        /// expected to have internal result data of a specific type set.
         /// </summary>
         FailureDataIsInvalid = Result.Failure_DataIsInvalid,
 
@@ -88,12 +95,18 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureInsufficientResources = Result.Failure_SpaceInsufficientResources,
 
         /// <summary>
-        /// Operation could not be completed until resources used are reduced or storage expanded.
+        /// The amount of device storage available for anchor data is insufficient for the requested save operation.
         /// </summary>
+        /// <remarks>
+        /// You can request that the user frees up space on their device, or your app can attempt to free up unused
+        /// space / anchors under its control before retrying. You may also find partial success saving anchors in
+        /// smaller batches, if not individually. However, anchors do have a relatively small disk footprint, typically
+        /// occupying a single 4 kibibyte block per each.
+        /// </remarks>
         FailureStorageAtCapacity = Result.Failure_SpaceStorageAtCapacity,
 
         /// <summary>
-        /// Insufficient view.
+        /// Device's view of the physical space is insufficient.
         /// </summary>
         /// <remarks>
         /// The user needs to look around the environment more for anchor tracking to function.
@@ -101,48 +114,49 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureInsufficientView = Result.Failure_SpaceInsufficientView,
 
         /// <summary>
-        /// Insufficient permission.
+        /// User has not granted all the required permissions for the app to use this API.
         /// </summary>
         /// <remarks>
-        /// Recommend confirming the status of the required permissions needed for using anchor APIs.
+        /// You should confirm the status of the permission(s) needed for using anchor APIs, namely:
+        /// <ul>
+        /// <li><c>"com.oculus.permission.USE_ANCHOR_API"</c></li>
+        /// </ul>
+        /// This is handled by checking that your OculusProjectConfig asset enables "Anchor Support", and by
+        /// subsequently running the Unity menu bar item "Meta > Tools > Update AndroidManifest.xml".
         /// </remarks>
+        /// <seealso cref="OVRPermissionsRequester"/>
         FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
 
         /// <summary>
         /// Operation canceled due to rate limiting.
         /// </summary>
         /// <remarks>
-        /// Recommend retrying after a short delay.
+        /// Your app is sending too many requests in a short amount of time. You should ensure that your request logic
+        /// is well-formed and the number of outgoing requests is in range of what you expect. If everything is as you
+        /// intended, it is recommended that you retry <see cref="FailureRateLimited"/> request(s) after several seconds
+        /// of delay.
         /// </remarks>
         FailureRateLimited = Result.Failure_SpaceRateLimited,
 
         /// <summary>
-        /// Too dark.
-        /// </summary>
-        /// <remarks>
         /// The environment is too dark to save the anchor.
-        /// </remarks>
+        /// </summary>
         FailureTooDark = Result.Failure_SpaceTooDark,
 
         /// <summary>
-        /// Too bright.
-        /// </summary>
-        /// <remarks>
         /// The environment is too bright to save the anchor.
-        /// </remarks>
+        /// </summary>
         FailureTooBright = Result.Failure_SpaceTooBright,
 
         /// <summary>
-        /// Save is not supported.
+        /// Save is not supported on this version or platform.
         /// </summary>
         FailureUnsupported = Result.Failure_Unsupported,
 
         /// <summary>
-        /// Persistence not enabled
+        /// One or more anchors do not have the <see cref="OVRStorable"/> component enabled, causing the save operation
+        /// to fail.
         /// </summary>
-        /// <remarks>
-        /// One or more anchors do not have the <see cref="OVRStorable"/> component enabled.
-        /// </remarks>
         FailurePersistenceNotEnabled = Result.Failure_SpaceComponentNotEnabled,
     }
 
@@ -160,17 +174,23 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         Success = Result.Success,
 
         /// <summary>
-        /// The operation failed.
+        /// The operation failed in an unexpected way.
         /// </summary>
         Failure = Result.Failure,
 
         /// <summary>
         /// At least one anchor is invalid.
         /// </summary>
+        /// <remarks>
+        /// An <see cref="OVRAnchor"/> is invalid if it is default constructed,
+        /// which is often the case before an <see cref="OVRSpatialAnchor"/> gets properly bound, or before it has
+        /// a chance to invoke its <c>Start()</c> method.
+        /// </remarks>
         FailureInvalidAnchor = Result.Failure_HandleInvalid,
 
         /// <summary>
-        /// Invalid data.
+        /// Typically indicates an uninitialized <see cref="OVRResult"/>, or a pending <see cref="OVRTask"/> which
+        /// expected to have internal result data of a specific type set.
         /// </summary>
         FailureDataIsInvalid = Result.Failure_DataIsInvalid,
 
@@ -183,32 +203,39 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureInsufficientResources = Result.Failure_SpaceInsufficientResources,
 
         /// <summary>
-        /// Insufficient permission.
+        /// User has not granted all the required permissions for the app to use this API.
         /// </summary>
         /// <remarks>
-        /// Recommend confirming the status of the required permissions needed for using anchor APIs.
+        /// You should confirm the status of the permission(s) needed for using anchor APIs, namely:
+        /// <ul>
+        /// <li><c>"com.oculus.permission.USE_ANCHOR_API"</c></li>
+        /// </ul>
+        /// This is handled by checking that your OculusProjectConfig asset enables "Anchor Support", and by
+        /// subsequently running the Unity menu bar item "Meta > Tools > Update AndroidManifest.xml".
         /// </remarks>
+        /// <seealso cref="OVRPermissionsRequester"/>
         FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
 
         /// <summary>
         /// Operation canceled due to rate limiting.
         /// </summary>
         /// <remarks>
-        /// Recommend retrying after a short delay.
+        /// Your app is sending too many requests in a short amount of time. You should ensure that your request logic
+        /// is well-formed and the number of outgoing requests is in range of what you expect. If everything is as you
+        /// intended, it is recommended that you retry <see cref="FailureRateLimited"/> request(s) after several seconds
+        /// of delay.
         /// </remarks>
         FailureRateLimited = Result.Failure_SpaceRateLimited,
 
         /// <summary>
-        /// Erase is not supported.
+        /// Erase is not supported on this version or platform.
         /// </summary>
         FailureUnsupported = Result.Failure_Unsupported,
 
         /// <summary>
-        /// Persistence not enabled
+        /// One or more anchors do not have the <see cref="OVRStorable"/> component enabled, causing the erase operation
+        /// to fail.
         /// </summary>
-        /// <remarks>
-        /// One or more anchors do not have the <see cref="OVRStorable"/> component enabled.
-        /// </remarks>
         FailurePersistenceNotEnabled = Result.Failure_SpaceComponentNotEnabled,
     }
 
@@ -229,12 +256,13 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         Success = Result.Success,
 
         /// <summary>
-        /// The operation failed.
+        /// The operation failed in an unexpected way.
         /// </summary>
         Failure = Result.Failure,
 
         /// <summary>
-        /// Invalid data.
+        /// Typically indicates an uninitialized <see cref="OVRResult"/>, or a pending <see cref="OVRTask"/> which
+        /// expected to have internal result data set.
         /// </summary>
         FailureDataIsInvalid = Result.Failure_DataIsInvalid,
 
@@ -255,7 +283,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureInsufficientResources = Result.Failure_SpaceInsufficientResources,
 
         /// <summary>
-        /// Insufficient view.
+        /// Device's view of the physical space is insufficient.
         /// </summary>
         /// <remarks>
         /// The user needs to look around the environment more for anchor tracking to function.
@@ -263,39 +291,44 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureInsufficientView = Result.Failure_SpaceInsufficientView,
 
         /// <summary>
-        /// Insufficient permission.
+        /// User has not granted all the required permissions for the app to use this API.
         /// </summary>
         /// <remarks>
-        /// Recommend confirming the status of the required permissions needed for using anchor APIs.
+        /// You should confirm the status of the permission(s) needed for using anchor APIs, namely:
+        /// <ul>
+        /// <li><c>"com.oculus.permission.USE_ANCHOR_API"</c></li>
+        /// <li><c>"com.oculus.permission.IMPORT_EXPORT_IOT_MAP_DATA"</c> (only required for fetching shared anchors)</li>
+        /// </ul>
+        /// This is handled by checking that your OculusProjectConfig asset enables "Anchor Support" and/or
+        /// "Anchor and Space Sharing Support", and by subsequently running the Unity menu bar item
+        /// "Meta > Tools > Update AndroidManifest.xml".
         /// </remarks>
+        /// <seealso cref="OVRPermissionsRequester"/>
         FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
 
         /// <summary>
         /// Operation canceled due to rate limiting.
         /// </summary>
         /// <remarks>
-        /// Recommend retrying after a short delay.
+        /// Your app is sending too many requests in a short amount of time. You should ensure that your request logic
+        /// is well-formed and the number of outgoing requests is in range of what you expect. If everything is as you
+        /// intended, it is recommended that you retry <see cref="FailureRateLimited"/> request(s) after several seconds
+        /// of delay.
         /// </remarks>
         FailureRateLimited = Result.Failure_SpaceRateLimited,
 
         /// <summary>
-        /// Too dark.
-        /// </summary>
-        /// <remarks>
         /// The environment is too dark to load anchors.
-        /// </remarks>
+        /// </summary>
         FailureTooDark = Result.Failure_SpaceTooDark,
 
         /// <summary>
-        /// Too bright.
-        /// </summary>
-        /// <remarks>
         /// The environment is too bright to load anchors.
-        /// </remarks>
+        /// </summary>
         FailureTooBright = Result.Failure_SpaceTooBright,
 
         /// <summary>
-        /// Fetch is not supported.
+        /// Fetch is not supported in this version or on this platform.
         /// </summary>
         FailureUnsupported = Result.Failure_Unsupported,
     }
@@ -314,17 +347,41 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         Success = Result.Success,
 
         /// <summary>
-        /// The operation failed.
+        /// The operation failed in an unexpected way.
         /// </summary>
         Failure = Result.Failure,
 
         /// <summary>
-        /// Invalid handle.
+        /// The operation failed for unspecified reasons.
         /// </summary>
+        /// <remarks>
+        /// Although distinct from <see cref="FailureInvalidParameter"/>, this result can often indicate something is
+        /// wrong with your input parameters; the OVR backend was unable to distinguish this.
+        /// </remarks>
+        FailureOperationFailed = Result.Failure_OperationFailed,
+
+        /// <summary>
+        /// API call was given an invalid parameter.
+        /// </summary>
+        /// <remarks>
+        /// Try ensuring that any <see cref="System.Guid"/> parameters are not <see cref="Guid.Empty"/> (aka default),
+        /// and that any <see cref="IEnumerable{T}"/> collections are not empty.
+        /// </remarks>
+        FailureInvalidParameter = Result.Failure_InvalidParameter,
+
+        /// <summary>
+        /// One or more invalid handles were provided to the API.
+        /// </summary>
+        /// <remarks>
+        /// This usually refers to anchor handles. An <see cref="OVRAnchor"/> is invalid if it is default constructed,
+        /// which is often the case before an <see cref="OVRSpatialAnchor"/> gets properly bound, or before it has
+        /// a chance to invoke its <c>Start()</c> method.
+        /// </remarks>
         FailureHandleInvalid = Result.Failure_HandleInvalid,
 
         /// <summary>
-        /// Invalid data.
+        /// Typically indicates an uninitialized <see cref="OVRResult"/>, or a pending <see cref="OVRTask"/> which
+        /// expected to have internal result data of a specific type set.
         /// </summary>
         FailureDataIsInvalid = Result.Failure_DataIsInvalid,
 
@@ -332,7 +389,8 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         /// A network timeout occurred.
         /// </summary>
         /// <remarks>
-        /// Recommend ensuring network speed is sufficient.
+        /// Ensure your network connectivity is stable, and check that you aren't being blocked or limited by firewalls,
+        /// custom DNS, VPN, etc.
         /// </remarks>
         FailureNetworkTimeout = Result.Failure_SpaceNetworkTimeout,
 
@@ -345,16 +403,20 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureNetworkRequestFailed = Result.Failure_SpaceNetworkRequestFailed,
 
         /// <summary>
-        /// The device has not built a sufficient map of the environment to share the anchor(s).
+        /// The device has not built a sufficient map of the environment to save the anchor(s).
         /// </summary>
         /// <remarks>
-        /// Recommend further exploration the space around the anchors to be shared.
+        /// Users should move and look around their space some more, and ensure their environment is sufficiently lit,
+        /// before retrying.
         /// </remarks>
         FailureMappingInsufficient = Result.Failure_SpaceMappingInsufficient,
 
         /// <summary>
         /// The device was not able to localize the anchor(s) being shared.
         /// </summary>
+        /// <remarks>
+        /// Make sure that the <see cref="OVRLocatable"/> component has been added and enabled on this anchor before attempting to share.
+        /// </remarks>
         FailureLocalizationFailed = Result.Failure_SpaceLocalizationFailed,
 
         /// <summary>
@@ -366,15 +428,35 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         FailureSharableComponentNotEnabled = Result.Failure_SpaceComponentNotEnabled,
 
         /// <summary>
-        /// Sharing failed because device has not enabled the `Share Point Cloud Data` setting.
+        /// Sharing failed because device has not enabled the "Share Point Cloud Data" setting.
         /// </summary>
         /// <remarks>
-        /// Recommend informing the end user that this permission must be set via the system settings.
+        /// Users can enable this setting in OS Settings &gt; Privacy and Safety &gt; Device Permissions
+        /// &gt; Share Point Cloud Data.
+        /// <br/><br/>
+        /// Once per app launch, the OS may also attempt to provide users a permission request popup over your app when
+        /// this result is about to be returned. If the user acquiesces, <see cref="Success"/> would be returned instead
+        /// of <see cref="FailureCloudStorageDisabled"/> once your app regains focus.
         /// </remarks>
         FailureCloudStorageDisabled = Result.Failure_SpaceCloudStorageDisabled,
 
         /// <summary>
-        /// Anchor Sharing is not supported.
+        /// User has not granted all the required permissions for the app to use this API.
+        /// </summary>
+        /// <remarks>
+        /// You should confirm the status of the permission(s) needed for using anchor APIs, namely:
+        /// <ul>
+        /// <li><c>"com.oculus.permission.USE_ANCHOR_API"</c></li>
+        /// <li><c>"com.oculus.permission.IMPORT_EXPORT_IOT_MAP_DATA"</c> (required for sharing)</li>
+        /// </ul>
+        /// This is handled by checking that your OculusProjectConfig asset enables "Anchor and Space Sharing Support",
+        /// and by subsequently running the Unity menu bar item "Meta > Tools > Update AndroidManifest.xml".
+        /// </remarks>
+        /// <seealso cref="OVRPermissionsRequester"/>
+        FailurePermissionInsufficient = Result.Failure_SpacePermissionInsufficient,
+
+        /// <summary>
+        /// Anchor Sharing is not supported with this version or on this platform.
         /// </summary>
         FailureUnsupported = Result.Failure_Unsupported,
     }
@@ -892,6 +974,35 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         }
     }
 
+    internal static unsafe OVRTask<OVRResult<ShareResult>> ShareAsyncInternal(ReadOnlySpan<ulong> anchors,
+        ReadOnlySpan<Guid> groupUuids)
+    {
+        var info = new OVRPlugin.ShareSpacesInfo();
+        info.RecipientType = OVRPlugin.ShareSpacesRecipientType.Group;
+
+        fixed (ulong* spacesPtr = anchors)
+        fixed (Guid* uuidsPtr = groupUuids)
+        {
+            info.Spaces = spacesPtr;
+            info.SpaceCount = (uint)anchors.Length;
+            var shareSpacesGroupRecipientInfo = new OVRPlugin.ShareSpacesGroupRecipientInfo()
+            {
+                GroupCount = (uint)groupUuids.Length,
+                GroupUuids = uuidsPtr
+            };
+
+            info.RecipientInfo = (ShareSpacesRecipientInfoBase*)(&shareSpacesGroupRecipientInfo);
+            var result = OVRPlugin.ShareSpaces(in info, out var requestId);
+            return result.IsSuccess()
+                ? OVRTask.FromRequest<OVRResult<ShareResult>>(requestId)
+                : OVRTask.FromResult(OVRResult.From((ShareResult)result));
+        }
+    }
+
+    internal static void OnShareAnchorsToGroupsComplete(UInt64 requestId, Result result)
+    {
+        OVRTask.SetResult(requestId, OVRResult.From((ShareResult)result));
+    }
 
     internal ulong Handle { get; }
 

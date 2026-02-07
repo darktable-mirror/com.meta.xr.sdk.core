@@ -38,13 +38,20 @@ namespace Meta.XR.MultiplayerBlocks.NGO.Editor
                 isDone: _ =>
                 {
                     var networkedAvatarBb = GetNetworkedAvatarBB();
-                    return networkedAvatarBb == null
-                           || BuildingBlockNGOUtils.IsPrefabContainedInNetworkManagerBB(networkedAvatarBb.GetComponent<AvatarSpawnerNGO>().avatarPrefab);
+
+                    if (networkedAvatarBb == null)
+                    {
+                        return true;
+                    }
+
+                    return BuildingBlockNGOUtils.IsPrefabContainedInNetworkManagerBB(networkedAvatarBb.GetComponent<AvatarSpawnerNGO>().avatarPrefab)
+                        && BuildingBlockNGOUtils.IsPrefabContainedInNetworkManagerBB(networkedAvatarBb.GetComponent<AvatarSpawnerNGO>().avatarPrefabSdk28Plus);
                 },
                 fix: _ =>
                 {
                     BuildingBlockNGOUtils.AddPrefabsToNetworkManagerBB(
-                        GetNetworkedAvatarBB().GetComponent<AvatarSpawnerNGO>().avatarPrefab);
+                        GetNetworkedAvatarBB().GetComponent<AvatarSpawnerNGO>().avatarPrefab,
+                        GetNetworkedAvatarBB().GetComponent<AvatarSpawnerNGO>().avatarPrefabSdk28Plus);
                 },
                 fixMessage: "Add the Networked Avatar prefab to the network prefabs list",
                 message:

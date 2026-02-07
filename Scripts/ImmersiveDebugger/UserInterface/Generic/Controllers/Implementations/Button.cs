@@ -24,6 +24,12 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> used for generic Button UI element.
+    /// Normally serves as the base component for more specific functioned buttons in Immersive Debugger.
+    /// Contains logic for handling events with <see cref="Callback"/> and a standard pattern of haptics (<see cref="HapticsClip"/> is played upon hovering).
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Button : InteractableController
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -46,8 +52,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// The callback that is invoked upon clicking the button UI (from the overriden <see cref="OnPointerClick"/> function).
+        /// </summary>
         public Action Callback { get; set; }
 
+        /// <summary>
+        /// The overriden function from the <see cref="PointerHandler"/> ancestor class.
+        /// Invoking the <see cref="Callback"/> within the same class.
+        /// </summary>
         public override void OnPointerClick()
         {
             Callback?.Invoke();

@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using UnityEngine;
 /// <summary>
 /// An enum representing the different formats of hands / skeletons which are supported.
@@ -26,9 +27,26 @@ public enum OVRHandSkeletonVersion
 {
     [InspectorName(null)]
     Uninitialized = -1,
-    [InspectorName("V1 (Legacy Skeleton)")]
-    V1 = 0, // The skeleton configuration used up to January 2023. Changed to V2 because it wasn't compliant with OVRSpecification for several reasons.
-    [InspectorName("V2 (OpenXR Skeleton)")]
-    V2 = 1, // An updated skeleton standard used after January 2023. Matches the OVR Specification for hands. Differs from Default in that it supports some
-            // extra bones and the data arrives from OVRPlugin with bone rotations in global space, not local space.
+    /// <summary>
+    /// The hand skeleton that has traditionally been provided by the
+    /// Core SDK. Differs from the OpenXR hand skeleton standard in both
+    /// joint set and joint orientation.
+    /// </summary>
+    [InspectorName("OVR Hand Skeleton")]
+    OVR = 0,
+    /// <summary>
+    /// This skeleton type matches the OpenXR hand skeleton specification.
+    /// Differs from the <see cref="OVR"/> skeleton in both
+    /// joint set and joint orientation.
+    /// </summary>
+    [InspectorName("OpenXR Hand Skeleton (Experimental)")]
+    OpenXR = 1,
+
+    [Obsolete("Use " + nameof(OVR) + "instead.")]
+    [InspectorName("")]
+    V1 = OVR,
+
+    [Obsolete("Use " + nameof(OpenXR) + "instead.")]
+    [InspectorName("")]
+    V2 = OpenXR,
 }

@@ -100,7 +100,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
 
 #if UNITY_SERVICES_INSTALLED
         private Lobby _connectedLobby;
-        private static bool IsLobbyHost(Lobby lobby) => lobby.HostId == AuthenticationService.Instance.PlayerId;
+        private static bool IsLobbyHost(Lobby lobby) => lobby != null && lobby.HostId == AuthenticationService.Instance.PlayerId;
 
         private async Task<Lobby> CreateOrJoinLobby()
         {

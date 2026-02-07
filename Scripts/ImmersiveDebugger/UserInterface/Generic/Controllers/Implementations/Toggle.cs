@@ -23,10 +23,18 @@ using System;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the toggle UI element which the icon image can be customized (not a switch).
+    /// It's can be used for certain toggle buttons for Immersive Debugger UIs.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Toggle : ButtonWithIcon
     {
         private bool _state;
 
+        /// <summary>
+        /// State of the toggle, the style will be set respectively for on and off states.
+        /// </summary>
         public bool State
         {
             get => _state;
@@ -42,6 +50,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// The event that would be invoked when the state is changed by setting the <see cref="State"/> property.
+        /// </summary>
         public Action<bool> StateChanged { get; set; }
 
         private void OnStateChanged()

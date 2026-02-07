@@ -32,6 +32,7 @@ Shader "Oculus/OVRVignette"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile _ QUADRATIC_FALLOFF
+            #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
 
@@ -39,12 +40,14 @@ Shader "Oculus/OVRVignette"
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct v2f
             {
                 float4 vertex : SV_POSITION;
                 half4 color : COLOR;
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             float4 _ScaleAndOffset0[2];
@@ -54,6 +57,8 @@ Shader "Oculus/OVRVignette"
             v2f vert (appdata v)
             {
                 v2f o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
                 float4 scaleAndOffset = lerp(_ScaleAndOffset0[unity_StereoEyeIndex], _ScaleAndOffset1[unity_StereoEyeIndex], v.uv.x);
 
@@ -66,6 +71,7 @@ Shader "Oculus/OVRVignette"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 #if QUADRATIC_FALLOFF
                 i.color.a *= i.color.a;
 #endif

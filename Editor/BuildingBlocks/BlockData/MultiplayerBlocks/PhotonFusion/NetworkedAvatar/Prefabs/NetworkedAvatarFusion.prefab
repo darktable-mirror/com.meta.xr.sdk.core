@@ -48,7 +48,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   loadAvatarWhenConnected: 1
   avatarBehavior: {fileID: 2792519774481030754, guid: eedb965bcb4e568479a4828d17fbc1c3, type: 3}
+  avatarBehaviorSdk28Plus: {fileID: 2792519774481030754, guid: d32bfe77913d75d4f919b5c9ae778fa7, type: 3}
   preloadedSampleAvatarSize: 32
+  avatarStreamLOD: 1
+  avatarUpdateIntervalInSec: 0.08
 --- !u!1001 &6782248694853556821
 PrefabInstance:
   m_ObjectHideFlags: 0

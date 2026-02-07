@@ -13,11 +13,10 @@ MonoBehaviour:
   m_Name: NetworkedGrabbableObjectNGOInstallationRoutine
   m_EditorClassIdentifier: 
   id: d5c83ff6-47e4-4c98-acdd-041d4686912f
-  routineName: NGO Installation Routine
-  description: NGO Installation Routine
   targetBlockDataId: e9b4b64f-1c7e-4dff-8f3c-ce409bdc3951
   prefab: {fileID: 0}
   packageDependencies:
-  - com.unity.netcode.gameobjects
+  - com.unity.netcode.gameobjects@^1.7.1
   implementation: 0
+  installMatchmaking: 0
   _useGravity: 1

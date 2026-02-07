@@ -24,6 +24,11 @@ using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> serves as base class for all the panels of Immersive Debugger.
+    /// Handles common behaviours like haptics and exposes functions to customize each panel.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Panel : InteractableController
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -49,12 +54,16 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         protected Canvas _canvas;
         private CanvasScaler _canvasScaler;
         private OVRRaycaster _ovrRaycaster;
-        public float PixelsPerUnit { get; private set; }
+        internal float PixelsPerUnit { get; private set; }
 
         protected Background Background;
         protected ImageStyle _backgroundStyle;
 
         private Vector3 _sphericalCoordinates = new Vector3(1, 0, 0);
+        /// <summary>
+        /// The spherical coordinates of the panel. As the panel is using the cylinder overlay shape
+        /// for a curved panel effect, this coordinates would be converted to actual position of the panel on the overlay canvas.
+        /// </summary>
         public Vector3 SphericalCoordinates
         {
             get => _sphericalCoordinates;
@@ -65,25 +74,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 SetPosition(position);
             }
         }
-        public Interface Interface => (Owner as Interface);
+        internal Interface Interface => (Owner as Interface);
 
 
-        private bool _transparent;
-        public bool Transparent
-        {
-            get => _transparent;
-            set
-            {
-                if (_transparent == value)
-                {
-                    return;
-                }
-
-                _transparent = value;
-                OnTransparencyChanged();
-            }
-        }
-
+        /// <summary>
+        /// The image style of the background, can specify the detailed properties such as sprite and color.
+        /// </summary>
         public ImageStyle BackgroundStyle
         {
             set
@@ -134,8 +130,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return new Vector3(x, y, z);
         }
 
-        protected virtual void OnTransparencyChanged()
+        protected override void OnTransparencyChanged()
         {
+            base.OnTransparencyChanged();
             Background.Color = Transparent ? _backgroundStyle.colorOff : _backgroundStyle.color;
         }
 
@@ -176,4 +173,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
     }
 }
-

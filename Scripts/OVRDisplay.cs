@@ -42,9 +42,14 @@ using Node = UnityEngine.XR.XRNode;
 using Settings = UnityEngine.XR.XRSettings;
 
 /// <summary>
-/// Manages an Oculus Rift head-mounted display (HMD).
+/// The OVRDisplay class manages the head-mounted display (HMD) of Meta Quest or PC headsets. Here are a
+/// few features supported by this class:
+///   * Obtain headset velocity (see <see cref="Velocity"/>)
+///   * Headset recentering detection (see <see cref="RecenteredPose"/>)
+///   * [Asymmetric Field of View](https://developer.oculus.com/documentation/unity/unity-asymmetric-fov-faq/)
+///   * [Display Refresh Rates](https://developer.oculus.com/documentation/unity/unity-set-disp-freq/)
 /// </summary>
-[HelpURL("https://developer.oculus.com/documentation/unreal/unreal-advanced-rendering/")]
+[HelpURL("https://developer.oculus.com/reference/unity/v67/class_o_v_r_display")]
 public class OVRDisplay
 {
     /// <summary>

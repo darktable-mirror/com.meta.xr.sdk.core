@@ -24,6 +24,10 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks
 {
+    /// <summary>
+    /// This is a utility class that is responsible for storing and loading an <see cref="OVRSpatialAnchor"/>
+    /// from local storage.
+    /// </summary>
     [RequireComponent(typeof(SpatialAnchorSpawnerBuildingBlock))]
     public class SpatialAnchorLoaderBuildingBlock : MonoBehaviour
     {
@@ -37,19 +41,18 @@ namespace Meta.XR.BuildingBlocks
         }
 
         /// <summary>
-        /// Loads and instantiates anchors from a list of uuids.
+        /// Loads and instantiates a set of <see cref="OVRSpatialAnchor"/>s from a list of uuids.
         /// </summary>
-        /// <remarks>If </remarks>
         public virtual void LoadAndInstantiateAnchors(List<Guid> uuids)
         {
             _spatialAnchorCore.LoadAndInstantiateAnchors(_spatialAnchorSpawner.AnchorPrefab, uuids);
         }
 
         /// <summary>
-        /// Loads anchors from local storage.
+        /// Loads an <see cref="OVRSpatialAnchor"/> from local storage.
         /// </summary>
-        /// <remarks><see cref="SpatialAnchorLocalStorageManagerBuildingBlock"/> component is required to load anchors from
-        /// default local storage</remarks>
+        /// <remarks>A <see cref="SpatialAnchorLocalStorageManagerBuildingBlock"/> component is required to load anchors from
+        /// default local storage.</remarks>
         /// <remarks>If </remarks>
         public virtual void LoadAnchorsFromDefaultLocalStorage()
         {

@@ -23,7 +23,7 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.Gizmo
 {
-    public class GizmoRenderer : MonoBehaviour
+    internal class GizmoRenderer : MonoBehaviour
     {
         private DebugGizmoType _gizmoType;
         private Color _gizmoColor;

@@ -18,26 +18,23 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
-using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
-using System.Linq;
 using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 
 /// <summary>
-/// Simple script for running the HandTrackingWideMotionModeFusion Sample
+/// This script runs the "HandTrackingWideMotionMode" scene in the Core SDK samples. It is an example of how to
+/// turn the Wide Motion Mode on and off in <see cref="OVRManager"/> as well as showing the impact that this feature
+/// has on hand tracking behavior.
 /// </summary>
 [DisallowMultipleComponent]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-wide-motion-mode/")]
 public class OVRHandTrackingWideMotionModeSample : MonoBehaviour
 {
+    /// <summary>
+    /// The toggle used to turn Wide Motion Mode on and off.
+    /// </summary>
     [SerializeField]
     public Toggle fusionToggle;
     [SerializeField]
@@ -53,27 +50,15 @@ public class OVRHandTrackingWideMotionModeSample : MonoBehaviour
     [SerializeField]
     private OVRInputModule inputModule;
 
-    // Unity event functions
-    void Awake()
+    void OnEnable()
     {
         fusionToggle.onValueChanged.AddListener(OnFusionToggleChanged);
     }
 
-    void OnDestroy()
-    {
-
-    }
-
-    void OnEnable()
-    {
-
-    }
-
     void OnDisable()
     {
-
+        fusionToggle.onValueChanged.RemoveListener(OnFusionToggleChanged);
     }
-
 
     private void Update()
     {
@@ -142,7 +127,7 @@ public class OVRHandTrackingWideMotionModeSample : MonoBehaviour
         linePointer.SetPosition(1, inputPosition + ray.direction * 2.5f);
     }
 
-    public void OnFusionToggleChanged(bool newValue)
+    private void OnFusionToggleChanged(bool newValue)
     {
         OVRManager.instance.wideMotionModeHandPosesEnabled = newValue;
     }

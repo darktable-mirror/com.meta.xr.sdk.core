@@ -44,7 +44,7 @@ internal class OVRProjectSetupBuildValidator : IPreprocessBuildWithReport
 
         OVRProjectSetup.UpdateTasks(buildTargetGroup, onCompleted: OnUpdated(reportOutputPath));
 
-        foreach (var task in OVRProjectSetup.GetTasks(buildTargetGroup, false))
+        foreach (var task in OVRProjectSetup.GetTasks(buildTargetGroup))
         {
             ValidateTask(task, buildTargetGroup);
         }

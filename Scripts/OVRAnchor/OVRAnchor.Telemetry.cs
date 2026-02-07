@@ -130,6 +130,7 @@ partial struct OVRAnchor
             public const string StorageLocation = "storage_location";
             public const string Timeout = "timeout";
             public const string MaxResults = "max_results";
+            public const string GroupCount = "group_count";
         }
     }
 }

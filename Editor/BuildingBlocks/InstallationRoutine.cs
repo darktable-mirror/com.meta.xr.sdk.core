@@ -50,8 +50,14 @@ namespace Meta.XR.BuildingBlocks.Editor
         [SerializeField] private List<string> packageDependencies;
         public IEnumerable<string> PackageDependencies => packageDependencies;
 
+        internal virtual IEnumerable<OVRConfigurationTask> GetAssociatedRules(BuildingBlock block)
+            => Enumerable.Empty<OVRConfigurationTask>();
+
         internal virtual IEnumerable<string> ComputePackageDependencies(VariantsSelection variantSelection) =>
             PackageDependencies;
+
+        internal virtual IEnumerable<BlockData> ComputeOptionalDependencies(VariantsSelection variantSelection)
+            => Enumerable.Empty<BlockData>();
 
         private IReadOnlyList<VariantHandle> _definitionVariants;
         internal IEnumerable<VariantHandle> DefinitionVariants =>

@@ -26,6 +26,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class RoomMeshBlockData : BlockData
     {
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
             var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();

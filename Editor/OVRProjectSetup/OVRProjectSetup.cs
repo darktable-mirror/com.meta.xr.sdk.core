@@ -21,7 +21,9 @@
 using System.Collections.Generic;
 using UnityEditor;
 using System;
+using System.Collections;
 using System.Linq;
+using System.Threading.Tasks;
 using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.UserInterface;
 using UnityEngine;
@@ -53,7 +55,15 @@ public static class OVRProjectSetup
         Physics = 4,
         Packages = 5,
         Features = 6,
-        Miscellaneous = 7
+        Miscellaneous = 7,
+        Headset = 8,
+    }
+
+    [Flags]
+    public enum TaskTags
+    {
+        None = 0,
+        HeavyProcessing = 1
     }
 
     private static readonly OVRConfigurationTaskRegistry _principalRegistry;
@@ -151,7 +161,8 @@ public static class OVRProjectSetup
         return _latestSummary?.HighestFixLevel switch
         {
             OVRProjectSetup.TaskLevel.Optional => (OVRProjectSetupDrawer.Styles.Contents.InfoIcon, InfoColor, true),
-            OVRProjectSetup.TaskLevel.Recommended => (OVRProjectSetupDrawer.Styles.Contents.WarningIcon, WarningColor, true),
+            OVRProjectSetup.TaskLevel.Recommended => (OVRProjectSetupDrawer.Styles.Contents.WarningIcon, WarningColor,
+                true),
             OVRProjectSetup.TaskLevel.Required => (OVRProjectSetupDrawer.Styles.Contents.ErrorIcon, ErrorColor, true),
             _ => (null, null, false)
         };
@@ -192,9 +203,9 @@ public static class OVRProjectSetup
         }
     }
 
-    internal static IEnumerable<OVRConfigurationTask> GetTasks(BuildTargetGroup buildTargetGroup, bool refresh)
+    internal static IEnumerable<OVRConfigurationTask> GetTasks(BuildTargetGroup buildTargetGroup)
     {
-        return Registry.GetTasks(buildTargetGroup, refresh);
+        return Registry.GetValidTasks(buildTargetGroup);
     }
 
     /// <summary>
@@ -207,9 +218,40 @@ public static class OVRProjectSetup
     /// <param name="task">The task that will get registered to the Setup Tool.</param>
     /// <exception cref="ArgumentException">Possible causes :
     /// - a task with the same unique ID already has been registered (conflict in hash generated from description message).</exception>
-    internal static void AddTask(OVRConfigurationTask task)
+    internal static void RegisterTask(OVRConfigurationTask task)
     {
         Registry.AddTask(task);
+    }
+
+    internal static OVRConfigurationTask RegisterTask(OVRProjectSetup.TaskGroup group,
+        Func<BuildTargetGroup, bool> isDone,
+        BuildTargetGroup platform = BuildTargetGroup.Unknown,
+        Action<BuildTargetGroup> fix = null,
+        OVRProjectSetup.TaskLevel level = OVRProjectSetup.TaskLevel.Recommended,
+        Func<BuildTargetGroup, OVRProjectSetup.TaskLevel> conditionalLevel = null,
+        string message = null,
+        Func<BuildTargetGroup, string> conditionalMessage = null,
+        string fixMessage = null,
+        Func<BuildTargetGroup, string> conditionalFixMessage = null,
+        string url = null,
+        Func<BuildTargetGroup, string> conditionalUrl = null,
+        bool validity = true,
+        Func<BuildTargetGroup, bool> conditionalValidity = null,
+        OVRProjectSetup.TaskTags tags = OVRProjectSetup.TaskTags.None,
+        bool fixAutomatic = true
+    )
+    {
+        var optionalLevel =
+            OptionalLambdaType<BuildTargetGroup, OVRProjectSetup.TaskLevel>.Create(level, conditionalLevel, true);
+        var optionalMessage = OptionalLambdaType<BuildTargetGroup, string>.Create(message, conditionalMessage, true);
+        var optionalFixMessage =
+            OptionalLambdaType<BuildTargetGroup, string>.Create(fixMessage, conditionalFixMessage, true);
+        var optionalUrl = OptionalLambdaType<BuildTargetGroup, string>.Create(url, conditionalUrl, true);
+        var optionalValidity = OptionalLambdaType<BuildTargetGroup, bool>.Create(validity, conditionalValidity, true);
+        var rule = new OVRConfigurationTask(group, tags, platform, isDone, fix, optionalLevel, optionalMessage,
+            optionalFixMessage, optionalUrl, optionalValidity, fixAutomatic);
+        RegisterTask(rule);
+        return rule;
     }
 
     /// <summary>
@@ -227,6 +269,7 @@ public static class OVRProjectSetup
     /// <param name="platform">Platform for which this Configuration Task applies. Use "Unknown" for any.</param>
     /// <param name="fix">Delegate that validates the Configuration Task.</param>
     /// <param name="level">Severity (or behaviour) of the Configuration Task.</param>
+    /// <param name="tags">Tags provide additional metadata about the task. They may adjust the way the task is being processed..</param>
     /// <param name="conditionalLevel">Use this delegate for more control or complex behaviours over the level parameter.</param>
     /// <param name="message">Description of the Configuration Task.</param>
     /// <param name="conditionalMessage">Use this delegate for more control or complex behaviours over the message parameter.</param>
@@ -258,19 +301,12 @@ public static class OVRProjectSetup
         Func<BuildTargetGroup, string> conditionalUrl = null,
         bool validity = true,
         Func<BuildTargetGroup, bool> conditionalValidity = null,
+        OVRProjectSetup.TaskTags tags = OVRProjectSetup.TaskTags.None,
         bool fixAutomatic = true
     )
-    {
-        var optionalLevel =
-            OptionalLambdaType<BuildTargetGroup, OVRProjectSetup.TaskLevel>.Create(level, conditionalLevel, true);
-        var optionalMessage = OptionalLambdaType<BuildTargetGroup, string>.Create(message, conditionalMessage, true);
-        var optionalFixMessage =
-            OptionalLambdaType<BuildTargetGroup, string>.Create(fixMessage, conditionalFixMessage, true);
-        var optionalUrl = OptionalLambdaType<BuildTargetGroup, string>.Create(url, conditionalUrl, true);
-        var optionalValidity = OptionalLambdaType<BuildTargetGroup, bool>.Create(validity, conditionalValidity, true);
-        AddTask(new OVRConfigurationTask(group, platform, isDone, fix, optionalLevel, optionalMessage,
-            optionalFixMessage, optionalUrl, optionalValidity, fixAutomatic));
-    }
+        => RegisterTask(group, isDone, platform, fix, level, conditionalLevel, message, conditionalMessage,
+            fixMessage,
+            conditionalFixMessage, url, conditionalUrl, validity, conditionalValidity, tags, fixAutomatic);
 
     internal static bool IsPlatformSupported(BuildTargetGroup buildTargetGroup)
     {
@@ -287,6 +323,11 @@ public static class OVRProjectSetup
 
     private const int LoopExitCount = 4;
 
+    public static Task FixAllAsync(BuildTargetGroup buildTargetGroup)
+    {
+        return FixTasksAsync(buildTargetGroup);
+    }
+
     internal static void FixTasks(
         BuildTargetGroup buildTargetGroup,
         Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> filter = null,
@@ -297,6 +338,16 @@ public static class OVRProjectSetup
         var fixer = new OVRConfigurationTaskFixer(Registry, buildTargetGroup, filter, logMessages, blocking,
             onCompleted);
         ProcessorQueue.Request(fixer);
+    }
+
+    internal static Task<OVRConfigurationTaskProcessor> FixTasksAsync(
+        BuildTargetGroup buildTargetGroup,
+        Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> filter = null,
+        LogMessages logMessages = LogMessages.Disabled)
+    {
+        var fixer = new OVRConfigurationTaskFixer(Registry, buildTargetGroup, filter, logMessages, false, null);
+        OVRProjectSetup.ProcessorQueue.Request(fixer);
+        return Task.Run(fixer.WaitForCompletion);
     }
 
     internal static void FixTask(
@@ -325,5 +376,15 @@ public static class OVRProjectSetup
         var updater =
             new OVRConfigurationTaskUpdater(Registry, buildTargetGroup, filter, logMessages, blocking, onCompleted);
         ProcessorQueue.Request(updater);
+    }
+
+    internal static Task<OVRConfigurationTaskProcessor> UpdateTasksAsync(
+        BuildTargetGroup buildTargetGroup,
+        Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> filter = null,
+        LogMessages logMessages = LogMessages.Disabled)
+    {
+        var updater = new OVRConfigurationTaskUpdater(Registry, buildTargetGroup, filter, logMessages, false, null);
+        OVRProjectSetup.ProcessorQueue.Request(updater);
+        return Task.Run(updater.WaitForCompletion);
     }
 }

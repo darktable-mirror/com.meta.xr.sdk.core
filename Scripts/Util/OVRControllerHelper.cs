@@ -23,34 +23,51 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Simple helper script that conditionally enables rendering of a controller if it is connected.
+/// Helper script for managing the rendering of a controller. This script takes into account the
+/// <see cref="ControllerType"/> of the associated physical controller, initializes the correct assets,
+/// manages animation, and hides the visuals when the controller is disconnected.
+///
+/// You can assign new prefabs to the model fields to control which prefab represents the given controller
+/// type, though replacement prefabs must be very carefully constructed to fulfill all requirements.
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/controller-animations/")]
 public class OVRControllerHelper : MonoBehaviour,
     OVRInputModule.InputSource
 {
     /// <summary>
-    /// The root GameObject that represents the Oculus Touch for Quest And RiftS Controller model (Left).
+    /// The root GameObject that represents the prefab that controls the Oculus Touch for Quest And RiftS Controller model (Left).
     /// </summary>
+    /// <remarks>
+    /// You can assign this field from the Unity Editor to control which prefab is used to represent this
+    /// controller type.
+    /// </remarks>
     public GameObject m_modelOculusTouchQuestAndRiftSLeftController;
 
     /// <summary>
-    /// The root GameObject that represents the Oculus Touch for Quest And RiftS Controller model (Right).
+    /// The root GameObject that represents the prefab for the Oculus Touch for Quest And RiftS Controller model (Right).
     /// </summary>
     public GameObject m_modelOculusTouchQuestAndRiftSRightController;
 
     /// <summary>
-    /// The root GameObject that represents the Oculus Touch for Rift Controller model (Left).
+    /// The root GameObject that represents the prefab that controls the Oculus Touch for Rift Controller model (Left).
     /// </summary>
+    /// <remarks>
+    /// This field can be assigned from the Unity Editor to control which prefab is used to represent this
+    /// controller type.
+    /// </remarks>
     public GameObject m_modelOculusTouchRiftLeftController;
 
     /// <summary>
-    /// The root GameObject that represents the Oculus Touch for Rift Controller model (Right).
+    /// The root GameObject that represents the prefab that controls the Oculus Touch for Rift Controller model (Right).
     /// </summary>
+    /// <remarks>
+    /// This field can be assigned from the Unity Editor to control which prefab is used to represent this
+    /// controller type.
+    /// </remarks>
     public GameObject m_modelOculusTouchRiftRightController;
 
     /// <summary>
-    /// The root GameObject that represents the Oculus Touch for Quest 2 Controller model (Left).
+    /// The root GameObject that represents the prefab for the Oculus Touch for Quest 2 Controller model (Left).
     /// </summary>
     public GameObject m_modelOculusTouchQuest2LeftController;
 
@@ -60,18 +77,20 @@ public class OVRControllerHelper : MonoBehaviour,
     public GameObject m_modelOculusTouchQuest2RightController;
 
     /// <summary>
-    /// The root GameObject that represents the Meta Touch Pro Controller model (Left).
+    /// The root GameObject that represents the prefab that controls the Meta Touch Pro Controller model (Left).
     /// </summary>
+
     public GameObject m_modelMetaTouchProLeftController;
 
     /// <summary>
-    /// The root GameObject that represents the Meta Touch Pro Controller model (Right).
+    /// The root GameObject that represents the prefab for the Meta Touch Pro Controller model (Right).
     /// </summary>
     public GameObject m_modelMetaTouchProRightController;
 
     /// <summary>
-    /// The root GameObject that represents the Meta Quest Plus Controller model (Left).
+    /// The root GameObject that represents the prefab for Meta Quest Plus Controller model (Left).
     /// </summary>
+
     public GameObject m_modelMetaTouchPlusLeftController;
 
     /// <summary>
@@ -80,27 +99,34 @@ public class OVRControllerHelper : MonoBehaviour,
     public GameObject m_modelMetaTouchPlusRightController;
 
     /// <summary>
-    /// The controller that determines whether or not to enable rendering of the controller model.
+    /// The <see cref="OVRInput.Controller"/> that should be reflected by the rendered assets.
+    /// OVRControllerHelper queries <see cref="OVRInput"/> and the underlying system for the appropriate
+    /// controller data depending on the controller specified in this setting.
     /// </summary>
     public OVRInput.Controller m_controller;
 
     /// <summary>
-    /// Determines if the controller should be hidden based on held state.
+    /// Determines if the controller should be hidden based on held state. But default, this value is set
+    /// to <see cref="OVRInput.InputDeviceShowState.ControllerInHandOrNoHand"/>.
     /// </summary>
     public OVRInput.InputDeviceShowState m_showState = OVRInput.InputDeviceShowState.ControllerInHandOrNoHand;
 
     /// <summary>
-    /// If controller driven hand poses is on, and the mode is Natural, controllers will be hidden unless this is true.
+    /// If controller-driven hand poses is on, and the mode is Natural, controllers will be hidden unless
+    /// this is true; in other words, enabling this setting will cause the controller visuals to be rendered
+    /// while controller-driven hands are enabled in Natural mode.
     /// </summary>
     public bool showWhenHandsArePoweredByNaturalControllerPoses = false;
 
     /// <summary>
-    /// The animator component that contains the controller animation controller for animating buttons and triggers.
+    /// The animator component that contains the controller animation controller for animating buttons and
+    /// triggers.
     /// </summary>
     private Animator m_animator;
 
     /// <summary>
-    /// An optional component for provind shell like ray functionality - highlighting where you're selecting in the UI and responding to pinches / button presses.
+    /// An optional component for providing basic shell-like ray interaction functionality, highlighting
+    /// where you're selecting in the UI and responding to pinches / button presses.
     /// </summary>
     public OVRRayHelper RayHelper;
 
@@ -457,47 +483,107 @@ public class OVRControllerHelper : MonoBehaviour,
         }
     }
 
+    /// <summary>
+    /// Sets the associated controller to have input focus.
+    /// </summary>
+    /// <remarks>
+    /// This is typically invoked in response to a button press or other clearly-intentional input and
+    /// is used for purposes such as showing pointer rays, etc.
+    /// </remarks>
     public void InputFocusAquired()
     {
         m_hasInputFocus = true;
     }
 
+    /// <summary>
+    /// Sets the associated controller to not have input focus.
+    /// </summary>
+    /// <remarks>
+    /// This is typically invoked in response to a button press or other clearly-intentional input on
+    /// a different controller and is used for purposes such as hiding pointer rays, etc.
+    /// </remarks>
     public void InputFocusLost()
     {
         m_hasInputFocus = false;
     }
 
+    /// <summary>
+    /// Checks whether the state of the associated controller is "pressed," a convenience wrapper around
+    /// checking <see cref="OVRInput.GetDown(OVRInput.Button, OVRInput.Controller)"/> on the
+    /// <see cref="OVRInput.Button.PrimaryIndexTrigger"/>.
+    /// </summary>
+    /// <returns>True if the primary index trigger is down, false otherwise</returns>
     public bool IsPressed()
     {
         return OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, m_controller);
     }
 
+    /// <summary>
+    /// Checks whether the state of the associated controller is "released," a convenience wrapper around
+    /// checking <see cref="OVRInput.GetUp(OVRInput.Button, OVRInput.Controller)"/> on the
+    /// <see cref="OVRInput.Button.PrimaryIndexTrigger"/>.
+    /// </summary>
+    /// <returns>True if the primary index trigger is up, false otherwise</returns>
     public bool IsReleased()
     {
         return OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger, m_controller);
     }
 
+    /// <summary>
+    /// Retrieves the Unity Transform which should be used as the origin of raycasts from the associated
+    /// controller. Specifically, raycasts should begin at the position and proceed in the forward direction
+    /// of the returned transform.
+    /// </summary>
+    /// <returns>The source transform for raycasts from the associated controller</returns>
     public Transform GetPointerRayTransform()
     {
         return transform;
     }
 
-    // This helps identify if the object has been destroyed.
+    /// <summary>
+    /// Checks whether or not this OVRControllerHelper instance has been Destroyed; a convenience wrapper
+    /// around the Unity idiomatic `this != null` check.
+    /// </summary>
+    /// <returns>True if this instance has been Destroyed, false otherwise</returns>
     public bool IsValid()
     {
         return this != null;
     }
 
+    /// <summary>
+    /// Checks whether the associated controller is considered to be "active," i.e. in use. Unrelated to
+    /// Unity's built-in Behaviour.isActiveAndEnabled property or any other Unity-related concept of
+    /// activity.
+    /// </summary>
+    /// <returns>True if the associated controller is active, false otherwise</returns>
     public bool IsActive()
     {
         return m_isActive;
     }
 
+    /// <summary>
+    /// Queries the handedness of an associated Oculus Touch controller.
+    /// </summary>
+    /// <returns>
+    /// <see cref="OVRPlugin.Hand.HandLeft"/> if the associated controller is
+    /// <see cref="OVRInput.Controller.LTouch"/>, otherwise returns <see cref="OVRPlugin.Hand.HandRight"/>.
+    /// </returns>
+    /// <remarks>
+    /// Because this method only checks for equivalency to <see cref="OVRInput.Controller.LTouch"/>, it cannot
+    /// be used to accurately query the handedness of non-Oculus Touch controllers as, even for
+    /// <see cref="OVRInput.Controller.LHand"/>, it will return <see cref="OVRPlugin.Hand.HandRight"/>.
+    /// </remarks>
     public OVRPlugin.Hand GetHand()
     {
         return m_controller == OVRInput.Controller.LTouch ? OVRPlugin.Hand.HandLeft : OVRPlugin.Hand.HandRight;
     }
 
+    /// <summary>
+    /// If <see cref="RayHelper"/> is set, applies the provided <see cref="OVRInputRayData"/> to that helper and
+    /// sets its activation and strength based on the <see cref="OVRInput.Button.PrimaryIndexTrigger"/> of the
+    /// associated controller. Does nothing if <see cref="RayHelper"/> is null.
+    /// </summary>
+    /// <param name="rayData">The <see cref="OVRInputRayData"/> to be provided to the ray helper</param>
     public void UpdatePointerRay(OVRInputRayData rayData)
     {
         if (RayHelper)

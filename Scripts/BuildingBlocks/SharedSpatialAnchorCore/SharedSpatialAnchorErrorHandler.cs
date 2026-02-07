@@ -23,12 +23,27 @@ using System.Collections.Generic;
 using Meta.XR.Util;
 using UnityEngine;
 
+/// <summary>
+/// A utility <see cref="MonoBehaviour"/> component to handle Shared Spatial Anchor's operational errors.
+/// </summary>
+/// <remarks>
+/// This component will spawn a visual alert box with error message at runtime.
+/// The public methods are meant to be used as listeners for Shared Spatial Anchor's operations.
+/// See `Editor/BuildingBlocks/BlockData/SampleSpatialAnchorController` in the Meta XR Core SDK for an example of how to use this class.
+/// <seealso cref="Meta.XR.BuildingBlocks"/>
+/// </remarks>
 [Feature(Feature.Anchors)]
 public class SharedSpatialAnchorErrorHandler : MonoBehaviour
 {
-    [Tooltip("Disables the GUI alerts in headset.")]
+    /// <summary>
+    /// Disables message alert box at runtime.
+    /// </summary>
+    [Tooltip("Disables the message alerts in headset.")]
     public bool DisableRuntimeGUIAlerts = false;
 
+    /// <summary>
+    /// Set your own <see cref="AlertViewHUD"/> prefab.
+    /// </summary>
     [SerializeField] private GameObject AlertViewHUDPrefab;
 
     private string cloudPermissionMsg =
@@ -41,6 +56,14 @@ public class SharedSpatialAnchorErrorHandler : MonoBehaviour
         if (AlertViewHUDPrefab) Instantiate(AlertViewHUDPrefab);
     }
 
+    /// <summary>
+    /// Handles the <see cref="SpatialAnchorCoreBuildingBlock.OnAnchorCreateCompleted">OnAnchorCreateCompleted</see>
+    /// event by logging "Failed to share the spatial anchor.".
+    /// </summary>
+    /// <remarks>
+    /// If there is a cloud storage error, it will log that instead.
+    /// </remarks>
+    /// <param name="result">Contains the <see cref="OVRSpatialAnchor"/> creation result.</param>
     public void OnAnchorCreate(OVRSpatialAnchor _, OVRSpatialAnchor.OperationResult result)
     {
         if (result == OVRSpatialAnchor.OperationResult.Failure_SpaceCloudStorageDisabled)
@@ -55,6 +78,10 @@ public class SharedSpatialAnchorErrorHandler : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Propagates <see cref="OVRSpatialAnchor"/> share failure message.
+    /// </summary>
+    /// <param name="result">Contains the <see cref="OVRSpatialAnchor"/> share result.</param>
     public void OnAnchorShare(List<OVRSpatialAnchor> _, OVRSpatialAnchor.OperationResult result)
     {
         if (result == OVRSpatialAnchor.OperationResult.Failure_SpaceCloudStorageDisabled)
@@ -69,6 +96,14 @@ public class SharedSpatialAnchorErrorHandler : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Handles the <see cref="SharedSpatialAnchorCore.OnSharedSpatialAnchorsLoadCompleted">OnSharedSpatialAnchorsLoadCompleted</see>
+    /// event by logging "Failed to load the spatial anchor(s).".
+    /// </summary>
+    /// <remarks>
+    /// If there is a cloud storage error, it will log that instead.
+    /// </remarks>
+    /// <param name="result">Contains the <see cref="OVRSpatialAnchor"/> load result.</param>
     public void OnSharedSpatialAnchorLoad(List<OVRSpatialAnchor> loadedAnchors, OVRSpatialAnchor.OperationResult result)
     {
         if (result == OVRSpatialAnchor.OperationResult.Failure_SpaceCloudStorageDisabled)
@@ -79,12 +114,20 @@ public class SharedSpatialAnchorErrorHandler : MonoBehaviour
         if (loadedAnchors == null || loadedAnchors.Count == 0) LogWarning($"Failed to load the spatial anchor(s).");
     }
 
+    /// <summary>
+    /// Handles the <see cref="SpatialAnchorCoreBuildingBlock.OnAnchorsEraseAllCompleted">OnAnchorsEraseAllCompleted</see>
+    /// event by logging "Failed to erase the spatial anchor(s).".
+    /// </summary>
     public void OnAnchorEraseAll(OVRSpatialAnchor.OperationResult result)
     {
         if (result == OVRSpatialAnchor.OperationResult.Failure)
             LogWarning($"Failed to erase the spatial anchor(s).");
     }
 
+    /// <summary>
+    /// Handles the <see cref="SpatialAnchorCoreBuildingBlock.OnAnchorEraseCompleted">OnAnchorEraseCompleted</see>
+    /// event by logging "Failed to erase the spatial anchor with uuid: " and the uuid of the anchor.
+    /// </summary>
     public void OnAnchorErase(OVRSpatialAnchor anchor, OVRSpatialAnchor.OperationResult result)
     {
         if (result == OVRSpatialAnchor.OperationResult.Failure)

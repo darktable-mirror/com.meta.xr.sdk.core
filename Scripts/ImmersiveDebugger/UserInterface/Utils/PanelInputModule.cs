@@ -24,7 +24,9 @@ using UnityEngine.EventSystems;
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
     /// <summary>
-    /// Override of OVRInputModule which handles the case if there are more than one BaseInputModule on the same game object.
+    /// Override of <see cref="OVRInputModule"/> which handles the case if there are more than one BaseInputModule on the same game object,
+    /// It'll force process this input module for Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     public class PanelInputModule : OVRInputModule
     {

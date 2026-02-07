@@ -30,7 +30,7 @@ namespace Meta.XR.ImmersiveDebugger
     internal static class Telemetry
     {
         [Markers]
-        public static class MarkerId
+        internal static class MarkerId
         {
             public const int SettingsAccessed = 163059815;
             public const int SettingsChanged = 163065143;
@@ -39,20 +39,20 @@ namespace Meta.XR.ImmersiveDebugger
             public const int FrameUpdate = 163056655;
         }
 
-        public enum State
+        internal enum State
         {
             OnStart,
             OnFocusLost,
             OnDisable
         }
 
-        public enum Method
+        internal enum Method
         {
             Attributes,
             DebugInspector
         }
 
-        public static class AnnotationType
+        internal static class AnnotationType
         {
             public const string Origin = "Origin";
             public const string Type = "Type";

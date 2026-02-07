@@ -105,14 +105,22 @@ namespace Meta.XR
             "XR_META_touch_controller_plus " +
             "XR_META_simultaneous_hands_and_controllers " +
             "XR_MSFT_hand_interaction " +
+            "XR_EXT_hand_interaction " +
             "XR_FB_hand_tracking_confidence " +
             "XR_META_detached_controllers " +
+            "XR_LOGITECH_mx_ink_stylus_interaction " +
+            "XR_META_colocation_discovery " +
+            "XR_META_spatial_entity_sharing " +
+            "XR_META_spatial_entity_group_sharing " +
+            // XR_META_dynamic_object_tracker
+            "XR_METAX1_dynamic_object_tracker " +
             "XR_META_spatial_entity_persistence " +
             "XR_META_spatial_entity_discovery " +
             "XR_META_boundary_visibility " +
             "XR_META_headset_id " +
             "XR_FB_composition_layer_settings " +
             "XR_META_automatic_layer_filter " +
+            "XR_EXT_future " +
             ""
             ;
     }

@@ -34,6 +34,13 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
             PhotonFusion
         }
 
+        internal enum MatchmakingType
+        {
+            AutoMatchmaking,
+            CustomMatchmaking,
+            None
+        }
+
         [SerializeField]
         [Variant(Behavior = VariantAttribute.VariantBehavior.Definition,
             Description = "The underlying network Implementation that will be used for all network Blocks.",
@@ -42,43 +49,62 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
 
         [SerializeField]
         [Variant(Behavior = VariantAttribute.VariantBehavior.Parameter,
-            Description = "Indicates whether Auto Matchmaking should also be included (recommended for prototyping).",
-            Condition = nameof(CanInstallAutoMatchmaking),
-            Default = true)]
-        internal bool installAutoMatchmaking;
+            Description = "Indicates whether Matchmaking should also be included.",
+            Condition = nameof(CanInstallMatchmaking),
+            Default = MatchmakingType.AutoMatchmaking)]
+        internal MatchmakingType installMatchmaking;
 
-        protected bool CanInstallAutoMatchmaking()
+        protected bool CanInstallMatchmaking()
             => TargetBlockDataId != BlockDataIds.IAutoMatchmaking
                && TargetBlockDataId != BlockDataIds.INetworkManager
-               && !IsAutoMatchmakingPresentInScene;
+               && TargetBlockDataId != BlockDataIds.ICustomMatchmaking
+               && !IsMatchmakingPresentInScene;
 
-        private static bool IsAutoMatchmakingPresentInScene => Utils.GetBlock(BlockDataIds.IAutoMatchmaking);
+        private static bool IsMatchmakingPresentInScene =>
+            Utils.GetBlock(BlockDataIds.IAutoMatchmaking)
+            || Utils.GetBlock(BlockDataIds.ICustomMatchmaking);
 
-        private bool ShouldInstallAutoMatchmaking => installAutoMatchmaking && CanInstallAutoMatchmaking();
+        private bool ShouldInstallMatchmaking => installMatchmaking != MatchmakingType.None && CanInstallMatchmaking();
+        private string MatchmakingBlockId => installMatchmaking switch
+        {
+            MatchmakingType.AutoMatchmaking => BlockDataIds.IAutoMatchmaking,
+            MatchmakingType.CustomMatchmaking => BlockDataIds.ICustomMatchmaking,
+            _ => null
+        };
 
         internal override IEnumerable<string> ComputePackageDependencies(VariantsSelection variantSelection)
         {
-            if (ShouldInstallAutoMatchmaking)
+            if (ShouldInstallMatchmaking)
             {
-                var autoMatchmakingBlock = Utils.GetBlockData(BlockDataIds.IAutoMatchmaking);
-                var additionalDependencies = InterfaceBlockData.ComputePackageDependencies(autoMatchmakingBlock as InterfaceBlockData, variantSelection);
+                var matchmakingBlock = Utils.GetBlockData(MatchmakingBlockId);
+                var additionalDependencies = InterfaceBlockData.ComputePackageDependencies(matchmakingBlock as InterfaceBlockData, variantSelection);
                 return base.ComputePackageDependencies(variantSelection).Concat(additionalDependencies);
             }
 
             return base.ComputePackageDependencies(variantSelection);
         }
 
+        internal override IEnumerable<BlockData> ComputeOptionalDependencies(VariantsSelection variantSelection)
+        {
+            return ShouldInstallMatchmaking ? new BlockData[] { Utils.GetBlockData(MatchmakingBlockId) } : Enumerable.Empty<BlockData>();
+        }
+
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
         {
-            // Installing Auto Matchmaking for all networking blocks use cases if not present
+            // Installing Matchmaking for all networking blocks use cases if not present
             // As an optional dependency, developers can easily remove and use their own matchmaking.
-            if (ShouldInstallAutoMatchmaking)
+            if (ShouldInstallMatchmaking)
             {
-                var autoMatchmakingBlockData = Utils.GetBlockData(BlockDataIds.IAutoMatchmaking);
-                await autoMatchmakingBlockData.InstallWithDependencies();
+                await InstallMatchmaking(MatchmakingBlockId);
             }
 
             return await base.InstallAsync(blockData, selectedGameObject);
+        }
+
+        private static async Task InstallMatchmaking(string matchmakingBlockId)
+        {
+            var matchmakingBlockData = Utils.GetBlockData(matchmakingBlockId);
+            await matchmakingBlockData.InstallWithDependencies();
         }
     }
 }

@@ -35,6 +35,7 @@ namespace Meta.XR.ImmersiveDebugger
     /// Annotate field, property, functions with this will show in Immersive Debugger panel in runtime.
     /// Without additional parameters specified, by default we're watching fields/properties,
     /// and provide a button to call function without parameter.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     [Serializable]
@@ -49,28 +50,33 @@ namespace Meta.XR.ImmersiveDebugger
         };
 
         /// <summary>
-        /// Draw gizmo in space according to the runtime value of the field/property data.
+        /// The type of the gizmo to draw in space according to the runtime value of the field/property data.
+        /// The gizmoType must match the runtime value's type, check out <see cref="DebugGizmoType"/> for reference.
         /// </summary>
         public DebugGizmoType GizmoType = DebugGizmoType.None;
         /// <summary>
         /// Whether or not the gizmo will be turned on by default at startup.
+        /// You can always turn the gizmo off by clicking the "eye" button next to the row of the debug option.
         /// </summary>
         public bool ShowGizmoByDefault = false;
         /// <summary>
-        /// The color used for DebugGizmo line drawing and inspector row pill icon
+        /// The color used for DebugGizmo line drawing and inspector row pill icon,
+        /// note it doesn't apply to the Axis typed gizmo as it's drawing R/G/B colors for 3 axis.
         /// </summary>
         public Color Color = Color.gray;
         /// <summary>
-        /// Specify whether this field/property is tweakable, will show control UI in panel.
-        /// For now only supports float and use together with Min, Max param.
+        /// Specify whether this field/property is tweakable, will show control UI in headset panel (inspector).
+        /// For now it only supports two types: 1. boolean with checkboxes shown in headset panel, and
+        /// 2. float/int which can be used together with <see cref="Min"/>, <see cref="Max"/> param with slider shown in headset panel.
+        /// By default to true and can be turned off if no need.
         /// </summary>
-        public bool Tweakable;
+        public bool Tweakable = true;
         /// <summary>
-        /// Minimum value for the tweak slider
+        /// Minimum value for the tweak slider, only applicable for float/int data when <see cref="Tweakable"/> is true
         /// </summary>
         public float Min;
         /// <summary>
-        /// Maximum value for the tweak slider
+        /// Maximum value for the tweak slider, only applicable for float/int data when <see cref="Tweakable"/> is true
         /// </summary>
         public float Max = 1.0f;
 
@@ -85,6 +91,10 @@ namespace Meta.XR.ImmersiveDebugger
         [Tooltip(DisplayNameTooltip)]
         public string DisplayName;
 
+        /// <summary>
+        /// Constructor of the DebugMember
+        /// </summary>
+        /// <param name="color">The DebugColor typed color used for DebugGizmo line drawing and inspector row pill icon, default to Gray</param>
         public DebugMember(DebugColor color = DebugColor.Gray)
         {
             ParsedColors.TryGetValue(color, out Color);

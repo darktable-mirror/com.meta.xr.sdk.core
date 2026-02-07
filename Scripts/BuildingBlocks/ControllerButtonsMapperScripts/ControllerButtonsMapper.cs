@@ -26,13 +26,48 @@ using UnityEngine.Events;
 namespace Meta.XR.BuildingBlocks
 {
     /// <summary>
-    /// A block for mapping controller buttons easily.
+    /// A utility class for mapping controller buttons easily.
     /// </summary>
+    /// <example>
+    /// <code>
+    /// // Instantiate a new button action
+    /// var buttonAction = new ControllerButtonsMapper.ButtonClickAction
+    /// {
+    ///     Title = "Spawn Object",
+    ///     Button = OVRInput.Button.PrimaryIndexTrigger,
+    ///     ButtonMode = ControllerButtonsMapper.ButtonClickAction.ButtonClickMode.OnButtonUp,
+    ///     Callback = new UnityEvent()
+    /// };
+    /// </code>
+    /// </example>
     public class ControllerButtonsMapper : MonoBehaviour
     {
+        /// <summary>
+        /// A struct to consolidate all the options for a button action.
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// // Instantiate a new button action
+        /// var buttonAction = new ControllerButtonsMapper.ButtonClickAction
+        /// {
+        ///     Title = "Spawn Object",
+        ///     Button = OVRInput.Button.PrimaryIndexTrigger,
+        ///     ButtonMode = ControllerButtonsMapper.ButtonClickAction.ButtonClickMode.OnButtonUp,
+        ///     Callback = new UnityEvent()
+        /// };
+        /// </code>
+        /// </example>
         [Serializable]
         public struct ButtonClickAction
         {
+            /// <summary>
+            /// Button click mode types.
+            /// </summary>
+            /// <remarks>
+            /// OnButtonDown will trigger on the first frame when the button is down.
+            /// OnButtonUp will trigger on the first frame when the user presses releases the button.
+            /// OnButton triggers repeatedly when the user holds the button down.
+            /// </remarks>
             public enum ButtonClickMode
             {
                 OnButtonUp,
@@ -40,15 +75,33 @@ namespace Meta.XR.BuildingBlocks
                 OnButton
             }
 
+            /// <summary>
+            /// A title for this button action.
+            /// </summary>
             public string Title;
+
+            /// <summary>
+            /// Sets the button that will trigger the <see cref="Callback"/> when the <see cref="ButtonMode"/> is detected (usually ButtonMode.OnButtonUp).
+            /// </summary>
             public OVRInput.Button Button;
+
+            /// <summary>
+            /// Button click type: OnButtonUp, OnButtonDown, and OnButton. Use OnButtonUp to trigger the callback when the user releases the button.
+            /// </summary>
             public ButtonClickMode ButtonMode;
+
+            /// <summary>
+            /// Dispatches when <see cref="Button"/> matches the chosen <see cref="ButtonMode"/>.
+            /// </summary>
             public UnityEvent Callback;
         }
 
         [SerializeField]
         private List<ButtonClickAction> _buttonClickActions;
 
+        /// <summary>
+        /// A list of <see cref="ButtonClickAction"/> to trigger.
+        /// </summary>
         public List<ButtonClickAction> ButtonClickActions
         {
             get => _buttonClickActions;

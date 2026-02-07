@@ -47,6 +47,14 @@ public enum OVRGLTFComponentType
     FLOAT = 5126,
 }
 
+/// <summary>
+/// Helper class used by OVRGLTFLoader <see cref="OVRGLTFLoader"> to load GLTF (GL Transmission Format) data buffers using appropriate accessors and translates them into corresponding Unity data types when applicable.
+/// This class follows the GLTF 2.0 specification for loading data. For more information, refer to the [Binary Data Storage](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-data-storage) section on the GLTF 2.0 specification site.
+/// </summary>
+/// <remarks>
+/// This class is intended to be used in conjunction with the <see cref="OVRGLTFLoader">. It is not recommended to use these functions outside of the context of GLTF loading.
+/// </remarks>
+
 public class OVRGLTFAccessor : IDisposable
 {
     private struct GLTFAccessor
@@ -89,6 +97,15 @@ public class OVRGLTFAccessor : IDisposable
     private int _activeBufferOffset;
     private bool _requireStrideSeek;
 
+    /// <summary>
+    /// Tries to create a OVRGLTFAccessor object by checking if the binary stream data provided is a valid GLTF binary chunk.
+    /// </summary>
+    /// <param name="accessorsRoot">JSON node containing the GLTF accessors.</param>
+    /// <param name="bufferViewsRoot">JSON node containing the GLTF buffer views.</param>
+    /// <param name="buffersRoot">JSON node containing the GLTF buffers.</param>
+    /// <param name="binaryChunk">Binary stream of the entire GLTF file.</param>
+    /// <param name="dataAccessor">A valid OVRGLTFAccessor that can be used to access data in the GLTF binary stream.</param>
+    /// <returns>If the OVRGLTFAccessor was created successfully.</returns>
     public static bool TryCreate(JSONNode accessorsRoot, JSONNode bufferViewsRoot, JSONNode buffersRoot, Stream binaryChunk, out OVRGLTFAccessor dataAccessor)
     {
         var reader = new BinaryReader(binaryChunk, Encoding.UTF8, true);
@@ -207,6 +224,11 @@ public class OVRGLTFAccessor : IDisposable
         }
     }
 
+    /// <summary>
+    /// Indexes into the GLTF accessors JSONNode provided to the <see cref="TryCreate"/> method and moves the binary data stream position based on the accessor's data.
+    /// </summary>
+    /// <param name="accessorIndex">The index to a accessor in the accessor array.</param>
+    /// <param name="onlyBufferView">If the position should be set to just the start of the buffer view.</param>
     public void Seek(int accessorIndex, bool onlyBufferView = false)
     {
         if (accessorIndex >= _accessors.Count)
@@ -248,6 +270,10 @@ public class OVRGLTFAccessor : IDisposable
         _binaryChunk.Seek(_activeBufferOffset + (stride * strideIndex), SeekOrigin.Begin);
     }
 
+    /// <summary>
+    /// Reads data as floats from the binary stream, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <returns>An array of floats.</returns>
     public float[] ReadFloat()
     {
         var res = new float[_activeGltfAccessor.Count];
@@ -266,6 +292,11 @@ public class OVRGLTFAccessor : IDisposable
         }
         return res;
     }
+
+    /// <summary>
+    /// Read data as integers from the binary stream, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <returns>An array of integers.</returns>
     public int[] ReadInt()
     {
         var res = new int[_activeGltfAccessor.Count];
@@ -275,6 +306,11 @@ public class OVRGLTFAccessor : IDisposable
         }
         return res;
     }
+
+    /// <summary>
+    /// Read data as 2D vectors from the binary stream, using the current accessor set by <see cref="Seek"/>
+    /// </summary>
+    /// <returns>An array of Vector2s</returns>
     public Vector2[] ReadVector2()
     {
         var res = new Vector2[_activeGltfAccessor.Count];
@@ -296,6 +332,12 @@ public class OVRGLTFAccessor : IDisposable
         }
         return res;
     }
+
+    /// <summary>
+    /// Read data from the binary stream as 3D vectors, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <param name="conversionScale">Coversion scale that is applied to each Vector3.</param>
+    /// <returns>An array of Vector3s</returns>
     public Vector3[] ReadVector3(Vector3 conversionScale)
     {
         var res = new Vector3[_activeGltfAccessor.Count];
@@ -323,6 +365,11 @@ public class OVRGLTFAccessor : IDisposable
         return res;
     }
 
+    /// <summary>
+    /// Read data from the binary stream as 4D vectors, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <param name="conversionScale">Coversion scale that is applied to each Vector4.</param>
+    /// <returns>An array of Vector4s</returns>
     public Vector4[] ReadVector4(Vector4 conversionScale)
     {
         var res = new Vector4[_activeGltfAccessor.Count];
@@ -396,6 +443,11 @@ public class OVRGLTFAccessor : IDisposable
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
         }
     }
+
+    /// <summary>
+    /// Read data from the binary stream as colors, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <returns>An array of Colors.</returns>
     public Color[] ReadColor()
     {
         if (_activeGltfAccessor.Type != OVRGLTFType.VEC4 && _activeGltfAccessor.Type != OVRGLTFType.VEC3)
@@ -438,6 +490,10 @@ public class OVRGLTFAccessor : IDisposable
         return colors;
     }
 
+    /// <summary>
+    /// Read data from the binary stream as bone weights, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <param name="resultsBoneWeights">Output array of BoneWeights.</param>
     public void ReadWeights(ref BoneWeight[] resultsBoneWeights)
     {
         if (_activeGltfAccessor.Type != OVRGLTFType.VEC4)
@@ -466,6 +522,10 @@ public class OVRGLTFAccessor : IDisposable
         }
     }
 
+    /// <summary>
+    /// Read data from the binary stream as bone indices, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <param name="resultsBoneWeights">Output array of BoneWeights.</param>
     public void ReadJoints(ref BoneWeight[] resultsBoneWeights)
     {
         if (_activeGltfAccessor.Type != OVRGLTFType.VEC4)
@@ -484,6 +544,11 @@ public class OVRGLTFAccessor : IDisposable
         }
     }
 
+    /// <summary>
+    /// Read data from the binary stream as Quaternions, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <param name="gltfToUnitySpaceRotation">The conversion value to apply to translate from GLTF space to Unity space.</param>
+    /// <returns>An array of Quaternions.</returns>
     public Quaternion[] ReadQuaterion(Vector4 gltfToUnitySpaceRotation)
     {
         if (_activeGltfAccessor.Type != OVRGLTFType.VEC4)
@@ -520,6 +585,11 @@ public class OVRGLTFAccessor : IDisposable
         return res;
     }
 
+    /// <summary>
+    /// Read data from the binary stream as a Matrix 4x4, using the current accessor set by <see cref="Seek"/>.
+    /// </summary>
+    /// <param name="conversionScale">Conversion scale to be applied to each 4x4 matrix.</param>
+    /// <returns>An array of Matrix4x4.</returns>
     public Matrix4x4[] ReadMatrix4x4(Vector3 conversionScale)
     {
         if (_activeGltfAccessor.Type != OVRGLTFType.MAT4)
@@ -599,6 +669,11 @@ public class OVRGLTFAccessor : IDisposable
         }
     }
 
+    /// <summary>
+    /// Read the binary stream using a specific buffer view.
+    /// </summary>
+    /// <param name="bufferViewIndex">Index of a buffer view to use out of all buffer views.</param>
+    /// <returns>An array of byte data the buffer view points to.</returns>
     public byte[] ReadBuffer(int bufferViewIndex)
     {
         _activeBufferView = _bufferViews[bufferViewIndex];
@@ -608,11 +683,18 @@ public class OVRGLTFAccessor : IDisposable
         return _reader.ReadBytes(_activeBufferView.ByteLength);
     }
 
+    /// <summary>
+    /// Disposes the BinaryReader if being used for accessing the Stream.
+    /// </summary>
     public void Dispose()
     {
         _reader.Dispose();
     }
 
+    /// <summary>
+    /// Gets the total number of GLTF accessors loaded from the GLTF file.
+    /// </summary>
+    /// <returns>Total number of GLTF accessors.</returns>
     public int GetDataCount()
     {
         return _activeGltfAccessor.Count;

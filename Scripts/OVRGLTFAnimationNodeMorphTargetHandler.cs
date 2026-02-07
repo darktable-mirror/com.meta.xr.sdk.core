@@ -21,6 +21,10 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// Helper class that updates mesh verticies and UVs based on provided weights using the mesh's morph targets. This is required when animating the GLTF model so that all
+/// mesh attributes are updated correctly when the mesh moves.
+/// </summary>
 public class OVRGLTFAnimationNodeMorphTargetHandler
 {
     private OVRMeshData _meshData;
@@ -38,6 +42,9 @@ public class OVRGLTFAnimationNodeMorphTargetHandler
         _meshModifiableData.texcoords = new Vector2[_meshData.baseAttributes.texcoords.Length];
     }
 
+    /// <summary>
+    /// Updates the mesh vertices and UVs when the weights are modified. This should be called during an animation update to ensure the mesh is updated correctly.
+    /// </summary>
     public void Update()
     {
         if (!_modified)
@@ -108,6 +115,9 @@ public class OVRGLTFAnimationNodeMorphTargetHandler
         _modified = false;
     }
 
+    /// <summary>
+    /// Marks the mesh data as modified so that <see cref="Update"/> will process the new morph target weights.
+    /// </summary>
     public void MarkModified()
     {
         _modified = true;

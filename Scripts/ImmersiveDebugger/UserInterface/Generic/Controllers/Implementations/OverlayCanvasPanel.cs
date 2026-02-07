@@ -23,6 +23,14 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> serves as the base of all the panels for Immersive Debugger.
+    /// Basically it utilizes the <see cref="OVROverlay"/> (within the customized <see cref="OverlayCanvas"/>)
+    /// so the rendering is done in overlay layer (composition layer) instead of projection layer.
+    /// Note the panel will only use the overlay layer in the runtime (not in Editor / Link).
+    /// It could help the panels display much sharper text. See more in the [OVROverlay doc](https://developer.oculus.com/documentation/unity/unity-ovroverlay/).
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class OverlayCanvasPanel : Panel
     {
         private OverlayCanvas _overlayCanvas;

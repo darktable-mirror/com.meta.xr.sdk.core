@@ -152,10 +152,7 @@ namespace Meta.XR.Editor.UserInterface
 
         private void LoadContent()
         {
-            if (!Utils.IsMainEditor())
-            {
-                return;
-            }
+            if (!Utils.ShouldRenderEditorUI()) return;
 
             if (_category == Categories.BuiltIn)
             {

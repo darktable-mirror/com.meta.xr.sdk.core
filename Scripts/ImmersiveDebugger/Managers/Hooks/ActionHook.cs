@@ -23,11 +23,11 @@ using System.Reflection;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
-    public class ActionHook : Hook
+    internal class ActionHook : Hook
     {
-        public System.Action Delegate { get; private set; }
+        internal System.Action Delegate { get; private set; }
 
-        public ActionHook(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute)
+        internal ActionHook(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute)
         {
             Delegate = () => (memberInfo as MethodInfo)?.Invoke(instance, null);
         }

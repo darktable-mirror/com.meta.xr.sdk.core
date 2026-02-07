@@ -23,10 +23,24 @@ using UnityEngine.EventSystems;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for responsible as handler for pointer events.
+    /// Used by all the interactable UI elements of Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class PointerHandler : UIBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
+        /// <summary>
+        /// The corresponding <see cref="InteractableController"/> that's used to handle pointer events.
+        /// This is the UI elements that's receiving the pointer events.
+        /// </summary>
         public InteractableController Controller { get; set; }
 
+        /// <summary>
+        /// Implementation of the <see cref="IPointerClickHandler"/> that's receiving the pointer click events
+        /// and forwarding to <see cref="InteractableController"/>'s corresponding function in this class.
+        /// </summary>
+        /// <param name="eventData">The pointer event data from the click event</param>
         public void OnPointerClick(PointerEventData eventData)
         {
             if (Controller != null)
@@ -35,6 +49,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// Implementation of the <see cref="IPointerEnterHandler"/> that's receiving the pointer enter events
+        /// and forwarding to <see cref="InteractableController"/>'s corresponding function in this class.
+        /// </summary>
+        /// <param name="eventData">The pointer event data from the enter event</param>
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (Controller != null)
@@ -43,6 +62,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// Implementation of the <see cref="IPointerExitHandler"/> that's receiving the pointer exit events
+        /// and forwarding to <see cref="InteractableController"/>'s corresponding function in this class.
+        /// </summary>
+        /// <param name="eventData">The pointer event data from the exit event</param>
         public void OnPointerExit(PointerEventData eventData)
         {
             if (Controller != null)

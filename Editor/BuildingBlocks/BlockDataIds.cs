@@ -55,8 +55,10 @@ namespace Meta.XR.BuildingBlocks.Editor
         public const string SpatialAudio = "6737262b-4fab-4779-a38b-fe74012fa505";
 
 
+
         // Multiplayer Blocks
         public const string IAutoMatchmaking = "d45b4309-f823-42e4-b871-0f58e8e647d8";
+        public const string ICustomMatchmaking = "c5bea02f-8079-4142-87f9-56da5993f861";
         public const string AutoMatchmakingNGOInstallationRoutine = "0d740637-ae4c-40f5-98e2-1a9bac152d35";
         public const string AutoMatchmakingFusionInstallationRoutine = "6436b892-b7d4-4073-8113-00ab41af3be1";
 
@@ -74,6 +76,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public const string ControllerTeleporter = "3503368f-ae74-4ba8-a0c1-cf904f4bf5b6";
         public const string PlatformInit = "40089589-8290-4ae3-a056-d9ca1ccaa35a";
+        public const string IPlatformSocial = "a29fd151-3fe0-46e4-8ae6-c899e8b9be35";
 
         public const string PlayerVoiceChat = "5523ee0f-69d0-4e9f-b4b3-1ca61874f631";
         public const string PlayerVoiceChatFusionInstallationRoutine = "ca29a203-ad6d-4c65-ae37-ffab1dc8a165";
@@ -87,3 +90,4 @@ namespace Meta.XR.BuildingBlocks.Editor
         public const string NetworkedGrabbableObjectFusionInstallationRoutine = "54548176-30f4-4a4a-8057-340a383c6102";
     }
 }
+

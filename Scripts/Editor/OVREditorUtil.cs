@@ -277,4 +277,53 @@ public static class OVREditorUtil
         }
 #endif
     }
+
+    [Conditional("UNITY_EDITOR_WIN"), Conditional("UNITY_STANDALONE_WIN"), Conditional("UNITY_EDITOR_OSX"), Conditional("UNITY_STANDALONE_OSX"), Conditional("UNITY_ANDROID")]
+    public static void SetupRangeSlider(Object target, string name, ref float minValue, ref float maxValue, float minConstraint, float maxConstraint, ref bool modified)
+    {
+        SetupRangeSlider(target, new GUIContent(name), ref minValue, ref maxValue, minConstraint, maxConstraint, ref modified);
+    }
+
+    [Conditional("UNITY_EDITOR_WIN"), Conditional("UNITY_STANDALONE_WIN"), Conditional("UNITY_EDITOR_OSX"), Conditional("UNITY_STANDALONE_OSX"), Conditional("UNITY_ANDROID")]
+    public static void SetupRangeSlider(Object target, GUIContent name, ref float minValue, ref float maxValue, float minConstraint, float maxConstraint, ref bool modified)
+    {
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PrefixLabel(name);
+        float minValueCopy = minValue;
+        float maxValueCopy = maxValue;
+
+        EditorGUI.BeginChangeCheck();
+        minValueCopy = EditorGUILayout.DelayedFloatField(minValueCopy, GUILayout.Width(35));
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Changed " + name.text + " (min)");
+            minValueCopy = (float)System.Math.Round(minValueCopy, 2);
+            minValue = minValueCopy;
+            modified = true;
+        }
+
+        EditorGUI.BeginChangeCheck();
+        EditorGUILayout.MinMaxSlider(ref minValueCopy, ref maxValueCopy, minConstraint, maxConstraint, GUILayout.ExpandWidth(true));
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Changed " + name.text + " (range)");
+            minValueCopy = (float)System.Math.Round(minValueCopy, 2);
+            minValue = minValueCopy;
+            maxValueCopy = (float)System.Math.Round(maxValueCopy, 2);
+            maxValue = maxValueCopy;
+            modified = true;
+        }
+
+        EditorGUI.BeginChangeCheck();
+        maxValueCopy = EditorGUILayout.DelayedFloatField(maxValueCopy, GUILayout.Width(35));
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Changed " + name.text + " (max)");
+            maxValueCopy = (float)System.Math.Round(maxValueCopy, 2);
+            maxValue = maxValueCopy;
+            modified = true;
+        }
+
+        EditorGUILayout.EndHorizontal();
+    }
 }

@@ -26,14 +26,29 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 {
     public class EntityInputManager : OvrAvatarInputManager
     {
+#if META_AVATAR_SDK_28_OR_NEWER
+        protected override void OnTrackingInitialized()
+        {
+            if (BodyTrackingContext is not OvrAvatarBodyTrackingContext bodyTracking)
+            {
+                return;
+            }
+
+            bodyTracking.InputTrackingDelegate = new InputTrackingDelegate(null);
+            bodyTracking.InputControlDelegate = new InputControlDelegate();
+        }
+#else
         private void Start()
         {
-            if (BodyTracking != null)
+            if (BodyTracking == null)
             {
-                BodyTracking.InputTrackingDelegate = new InputTrackingDelegate(null);
-                BodyTracking.InputControlDelegate = new InputControlDelegate();
+                return;
             }
+
+            BodyTracking.InputTrackingDelegate = new InputTrackingDelegate(null);
+            BodyTracking.InputControlDelegate = new InputControlDelegate();
         }
+#endif
     }
 }
 #endif // META_AVATAR_SDK_DEFINED

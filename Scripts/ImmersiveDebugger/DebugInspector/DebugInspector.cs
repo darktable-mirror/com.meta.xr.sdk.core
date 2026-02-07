@@ -27,6 +27,13 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger
 {
+    /// <summary>
+    /// A <see cref="MonoBehaviour"/> component that allows opting-in debug types for Immersive Debugger
+    /// from Unity Editor's Inspector panel.
+    /// Usage: Add this component to any scene object, and you can select and add any debug types and configure the
+    /// debug options from the component's inspector.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     [ExecuteInEditMode]
     public class DebugInspector : MonoBehaviour
     {
@@ -37,7 +44,7 @@ namespace Meta.XR.ImmersiveDebugger
 
             internal List<InspectedHandle> Handles => handles;
 
-            public void Initialize(DebugInspector owner)
+            internal void Initialize(DebugInspector owner)
             {
                 // Initialize Handles
                 foreach (var handle in handles)

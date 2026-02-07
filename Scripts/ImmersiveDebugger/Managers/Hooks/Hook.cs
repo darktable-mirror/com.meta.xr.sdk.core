@@ -23,8 +23,7 @@ using System.Reflection;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
-
-    public abstract class Hook
+    internal abstract class Hook
     {
         private readonly DebugMember _attribute;
         protected readonly MemberInfo _memberInfo;

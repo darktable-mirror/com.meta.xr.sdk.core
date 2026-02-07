@@ -121,7 +121,6 @@ public class OVRSceneModelLoader : MonoBehaviour
             var callbacks = new PermissionCallbacks();
             callbacks.PermissionGranted += _ => OVRTask.SetResult(taskId, true);
             callbacks.PermissionDenied += _ => OVRTask.SetResult(taskId, false);
-            callbacks.PermissionDeniedAndDontAskAgain += _ => OVRTask.SetResult(taskId, false);
 
             // Create a task and request permission
             var task = OVRTask.Create<bool>(taskId);

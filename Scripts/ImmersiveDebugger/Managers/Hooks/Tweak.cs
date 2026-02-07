@@ -24,13 +24,17 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
-    public static class TweakUtils
+    internal static class TweakUtils
     {
         private static readonly Dictionary<Type, Type> _types = new Dictionary<Type, Type>();
         private static readonly HashSet<Type> _supportsValueRange = new();
+
+        private const string Min = "min";
+        private const string Max = "max";
 
         static TweakUtils()
         {
@@ -77,16 +81,67 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public static bool IsMemberTypeValidForTweak(MemberInfo member) =>
             member.MemberType == MemberTypes.Field && IsTypeSupported((member as FieldInfo)?.FieldType) ||
             member.MemberType == MemberTypes.Property && IsTypeSupported((member as PropertyInfo)?.PropertyType);
+
+        public static void ProcessMinMaxRange(MemberInfo member, DebugMember attribute, Object instance)
+        {
+            var memberType = member.GetDataType();
+            double value = 0;
+
+            // This is to avoid InvalidCastException
+            if (memberType == typeof(float)) value = (float)member.GetValue(instance);
+            else if (memberType == typeof(int)) value = (int)member.GetValue(instance);
+            else if (memberType == typeof(double)) value = (double)member.GetValue(instance);
+
+            if (attribute.Min <= value && value <= attribute.Max)
+            {
+                return;
+            }
+
+            // 50% min, max range
+            var spread = Mathf.Abs((float)(value * 0.5f));
+            attribute.Min = RoundToNearest((float)(value - spread), Min);
+            attribute.Max = RoundToNearest((float)(value + spread), Max);
+        }
+
+        internal static float RoundToNearest(float value, string op)
+        {
+            var scale = 0f;
+            if (value >= 0)
+            {
+                switch (value)
+                {
+                    case < 1:
+                        return op == Min ? 0 : 1; // Explicitly set for small values
+                    case < 10:
+                        return Mathf.Round(value);
+                    default:
+                        scale = Mathf.Pow(10, Mathf.Floor(Mathf.Log10(value)));
+                        return Mathf.Ceil(value / scale) * scale;
+                }
+            }
+
+            switch (value)
+            {
+                case > -1:
+                    return op == Min ? -1.0f : 0; // Explicitly set to -1 for small negative values
+                case > -10:
+                    return Mathf.Round(value);
+                default:
+                    scale = Mathf.Pow(10, Mathf.Floor(Mathf.Log10(-value)));
+                    var scaledToTen = op == Min ? Mathf.Floor(value / scale) : Mathf.Ceil(value / scale);
+                    return scaledToTen * scale;
+            }
+        }
     }
 
-    public abstract class Tweak : Hook
+    internal abstract class Tweak : Hook
     {
         public abstract float Tween { get; set; }
 
         protected Tweak(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute) { }
     }
 
-    public class Tweak<T> : Tweak
+    internal class Tweak<T> : Tweak
     {
         public static Func<T, T, T, float> InverseLerp;
         public static Func<T, T, float, T> Lerp;

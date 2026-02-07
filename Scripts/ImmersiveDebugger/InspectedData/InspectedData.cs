@@ -29,6 +29,7 @@ namespace Meta.XR.ImmersiveDebugger
     /// <summary>
     /// Storing inspected members separately as a file and get loaded by runtime,
     /// can be used when [DebugMember] attribute cannot be conveniently added to script.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     [CreateAssetMenu(fileName = "InspectedData", menuName = "Meta/ImmersiveDebugger/InspectedData", order = 100)]
     public class InspectedData : ScriptableObject
@@ -37,7 +38,7 @@ namespace Meta.XR.ImmersiveDebugger
         [SerializeField] internal string DisplayName;
         [SerializeField] internal List<InspectedMember> InspectedMembers = new();
 
-        public IEnumerable<Type> ExtractTypesFromInspectedMembers()
+        internal IEnumerable<Type> ExtractTypesFromInspectedMembers()
         {
             var types = new HashSet<Type>();
             foreach (var inspectedMember in InspectedMembers)
@@ -54,7 +55,7 @@ namespace Meta.XR.ImmersiveDebugger
         }
     }
 
-    public static class InspectedDataRegistry
+    internal static class InspectedDataRegistry
     {
         private static readonly Dictionary<Type, List<InspectedMember>> InspectedMembersRegistry = new();
 

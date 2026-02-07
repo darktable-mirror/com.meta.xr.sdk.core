@@ -17,5 +17,5 @@ MonoBehaviour:
   sprite: {fileID: 21300000, guid: 32480d79d7cd39b4d90c897f3f36b573, type: 3}
   color: {r: 0.12941177, g: 0.1882353, b: 0.21176471, a: 1}
   colorHover: {r: 0.23590836, g: 0.2560816, b: 0.26415092, a: 1}
-  colorOff: {r: 0.10843124, g: 0.14553563, b: 0.16037738, a: 0}
+  colorOff: {r: 0.10843124, g: 0.14553563, b: 0.16037738, a: 0.32156864}
   pixelDensityMultiplier: 4

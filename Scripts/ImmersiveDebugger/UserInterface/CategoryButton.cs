@@ -33,7 +33,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Label _subLabel;
         private Flex _flex;
 
-        public string CategoryName
+        internal string CategoryName
         {
             get => _category;
             set
@@ -43,7 +43,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public int Counter
+        internal int Counter
         {
             get => _counter;
             set
@@ -78,8 +78,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _subLabel.TextStyle = Style.Load<TextStyle>("CategorySubLabel");
 
             IconStyle = Style.Load<ImageStyle>("None");
-            BackgroundStyle = Style.Load<ImageStyle>("CategoryButtonBackground");
+            BackgroundStyle = Style.Instantiate<ImageStyle>("CategoryButtonBackground");
         }
     }
 }
-

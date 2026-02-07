@@ -3,6 +3,8 @@
     "rootNamespace": "",
     "references": [
         "Meta.XR.Editor.UserInterface",
+        "Meta.XR.Editor.Reflection",
+        "Meta.XR.Editor.Settings",
         "Oculus.VR.Editor"
     ],
     "includePlatforms": [

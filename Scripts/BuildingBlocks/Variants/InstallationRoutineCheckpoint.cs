@@ -28,6 +28,8 @@ namespace Meta.XR.BuildingBlocks
     /// Contains all Metadata related to the installation of a block,
     /// typically the variants and interfaces choices required by the installation process.
     /// The data is serialized in the owner <see cref="BuildingBlock"/> <see cref="MonoBehaviour"/>.
+    /// Installation Routines and Variants are a part of Meta XR Building Blocks. For more information,
+    /// see [Building Blocks](https://developer.oculus.com/documentation/unity/bb-overview/)
     /// </summary>
     /// <remarks>
     /// The data is set automatically into these serializable classes on installation of a <see cref="BuildingBlock"/>.
@@ -38,13 +40,16 @@ namespace Meta.XR.BuildingBlocks
         [SerializeField, HideInInspector] private string _installationRoutineId;
         /// <summary>
         /// Identifies the <see cref="Meta.XR.BuildingBlocks.Editor.InstallationRoutine"/> used to install the owner
-        /// <see cref="BuildingBlock"/>.
+        /// <see cref="BuildingBlock"/>. During the installation, this is used to know which routine should be applied.
+        /// After installation, this is stored to keep an history on how the block was installed.
         /// </summary>
         public string InstallationRoutineId => _installationRoutineId;
 
         [SerializeField, HideInInspector] private List<VariantCheckpoint> _installationVariants;
         /// <summary>
-        /// List of all variant options used for the installation of the owner <see cref="BuildingBlock"/>.
+        /// List of all variant options used for the installation of the owning <see cref="BuildingBlock"/>.
+        /// During the installation, these are used to know which variants to apply during the installation routine.
+        /// After installation, these are used to keep an history on the variants that were used for this block.
         /// </summary>
         public List<VariantCheckpoint> InstallationVariants => _installationVariants;
 
@@ -65,6 +70,8 @@ namespace Meta.XR.BuildingBlocks
     /// Describes a variant used for the installation of a block.
     /// The data is serialized within the <see cref="InstallationRoutineCheckpoint"/> which is stored within the owner
     /// <see cref="BuildingBlock"/> <see cref="MonoBehaviour"/>.
+    /// Installation Routines and Variants are a part of Meta XR Building Blocks. For more information,
+    /// see [Building Blocks](https://developer.oculus.com/documentation/unity/bb-overview/)
     /// </summary>
     /// <remarks>
     /// The data is set automatically into these serializable classes on installation of a <see cref="BuildingBlock"/>.
@@ -74,13 +81,17 @@ namespace Meta.XR.BuildingBlocks
     {
         [SerializeField] protected string _memberName;
         /// <summary>
-        /// Name of the member set by this variant
+        /// Name of the member set by this variant. During installation, it is used by reflection to figure out
+        /// which member needs to be set by this variant. After installation, it is stored to keep an history of
+        /// the selected variants.
         /// </summary>
         public string MemberName => _memberName;
 
         [SerializeField] protected string _value;
         /// <summary>
-        /// Serialized value, as a string, set by this variant
+        /// Serialized value, as a string, set by this variant. During installation, it is used to set the value
+        /// of the variant (to the member represented by <see cref="MemberName"/>). After installation, it is stored
+        /// to keep an history of the selected variants.
         /// </summary>
         public string Value => _value;
 

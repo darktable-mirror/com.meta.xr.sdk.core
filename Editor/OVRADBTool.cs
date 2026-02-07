@@ -23,6 +23,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using UnityEngine;
@@ -53,7 +54,11 @@ public class OVRADBTool
         }
 
         androidPlatformToolsPath = Path.Combine(this.androidSdkRoot, "platform-tools");
+#if UNITY_EDITOR_OSX
+        adbPath = Path.Combine(androidPlatformToolsPath, "adb");
+#else
         adbPath = Path.Combine(androidPlatformToolsPath, "adb.exe");
+#endif
         isReady = File.Exists(adbPath);
     }
 
@@ -111,26 +116,41 @@ public class OVRADBTool
 
     public List<string> GetDevices()
     {
+        return new List<string>(GetDevicesWithStatus().Keys);
+    }
+
+    public Dictionary<string, string> GetDevicesWithStatus()
+    {
         string outputString;
         string errorString;
 
         RunCommand(new string[] { "devices" }, null, out outputString, out errorString);
-        string[] devices = outputString.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        string[] devices = outputString.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
 
         List<string> deviceList = new List<string>(devices);
+
+        Dictionary<string, string> deviceStatuses = new Dictionary<string, string>(deviceList.Count);
+        if (!deviceList.Any())
+        {
+            return deviceStatuses;
+        }
         deviceList.RemoveAt(0);
 
         for (int i = 0; i < deviceList.Count; i++)
         {
-            string deviceName = deviceList[i];
-            int index = deviceName.IndexOf('\t');
+            string deviceItem = deviceList[i];
+            int index = deviceItem.IndexOf('\t');
             if (index >= 0)
-                deviceList[i] = deviceName.Substring(0, index);
+            {
+                string deviceName = deviceItem.Substring(0, index);
+                string deviceStatus = deviceItem.Substring(index + 1);
+                deviceStatuses.Add(deviceName, deviceStatus);
+            }
             else
                 deviceList[i] = "";
         }
 
-        return deviceList;
+        return deviceStatuses;
     }
 
     private StringBuilder outputStringBuilder = null;
@@ -196,18 +216,6 @@ public class OVRADBTool
         outputStringBuilder = null;
         errorStringBuilder = null;
 
-        if (!string.IsNullOrEmpty(errorString))
-        {
-            if (errorString.Contains("Warning") || errorString.Contains("daemon not running; starting now"))
-            {
-                UnityEngine.Debug.LogWarning("OVRADBTool " + errorString);
-            }
-            else
-            {
-                UnityEngine.Debug.LogError("OVRADBTool " + errorString);
-            }
-        }
-
         return exitCode;
     }
 
@@ -239,6 +247,31 @@ public class OVRADBTool
         process.BeginErrorReadLine();
 
         return process;
+    }
+
+    public bool TryGetSystemProperty(string device, string property, string defaultValue,
+        out string value)
+    {
+        if (RunCommand(new[]
+            {
+                "-s", device,
+                "shell", "getprop", property
+            }, null, out var stdout, out _) != 0)
+        {
+            value = defaultValue;
+            return false;
+        }
+
+        stdout = stdout?.Trim();
+        value = string.IsNullOrEmpty(stdout) ? defaultValue : stdout;
+        return true;
+    }
+
+    public bool TryGetSystemProperty(string device, string property, out int value)
+    {
+        value = 0;
+        return TryGetSystemProperty(device, property, "0", out var strValue) &&
+               int.TryParse(strValue, out value);
     }
 
     private void OutputDataReceivedHandler(object sendingProcess, DataReceivedEventArgs args)

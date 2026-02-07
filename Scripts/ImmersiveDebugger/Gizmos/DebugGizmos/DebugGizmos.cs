@@ -28,6 +28,11 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.Gizmo
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> responsible for drawing debug gizmos for Immersive Debugger.
+    /// It contains methods and configuration options for drawing builtin types within the class.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     [ExecuteAlways]
     public class DebugGizmos : MonoBehaviour
     {
@@ -272,6 +277,10 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
         }
 
         private static bool _renderSinglePass = true;
+        /// <summary>
+        /// Indicate whether using single pass rendering, can be updated within runtime dynamically.
+        /// If using single pass rendering, duplicate buffer data for the <see cref="PolylineRenderer"/>
+        /// </summary>
         public static bool RenderSinglePass
         {
             get
@@ -293,10 +302,18 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             }
         }
 
+        /// <summary>
+        /// The color (of Unity <see cref="Color"/> type) used to draw the segments, by default to Black.
+        /// Can be adjusted dynamically in runtime.
+        /// </summary>
         public static Color Color = Color.black;
+        /// <summary>
+        /// Float indicating the width of the segments that's used for drawing the gizmos, by default to 0.1f.
+        /// Can be adjusted dynamically in runtime.
+        /// </summary>
         public static float LineWidth = 0.1f;
 
-        public struct ColorScope : IDisposable
+        internal struct ColorScope : IDisposable
         {
             private readonly Color _savedColor;
             public ColorScope(Color color)
@@ -311,6 +328,11 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             }
         }
 
+        /// <summary>
+        /// Draw a point gizmo using <see cref="PolylineRenderer"/> segments
+        /// </summary>
+        /// <param name="p0">Vector3 indicating the position of the point</param>
+        /// <param name="t">Optional <see cref="Transform"/> applied on top of the gizmo</param>
         public static void DrawPoint(Vector3 p0, Transform t = null)
         {
             if (t != null)
@@ -321,6 +343,12 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             Root.AddSegment(p0, p0, LineWidth, Color, Color);
         }
 
+        /// <summary>
+        /// Draw a line gizmo using <see cref="PolylineRenderer"/> segments
+        /// </summary>
+        /// <param name="p0">Vector3 indicating the starting point of the line</param>
+        /// <param name="p1">Vector3 indicating the ending point of the line</param>
+        /// <param name="t">Optional <see cref="Transform"/> applied on top of the gizmo</param>
         public static void DrawLine(Vector3 p0, Vector3 p1, Transform t = null)
         {
             if (t != null)
@@ -332,6 +360,12 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             Root.AddSegment(p0, p1, LineWidth, Color, Color);
         }
 
+        /// <summary>
+        /// Draw a wired cube gizmo using <see cref="PolylineRenderer"/> segments
+        /// </summary>
+        /// <param name="center">Vector3 indicating the center of the cube</param>
+        /// <param name="size">Float indicating the size of the cube</param>
+        /// <param name="t">Optional <see cref="Transform"/> applied on top of the gizmo</param>
         public static void DrawWireCube(Vector3 center, float size, Transform t = null)
         {
             for (int i = 0; i < CUBE_SEGMENTS.Count; i += 2)
@@ -353,11 +387,21 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             DrawLine(position, position + rotation * Vector3.forward * size);
         }
 
+        /// <summary>
+        /// Draw an Axis gizmo using <see cref="PolylineRenderer"/> segments
+        /// </summary>
+        /// <param name="pose"><see cref="Pose"/> indicating the position/rotation of the Axis</param>
+        /// <param name="size">Float indicating the length of each Axis line</param>
         public static void DrawAxis(Pose pose, float size = 0.1f)
         {
             DrawAxis(pose.position, pose.rotation, size);
         }
 
+        /// <summary>
+        /// Draw an Axis gizmo using <see cref="PolylineRenderer"/> segments
+        /// </summary>
+        /// <param name="t"><see cref="Transform"/> indicating the position/rotation of the Axis</param>
+        /// <param name="size">Float indicating the length of each Axis line</param>
         public static void DrawAxis(Transform t, float size = 0.1f)
         {
             DrawAxis(new Pose(t.position, t.rotation), size);
@@ -375,6 +419,12 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             }
         }
 
+        /// <summary>
+        /// Draw a plane gizmo  using <see cref="PolylineRenderer"/> segments
+        /// </summary>
+        /// <param name="pose"><see cref="Pose"/> indicating the origin position and normal of the plane (the center point)</param>
+        /// <param name="width">Float indicating the width of the plane</param>
+        /// <param name="height">Float indicating the height of the plane</param>
         public static void DrawPlane(Pose pose, float width, float height)
         {
             DrawPlane(pose.position, pose.rotation, width, height);
@@ -398,6 +448,15 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             }
         }
 
+        /// <summary>
+        /// Draw a box gizmo using <see cref="PolylineRenderer"/> segments
+        /// </summary>
+        /// <param name="pose"><see cref="Pose"/> indicating the origin position and normal of the box (pivot depending on <see cref="isPivotTopSurface"/>)</param>
+        /// <param name="width">Float indicating the width of the box</param>
+        /// <param name="height">Float indicating the height of the box</param>
+        /// <param name="depth">Float indicating the depth of the box</param>
+        /// <param name="isPivotTopSurface">Boolean specifying the pivot's <see cref="Pose"/> is from the middle center of the box or top surface's center,
+        /// it's usually used as true for Scene anchors</param>
         public static void DrawBox(Pose pose, float width, float height, float depth, bool isPivotTopSurface = false)
         {
             DrawBox(pose.position, pose.rotation, width, height, depth, isPivotTopSurface);

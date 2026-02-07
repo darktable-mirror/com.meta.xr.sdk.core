@@ -13,10 +13,9 @@ MonoBehaviour:
   m_Name: NetworkedAvatarNGOInstallationRoutine
   m_EditorClassIdentifier: 
   id: e7255571-f7d7-46a3-a005-558934863c26
-  routineName: Networked Avatar NGO Installation Routine
-  description: Installation routine for NGO Networked Avatar
   targetBlockDataId: b627f6cd-e738-4827-bfb1-7332719112b3
   prefab: {fileID: 8828322664059971389, guid: a53d469ab1a5e9445b6c037756cff619, type: 3}
   packageDependencies:
-  - com.unity.netcode.gameobjects
+  - com.unity.netcode.gameobjects@^1.7.1
   implementation: 0
+  installMatchmaking: 0

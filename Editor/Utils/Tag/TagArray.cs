@@ -71,6 +71,12 @@ namespace Meta.XR.Editor.Tags
             }
         }
 
+        public void Update(Tag tag)
+        {
+            if (array.Contains(tag)) Remove(tag);
+            Add(tag);
+        }
+
         public void Remove(Tag tag)
         {
             var index = Array.IndexOf(array, tag);

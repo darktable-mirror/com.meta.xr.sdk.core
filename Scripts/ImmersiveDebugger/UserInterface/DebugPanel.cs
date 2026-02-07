@@ -24,13 +24,24 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> representing Panel UI (base class of actual panels) of Immersive Debugger.
+    /// Inheriting from <see cref="OverlayCanvasPanel"/> that's using the OVROverlay layer for rendering.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class DebugPanel : OverlayCanvasPanel
     {
         private Label _title;
         private ButtonWithIcon _closeIcon;
 
+        /// <summary>
+        /// The Icon of the panel, used for displaying on the <see cref="DebugBar"/> and toggling visibility of the panel itself.
+        /// </summary>
         public Texture2D Icon { get; set; }
 
+        /// <summary>
+        /// The Title of the panel, used for displaying at the bottom center of the panel to identify the panel.
+        /// </summary>
         public string Title
         {
             get => _title.Content;

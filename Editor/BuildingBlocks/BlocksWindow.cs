@@ -41,7 +41,7 @@ using Object = UnityEngine.Object;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
-    public class BuildingBlocksWindow : EditorWindow
+    public partial class BuildingBlocksWindow : EditorWindow
     {
         private const string MenuPath = "Meta/Tools/Building Blocks";
 
@@ -62,6 +62,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                            $"\n• You can use multiple blocks to enable more XR capabilities.");
 
         private Vector2 _scrollPosition;
+
 
         private AnimatedContent _outline = null;
         private AnimatedContent _tutorial = null;
@@ -118,7 +119,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
-        private class Dimensions
+        internal class Dimensions
         {
             public int WindowWidth { get; private set; }
             public int WindowHeight { get; private set; }
@@ -175,10 +176,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.OpenWindow)
                 .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.ActionTrigger, origin.ToString())
                 .Send();
+
         }
 
         private void OnGUI()
         {
+
             if (Event.current.type == EventType.MouseMove)
             {
                 _repainter.RequestRepaint();
@@ -273,6 +276,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             DragAndDrop.RemoveDropHandler(HierarchyDropHandler);
 #endif // OVR_BB_DRAGANDDROP
             _requestFilterSearchFocus = true;
+
         }
 
         private static IReadOnlyList<BlockBaseData> _blockList;
@@ -367,7 +371,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 var isVisibleInScrollView = IsVisibleInScrollView(lineIndex, dimensions);
                 Show(block, blockRect, isVisibleInScrollView, dimensions.ExpectedThumbnailWidth, dimensions.ExpectedThumbnailHeight);
 
-                if (showTutorial && block.CanBeAdded)
+                if (showTutorial && block.IsInteractable)
                 {
                     ShowTutorial(blockRect);
                     showTutorial = false;
@@ -431,23 +435,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private static bool CanBeAdded(BlockBaseData block)
-        {
-            if (block is InterfaceBlockData interfaceBlockData)
-            {
-                return interfaceBlockData.HasInstallationRoutine
-                       && !interfaceBlockData.HasMissingDependencies
-                       && !interfaceBlockData.IsSingletonAndAlreadyPresent
-                       && !Utils.IsApplicationPlaying.Invoke();
-            }
-
-            return block.CanBeAdded;
-        }
-
         private static bool ShouldShowMissingPackageDependencies(BlockData block)
             => block != null && block.HasMissingPackageDependencies;
 
-        private void ShowButtons(BlockBaseData block, Rect blockRect, bool canBeAdded, bool canBeSelected)
+        private void ShowBlockInstallButton(BlockBaseData block, Rect blockRect, bool canBeAdded, bool canBeSelected)
         {
             GUILayout.BeginArea(blockRect, Styles.GUIStyles.LargeButtonArea);
             GUILayout.FlexibleSpace();
@@ -573,7 +564,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             int expectedThumbnailHeight)
         {
             var blockData = block as BlockData;
-            var canBeAdded = CanBeAdded(block);
+            var canBeAdded = block.IsInteractable;
             var numberInScene = blockData != null ? blockData.ComputeNumberOfBlocksInScene() : 0;
             var canBeSelected = numberInScene > 0;
             var isHover = OVREditorUtils.HoverHelper.IsHover(block.Id + "Description");
@@ -590,7 +581,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.BeginVertical(gridItemStyle);
             ShowThumbnail(block, targetHeight, expectedThumbnailWidth, expectedThumbnailHeight);
             ShowDescription(block, blockRect, targetHeight, expectedThumbnailWidth, expectedThumbnailHeight, canBeAdded, canBeSelected);
-            ShowButtons(block, blockRect, canBeAdded, canBeSelected);
+
+            ShowBlockInstallButton(block, blockRect, canBeAdded, canBeSelected);
+
 #if OVR_BB_DRAGANDDROP
             ShowDragAndDrop(block, blockRect, canBeAdded);
 #endif // OVR_BB_DRAGANDDROP
@@ -600,6 +593,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 block.MarkAsSeen();
             }
+
         }
 
         private void Show(BlockBaseData block, Rect blockRect, bool isVisibleInScrollView, int expectedThumbnailWidth, int expectedThumbnailHeight)
@@ -798,6 +792,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             DragAndDrop.SetGenericData(DragAndDropBlockDataLabel, block);
             DragAndDrop.SetGenericData(DragAndDropBlockThumbnailLabel, block.Thumbnail);
             DragAndDrop.StartDrag(DragAndDropLabel);
+
         }
 
         private static void ResetDragThumbnail()

@@ -21,27 +21,47 @@
 
 using UnityEngine;
 
+/*
+ If you're not using standard OVRCameraRig and controllers for Oculus Integration,
+ to integrate with Immersive Debugger consider using a custom config.
+
+ Make sure UseCustomIntegrationConfig option is enabled in settings.
+
+ There are two ways of integrating it:
+ 1. Subscription based with the static CustomIntegrationConfig class, you can freely subscribe/unsubscribe anytime but harder to maintain.
+ 2. Implement a class of ICustomIntegrationConfig or [recommended] overriding CustomIntegrationConfigBase and put it in the settings slot.
+ For the file in the settings slot, we'll automatically attach the monobehaviour in Immersive Debugger setup and use it.
+*/
 namespace Meta.XR.ImmersiveDebugger
 {
     /// <summary>
     /// Subscribe to the delegate events to register custom config of the integration with Immersive Debugger,
     /// all should be only subscribed once for each scene.
-    /// For example implementation, check out ExampleCustomIntegrationConfig.cs
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     public static class CustomIntegrationConfig
     {
+        /// <summary>
+        /// Delegate type for the GetCamera function
+        /// </summary>
         public delegate Camera GetCameraDelegate();
+        /// <summary>
+        /// Delegate type for the GetLeftControllerTransformDelegate function
+        /// </summary>
         public delegate Transform GetLeftControllerTransformDelegate();
+        /// <summary>
+        /// Delegate type for the GetRightControllerTransformDelegate function
+        /// </summary>
         public delegate Transform GetRightControllerTransformDelegate();
-
-        // Get Camera of the current scene, could be null. Used for show panel in relation to
-        // the camera's pose in runtime if you're not using OVRCameraRig.
         public static event GetCameraDelegate GetCameraHandler;
-        // Get Left controller, used to calculate raycasting to the panel in runtime
         public static event GetLeftControllerTransformDelegate GetLeftControllerTransformHandler;
-        // Get Right controller, used to calculate raycasting to the panel in runtime
         public static event GetRightControllerTransformDelegate GetRightControllerTransformHandler;
 
+        /// <summary>
+        /// Setup all the configs with provided ICustomIntegrationConfig so it's used by Immersive Debugger
+        /// Note the config is only gonna be used if UseCustomIntegrationConfig is enabled in settings
+        /// </summary>
+        /// <param name="customConfig">The implementation of ICustomIntegrationConfig</param>
         public static void SetupAllConfig(ICustomIntegrationConfig customConfig)
         {
             GetCameraHandler += customConfig.GetCamera;
@@ -49,6 +69,10 @@ namespace Meta.XR.ImmersiveDebugger
             GetRightControllerTransformHandler += customConfig.GetRightControllerTransform;
         }
 
+        /// <summary>
+        /// Remove the registered customConfig from Immersive Debugger
+        /// </summary>
+        /// <param name="customConfig">The implementation of ICustomIntegrationConfig</param>
         public static void ClearAllConfig(ICustomIntegrationConfig customConfig)
         {
             GetCameraHandler -= customConfig.GetCamera;
@@ -56,22 +80,40 @@ namespace Meta.XR.ImmersiveDebugger
             GetRightControllerTransformHandler -= customConfig.GetRightControllerTransform;
         }
 
+        /// <summary>
+        /// Get Camera of the current scene, could be null. Used for show panel in relation to
+        /// the camera's pose in runtime if you're not using OVRCameraRig.
+        /// </summary>
         public static Camera GetCamera()
         {
             return GetCameraHandler?.Invoke();
         }
 
+        /// <summary>
+        /// Get Left controller, used to calculate ray casting to the panel in runtime
+        /// </summary>
+        /// <returns> Transform of the left controller</returns>
         public static Transform GetLeftControllerTransform()
         {
             return GetLeftControllerTransformHandler?.Invoke();
         }
 
+        /// <summary>
+        /// Get Right controller, used to calculate ray casting to the panel in runtime
+        /// </summary>
+        /// <returns>Transform of the right controller</returns>
         public static Transform GetRightControllerTransform()
         {
             return GetRightControllerTransformHandler?.Invoke();
         }
     }
 
+    /// <summary>
+    /// Interface for the custom integration config, implement this to allow integrating with
+    /// Immersive Debugger in a customized way. Currently only exposing customization of
+    /// overriding camera and controllers. Might be expanded in the future.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public interface ICustomIntegrationConfig
     {
         public Camera GetCamera();
@@ -79,6 +121,13 @@ namespace Meta.XR.ImmersiveDebugger
         public Transform GetRightControllerTransform();
     }
 
+    /// <summary>
+    /// A Base class implementing <see cref="ICustomIntegrationConfig"/> which automatically
+    /// setup/clear all the configurations in awake/destroy life cycle.
+    /// This is intend to make it more convenient to use custom integration config with boiler plate code provided.
+    /// Overriding this class following the ExampleCustomIntegrationConfig.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class CustomIntegrationConfigBase : MonoBehaviour, ICustomIntegrationConfig
     {
         private void Awake()
@@ -90,17 +139,30 @@ namespace Meta.XR.ImmersiveDebugger
         {
             CustomIntegrationConfig.ClearAllConfig(this);
         }
-
+        /// <summary>
+        /// Indicates how a camera should be found in the application.
+        /// This should be dynamically managed across scenes, if previous camera is destroyed,
+        /// Immersive Debugger will call this function again to retrieve camera.
+        /// </summary>
+        /// <returns>The camera component Immersive Debugger is using to position panels</returns>
         public virtual Camera GetCamera()
         {
             return null;
         }
 
+        /// <summary>
+        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
+        /// </summary>
+        /// <returns>The left controller component Immersive Debugger is using to detect ray casting for panels</returns>
         public virtual Transform GetLeftControllerTransform()
         {
             return null;
         }
 
+        /// <summary>
+        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
+        /// </summary>
+        /// <returns>The right controller component Immersive Debugger is using to detect ray casting for panels</returns>
         public virtual Transform GetRightControllerTransform()
         {
             return null;

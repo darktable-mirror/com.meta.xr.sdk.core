@@ -112,20 +112,16 @@ internal class OVRConfigurationTaskRegistry
         _tasks.Clear();
     }
 
-    internal IEnumerable<OVRConfigurationTask> GetTasks(BuildTargetGroup buildTargetGroup, bool refresh)
+    internal IEnumerable<OVRConfigurationTask> GetValidTasks(BuildTargetGroup buildTargetGroup)
     {
-        if (refresh)
-        {
-            foreach (var task in Tasks)
-            {
-                task.InvalidateCache(buildTargetGroup);
-            }
-        }
+        return GetTasks(buildTargetGroup).Where(task => task.Valid.GetValue(buildTargetGroup));
+    }
 
+    internal IEnumerable<OVRConfigurationTask> GetTasks(BuildTargetGroup buildTargetGroup)
+    {
         return Tasks.Where
         (
             task => (task.Platform == BuildTargetGroup.Unknown || task.Platform == buildTargetGroup)
-                    && task.Valid.GetValue(buildTargetGroup)
         );
     }
 }

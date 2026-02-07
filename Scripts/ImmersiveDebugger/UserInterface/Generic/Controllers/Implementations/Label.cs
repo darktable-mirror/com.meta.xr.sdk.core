@@ -24,10 +24,19 @@ using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the generic Label UI element,
+    /// used by labels on the in-headset panels of Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Label : Controller
     {
         internal Text Text { get; private set; }
 
+        /// <summary>
+        /// String that is being used for displaying text content of the label.
+        /// Might be truncated if too long (with overflow)
+        /// </summary>
         public string Content
         {
             get => Text.text;
@@ -44,6 +53,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Text.text = "";
         }
 
+        /// <summary>
+        /// The style used for the text, containing properties such as font, size, alignment and color.
+        /// </summary>
         public TextStyle TextStyle
         {
             set

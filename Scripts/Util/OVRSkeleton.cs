@@ -128,10 +128,18 @@ public class OVRSkeleton : MonoBehaviour
     public enum SkeletonType
     {
         None = OVRPlugin.SkeletonType.None,
+        [InspectorName("OVR Hand (Left)")]
         HandLeft = OVRPlugin.SkeletonType.HandLeft,
+        [InspectorName("OVR Hand (Right)")]
         HandRight = OVRPlugin.SkeletonType.HandRight,
         Body = OVRPlugin.SkeletonType.Body,
         FullBody = OVRPlugin.SkeletonType.FullBody,
+        [InspectorName("OpenXR Hand (Left)")]
+        XRHandLeft = OVRPlugin.SkeletonType.XRHandLeft,
+
+        [InspectorName("OpenXR Hand (Right)")]
+        XRHandRight = OVRPlugin.SkeletonType.XRHandRight,
+
     }
 
     /// <summary>
@@ -178,6 +186,41 @@ public class OVRSkeleton : MonoBehaviour
         Hand_RingTip = OVRPlugin.BoneId.Hand_RingTip, // tip of the ring finger
         Hand_PinkyTip = OVRPlugin.BoneId.Hand_PinkyTip, // tip of the pinky
         Hand_End = OVRPlugin.BoneId.Hand_End,
+
+        // Hand bone ids in OpenXR format.
+        // XRHands use HandState3 data and openXR format hand skeletons.
+        // Hand_ bone ids will be deprecated in an upcoming version.
+        XRHand_Start = OVRPlugin.BoneId.XRHand_Start,
+        XRHand_Palm = OVRPlugin.BoneId.XRHand_Palm,
+        XRHand_Wrist = OVRPlugin.BoneId.XRHand_Wrist,
+        XRHand_ThumbMetacarpal = OVRPlugin.BoneId.XRHand_ThumbMetacarpal,
+        XRHand_ThumbProximal = OVRPlugin.BoneId.XRHand_ThumbProximal,
+        XRHand_ThumbDistal = OVRPlugin.BoneId.XRHand_ThumbDistal,
+        XRHand_ThumbTip = OVRPlugin.BoneId.XRHand_ThumbTip,
+        XRHand_IndexMetacarpal = OVRPlugin.BoneId.XRHand_IndexMetacarpal,
+        XRHand_IndexProximal = OVRPlugin.BoneId.XRHand_IndexProximal,
+        XRHand_IndexIntermediate = OVRPlugin.BoneId.XRHand_IndexIntermediate,
+        XRHand_IndexDistal = OVRPlugin.BoneId.XRHand_IndexDistal,
+        XRHand_IndexTip = OVRPlugin.BoneId.XRHand_IndexTip,
+        XRHand_MiddleMetacarpal = OVRPlugin.BoneId.XRHand_MiddleMetacarpal,
+        XRHand_MiddleProximal = OVRPlugin.BoneId.XRHand_MiddleProximal,
+
+        XRHand_MiddleIntermediate = OVRPlugin.BoneId.XRHand_MiddleIntermediate,
+        XRHand_MiddleDistal = OVRPlugin.BoneId.XRHand_MiddleDistal,
+        XRHand_MiddleTip = OVRPlugin.BoneId.XRHand_MiddleTip,
+        XRHand_RingMetacarpal = OVRPlugin.BoneId.XRHand_RingMetacarpal,
+        XRHand_RingProximal = OVRPlugin.BoneId.XRHand_RingProximal,
+        XRHand_RingIntermediate = OVRPlugin.BoneId.XRHand_RingIntermediate,
+        XRHand_RingDistal = OVRPlugin.BoneId.XRHand_RingDistal,
+        XRHand_RingTip = OVRPlugin.BoneId.XRHand_RingTip,
+        XRHand_LittleMetacarpal = OVRPlugin.BoneId.XRHand_LittleMetacarpal,
+        XRHand_LittleProximal = OVRPlugin.BoneId.XRHand_LittleProximal,
+
+        XRHand_LittleIntermediate = OVRPlugin.BoneId.XRHand_LittleIntermediate,
+        XRHand_LittleDistal = OVRPlugin.BoneId.XRHand_LittleDistal,
+        XRHand_LittleTip = OVRPlugin.BoneId.XRHand_LittleTip,
+        XRHand_Max = OVRPlugin.BoneId.XRHand_Max,
+        XRHand_End = OVRPlugin.BoneId.XRHand_End,
 
 
         // Upper body bones
@@ -567,7 +610,7 @@ public class OVRSkeleton : MonoBehaviour
 
     protected virtual void InitializeBones()
     {
-        bool flipX = IsHandSkeleton(_skeletonType);
+        bool flipX = _skeletonType.IsOVRHandSkeleton();
 
         if (!_bonesGO)
         {
@@ -818,6 +861,7 @@ public class OVRSkeleton : MonoBehaviour
             Initialize();
         }
 
+
         if (!IsInitialized || _dataProvider == null)
         {
             IsDataValid = false;
@@ -834,12 +878,14 @@ public class OVRSkeleton : MonoBehaviour
             return;
         }
 
+
         if (SkeletonChangedCount != data.SkeletonChangedCount)
         {
             SkeletonChangedCount = data.SkeletonChangedCount;
             IsInitialized = false;
             Initialize();
         }
+
 
         IsDataHighConfidence = data.IsDataHighConfidence;
 
@@ -866,11 +912,32 @@ public class OVRSkeleton : MonoBehaviour
             }
             else if (IsHandSkeleton(_skeletonType))
             {
-                boneTransform.localRotation = data.BoneRotations[i].FromFlippedXQuatf();
-
-                if (_bones[i].Id == BoneId.Hand_WristRoot)
+                if (_skeletonType.IsOVRHandSkeleton())
                 {
-                    boneTransform.localRotation *= wristFixupRotation;
+                    boneTransform.localRotation = data.BoneRotations[i].FromFlippedXQuatf();
+
+                    if (_bones[i].Id == BoneId.Hand_WristRoot)
+                    {
+                        boneTransform.localRotation *= wristFixupRotation;
+                    }
+                }
+                else if (_skeletonType.IsOpenXRHandSkeleton())
+                {
+                    Vector3 bonePos = data.BoneTranslations[i].FromFlippedZVector3f();
+                    Quaternion boneRot = data.BoneRotations[i].FromFlippedZQuatf();
+
+                    int parentIndex = _bones[i].ParentBoneIndex;
+                    bool isParentValid = IsValidBone((BoneId)parentIndex);
+
+                    Vector3 parentPos = (isParentValid ? data.BoneTranslations[parentIndex] :
+                        data.RootPose.Position).FromFlippedZVector3f();
+                    Quaternion parentRot = (isParentValid ? data.BoneRotations[parentIndex] :
+                        data.RootPose.Orientation).FromFlippedZQuatf();
+
+                    float invScale = data.RootScale > 0f ? 1f / data.RootScale : 1f;
+                    Quaternion invFromRot = Quaternion.Inverse(parentRot);
+                    boneTransform.localPosition = invFromRot * (invScale * (bonePos - parentPos));
+                    boneTransform.localRotation = invFromRot * boneRot;
                 }
             }
             else
@@ -948,6 +1015,9 @@ public class OVRSkeleton : MonoBehaviour
                 return BoneId.Body_Start;
             case SkeletonType.FullBody:
                 return BoneId.FullBody_Start;
+            case SkeletonType.XRHandLeft:
+            case SkeletonType.XRHandRight:
+                return BoneId.XRHand_Start;
             case SkeletonType.None:
             default:
                 return BoneId.Invalid;
@@ -967,6 +1037,9 @@ public class OVRSkeleton : MonoBehaviour
             case SkeletonType.HandLeft:
             case SkeletonType.HandRight:
                 return BoneId.Hand_End;
+            case SkeletonType.XRHandLeft:
+            case SkeletonType.XRHandRight:
+                return BoneId.XRHand_End;
             case SkeletonType.Body:
                 return BoneId.Body_End;
             case SkeletonType.FullBody:
@@ -988,6 +1061,9 @@ public class OVRSkeleton : MonoBehaviour
                 return BoneId.Body_End;
             case SkeletonType.FullBody:
                 return BoneId.FullBody_End;
+            case SkeletonType.XRHandLeft:
+            case SkeletonType.XRHandRight:
+                return BoneId.XRHand_Max;
             case SkeletonType.None:
             default:
                 return BoneId.Invalid;
@@ -1029,6 +1105,8 @@ public class OVRSkeleton : MonoBehaviour
             case SkeletonType.HandRight:
             case SkeletonType.Body:
             case SkeletonType.FullBody:
+            case SkeletonType.XRHandLeft:
+            case SkeletonType.XRHandRight:
                 return GetCurrentMaxSkinnableBoneId() - GetCurrentStartBoneId();
             case SkeletonType.None:
             default:
@@ -1430,7 +1508,63 @@ public class OVRSkeleton : MonoBehaviour
             }
             else
             {
-                return "Hand_Unknown";
+                switch (boneId)
+                {
+                    case BoneId.XRHand_Palm:
+                        return "XRHand_Palm";
+                    case BoneId.XRHand_Wrist:
+                        return "XRHand_Wrist";
+                    case BoneId.XRHand_ThumbMetacarpal:
+                        return "XRHand_ThumbMetacarpal";
+                    case BoneId.XRHand_ThumbProximal:
+                        return "XRHand_ThumbProximal";
+                    case BoneId.XRHand_ThumbDistal:
+                        return "XRHand_ThumbDistal";
+                    case BoneId.XRHand_ThumbTip:
+                        return "XRHand_ThumbTip";
+                    case BoneId.XRHand_IndexMetacarpal:
+                        return "XRHand_IndexMetacarpal";
+                    case BoneId.XRHand_IndexProximal:
+                        return "XRHand_IndexProximal";
+                    case BoneId.XRHand_IndexIntermediate:
+                        return "XRHand_IndexIntermediate";
+                    case BoneId.XRHand_IndexDistal:
+                        return "XRHand_IndexDistal";
+                    case BoneId.XRHand_IndexTip:
+                        return "XRHand_IndexTip";
+                    case BoneId.XRHand_MiddleMetacarpal:
+                        return "XRHand_MiddleMetacarpal";
+                    case BoneId.XRHand_MiddleProximal:
+                        return "XRHand_MiddleProximal";
+                    case BoneId.XRHand_MiddleIntermediate:
+                        return "XRHand_MiddleIntermediate";
+                    case BoneId.XRHand_MiddleDistal:
+                        return "XRHand_MiddleDistal";
+                    case BoneId.XRHand_MiddleTip:
+                        return "XRHand_MiddleTip";
+                    case BoneId.XRHand_RingMetacarpal:
+                        return "XRHand_RingMetacarpal";
+                    case BoneId.XRHand_RingProximal:
+                        return "XRHand_RingProximal";
+                    case BoneId.XRHand_RingIntermediate:
+                        return "XRHand_RingIntermediate";
+                    case BoneId.XRHand_RingDistal:
+                        return "XRHand_RingDistal";
+                    case BoneId.XRHand_RingTip:
+                        return "XRHand_RingTip";
+                    case BoneId.XRHand_LittleMetacarpal:
+                        return "XRHand_LittleMetacarpal";
+                    case BoneId.XRHand_LittleProximal:
+                        return "XRHand_LittleProximal";
+                    case BoneId.XRHand_LittleIntermediate:
+                        return "XRHand_LittleIntermediate";
+                    case BoneId.XRHand_LittleDistal:
+                        return "XRHand_LittleDistal";
+                    case BoneId.XRHand_LittleTip:
+                        return "XRHand_LittleTip";
+                    default:
+                        return "XRHand_Unknown";
+                }
             }
         }
         else
@@ -1518,8 +1652,8 @@ public class OVRBone : System.IDisposable
 
 /// <summary>
 /// The bone capsule class tracks data related to capsule colliders that
-/// may or may not be created with skeleton bones. You may use this to
-/// control physics interactions with the skeleton in case the user requires
+/// may or may not be created with a <see cref="OVRSkeleton"/>'s <see cref="OVRBone"/>. You may use this to
+/// control physics interactions with the <see cref="OVRSkeleton"/> in case the user requires
 /// collision-based interactions in a game or experience.
 /// </summary>
 public class OVRBoneCapsule
@@ -1528,6 +1662,7 @@ public class OVRBoneCapsule
     /// The index of the bone that is associated with the current
     /// capsule. When used with hand tracking, use to understand what
     /// part of the hand corresponds with this instance's capsule.
+    /// This index matches the <see cref="OVRPlugin.BoneCapsule.BoneIndex"/> for the same <see cref="OVRBone"/>.
     /// </summary>
     public short BoneIndex { get; set; }
     /// <summary>
@@ -1551,10 +1686,11 @@ public class OVRBoneCapsule
 
     /// <summary>
     /// Constructor that completely initializes the bone capsule instance.
+    /// You can source the bone index by iterating through the <see cref="OVRSkeleton.Bones"/> list.
     /// </summary>
-    /// <param name="boneIndex">Bone index.</param>
+    /// <param name="boneIndex">The bone index of the <see cref="OVRBone"/> which this capsule matches to.</param>
     /// <param name="capsuleRigidBody">Bone capsule's rigid body.</param>
-    /// <param name="capsuleCollider">Bone capsule collider.</param>
+    /// <param name="capsuleCollider">Bone capsule's collider.</param>
     public OVRBoneCapsule(short boneIndex, Rigidbody capsuleRigidBody, CapsuleCollider capsuleCollider)
     {
         BoneIndex = boneIndex;
@@ -1563,7 +1699,7 @@ public class OVRBoneCapsule
     }
 
     /// <summary>
-    /// Cleans up physics-based objects associated with bone. The
+    /// Cleans up physics-based objects associated with the <see cref="OVRBone"/>. The
     /// capsule rigid body's GameObject is destroyed.
     /// </summary>
     public void Cleanup()

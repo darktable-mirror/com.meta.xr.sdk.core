@@ -447,6 +447,20 @@ public class OVRManifestPreprocessor
             sharedAnchorEntryNeeded,
             modifyIfFound);
 
+        //============================================================================
+        // Colocation Session
+        var targetColocationSessionSupport = OVRProjectConfig.CachedProjectConfig.colocationSessionSupport;
+        bool colocationSessionEntryNeeded = OVRDeviceSelector.isTargetDeviceQuestFamily &&
+                                         (targetColocationSessionSupport != OVRProjectConfig.FeatureSupport.None);
+
+        AddOrRemoveTag(doc,
+            androidNamespaceURI,
+            "/manifest",
+            "uses-permission",
+            "com.oculus.permission.USE_COLOCATION_DISCOVERY_API",
+            colocationSessionEntryNeeded,
+            modifyIfFound);
+
 
 
         //============================================================================

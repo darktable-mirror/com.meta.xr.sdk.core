@@ -24,12 +24,17 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> used for managing the layout for all the UI elements of Immersive Debugger.
+    /// It contains helper functions to calculate and update layout.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Flex : Controller
     {
         private Vector2 _sizeDelta;
 
-        public Vector2 SizeDelta => _sizeDelta;
-        public Vector2 SizeDeltaWithMargin => _sizeDelta + LayoutStyle.TopLeftMargin + LayoutStyle.BottomRightMargin;
+        internal Vector2 SizeDelta => _sizeDelta;
+        internal Vector2 SizeDeltaWithMargin => _sizeDelta + LayoutStyle.TopLeftMargin + LayoutStyle.BottomRightMargin;
 
         internal ScrollViewport ScrollViewport { get; set; }
         private Vector2? _previousAnchoredPosition;
@@ -167,24 +172,24 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
-        public void LateUpdate()
+        private void LateUpdate()
         {
             RefreshVisibilities();
         }
 
-        public void Forget(Controller controller)
+        internal void Forget(Controller controller)
         {
             Remove(controller, false);
             controller.Hide();
         }
 
-        public void Remember(Controller controller)
+        internal void Remember(Controller controller)
         {
             Append(controller);
             controller.Show();
         }
 
-        public void ForgetAll()
+        internal void ForgetAll()
         {
             foreach (var child in _children)
             {

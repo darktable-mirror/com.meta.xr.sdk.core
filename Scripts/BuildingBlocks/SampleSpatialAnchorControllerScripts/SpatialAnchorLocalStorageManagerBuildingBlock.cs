@@ -25,7 +25,7 @@ using UnityEngine;
 namespace Meta.XR.BuildingBlocks
 {
     /// <summary>
-    /// Anchor's uuid on local storage manager.
+    /// A local storage manager responsible for storing <see cref="OVRSpatialAnchor"/>'s uuid. This is used as part of the SampleSpatialAnchorController and not designed to be used outside of that context. It is for educational purposes only.
     /// </summary>
     public class SpatialAnchorLocalStorageManagerBuildingBlock : MonoBehaviour
     {
@@ -58,6 +58,9 @@ namespace Meta.XR.BuildingBlocks
             PlayerPrefs.SetInt(NumUuidsPlayerPref, ++playerNumUuids);
         }
 
+        /// <summary>
+        /// Remove a <see cref="Guid"/> of specified <see cref="OVRSpatialAnchor"/> from local storage.
+        /// </summary>
         internal void RemoveAnchorFromLocalStorage(OVRSpatialAnchor anchor, OVRSpatialAnchor.OperationResult result)
         {
             var uuid = anchor.Uuid;
@@ -85,8 +88,11 @@ namespace Meta.XR.BuildingBlocks
         }
 
         /// <summary>
-        /// Load spatial anchors stored in local storage.
+        /// This method will load the <see cref="Guid"/>(s) of <see cref="OVRSpatialAnchor"/> from local storage for each one found.
         /// </summary>
+        /// <returns>
+        /// List of loaded <see cref="Guid"/>(s) from local storage.
+        /// </returns>
         internal List<Guid> GetAnchorAnchorUuidFromLocalStorage()
         {
             // Get number of saved anchor uuids
@@ -97,7 +103,7 @@ namespace Meta.XR.BuildingBlocks
                 return null;
             }
 
-            // Load unbounded anchors
+            // Load unbounded anchors' uuid from local storage
             _uuids.Clear();
             var playerUuidCount = PlayerPrefs.GetInt(NumUuidsPlayerPref);
             for (int i = 0; i < playerUuidCount; ++i)
@@ -113,6 +119,12 @@ namespace Meta.XR.BuildingBlocks
             return _uuids;
         }
 
+        /// <summary>
+        /// Clear all <see cref="OVRSpatialAnchor"/> data from local storage.
+        /// </summary>
+        /// <remarks>
+        /// Sets Unity PlayerPrefs to discard all <see cref="OVRSpatialAnchor"/> data from local storage.
+        /// </remarks>
         public void Reset()
         {
             PlayerPrefs.SetInt(NumUuidsPlayerPref, 0);

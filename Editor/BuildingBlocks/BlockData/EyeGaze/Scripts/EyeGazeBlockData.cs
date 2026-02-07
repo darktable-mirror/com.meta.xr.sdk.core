@@ -28,6 +28,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class EyeGazeBlockData : BlockData
     {
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
             var cameraRigBB = Utils.GetBlocksWithType<OVRCameraRig>().First();
@@ -52,8 +53,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             var eyeGaze = gameObject.GetComponentInChildren<OVREyeGaze>();
             if (eyeGaze == null)
             {
-                throw new InvalidOperationException(
-                    "The instantiated prefab should contain a OVREyeGaze component.");
+                throw new InvalidOperationException("The instantiated prefab should contain a OVREyeGaze component.");
             }
 
             eyeGaze.Eye = eye;

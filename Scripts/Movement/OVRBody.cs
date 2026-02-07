@@ -24,9 +24,12 @@ using UnityEngine;
 
 /// <summary>
 /// This class implements <see cref="OVRSkeleton.IOVRSkeletonDataProvider"/> in order
-/// to provide body pose data and related skeleton type, and it also implements
-/// <see cref="OVRSkeletonRenderer.IOVRSkeletonRendererDataProvider"/> in case body tracking
-/// state needs to be provided to renderer-based classes. It starts and stops body tracking.
+/// to provide body tracking data per frame, and is responsible for stopping and starting
+/// body tracking. Furthermore, it defines the skeleton type and implements
+/// <see cref="OVRSkeletonRenderer.IOVRSkeletonRendererDataProvider"/> in case the
+/// body tracking state needs to be provided to renderer-based classes. Use this class
+/// to read body tracking pose data, accessible via <see cref="OVRSkeleton.IOVRSkeletonDataProvider.GetSkeletonPoseData"/>,
+/// to drive the bone transforms of a character, or to use for pose estimation purposes.
 /// For more information, see [Body Tracking for Movement SDK for Unity](https://developer.oculus.com/documentation/unity/move-body-tracking/).
 /// </summary>
 /// <remarks>

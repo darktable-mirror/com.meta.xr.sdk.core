@@ -35,6 +35,13 @@ public enum OVRGLTFInputNode
     ThumbStick
 };
 
+/// <summary>
+/// Helper class specifically used for animating buttons, triggers, and thumbsticks on GLTF (GL Transmission Format) controller models loaded from the Meta Quest Runtime.
+/// Controller input is passed in from <see cref="OVRRuntimeController"> which is then used to update the poses of each coresponding button, trigger, or thumbstick on the controller models.
+/// <remarks>
+/// These animation functions are used specifically for the [Controller Models](https://developer.oculus.com/documentation/unity/unity-runtime-controller/) loaded from the Meta Quest Runtime. We do not recommended using these functions any other GLTF models.
+/// </remarks>
+/// </summary>
 public class OVRGLTFAnimatinonNode
 {
     private OVRGLTFInputNode m_intputNodeType;
@@ -111,6 +118,12 @@ public class OVRGLTFAnimatinonNode
         public Vector2 vecT;
     }
 
+    /// <summary>
+    /// Creates a new OVRGLTFAnimationNode object which is used to animate a controller button, trigger, or joystick.
+    /// </summary>
+    /// <param name="inputNodeType">Input node type used to specify if this node is a button, trigger, or joystick.</param>
+    /// <param name="gameObj">Game object associated with the node being animated.</param>
+    /// <param name="morphTargetHandler">The morpph target data that is required for animating this node.</param>
     public OVRGLTFAnimatinonNode(OVRGLTFInputNode inputNodeType,
         GameObject gameObj, OVRGLTFAnimationNodeMorphTargetHandler morphTargetHandler)
     {
@@ -122,6 +135,12 @@ public class OVRGLTFAnimatinonNode
         m_scales.Add(CloneVector3(m_gameObj.transform.localScale));
     }
 
+    /// <summary>
+    /// Adds an animation channel to this animation node. Check the GLTF [animation channel](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_animation_channels) section in the GLTF 2.0 specification page for more information.
+    /// </summary>
+    /// <param name="channel">The JSON node containing data for the animation channel.</param>
+    /// <param name="samplers">The JSON node containing GLTF samplers.</param>
+    /// <param name="dataAccessor">The OVRGLTFAccessor object for retriving animation data.</param>
     public void AddChannel(JSONNode channel, JSONNode samplers, OVRGLTFAccessor dataAccessor)
     {
         int samplerId = channel["sampler"].AsInt;
@@ -133,6 +152,10 @@ public class OVRGLTFAnimatinonNode
         return;
     }
 
+    /// <summary>
+    /// Updates the pose of a controller button object based on button down state.
+    /// </summary>
+    /// <param name="down">If the button is being pressed.</param>
     public void UpdatePose(bool down)
     {
         if (m_inputNodeState.down == down)
@@ -147,6 +170,11 @@ public class OVRGLTFAnimatinonNode
             SetScale((down) ? m_scales[1] : m_scales[0]);
     }
 
+    /// <summary>
+    /// Updates the pose of a object based on a float value.
+    /// </summary>
+    /// <param name="t">The floating point value ranging from 0.0f to 1.0f.</param>
+    /// <param name="applyDeadZone">If a dead zone should be applied to the animation. The object will not move until the dead zone threshold is exceeded.</param>
     public void UpdatePose(float t, bool applyDeadZone = true)
     {
         if (applyDeadZone)
@@ -188,6 +216,10 @@ public class OVRGLTFAnimatinonNode
         }
     }
 
+    /// <summary>
+    /// Updates the pose of a controller joystick object based on the joystick's x and y position.
+    /// </summary>
+    /// <param name="joystick">The floating point value of the joystick's x and y position.</param>
     public void UpdatePose(Vector2 joystick)
     {
         const float deadZone = 0.05f;

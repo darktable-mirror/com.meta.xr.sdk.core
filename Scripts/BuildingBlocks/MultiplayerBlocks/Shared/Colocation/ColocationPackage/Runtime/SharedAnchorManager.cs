@@ -140,7 +140,13 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
 
         public async Task<bool> ShareAnchorsWithUser(ulong userId)
         {
-            _userShareList.Add(new OVRSpaceUser(userId));
+            if (!OVRSpaceUser.TryCreate(userId, out var spaceUser))
+            {
+                Logger.Log($"{nameof(SharedAnchorManager)}: Failed to create space user using user id {userId}.", LogLevel.Warning);
+                return false;
+            }
+
+            _userShareList.Add(spaceUser);
 
             _shareAnchorIsSuccessful = false;
             CheckIfSharingAnchorServiceHung();
@@ -159,7 +165,7 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
             var users = new List<OVRSpaceUser>();
             users.AddRange(_userShareList);
             _ssaCore.ShareSpatialAnchors(_localAnchors, users);
-            _ssaCore.OnSpatialAnchorsShareCompleted.AddListener((uuids, result) =>
+            _ssaCore.OnSpatialAnchorsShareCompleted.AddListener((_, result) =>
             {
                 Logger.Log($"{nameof(SharedAnchorManager)}: result of sharing the anchor is {result}", LogLevel.Verbose);
                 task.TrySetResult(result == OVRSpatialAnchor.OperationResult.Success);

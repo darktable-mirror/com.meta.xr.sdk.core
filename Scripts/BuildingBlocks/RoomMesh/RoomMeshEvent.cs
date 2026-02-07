@@ -23,8 +23,23 @@ using UnityEngine.Events;
 
 namespace Meta.XR.BuildingBlocks
 {
+    /// <summary>
+    /// A helper class to receive Room Mesh load completion event.
+    /// </summary>
+    /// <remarks>
+    /// This Unity component is part of Scene Mesh Building Blocks. Subscribe to this event to be notified when Room Mesh is loaded.
+    /// The <see cref="MeshFilter"/> in the event payload contains the loaded mesh data.
+    /// For more information on Scene Mesh, see [Scene Mesh](https://developer.oculus.com/documentation/unity/unity-scene-build-mixed-reality/#scene-mesh) in Using the Scene Model.
+    /// Scene Mesh documentation</a>.
+    /// </remarks>
     public class RoomMeshEvent : MonoBehaviour
     {
+        /// <summary>
+        /// An event to trigger when Room Mesh loads successfully.
+        /// </summary>
+        /// <remarks>
+        /// In the event payload, <paramref>MeshFilter</paramref>, is the component that will contain the mesh data.
+        /// </remarks>
         public UnityEvent<MeshFilter> OnRoomMeshLoadCompleted;
     }
 }

@@ -27,7 +27,10 @@ using UnityEngine;
 using Node = UnityEngine.XR.XRNode;
 
 /// <summary>
-/// Provides a unified input system for Oculus controllers and gamepads.
+/// OVRInput exposes a unified input API for multiple controller types. It is used to query virtual or
+/// raw controller state, such as buttons, thumbsticks, triggers, and capacitive touch data. It supports
+/// the Meta Quest Touch controllers.
+/// For more information, see [Controller Input and Tracking Overview](https://developer.oculus.com/documentation/unity/unity-ovrinput/).
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-ovrinput/")]
 public static class OVRInput
@@ -1804,13 +1807,55 @@ public static class OVRInput
         WindowsMRController = 3
     }
 
+    /// <summary>
+    /// Struct characterizing the current state of an <see cref="OpenVRController"/>. This struct is used
+    /// to communicate with the OpenVR platform API and should not be used by developers.
+    /// </summary>
+    /// <remarks>
+    /// In general, OpenXR should be preferred over OpenVR for new development.
+    /// </remarks>
     [StructLayout(LayoutKind.Sequential)]
     public struct OpenVRControllerDetails
     {
+        /// <summary>
+        /// The current <see cref="OVR.OpenVR.VRControllerState_t"/> of the hardware controller described by
+        /// this struct.
+        /// </summary>
+        /// <remarks>
+        /// In general, OpenXR should be preferred over OpenVR for new development.
+        /// </remarks>
         public OVR.OpenVR.VRControllerState_t state;
+
+        /// <summary>
+        /// The type (Oculus Touch, Vive, etc.) of the hardware controller described by this struct.
+        /// </summary>
+        /// <remarks>
+        /// In general, OpenXR should be preferred over OpenVR for new development.
+        /// </remarks>
         public OpenVRController controllerType;
+
+        /// <summary>
+        /// The unique identifier associated with the hardware controller described by this struct.
+        /// </summary>
+        /// <remarks>
+        /// In general, OpenXR should be preferred over OpenVR for new development.
+        /// </remarks>
         public uint deviceID;
+
+        /// <summary>
+        /// The tracking-space position of the hardware controller described by this struct.
+        /// </summary>
+        /// <remarks>
+        /// In general, OpenXR should be preferred over OpenVR for new development.
+        /// </remarks>
         public Vector3 localPosition; //Position relative to Tracking Space
+
+        /// <summary>
+        /// The tracking-space orientation of the hardware controller described by this struct.
+        /// </summary>
+        /// <remarks>
+        /// In general, OpenXR should be preferred over OpenVR for new development.
+        /// </remarks>
         public Quaternion localOrientation; //Orientation relative to Tracking Space
     }
 
@@ -2188,44 +2233,268 @@ public static class OVRInput
     // (https://github.com/dotnet/roslyn/issues/28729)
     #pragma warning disable format
 
+    /// <summary>
+    /// Provides the base class for instances representing specific types of physical controllers
+    /// (<see cref="OVRControllerGamepadPC"/>, <see cref="OVRControllerTouch"/>, etc.).
+    /// </summary>
+    /// <remarks>
+    /// The primary purpose of this type is to encapsulate input mappings allowing inputs from
+    /// various controller types to be interpreted appropriately. Descendant types are thus expected
+    /// to use their abstract method overrides (such as of <see cref="ConfigureButtonMap"/>) to
+    /// initialize input mappings to reasonable defaults for the control scheme being implemented.
+    /// </remarks>
     public abstract class OVRControllerBase
     {
+        /// <summary>
+        /// Characterizes the mapping between <see cref="RawButton"/> data read from physical inputs
+        /// and how that data should be intereted as buttons depending on specific control schemes.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="OVRControllerBase"/> instances each contain one instance of this type, the
+        /// mappings within which are overridden by the <see cref="ConfigureButtonMap"/> implementation
+        /// of the descendant type. The mappings within can also be overwritten after initialization to
+        /// enable customized input mapping (such as by the user from a settings screen).
+        /// </remarks>
         public class VirtualButtonMap
         {
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.None"/>, meaning an observed input of
+            /// <see cref="Button.None"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton None                     = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.One"/>, meaning an observed input of
+            /// <see cref="Button.One"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton One                      = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Two"/>, meaning an observed input of
+            /// <see cref="Button.Two"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Two                      = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Three"/>, meaning an observed input of
+            /// <see cref="Button.Three"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Three                    = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Four"/>, meaning an observed input of
+            /// <see cref="Button.Four"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Four                     = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Start"/>, meaning an observed input of
+            /// <see cref="Button.Start"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Start                    = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Back"/>, meaning an observed input of
+            /// <see cref="Button.Back"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Back                     = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryShoulder"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryShoulder"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryShoulder          = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryIndexTrigger      = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryHandTrigger"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryHandTrigger"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryHandTrigger       = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryThumbstick"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryThumbstick"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryThumbstick        = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryThumbstickUp"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryThumbstickUp"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryThumbstickUp      = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryThumbstickDown"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryThumbstickDown"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryThumbstickDown    = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryThumbstickLeft"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryThumbstickLeft"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryThumbstickLeft    = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryThumbstickRight"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryThumbstickRight"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryThumbstickRight   = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.PrimaryTouchpad"/>, meaning an observed input of
+            /// <see cref="Button.PrimaryTouchpad"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton PrimaryTouchpad          = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryShoulder"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryShoulder"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryShoulder        = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryIndexTrigger    = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryHandTrigger"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryHandTrigger"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryHandTrigger     = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryThumbstick"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryThumbstick"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryThumbstick      = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryThumbstickUp"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryThumbstickUp"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryThumbstickUp    = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryThumbstickDown"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryThumbstickDown"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryThumbstickDown  = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryThumbstickLeft"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryThumbstickLeft"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryThumbstickLeft  = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryThumbstickRight"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryThumbstickRight"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryThumbstickRight = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.SecondaryTouchpad"/>, meaning an observed input of
+            /// <see cref="Button.SecondaryTouchpad"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton SecondaryTouchpad        = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.DpadUp"/>, meaning an observed input of
+            /// <see cref="Button.DpadUp"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton DpadUp                   = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.DpadDown"/>, meaning an observed input of
+            /// <see cref="Button.DpadDown"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton DpadDown                 = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.DpadLeft"/>, meaning an observed input of
+            /// <see cref="Button.DpadLeft"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton DpadLeft                 = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.DpadRight"/>, meaning an observed input of
+            /// <see cref="Button.DpadRight"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton DpadRight                = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Up"/>, meaning an observed input of
+            /// <see cref="Button.Up"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Up                       = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Down"/>, meaning an observed input of
+            /// <see cref="Button.Down"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Down                     = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Left"/>, meaning an observed input of
+            /// <see cref="Button.Left"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Left                     = RawButton.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Button.Right"/>, meaning an observed input of
+            /// <see cref="Button.Right"/> will be remapped by <see cref="ToRawMask(Button)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawButton Right                    = RawButton.None;
 
+            /// <summary>
+            /// Remaps a <see cref="Button"/> bit mask to a new <see cref="RawButton"/> bit mask based on
+            /// the mappings contained in this instance. This allows provided input to be "reinterpreted"
+            /// according to a specificied input mapping for a given control scheme.
+            /// </summary>
+            /// <param name="virtualMask">The original bit mask to be reinterpreted</param>
+            /// <returns>The new <see cref="RawButton"/> remapping of <paramref name="virtualMask"/></returns>
             public RawButton ToRawMask(Button virtualMask)
             {
                 RawButton rawMask = 0;
@@ -2302,22 +2571,116 @@ public static class OVRInput
             }
         }
 
+        /// <summary>
+        /// Characterizes the mapping between <see cref="RawTouch"/> data read from physical inputs
+        /// and how that data should be intereted as touches depending on specific control schemes.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="OVRControllerBase"/> instances each contain one instance of this type, the
+        /// mappings within which are overridden by the <see cref="ConfigureTouchMap"/> implementation
+        /// of the descendant type. The mappings within can also be overwritten after initialization to
+        /// enable customized input mapping (such as by the user from a settings screen).
+        /// </remarks>
         public class VirtualTouchMap
         {
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.None"/>, meaning an observed input of
+            /// <see cref="Touch.None"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch None                      = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.One"/>, meaning an observed input of
+            /// <see cref="Touch.One"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch One                       = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.Two"/>, meaning an observed input of
+            /// <see cref="Touch.Two"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch Two                       = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.Three"/>, meaning an observed input of
+            /// <see cref="Touch.Three"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch Three                     = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.Four"/>, meaning an observed input of
+            /// <see cref="Touch.Four"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch Four                      = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.PrimaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="Touch.PrimaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch PrimaryIndexTrigger       = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.PrimaryThumbstick"/>, meaning an observed input of
+            /// <see cref="Touch.PrimaryThumbstick"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch PrimaryThumbstick         = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.PrimaryThumbRest"/>, meaning an observed input of
+            /// <see cref="Touch.PrimaryThumbRest"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch PrimaryThumbRest          = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.PrimaryTouchpad"/>, meaning an observed input of
+            /// <see cref="Touch.PrimaryTouchpad"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch PrimaryTouchpad           = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.SecondaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="Touch.SecondaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch SecondaryIndexTrigger     = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.SecondaryThumbstick"/>, meaning an observed input of
+            /// <see cref="Touch.SecondaryThumbstick"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch SecondaryThumbstick       = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.SecondaryThumbRest"/>, meaning an observed input of
+            /// <see cref="Touch.SecondaryThumbRest"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch SecondaryThumbRest        = RawTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Touch.SecondaryTouchpad"/>, meaning an observed input of
+            /// <see cref="Touch.SecondaryTouchpad"/> will be remapped by <see cref="ToRawMask(Touch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawTouch SecondaryTouchpad         = RawTouch.None;
 
+            /// <summary>
+            /// Remaps a <see cref="Touch"/> bit mask to a new <see cref="RawTouch"/> bit mask based on
+            /// the mappings contained in this instance. This allows provided input to be "reinterpreted"
+            /// according to a specificied input mapping for a given control scheme.
+            /// </summary>
+            /// <param name="virtualMask">The original bit mask to be reinterpreted</param>
+            /// <returns>The new <see cref="RawTouch"/> remapping of <paramref name="virtualMask"/></returns>
             public RawTouch ToRawMask(Touch virtualMask)
             {
                 RawTouch rawMask = 0;
@@ -2354,14 +2717,60 @@ public static class OVRInput
             }
         }
 
+        /// <summary>
+        /// Characterizes the mapping between <see cref="RawNearTouch"/> data read from physical inputs
+        /// and how that data should be intereted as buttons depending on specific control schemes.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="OVRControllerBase"/> instances each contain one instance of this type, the
+        /// mappings within which are overridden by the <see cref="ConfigureNearTouchMap"/> implementation
+        /// of the descendant type. The mappings within can also be overwritten after initialization to
+        /// enable customized input mapping (such as by the user from a settings screen).
+        /// </remarks>
         public class VirtualNearTouchMap
         {
+            /// <summary>
+            /// Specifies the mapping of <see cref="NearTouch.None"/>, meaning an observed input of
+            /// <see cref="NearTouch.None"/> will be remapped by <see cref="ToRawMask(NearTouch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawNearTouch None                      = RawNearTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="NearTouch.PrimaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="NearTouch.PrimaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(NearTouch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawNearTouch PrimaryIndexTrigger       = RawNearTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="NearTouch.PrimaryThumbButtons"/>, meaning an observed input of
+            /// <see cref="NearTouch.PrimaryThumbButtons"/> will be remapped by <see cref="ToRawMask(NearTouch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawNearTouch PrimaryThumbButtons       = RawNearTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="NearTouch.SecondaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="NearTouch.SecondaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(NearTouch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawNearTouch SecondaryIndexTrigger     = RawNearTouch.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="NearTouch.SecondaryThumbButtons"/>, meaning an observed input of
+            /// <see cref="NearTouch.SecondaryThumbButtons"/> will be remapped by <see cref="ToRawMask(NearTouch)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawNearTouch SecondaryThumbButtons     = RawNearTouch.None;
 
+            /// <summary>
+            /// Remaps a <see cref="NearTouch"/> bit mask to a new <see cref="RawNearTouch"/> bit mask based on
+            /// the mappings contained in this instance. This allows provided input to be "reinterpreted"
+            /// according to a specificied input mapping for a given control scheme.
+            /// </summary>
+            /// <param name="virtualMask">The original bit mask to be reinterpreted</param>
+            /// <returns>The new <see cref="RawNearTouch"/> remapping of <paramref name="virtualMask"/></returns>
             public RawNearTouch ToRawMask(NearTouch virtualMask)
             {
                 RawNearTouch rawMask = 0;
@@ -2382,23 +2791,130 @@ public static class OVRInput
             }
         }
 
+        /// <summary>
+        /// Characterizes the mapping between <see cref="RawAxis1D"/> data read from physical inputs
+        /// and how that data should be intereted as buttons depending on specific control schemes.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="OVRControllerBase"/> instances each contain one instance of this type, the
+        /// mappings within which are overridden by the <see cref="ConfigureAxis1DMap"/> implementation
+        /// of the descendant type. The mappings within can also be overwritten after initialization to
+        /// enable customized input mapping (such as by the user from a settings screen).
+        /// </remarks>
         public class VirtualAxis1DMap
         {
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.None"/>, meaning an observed input of
+            /// <see cref="Axis1D.None"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D None                      = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.PrimaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="Axis1D.PrimaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D PrimaryIndexTrigger       = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.PrimaryHandTrigger"/>, meaning an observed input of
+            /// <see cref="Axis1D.PrimaryHandTrigger"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D PrimaryHandTrigger        = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.SecondaryIndexTrigger"/>, meaning an observed input of
+            /// <see cref="Axis1D.SecondaryIndexTrigger"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D SecondaryIndexTrigger     = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.SecondaryHandTrigger"/>, meaning an observed input of
+            /// <see cref="Axis1D.SecondaryHandTrigger"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D SecondaryHandTrigger      = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.PrimaryIndexTriggerCurl"/>, meaning an observed input of
+            /// <see cref="Axis1D.PrimaryIndexTriggerCurl"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D PrimaryIndexTriggerCurl    = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.PrimaryIndexTriggerSlide"/>, meaning an observed input of
+            /// <see cref="Axis1D.PrimaryIndexTriggerSlide"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D PrimaryIndexTriggerSlide   = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.PrimaryThumbRestForce"/>, meaning an observed input of
+            /// <see cref="Axis1D.PrimaryThumbRestForce"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D PrimaryThumbRestForce      = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.PrimaryStylusForce"/>, meaning an observed input of
+            /// <see cref="Axis1D.PrimaryStylusForce"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D PrimaryStylusForce         = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.SecondaryIndexTriggerCurl"/>, meaning an observed input of
+            /// <see cref="Axis1D.SecondaryIndexTriggerCurl"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D SecondaryIndexTriggerCurl  = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.SecondaryIndexTriggerSlide"/>, meaning an observed input of
+            /// <see cref="Axis1D.SecondaryIndexTriggerSlide"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D SecondaryIndexTriggerSlide = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.SecondaryThumbRestForce"/>, meaning an observed input of
+            /// <see cref="Axis1D.SecondaryThumbRestForce"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D SecondaryThumbRestForce    = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.SecondaryStylusForce"/>, meaning an observed input of
+            /// <see cref="Axis1D.SecondaryStylusForce"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D SecondaryStylusForce       = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.PrimaryIndexTriggerForce"/>, meaning an observed input of
+            /// <see cref="Axis1D.PrimaryIndexTriggerForce"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D PrimaryIndexTriggerForce   = RawAxis1D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis1D.SecondaryIndexTriggerForce"/>, meaning an observed input of
+            /// <see cref="Axis1D.SecondaryIndexTriggerForce"/> will be remapped by <see cref="ToRawMask(Axis1D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis1D SecondaryIndexTriggerForce = RawAxis1D.None;
+
+            /// <summary>
+            /// Remaps a <see cref="Axis1D"/> bit mask to a new <see cref="RawAxis1D"/> bit mask based on
+            /// the mappings contained in this instance. This allows provided input to be "reinterpreted"
+            /// according to a specificied input mapping for a given control scheme.
+            /// </summary>
+            /// <param name="virtualMask">The original bit mask to be reinterpreted</param>
+            /// <returns>The new <see cref="RawAxis1D"/> remapping of <paramref name="virtualMask"/></returns>
             public RawAxis1D ToRawMask(Axis1D virtualMask)
             {
                 RawAxis1D rawMask = 0;
@@ -2439,14 +2955,60 @@ public static class OVRInput
             }
         }
 
+        /// <summary>
+        /// Characterizes the mapping between <see cref="RawAxis2D"/> data read from physical inputs
+        /// and how that data should be intereted as buttons depending on specific control schemes.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="OVRControllerBase"/> instances each contain one instance of this type, the
+        /// mappings within which are overridden by the <see cref="ConfigureAxis2DMap"/> implementation
+        /// of the descendant type. The mappings within can also be overwritten after initialization to
+        /// enable customized input mapping (such as by the user from a settings screen).
+        /// </remarks>
         public class VirtualAxis2DMap
         {
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis2D.None"/>, meaning an observed input of
+            /// <see cref="Axis2D.None"/> will be remapped by <see cref="ToRawMask(Axis2D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis2D None                      = RawAxis2D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis2D.PrimaryThumbstick"/>, meaning an observed input of
+            /// <see cref="Axis2D.PrimaryThumbstick"/> will be remapped by <see cref="ToRawMask(Axis2D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis2D PrimaryThumbstick         = RawAxis2D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis2D.PrimaryTouchpad"/>, meaning an observed input of
+            /// <see cref="Axis2D.PrimaryTouchpad"/> will be remapped by <see cref="ToRawMask(Axis2D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis2D PrimaryTouchpad           = RawAxis2D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis2D.SecondaryThumbstick"/>, meaning an observed input of
+            /// <see cref="Axis2D.SecondaryThumbstick"/> will be remapped by <see cref="ToRawMask(Axis2D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis2D SecondaryThumbstick       = RawAxis2D.None;
+
+            /// <summary>
+            /// Specifies the mapping of <see cref="Axis2D.SecondaryTouchpad"/>, meaning an observed input of
+            /// <see cref="Axis2D.SecondaryTouchpad"/> will be remapped by <see cref="ToRawMask(Axis2D)"/> to the
+            /// value assigned here.
+            /// </summary>
             public RawAxis2D SecondaryTouchpad         = RawAxis2D.None;
 
+            /// <summary>
+            /// Remaps a <see cref="Axis2D"/> bit mask to a new <see cref="RawAxis2D"/> bit mask based on
+            /// the mappings contained in this instance. This allows provided input to be "reinterpreted"
+            /// according to a specificied input mapping for a given control scheme.
+            /// </summary>
+            /// <param name="virtualMask">The original bit mask to be reinterpreted</param>
+            /// <returns>The new <see cref="RawAxis2D"/> remapping of <paramref name="virtualMask"/></returns>
             public RawAxis2D ToRawMask(Axis2D virtualMask)
             {
                 RawAxis2D rawMask = 0;
@@ -2467,16 +3029,102 @@ public static class OVRInput
             }
         }
 
+        /// <summary>
+        /// The controller type (gamepad, Oculus Touch, etc.) of the physical controller represented by
+        /// this instance.
+        /// </summary>
+        /// <remarks>
+        /// This value is typically set by a descendant type of <see cref="OVRControllerBase"/> during
+        /// construction.
+        /// </remarks>
         public Controller controllerType = Controller.None;
+
+        /// <summary>
+        /// The <see cref="VirtualButtonMap"/> characterizing how physical button inputs should be mapped
+        /// to <see cref="RawButton"/> states as appropriate to this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This mapping should be initialized during construction by the implementation of
+        /// <see cref="ConfigureButtonMap"/>.
+        /// </remarks>
         public VirtualButtonMap buttonMap = new VirtualButtonMap();
+
+        /// <summary>
+        /// The <see cref="VirtualTouchMap"/> characterizing how physical touch inputs should be mapped
+        /// to <see cref="RawTouch"/> states as appropriate to this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This mapping should be initialized during construction by the implementation of
+        /// <see cref="ConfigureTouchMap"/>.
+        /// </remarks>
         public VirtualTouchMap touchMap = new VirtualTouchMap();
+
+        /// <summary>
+        /// The <see cref="VirtualNearTouchMap"/> characterizing how physical proximity inputs should be mapped
+        /// to <see cref="RawNearTouch"/> states as appropriate to this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This mapping should be initialized during construction by the implementation of
+        /// <see cref="ConfigureNearTouchMap"/>.
+        /// </remarks>
         public VirtualNearTouchMap nearTouchMap = new VirtualNearTouchMap();
+
+        /// <summary>
+        /// The <see cref="VirtualAxis1DMap"/> characterizing how physical single-axis inputs should be mapped
+        /// to <see cref="RawAxis1D"/> states as appropriate to this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This mapping should be initialized during construction by the implementation of
+        /// <see cref="ConfigureAxis1DMap"/>.
+        /// </remarks>
         public VirtualAxis1DMap axis1DMap = new VirtualAxis1DMap();
+
+        /// <summary>
+        /// The <see cref="VirtualAxis2DMap"/> characterizing how physical two-axis inputs should be mapped
+        /// to <see cref="RawAxis2D"/> states as appropriate to this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This mapping should be initialized during construction by the implementation of
+        /// <see cref="ConfigureAxis2DMap"/>.
+        /// </remarks>
         public VirtualAxis2DMap axis2DMap = new VirtualAxis2DMap();
+
+        /// <summary>
+        /// The previous state (prior to the most recent <see cref="Update"/> of the this controller.
+        /// </summary>
+        /// <remarks>
+        /// This data can be used by polling logic to determine whether state has changed. The data is
+        /// updated automatically as part of the instance's <see cref="Update"/>.
+        /// </remarks>
         public OVRPlugin.ControllerState6 previousState = new OVRPlugin.ControllerState6();
+
+        /// <summary>
+        /// The current state (as of the most recent <see cref="Update"/> of the this controller.
+        /// </summary>
+        /// <remarks>
+        /// This data can be used directly to observe the current state or compared with
+        /// <see cref="previousState"/> to determine whether state has changed. The data is updated
+        /// automatically as part of the instance's <see cref="Update"/>.
+        /// </remarks>
         public OVRPlugin.ControllerState6 currentState = new OVRPlugin.ControllerState6();
+
+        /// <summary>
+        /// Determines whether a "dead zone" should be applied to suppress small values of one-
+        /// and two-axis inputs.
+        /// </summary>
+        /// <remarks>
+        /// It is possible to set this value manually; however, there is internal OVR logic which can
+        /// set this value on its own under certain circumstances, in which case the manually-set value
+        /// may be overridden without warning.
+        /// </remarks>
         public bool shouldApplyDeadzone = true;
 
+        /// <summary>
+        /// Basic constructor responsible for initializing input mappings. This is done by invoking the
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>,
+        /// etc.), which descendant types should use to appropriately initialize the respective input
+        /// mappings (<see cref="buttonMap"/>, <see cref="touchMap"/>, etc.).
+        /// </summary>
         public OVRControllerBase()
         {
             ConfigureButtonMap();
@@ -2486,6 +3134,14 @@ public static class OVRInput
             ConfigureAxis2DMap();
         }
 
+        /// <summary>
+        /// Updates this instance by reading inputs from the underlying system, reinterpreting them as specified
+        /// by the input maps (<see cref="buttonMap"/>, <see cref="touchMap"/>, etc.), and updating the information
+        /// in <see cref="currentState"/> and <see cref="previousState"/>.
+        /// </summary>
+        /// <returns>
+        /// An enum bit mask indicating whether a controller of <see cref="controllerType"/> is currently connected
+        /// </returns>
         public virtual Controller Update()
         {
             OVRPlugin.ControllerState6 state;
@@ -2602,11 +3258,24 @@ public static class OVRInput
             return state;
         }
 
+        /// <summary>
+        /// Sets the vibration of the physical controller represented by this instance.
+        /// </summary>
+        /// <param name="frequency">The frequency of the desired vibration</param>
+        /// <param name="amplitude">The amplitude of the desired vibration</param>
         public virtual void SetControllerVibration(float frequency, float amplitude)
         {
             OVRPlugin.SetControllerVibration((uint)controllerType, frequency, amplitude);
         }
 
+        /// <summary>
+        /// Sets the localized vibration of the physical controller represented by this instance.
+        /// </summary>
+        /// <param name="hapticsLocationMask">
+        /// A mask indicating the locations to which this vibration should apply
+        /// </param>
+        /// <param name="frequency">The frequency of the desired vibration</param>
+        /// <param name="amplitude">The amplitude of the desired vibration</param>
         public virtual void SetControllerLocalizedVibration(HapticsLocation hapticsLocationMask, float frequency,
             float amplitude)
         {
@@ -2614,6 +3283,11 @@ public static class OVRInput
                 (OVRPlugin.HapticsLocation)hapticsLocationMask, frequency, amplitude);
         }
 
+        /// <summary>
+        /// Sets the <see cref="HapticsAmplitudeEnvelopeVibration"/> for the physical controller
+        /// represented by this instance.
+        /// </summary>
+        /// <param name="hapticsVibration">The desired haptics amplitude envelope vibration</param>
         public virtual void SetControllerHapticsAmplitudeEnvelope(HapticsAmplitudeEnvelopeVibration hapticsVibration)
         {
             GCHandle pinnedSamples = GCHandle.Alloc(hapticsVibration.Samples, GCHandleType.Pinned);
@@ -2638,6 +3312,12 @@ public static class OVRInput
 
         private UInt32[] HapticsPcmSamplesConsumedCache = new UInt32[1];
 
+        /// <summary>
+        /// Sets the <see cref="HapticsPcmVibration"/> for the physical controller represented by
+        /// this instance.
+        /// </summary>
+        /// <param name="hapticsVibration">The desired PCM vibration to be sent to the system</param>
+        /// <returns>The number of samples consumed by the resulting native invocation</returns>
         public virtual int SetControllerHapticsPcm(HapticsPcmVibration hapticsVibration)
         {
             GCHandle pinnedSamples = GCHandle.Alloc(hapticsVibration.Samples, GCHandleType.Pinned);
@@ -2675,6 +3355,10 @@ public static class OVRInput
             return samplesConsumed;
         }
 
+        /// <summary>
+        /// Retrieves the hardware sampling rate of the physical controller represented by this instance.
+        /// </summary>
+        /// <returns>The sampling rate, in hertz</returns>
         public virtual float GetControllerSampleRateHz()
         {
             OVRPlugin.GetControllerSampleRateHz((OVRPlugin.Controller)controllerType, out float sampleRateHz);
@@ -2682,50 +3366,164 @@ public static class OVRInput
             return sampleRateHz;
         }
 
+        /// <summary>
+        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// </summary>
+        /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
         public virtual byte GetBatteryPercentRemaining()
         {
             return 0;
         }
 
+        /// <summary>
+        /// Initializes the <see cref="buttonMap"/> to appropriate default values for the control scheme
+        /// encapsulated in this instance.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public abstract void ConfigureButtonMap();
+
+        /// <summary>
+        /// Initializes the <see cref="touchMap"/> to appropriate default values for the control scheme
+        /// encapsulated in this instance.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public abstract void ConfigureTouchMap();
+
+        /// <summary>
+        /// Initializes the <see cref="nearTouchMap"/> to appropriate default values for the control scheme
+        /// encapsulated in this instance.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public abstract void ConfigureNearTouchMap();
+
+        /// <summary>
+        /// Initializes the <see cref="axis1DMap"/> to appropriate default values for the control scheme
+        /// encapsulated in this instance.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public abstract void ConfigureAxis1DMap();
+
+        /// <summary>
+        /// Initializes the <see cref="axis2DMap"/> to appropriate default values for the control scheme
+        /// encapsulated in this instance.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public abstract void ConfigureAxis2DMap();
 
+        /// <summary>
+        /// Wrapper method which invokes the <see cref="VirtualButtonMap.ToRawMask(Button)"/> method of this
+        /// instance's <see cref="buttonMap"/>.
+        /// </summary>
+        /// <param name="virtualMask">The observed inputs to be remapped</param>
+        /// <returns>
+        /// A remapping of <paramref name="virtualMask"/> as specified by <see cref="buttonMap"/>
+        /// </returns>
         public RawButton ResolveToRawMask(Button virtualMask)
         {
             return buttonMap.ToRawMask(virtualMask);
         }
 
+        /// <summary>
+        /// Wrapper method which invokes the <see cref="VirtualTouchMap.ToRawMask(Touch)"/> method of this
+        /// instance's <see cref="touchMap"/>.
+        /// </summary>
+        /// <param name="virtualMask">The observed inputs to be remapped</param>
+        /// <returns>
+        /// A remapping of <paramref name="virtualMask"/> as specified by <see cref="touchMap"/>
+        /// </returns>
         public RawTouch ResolveToRawMask(Touch virtualMask)
         {
             return touchMap.ToRawMask(virtualMask);
         }
 
+        /// <summary>
+        /// Wrapper method which invokes the <see cref="VirtualNearTouchMap.ToRawMask(NearTouch)"/> method of this
+        /// instance's <see cref="nearTouchMap"/>.
+        /// </summary>
+        /// <param name="virtualMask">The observed inputs to be remapped</param>
+        /// <returns>
+        /// A remapping of <paramref name="virtualMask"/> as specified by <see cref="nearTouchMap"/>
+        /// </returns>
         public RawNearTouch ResolveToRawMask(NearTouch virtualMask)
         {
             return nearTouchMap.ToRawMask(virtualMask);
         }
 
+        /// <summary>
+        /// Wrapper method which invokes the <see cref="VirtualAxis1DMap.ToRawMask(Axis1D)"/> method of this
+        /// instance's <see cref="axis1DMap"/>.
+        /// </summary>
+        /// <param name="virtualMask">The observed inputs to be remapped</param>
+        /// <returns>
+        /// A remapping of <paramref name="virtualMask"/> as specified by <see cref="axis1DMap"/>
+        /// </returns>
         public RawAxis1D ResolveToRawMask(Axis1D virtualMask)
         {
             return axis1DMap.ToRawMask(virtualMask);
         }
 
+        /// <summary>
+        /// Wrapper method which invokes the <see cref="VirtualAxis2DMap.ToRawMask(Axis2D)"/> method of this
+        /// instance's <see cref="axis2DMap"/>.
+        /// </summary>
+        /// <param name="virtualMask">The observed inputs to be remapped</param>
+        /// <returns>
+        /// A remapping of <paramref name="virtualMask"/> as specified by <see cref="axis2DMap"/>
+        /// </returns>
         public RawAxis2D ResolveToRawMask(Axis2D virtualMask)
         {
             return axis2DMap.ToRawMask(virtualMask);
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for a pair of touch controllers.
+    /// Overrides the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     public class OVRControllerTouch : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.Touch"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerTouch()
         {
             controllerType = Controller.Touch;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -2763,6 +3561,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.LThumbstickRight;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -2780,6 +3586,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -2789,6 +3603,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.RThumbButtons;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -2808,6 +3630,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.RIndexTriggerForce;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;
@@ -2817,6 +3647,10 @@ public static class OVRInput
             axis2DMap.SecondaryTouchpad         = RawAxis2D.RTouchpad;
         }
 
+        /// <summary>
+        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// </summary>
+        /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
         public override byte GetBatteryPercentRemaining()
         {
             byte leftBattery = currentState.LBatteryPercentRemaining;
@@ -2827,13 +3661,39 @@ public static class OVRInput
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for left-hand touch controllers.
+    /// Overrides the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     public class OVRControllerLTouch : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.LTouch"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerLTouch()
         {
             controllerType = Controller.LTouch;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -2871,6 +3731,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.LThumbstickRight;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -2888,6 +3756,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -2897,6 +3773,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -2916,6 +3800,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;
@@ -2925,19 +3817,49 @@ public static class OVRInput
             axis2DMap.SecondaryTouchpad         = RawAxis2D.None;
         }
 
+        /// <summary>
+        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// </summary>
+        /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.LBatteryPercentRemaining;
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for right-hand touch controllers.
+    /// Overrides the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     private class OVRControllerRTouch : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.RTouch"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerRTouch()
         {
             controllerType = Controller.RTouch;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -2975,6 +3897,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.RThumbstickRight;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -2992,6 +3922,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -3001,6 +3939,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -3020,6 +3966,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;
@@ -3029,19 +3983,49 @@ public static class OVRInput
             axis2DMap.SecondaryTouchpad         = RawAxis2D.None;
         }
 
+        /// <summary>
+        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// </summary>
+        /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.RBatteryPercentRemaining;
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for hands provided by hand tracking. Overrides
+    /// the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     public class OVRControllerHands : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.Hands"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerHands()
         {
             controllerType = Controller.Hands;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -3079,6 +4063,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -3096,6 +4088,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -3105,6 +4105,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -3124,6 +4132,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;
@@ -3133,6 +4149,10 @@ public static class OVRInput
             axis2DMap.SecondaryTouchpad         = RawAxis2D.None;
         }
 
+        /// <summary>
+        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// </summary>
+        /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
         public override byte GetBatteryPercentRemaining()
         {
             byte leftBattery = currentState.LBatteryPercentRemaining;
@@ -3143,13 +4163,39 @@ public static class OVRInput
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for left hands provided by hand tracking.
+    /// Overrides the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     public class OVRControllerLHand : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.LHand"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerLHand()
         {
             controllerType = Controller.LHand;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -3187,6 +4233,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -3204,6 +4258,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -3213,6 +4275,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -3232,6 +4302,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;
@@ -3241,19 +4319,49 @@ public static class OVRInput
             axis2DMap.SecondaryTouchpad         = RawAxis2D.None;
         }
 
+        /// <summary>
+        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// </summary>
+        /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.LBatteryPercentRemaining;
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for right-hand controllers. Overrides
+    /// the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     public class OVRControllerRHand : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.RHand"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerRHand()
         {
             controllerType = Controller.RHand;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -3291,6 +4399,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -3308,6 +4424,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -3317,6 +4441,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -3336,6 +4468,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;
@@ -3345,19 +4485,49 @@ public static class OVRInput
             axis2DMap.SecondaryTouchpad         = RawAxis2D.None;
         }
 
+        /// <summary>
+        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// </summary>
+        /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.RBatteryPercentRemaining;
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for remote (such as Oculus Go) controls. Overrides
+    /// the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     public class OVRControllerRemote : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.Remote"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerRemote()
         {
             controllerType = Controller.Remote;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -3395,6 +4565,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.DpadRight;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -3412,6 +4590,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                  = RawNearTouch.None;
@@ -3421,6 +4607,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                     = RawAxis1D.None;
@@ -3440,6 +4634,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                     = RawAxis2D.None;
@@ -3450,13 +4652,39 @@ public static class OVRInput
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for PC-based gamepad controls. Overrides
+    /// the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     public class OVRControllerGamepadPC : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.Gamepad"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerGamepadPC()
         {
             controllerType = Controller.Gamepad;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -3494,6 +4722,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.LThumbstickRight;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -3511,6 +4747,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -3520,6 +4764,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -3539,6 +4791,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;
@@ -3549,13 +4809,39 @@ public static class OVRInput
         }
     }
 
+    /// <summary>
+    /// Specializes <see cref="OVRControllerBase"/> specifically for Android-based gamepad controls.
+    /// Overrides the configuration methods of the base type to populate the various input maps
+    /// (<see cref="OVRControllerBase.buttonMap"/>, <see cref="OVRControllerBase.touchMap"/>, etc.) with
+    /// the appropriate <see cref="RawButton"/> mappings for this control sceme. These mappings can be modified
+    /// after construction to customize controls.
+    /// </summary>
     private class OVRControllerGamepadAndroid : OVRControllerBase
     {
+        /// <summary>
+        /// Basic constructor. Initializes <see cref="OVRControllerBase.controllerType"/> to
+        /// <see cref="Controller.Gamepad"/>, otherwise initializes all other <see cref="OVRControllerBase"/>
+        /// values to their defaults.
+        /// </summary>
+        /// <remarks>
+        /// Note that, because the <see cref="OVRControllerBase"/> constructor invokes all the virtual
+        /// configuration methods (<see cref="ConfigureButtonMap"/>, <see cref="ConfigureTouchMap"/>, etc.),
+        /// the default values to which the various input maps will be initialized are the defaults for
+        /// this type, not the base type.
+        /// </remarks>
         public OVRControllerGamepadAndroid()
         {
             controllerType = Controller.Gamepad;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.buttonMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureButtonMap()
         {
             buttonMap.None                     = RawButton.None;
@@ -3593,6 +4879,14 @@ public static class OVRInput
             buttonMap.Right                    = RawButton.LThumbstickRight;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.touchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureTouchMap()
         {
             touchMap.None                      = RawTouch.None;
@@ -3610,6 +4904,14 @@ public static class OVRInput
             touchMap.SecondaryTouchpad         = RawTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.nearTouchMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureNearTouchMap()
         {
             nearTouchMap.None                      = RawNearTouch.None;
@@ -3619,6 +4921,14 @@ public static class OVRInput
             nearTouchMap.SecondaryThumbButtons     = RawNearTouch.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis1DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis1DMap()
         {
             axis1DMap.None                      = RawAxis1D.None;
@@ -3638,6 +4948,14 @@ public static class OVRInput
             axis1DMap.SecondaryIndexTriggerForce = RawAxis1D.None;
         }
 
+        /// <summary>
+        /// Configures the <see cref="OVRControllerBase.axis2DMap"/> to contain the appropriate default mappings
+        /// for this control scheme.
+        /// </summary>
+        /// <remarks>
+        /// This method is invoked automatically during initialization and need not be separately invoked except
+        /// to restore the defaults from a modified state.
+        /// </remarks>
         public override void ConfigureAxis2DMap()
         {
             axis2DMap.None                      = RawAxis2D.None;

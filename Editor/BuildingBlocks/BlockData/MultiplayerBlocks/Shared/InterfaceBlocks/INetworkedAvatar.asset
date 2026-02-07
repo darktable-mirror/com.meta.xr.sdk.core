@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: INetworkedAvatar
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: b627f6cd-e738-4827-bfb1-7332719112b3
   version: 1
   blockName: Networked Avatar
@@ -30,10 +30,15 @@ MonoBehaviour:
   - 40089589-8290-4ae3-a056-d9ca1ccaa35a
   packageDependencies:
   - com.meta.xr.sdk.avatars
+  - com.meta.xr.sdk.avatars.sample.assets
   isSingleton: 1
   usageInstructions: "To show default avatars for anonymous users or whoever failed
     entitlement check, download Meta XR Avatar SDK Sample Assets package (com.meta.xr.sdk.avatars.sample.assets).\nWithout
     sample assets, default avatar would show as blue colored, only users who has
-    setup Avatars in Oculus OS would show their own Avatar.\n\nWhen testing user's
-    own Avatars during development, AppId needs to be filled in. \nSee guidance from
-    menu of Oculus > Tools > Meta Account Setup Guide.\nDoc: https://developer.oculus.com/documentation/unity/meta-avatars-app-config/"
+    setup Avatars in Oculus OS would show their own Avatar.\n\nWhen using Avatar
+    SDK v28 or newer leg movement animation is avaible by importing the Sample \"Sample
+    Scenes\" from the UPM package.\n\nWhen testing user's own Avatars during development,
+    AppId needs to be filled in. \nSee guidance from menu of Oculus > Tools > Meta
+    Account Setup Guide.\nDoc: https://developer.oculus.com/documentation/unity/meta-avatars-app-config/"
+  featureDocumentationName: 
+  featureDocumentationUrl: 

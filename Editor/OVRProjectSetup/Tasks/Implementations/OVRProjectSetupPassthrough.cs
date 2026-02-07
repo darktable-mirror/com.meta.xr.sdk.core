@@ -19,6 +19,7 @@
  */
 
 using Meta.XR.BuildingBlocks;
+using Meta.XR.Editor.Rules;
 using UnityEditor;
 
 [InitializeOnLoad]
@@ -70,12 +71,12 @@ internal static class OVRProjectSetupPassthrough
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Required,
             group: Group,
-            isDone: buildTargetGroup => OVRProjectSetupCompatibilityTasks.IsTargetingARM64,
+            isDone: buildTargetGroup => AndroidCompatibility.IsTargetingARM64,
             conditionalValidity: buildTargetGroup => OVRProjectConfig.CachedProjectConfig.insightPassthroughSupport !=
                                                      OVRProjectConfig.FeatureSupport.None,
             message: "When enabling the Passthrough capability in your project it's required to use ARM64 as " +
                      "the target architecture",
-            fix: OVRProjectSetupCompatibilityTasks.SetARM64Target,
+            fix: AndroidCompatibility.SetARM64Target,
             fixMessage: "PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64"
         );
 

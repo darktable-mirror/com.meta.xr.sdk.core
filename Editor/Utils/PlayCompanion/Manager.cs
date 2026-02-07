@@ -19,8 +19,8 @@
  */
 
 using System.Collections.Generic;
+using Meta.XR.Editor.Settings;
 using UnityEditor;
-using UnityEngine;
 
 namespace Meta.XR.Editor.PlayCompanion
 {
@@ -29,8 +29,8 @@ namespace Meta.XR.Editor.PlayCompanion
     {
         private static readonly List<Item> Items = new List<Item>();
 
-        public static readonly OVRProjectSetupSettingBool Enabled =
-            new OVRProjectSetupUserSettingBool("PlayCompanionEnabled", true);
+        public static readonly Bool Enabled =
+            new UserBool("PlayCompanion.Enabled", true);
 
         static Manager()
         {
@@ -38,6 +38,7 @@ namespace Meta.XR.Editor.PlayCompanion
 
             EditorApplication.update += Update;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorApplication.quitting += OnEditorQuitting;
             OVRUserSettingsProvider.Register("Toolbar", OnSettingsGUI);
 
             Update();
@@ -114,6 +115,11 @@ namespace Meta.XR.Editor.PlayCompanion
                     SelectedItem?.OnExitingPlayMode?.Invoke();
                     break;
             }
+        }
+
+        private static void OnEditorQuitting()
+        {
+            SelectedItem?.OnEditorQuitting?.Invoke();
         }
 
         private static void SetupMenu()

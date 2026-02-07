@@ -25,15 +25,23 @@ using UnityEngine.EventSystems;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the slider UI element.
+    /// It's used for the float/int debug data's tweaking in the Inspector panel of Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Slider : Button, IDragHandler, IInitializePotentialDragHandler
     {
         private Background _emptyBackground;
         private Background _fillBackground;
         private Icon _pill;
 
-        public Tweak Tweak { get; set; }
+        internal Tweak Tweak { get; set; }
 
         private ImageStyle _emptyBackgroundStyle;
+        /// <summary>
+        /// The background style when the slider is not filled (normally on the right hand side of the slider)
+        /// </summary>
         public ImageStyle EmptyBackgroundStyle
         {
             set
@@ -46,6 +54,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
 
         private ImageStyle _fillBackgroundStyle;
+        /// <summary>
+        /// The background style when the slider is filled (normally on the left hand side of the slider)
+        /// </summary>
         public ImageStyle FillBackgroundStyle
         {
             set
@@ -85,11 +96,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _fillBackground.RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, idealPosition);
         }
 
-        public void Update()
+        private void Update()
         {
             UpdatePillPosition();
         }
 
+        /// <summary>
+        /// The callback implementation for the <see cref="OnDrag"/> event.
+        /// </summary>
+        /// <param name="eventData">The pointer event data for the drag gesture</param>
         public void OnDrag(PointerEventData eventData)
         {
             if (!MayDrag(eventData)) return;
@@ -105,6 +120,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return Tweak != null && eventData.button == PointerEventData.InputButton.Left;
         }
 
+        /// <summary>
+        /// The callback implementation for the <see cref="OnInitializePotentialDrag"/> event.
+        /// </summary>
+        /// <param name="eventData">The pointer event data for the potential drag gesture</param>
         public void OnInitializePotentialDrag(PointerEventData eventData)
         {
             eventData.useDragThreshold = false;

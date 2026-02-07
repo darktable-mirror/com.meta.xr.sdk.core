@@ -63,8 +63,14 @@ public class OVRConfig : ScriptableObject
         set { instance = value; }
     }
 
-    // Returns the path to the base directory of the Android SDK
     public string GetAndroidSDKPath(bool throwError = true)
+    {
+        // kept only for backward compatibility. Should be deleted later on.
+        return GetAndroidSDKPathLocation(throwError);
+    }
+
+    // Returns the path to the base directory of the Android SDK
+    public static string GetAndroidSDKPathLocation(bool throwError = true)
     {
         string androidSDKPath = "";
 #if UNITY_2019_1_OR_NEWER
@@ -82,7 +88,8 @@ public class OVRConfig : ScriptableObject
             androidSDKPath = EditorPrefs.GetString("AndroidSdkRoot");
         }
 
-        androidSDKPath = androidSDKPath.Replace("/", "\\");
+        androidSDKPath = androidSDKPath.Replace('/', Path.DirectorySeparatorChar);
+
         // Validate sdk path and notify user if path does not exist.
         if (!Directory.Exists(androidSDKPath))
         {

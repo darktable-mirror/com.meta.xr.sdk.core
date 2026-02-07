@@ -38,9 +38,62 @@ namespace Meta.XR.EnvironmentDepth
     /// Surfaces _EnvironmentDepthTexture and complementary information
     /// for reprojection and movement compensation to shaders globally.
     /// </summary>
+    /// <remarks>
+    /// Enabling this class will allow you to make depth textures available from the system asynchronously.
+    /// For more information, see [Depth API Overview](https://developers.meta.com/horizon/documentation/unity/unity-depthapi-overview).
+    /// <example> Enabling depth textures:
+    /// <code><![CDATA[
+    /// [SerializeField] private EnvironmentDepthManager _environmentDepthManager;
+    /// private IEnumerator Example()
+    /// {
+    ///     //Check if this feature is supported on your platform
+    ///     if(!EnvironmentDepthManager.IsSupported)
+    ///     {
+    ///         Debug.Log("This feature is not supported");
+    ///         yield break;
+    ///     }
+    ///     //enables the feature and makes depth textures available
+    ///     //depth textures will be available from the system asynchronously
+    ///     _environmentDepthManager.enabled = true;
+    ///
+    ///     while(!_environmentDepthManager.IsDepthAvailable)
+    ///         yield return null;
+    ///
+    ///     Debug.Log("Depth textures are now available);
+    /// }
+    /// ]]></code></example>
+    /// <example> Using Depth Manager features:
+    /// <code><![CDATA[
+    /// private void ExampleOccl()
+    /// {
+    ///   //sets occlusion mode to "SoftOcclusion" -- this is the default value
+    ///   _environmentDepthManager.OcclusionShadersMode = OcclusionShadersMode.SoftOcclusion;
+    ///
+    ///  //sets occlusion mode to "HardOcclusion"
+    ///  _environmentDepthManager.OcclusionShadersMode = OcclusionShadersMode.HardOcclusion;
+    ///
+    ///  //sets occlusion mode to "None" -- it's a good idea to disable environmentDepthManager to save resources in this case
+    ///  _environmentDepthManager.OcclusionShadersMode = OcclusionShadersMode.None;
+    ///
+    ///  //remove hands from the depth map
+    ///  _environmentDepthManager.RemoveHands = true;
+    ///
+    ///  //disables the feature. Frees up resources by not requesting depth textures from the system
+    ///  _environmentDepthManager.enabled = false;
+    /// }
+    /// ]]></code></example>
+    /// </remarks>
     public class EnvironmentDepthManager : MonoBehaviour
     {
+        /// <summary>
+        /// The shader keyword for enabling hard occlusions.
+        /// </summary>
+
         public const string HardOcclusionKeyword = "HARD_OCCLUSION";
+        /// <summary>
+        /// The shader keyword for enabling soft occlusions.
+        /// </summary>
+
         public const string SoftOcclusionKeyword = "SOFT_OCCLUSION";
         private const int numViews = 2;
         private static readonly int DepthTextureID = Shader.PropertyToID("_EnvironmentDepthTexture");
@@ -48,8 +101,22 @@ namespace Meta.XR.EnvironmentDepth
         private static readonly int ZBufferParamsID = Shader.PropertyToID("_EnvironmentDepthZBufferParams");
         private static readonly int PreprocessedEnvironmentDepthTexture = Shader.PropertyToID("_PreprocessedEnvironmentDepthTexture");
 
+        private static readonly int MvpMatricesID = Shader.PropertyToID("_DepthMask_MVP_Matrices");
+        private static readonly int MaskTextureID = Shader.PropertyToID("_MaskTexture");
+        private static readonly int MaskBiasID = Shader.PropertyToID("_MaskBias");
+
         [SerializeField] private OcclusionShadersMode _occlusionShadersMode = OcclusionShadersMode.SoftOcclusion;
         [SerializeField] private bool _removeHands;
+        /// <summary>
+        /// This transform allows you to override the default tracking space.
+        /// </summary>
+        [SerializeField] public Transform CustomTrackingSpace;
+        /// <summary>
+        /// A list of mesh filters to be used with the Depth Masking feature. If this list is left empty, the feature is disabled.
+        /// </summary>
+        [field: SerializeField] public List<MeshFilter> MaskMeshFilters { get; set; } = new List<MeshFilter>();
+
+        private bool _isCameraRigCached;
         [SerializeField, HideInInspector] private OVRCameraRig _cameraRig;
         internal static readonly IDepthProvider _provider = CreateProvider();
         private bool _hasPermission;
@@ -57,6 +124,9 @@ namespace Meta.XR.EnvironmentDepth
         private Material _preprocessMaterial;
         [CanBeNull] private RenderTexture _preprocessTexture;
         private RenderTargetSetup _preprocessRenderTargetSetup;
+
+        private float _maskBias = 0.1f;
+        private Mask _mask;
 
         [NotNull]
         private static IDepthProvider CreateProvider()
@@ -69,8 +139,14 @@ namespace Meta.XR.EnvironmentDepth
 #pragma warning restore CS0162
         }
 
+        /// <summary>
+        /// Returns true if the current platform supports Environment Depth.
+        /// </summary>
         public static bool IsSupported => _provider.IsSupported;
 
+        /// <summary>
+        /// Returns true if depth textures were made available from the system.
+        /// </summary>
         public bool IsDepthAvailable { get; private set; }
 
         /// <summary>
@@ -93,6 +169,9 @@ namespace Meta.XR.EnvironmentDepth
         /// <summary>
         /// If set to true, hands will be removed from the depth texture.
         /// </summary>
+        /// <remarks>
+        /// For more information, see [Hands Removal](https://developers.meta.com/horizon/documentation/unity/unity-depthapi-hands-removal).
+        /// </remarks>
         public bool RemoveHands
         {
             get => _removeHands;
@@ -103,6 +182,23 @@ namespace Meta.XR.EnvironmentDepth
                 _removeHands = value;
                 if (enabled)
                     _provider.RemoveHands = value;
+            }
+        }
+
+        /// <summary>
+        /// When using the Depth Mask feature, the world position of the environment depth and the world position of the meshes used in the masking process are compared, and the closest value will be taken. To avoid
+        /// z-fighting, adjust this value to move the meshes closer or further.
+        /// </summary>
+        public float MaskBias
+        {
+            get => _maskBias;
+            set
+            {
+                _maskBias = value;
+                if (_mask != null)
+                {
+                    _mask._maskMaterial.SetFloat(MaskBiasID, value);
+                }
             }
         }
 
@@ -183,6 +279,7 @@ namespace Meta.XR.EnvironmentDepth
                 Destroy(_preprocessMaterial);
             if (_preprocessTexture != null)
                 Destroy(_preprocessTexture);
+            _mask?.Dispose();
         }
 
         private void Update()
@@ -195,7 +292,8 @@ namespace Meta.XR.EnvironmentDepth
                 _provider.SetDepthEnabled(true, _removeHands);
             }
 
-            TryFetchDepthTexture();
+            var trackingSpaceWorldToLocal = GetTrackingSpaceWorldToLocalMatrix();
+            TryFetchDepthTexture(trackingSpaceWorldToLocal);
             if (!IsDepthAvailable)
                 return;
 
@@ -206,9 +304,8 @@ namespace Meta.XR.EnvironmentDepth
             var depthZBufferParams = EnvironmentDepthUtils.ComputeNdcToLinearDepthParameters(leftEyeData.nearZ, leftEyeData.farZ);
             Shader.SetGlobalVector(ZBufferParamsID, depthZBufferParams);
 
-            var trackingSpaceViewMatrix = _cameraRig.trackingSpace.worldToLocalMatrix;
-            _reprojectionMatrices[0] = EnvironmentDepthUtils.CalculateReprojection(leftEyeData) * trackingSpaceViewMatrix;
-            _reprojectionMatrices[1] = EnvironmentDepthUtils.CalculateReprojection(rightEyeData) * trackingSpaceViewMatrix;
+            _reprojectionMatrices[0] = EnvironmentDepthUtils.CalculateReprojection(leftEyeData) * trackingSpaceWorldToLocal;
+            _reprojectionMatrices[1] = EnvironmentDepthUtils.CalculateReprojection(rightEyeData) * trackingSpaceWorldToLocal;
             Shader.SetGlobalMatrixArray(ReprojectionMatricesID, _reprojectionMatrices);
         }
 
@@ -245,7 +342,7 @@ namespace Meta.XR.EnvironmentDepth
             }
         }
 
-        private void TryFetchDepthTexture()
+        private void TryFetchDepthTexture(Matrix4x4 trackingSpaceWorldToLocal)
         {
             uint textureId = 0;
             if (!_xrDisplay.running || !_provider.GetDepthTextureId(ref textureId))
@@ -267,8 +364,11 @@ namespace Meta.XR.EnvironmentDepth
             _prevTextureId = textureId;
 
             Assert.IsTrue(depthTexture.IsCreated(), "depthTexture.IsCreated()");
-            CacheCameraRig();
-            Assert.IsNotNull(_cameraRig, $"{nameof(OVRCameraRig)} is not present in the scene.");
+            if (MaskMeshFilters != null && MaskMeshFilters.Count > 0)
+            {
+                _mask ??= new Mask(depthTexture.width, depthTexture.height, _maskBias);
+                depthTexture = _mask.ApplyMask(depthTexture, MaskMeshFilters, trackingSpaceWorldToLocal);
+            }
             Shader.SetGlobalTexture(DepthTextureID, depthTexture);
             if (!IsDepthAvailable)
             {
@@ -281,6 +381,97 @@ namespace Meta.XR.EnvironmentDepth
                 PreprocessDepthTexture(depthTexture);
         }
 
+        internal Matrix4x4 GetTrackingSpaceWorldToLocalMatrix()
+        {
+            if (CustomTrackingSpace != null)
+            {
+                return CustomTrackingSpace.worldToLocalMatrix;
+            }
+            if (!_isCameraRigCached)
+            {
+                _isCameraRigCached = true;
+                CacheCameraRig();
+            }
+            return _cameraRig != null ? _cameraRig.trackingSpace.worldToLocalMatrix : Matrix4x4.identity;
+        }
+
+        private class Mask
+        {
+            internal readonly Material _maskMaterial;
+            private readonly RenderTexture _maskDepthRt;
+            private readonly RenderTexture _maskedDepthTexture;
+            private readonly CommandBuffer _maskCommandBuffer;
+            private readonly Matrix4x4[] _mvpMatrices = new Matrix4x4[2];
+
+            internal Mask(int width, int height, float bias)
+            {
+                const string shaderName = "Meta/EnvironmentDepth/DepthMask";
+                var shader = Shader.Find(shaderName);
+                Assert.IsNotNull(shader, "Shader named '" + shaderName + "' wasn't found in Resources folder.");
+                _maskMaterial = new Material(shader)
+                {
+                    enableInstancing = true
+                };
+                _maskMaterial.SetFloat(MaskBiasID, bias);
+                _maskDepthRt = new RenderTexture(width, height, GraphicsFormat.R16_UNorm, GraphicsFormat.D16_UNorm)
+                {
+                    dimension = TextureDimension.Tex2DArray,
+                    volumeDepth = numViews
+                };
+                _maskedDepthTexture = new RenderTexture(width, height, GraphicsFormat.R16_UNorm, GraphicsFormat.None)
+                {
+                    dimension = TextureDimension.Tex2DArray,
+                    volumeDepth = numViews,
+                    depth = 0
+                };
+                _maskCommandBuffer = new CommandBuffer();
+            }
+
+            internal RenderTexture ApplyMask(RenderTexture depthTexture, List<MeshFilter> meshFilters, Matrix4x4 trackingSpaceWorldToLocal)
+            {
+                // update depth camera proj and view matrices
+                EnvironmentDepthUtils.CalculateDepthCameraMatrices(_provider.GetFrameDesc(0), out var proj0, out var view0);
+                EnvironmentDepthUtils.CalculateDepthCameraMatrices(_provider.GetFrameDesc(1), out var proj1, out var view1);
+
+                // render mask's depth into _maskDepthRt
+                _maskCommandBuffer.SetRenderTarget(new RenderTargetIdentifier(_maskDepthRt, 0, CubemapFace.Unknown, -1),
+                    colorLoadAction: RenderBufferLoadAction.DontCare, colorStoreAction: RenderBufferStoreAction.Store,
+                    depthLoadAction: RenderBufferLoadAction.DontCare, depthStoreAction: RenderBufferStoreAction.DontCare
+                );
+                _maskCommandBuffer.ClearRenderTarget(true, true, Color.white);
+                foreach (var meshFilter in meshFilters)
+                {
+                    if (meshFilter == null || meshFilter.sharedMesh == null)
+                    {
+                        Debug.LogError($"{nameof(MeshFilter)} or {nameof(MeshFilter.sharedMesh)} is null.");
+                        continue;
+                    }
+                    _mvpMatrices[0] = GL.GetGPUProjectionMatrix(proj0, true) * view0 * trackingSpaceWorldToLocal * meshFilter.transform.localToWorldMatrix;
+                    _mvpMatrices[1] = GL.GetGPUProjectionMatrix(proj1, true) * view1 * trackingSpaceWorldToLocal * meshFilter.transform.localToWorldMatrix;
+                    _maskCommandBuffer.SetGlobalMatrixArray(MvpMatricesID, _mvpMatrices);
+                    _maskCommandBuffer.DrawMeshInstancedProcedural(meshFilter.sharedMesh, 0, _maskMaterial, 0, numViews);
+                }
+
+                // combine mask with the depth texture
+                _maskMaterial.SetTexture(DepthTextureID, depthTexture);
+                _maskMaterial.SetTexture(MaskTextureID, _maskDepthRt);
+                _maskCommandBuffer.SetRenderTarget(new RenderTargetIdentifier(_maskedDepthTexture, 0, CubemapFace.Unknown, -1),
+                    colorLoadAction: RenderBufferLoadAction.DontCare, colorStoreAction: RenderBufferStoreAction.Store,
+                    depthLoadAction: RenderBufferLoadAction.DontCare, depthStoreAction: RenderBufferStoreAction.DontCare);
+                _maskCommandBuffer.DrawProcedural(Matrix4x4.identity, _maskMaterial, 1, MeshTopology.Triangles, 3, numViews);
+                Graphics.ExecuteCommandBuffer(_maskCommandBuffer);
+                _maskCommandBuffer.Clear();
+                return _maskedDepthTexture;
+            }
+
+            internal void Dispose()
+            {
+                Destroy(_maskMaterial);
+                Destroy(_maskDepthRt);
+                Destroy(_maskedDepthTexture);
+                _maskCommandBuffer.Dispose();
+            }
+        }
 
         private void PreprocessDepthTexture(RenderTexture depthTexture)
         {

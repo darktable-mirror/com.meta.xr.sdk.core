@@ -24,6 +24,11 @@ using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the cursor UI element that's used on all panels of Immersive Debugger.
+    /// It's inheriting from the <see cref="OVRCursor"/> and will be ray casting the "PanelLayer" specified in the settings.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Cursor : OVRCursor
     {
         private Vector3 _startPoint;
@@ -32,10 +37,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         private Vector3 _normal;
         private bool _hit;
 
-        public GameObject GameObject { get; private set; }
-        public Transform Transform { get; private set; }
+        internal GameObject GameObject { get; private set; }
+        private Transform Transform { get; set; }
 
-        public void Awake()
+        private void Awake()
         {
             GameObject = gameObject;
 
@@ -51,6 +56,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Transform = transform;
         }
 
+        /// <summary>
+        /// Overriding the <see cref="SetCursorStartDest"/> from <see cref="OVRCursor"/>, setting the starting point
+        /// and the destination point of the cursor.
+        /// </summary>
+        /// <param name="start"><see cref="Vector3"/> of the starting point position</param>
+        /// <param name="dest"><see cref="Vector3"/> of the destination point position</param>
+        /// <param name="normal"><see cref="Vector3"/> representing the normal of the cursor</param>
         public override void SetCursorStartDest(Vector3 start, Vector3 dest, Vector3 normal)
         {
             _startPoint = start;
@@ -59,6 +71,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _hit = true;
         }
 
+        /// <summary>
+        /// Overriding the <see cref="SetCursorRay"/> from <see cref="OVRCursor"/>, setting the transform of the cursor ray.
+        /// </summary>
+        /// <param name="t"><see cref="Transform"/> that's used to set the cursor's starting point and forward direction</param>
         public override void SetCursorRay(Transform t)
         {
             _startPoint = t.position;
@@ -80,7 +96,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
-        public void Attach(Panel panel)
+        internal void Attach(Panel panel)
         {
             if (panel == null)
             {

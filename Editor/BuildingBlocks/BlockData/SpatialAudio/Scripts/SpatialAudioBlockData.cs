@@ -48,7 +48,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             return new List<GameObject> { selectedGameObject };
 #else
-            throw new InvalidOperationException("It's required to install the Audio SDK package to use this component");
+            throw new InstallationCancelledException("It's required to install the Audio SDK package to use this component");
 #endif // USING_META_XR_AUDIO_SDK
         }
 

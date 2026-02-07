@@ -30,10 +30,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
     {
         protected Label _label;
         protected Background _background;
-        public Background Background => _background;
+        internal Background Background => _background;
 
         protected ImageStyle _backgroundStyle;
-        public ImageStyle BackgroundStyle
+        internal ImageStyle BackgroundStyle
         {
             set
             {
@@ -44,7 +44,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public TextStyle TextStyle
+        internal TextStyle TextStyle
         {
             set => _label.TextStyle = value;
         }
@@ -70,7 +70,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (_backgroundStyle != null && _backgroundStyle.enabled)
             {
                 _background.Show();
-                _background.Color = _backgroundStyle.color;
+                _background.Color = Transparent ? _backgroundStyle.colorOff : _backgroundStyle.color;
             }
             else
             {
@@ -78,7 +78,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        public string Content
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            RefreshStyle();
+        }
+
+        internal string Content
         {
             get => _label.Content;
             set => _label.Content = value;
@@ -86,4 +92,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
     }
 }
-

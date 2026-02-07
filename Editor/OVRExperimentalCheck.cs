@@ -43,7 +43,7 @@ class OVRExperimentalCheck : IPreprocessBuildWithReport
         var enabledInProject = config.experimentalFeaturesEnabled;
         if (!enabledInProject) return;
 
-        var adbTool = new OVRADBTool(OVRConfig.Instance.GetAndroidSDKPath());
+        var adbTool = new OVRADBTool(OVRConfig.GetAndroidSDKPathLocation());
         if (!adbTool.isReady) return;
 
         var devices = adbTool.GetDevices();

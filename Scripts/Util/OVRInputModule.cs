@@ -975,7 +975,7 @@ namespace UnityEngine.EventSystems
             }
             else
             {
-#if UNITY_ANDROID && !UNITY_EDITOR // On android allow swiping to start drag
+#if UNITY_ANDROID && !UNITY_EDITOR && ENABLE_LEGACY_INPUT_MANAGER // On android allow swiping to start drag
                 if (useSwipeScroll && ((Vector3)pointerEvent.GetSwipeStart() - Input.mousePosition).magnitude > swipeDragThreshold)
                 {
                     return true;
@@ -1011,7 +1011,7 @@ namespace UnityEngine.EventSystems
 
         protected Vector2 SwipeAdjustedPosition(Vector2 originalPosition, PointerEventData pointerEvent)
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR && ENABLE_LEGACY_INPUT_MANAGER
             // On android we use the touchpad position (accessed through Input.mousePosition) to modify
             // the effective cursor position for events related to dragging. This allows the user to
             // use the touchpad to drag draggable UI elements

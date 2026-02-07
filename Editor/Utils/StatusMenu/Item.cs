@@ -39,7 +39,7 @@ namespace Meta.XR.Editor.StatusMenu
             StatusMenu,
             Console,
             Component,
-            Toolbar
+            Toolbar,
         }
 
         public struct HeaderIcon
@@ -98,9 +98,6 @@ namespace Meta.XR.Editor.StatusMenu
             }
             EditorGUILayout.EndVertical();
 
-            var leftMarginRect = buttonRect;
-            leftMarginRect.width = MiniMargin;
-            EditorGUI.DrawRect(leftMarginRect, Color);
             EditorGUIUtility.AddCursorRect(buttonRect, MouseCursor.Link);
             if (hover && Event.current.type == EventType.MouseUp)
             {
@@ -126,7 +123,7 @@ namespace Meta.XR.Editor.StatusMenu
         {
             EditorGUILayout.BeginVertical();
             {
-                EditorGUILayout.LabelField(Name, hover ? GUIStyles.BoldLabelHover : GUIStyles.BoldLabel);
+                EditorGUILayout.LabelField(Name, hover ? Styles.GUIStyles.BoldLabelHover : Styles.GUIStyles.BoldLabel);
                 ShowInfoText();
             }
             EditorGUILayout.EndVertical();

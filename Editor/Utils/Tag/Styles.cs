@@ -23,6 +23,7 @@ using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
+using static Meta.XR.Editor.UserInterface.Styles.GUIStylesContainer;
 
 namespace Meta.XR.Editor.Tags
 {
@@ -38,18 +39,6 @@ namespace Meta.XR.Editor.Tags
 
         public class GUIStylesContainer
         {
-            public class ColorStates
-            {
-                public Color Normal;
-                public Color Hover;
-                public Color Active;
-
-                public Color GetColor(bool active, bool hover)
-                {
-                    return hover ? Hover : active ? Active : Normal;
-                }
-            }
-
             public readonly GUIStyle TagIcon = new GUIStyle(EditorStyles.miniLabel)
             {
                 padding = new RectOffset(Padding, Padding, MiniPadding, MiniPadding),

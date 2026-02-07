@@ -26,6 +26,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class CameraRigBBBlockData : BlockData
     {
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
             var existingCameraRig = FindObjectOfType<OVRCameraRig>();
@@ -36,15 +37,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
 #if UNITY_2021
-            if (PrefabUtility.GetPrefabInstanceStatus(existingCameraRig.gameObject) != PrefabInstanceStatus.NotAPrefab)
-            {
-                PrefabUtility.UnpackPrefabInstance(
-                    PrefabUtility.GetOutermostPrefabInstanceRoot(existingCameraRig.gameObject),
-                    PrefabUnpackMode.Completely,
-                    InteractionMode.AutomatedAction);
-            }
+                    if (PrefabUtility.GetPrefabInstanceStatus(existingCameraRig.gameObject) != PrefabInstanceStatus.NotAPrefab)
+                    {
+                        PrefabUtility.UnpackPrefabInstance(
+                            PrefabUtility.GetOutermostPrefabInstanceRoot(existingCameraRig.gameObject),
+                            PrefabUnpackMode.Completely,
+                            InteractionMode.AutomatedAction);
+                    }
 #endif
-
             return new List<GameObject> { existingCameraRig.gameObject };
         }
     }

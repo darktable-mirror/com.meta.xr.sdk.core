@@ -23,8 +23,16 @@ using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+/// <summary>
+/// This class contains the mesh data for hand tracking that is loaded from the Meta Quest runtime.
+/// It is combined with skeleton data from <see cref="OVRSkeleton"/> to create a skinned mesh in <see cref="OVRMeshRenderer"/>.
+/// </summary>
 public class OVRMesh : MonoBehaviour
 {
+    /// <summary>
+    /// Provides an interface for getting a MeshType. A data provider such as <see cref="OVRHand"/> can expose this interface to allow users to retrieve a MeshType from a private mesh.
+    /// Mesh types include None, HandLeft for the left hand and HandRight for the right hand.
+    /// </summary>
     public interface IOVRMeshDataProvider
     {
         MeshType GetMeshType();
@@ -33,8 +41,14 @@ public class OVRMesh : MonoBehaviour
     public enum MeshType
     {
         None = OVRPlugin.MeshType.None,
+        [InspectorName("OVR Hand (Left)")]
         HandLeft = OVRPlugin.MeshType.HandLeft,
+        [InspectorName("OVR Hand (Right)")]
         HandRight = OVRPlugin.MeshType.HandRight,
+        [InspectorName("OpenXR Hand (Left)")]
+        XRHandLeft = OVRPlugin.MeshType.XRHandLeft,
+        [InspectorName("OpenXR Hand (Right)")]
+        XRHandRight = OVRPlugin.MeshType.XRHandRight,
     }
 
 
@@ -48,8 +62,14 @@ public class OVRMesh : MonoBehaviour
 
     private Mesh _mesh;
 
+    /// <summary>
+    /// True if the mesh has been successfully loaded, false otherwise.
+    /// </summary>
     public bool IsInitialized { get; private set; }
 
+    /// <summary>
+    /// Getter for the Unity mesh object this class contains.
+    /// </summary>
     public Mesh Mesh
     {
         get => _mesh;
@@ -64,7 +84,6 @@ public class OVRMesh : MonoBehaviour
     {
         _meshType = type;
     }
-
 
     private void Awake()
     {
@@ -100,7 +119,7 @@ public class OVRMesh : MonoBehaviour
         {
             return false;
         }
-        else if (_meshType == MeshType.HandLeft || _meshType == MeshType.HandRight)
+        else if (_meshType.IsHand())
         {
 #if UNITY_EDITOR
             return OVRInput.IsControllerConnected(OVRInput.Controller.Hands);
@@ -117,7 +136,8 @@ public class OVRMesh : MonoBehaviour
     private void Initialize(MeshType meshType)
     {
         _mesh = new Mesh();
-        if (OVRPlugin.GetMesh((OVRPlugin.MeshType)_meshType, out var ovrpMesh))
+
+        if (OVRPlugin.GetMesh((OVRPlugin.MeshType)meshType, out var ovrpMesh))
         {
             TransformOvrpMesh(ovrpMesh, _mesh);
             IsInitialized = true;

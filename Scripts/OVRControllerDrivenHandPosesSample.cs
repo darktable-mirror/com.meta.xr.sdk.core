@@ -32,8 +32,14 @@ using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 
 /// <summary>
-/// Simple script for running the ControllerDrivenHandPosesSample
+/// Simple script for running the controller-driven hand poses sample.
 /// </summary>
+/// <remarks>
+/// This sample demonstrates the ability for <see cref="OVRInput"/> to simulate human hand inputs by working backward
+/// from controller state (for example, by curling or extending the index finger based on the observed values for
+/// <see cref="OVRInput.Axis1D.PrimaryIndexTrigger"/>, etc. Note that performing this hand simulation is a feature
+/// of <see cref="OVRInput"/>, not OVRControllerDrivenPosesSample, which merely conducts the demonstration.
+/// </remarks>
 [DisallowMultipleComponent]
 [HelpURL("https://developer.oculus.com/documentation/unity/move-body-tracking/#appendix-b-isdk-integration")]
 public class OVRControllerDrivenHandPosesSample : MonoBehaviour
@@ -45,6 +51,14 @@ public class OVRControllerDrivenHandPosesSample : MonoBehaviour
     [SerializeField]
     private Button buttonNatural;
 
+    /// <summary>
+    /// The <see cref="OVRCameraRig"/> for the scene, containing representations of the various XR input and output
+    /// modalities.
+    /// </summary>
+    /// <remarks>
+    /// This field is not used by OVRControllerDrivenHandPosesSample itself, but can be accessed by dependent types
+    /// which may have a dependency on the rig.
+    /// </remarks>
     public OVRCameraRig cameraRig;
 
     // Unity event functions
@@ -65,6 +79,15 @@ public class OVRControllerDrivenHandPosesSample : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sets the mode of the controller-driven hands simulation to
+    /// <see cref="OVRManager.ControllerDrivenHandPosesType.None"/> and updates sample state
+    /// correspondingly.
+    /// </summary>
+    /// <remarks>
+    /// Subsequent calls to either <see cref="SetControllerDrivenHandPosesTypeToControllerConforming"/> or
+    /// <see cref="SetControllerDrivenHandPosesTypeToNatural"/> will override these changes.
+    /// </remarks>
     public void SetControllerDrivenHandPosesTypeToNone()
     {
         OVRManager.instance.controllerDrivenHandPosesType = OVRManager.ControllerDrivenHandPosesType.None;
@@ -73,6 +96,15 @@ public class OVRControllerDrivenHandPosesSample : MonoBehaviour
         buttonNatural.interactable = true;
     }
 
+    /// <summary>
+    /// Sets the mode of the controller-driven hands simulation to
+    /// <see cref="OVRManager.ControllerDrivenHandPosesType.ConformingToController"/> and updates sample
+    /// state correspondingly.
+    /// </summary>
+    /// <remarks>
+    /// Subsequent calls to either <see cref="SetControllerDrivenHandPosesTypeToNone"/> or
+    /// <see cref="SetControllerDrivenHandPosesTypeToNatural"/> will override these changes.
+    /// </remarks>
     public void SetControllerDrivenHandPosesTypeToControllerConforming()
     {
         OVRManager.instance.controllerDrivenHandPosesType = OVRManager.ControllerDrivenHandPosesType.ConformingToController;
@@ -81,6 +113,15 @@ public class OVRControllerDrivenHandPosesSample : MonoBehaviour
         buttonNatural.interactable = true;
     }
 
+    /// <summary>
+    /// Sets the mode of the controller-driven hands simulation to
+    /// <see cref="OVRManager.ControllerDrivenHandPosesType.Natural"/> and updates sample state
+    /// correspondingly.
+    /// </summary>
+    /// <remarks>
+    /// Subsequent calls to either <see cref="SetControllerDrivenHandPosesTypeToNone"/> or
+    /// <see cref="SetControllerDrivenHandPosesTypeToControllerConforming"/> will override these changes.
+    /// </remarks>
     public void SetControllerDrivenHandPosesTypeToNatural()
     {
         OVRManager.instance.controllerDrivenHandPosesType = OVRManager.ControllerDrivenHandPosesType.Natural;

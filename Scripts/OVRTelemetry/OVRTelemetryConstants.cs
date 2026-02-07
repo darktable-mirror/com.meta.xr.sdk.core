@@ -37,7 +37,6 @@ internal static class OVRTelemetryConstants
             public const string ProjectName = "ProjectName";
             public const string ProjectGuid = "ProjectGuid";
             public const string Origin = "Origin";
-            public const string EngineVersion = "developer_platform_version";
             public const string BatchMode = "BatchMode";
         }
 
@@ -70,6 +69,12 @@ internal static class OVRTelemetryConstants
             public const string AssemblyName = "AssemblyName";
             public const string UsesProSkin = "UsesProSkin";
             public const string Origin = "Origin";
+        }
+
+        public enum AnnotationVariant
+        {
+            Required,
+            Optional
         }
     }
 
@@ -166,4 +171,46 @@ internal static class OVRTelemetryConstants
             public const string EnabledSettings = "FeaturesSupportInSettings";
         }
     }
+
+    public static class ProjectSettings
+    {
+        [Markers]
+        public static class MarkerId
+        {
+            public const int RenderThreadingMode = 163060994;
+            public const int RenderingPath = 163068301;
+            public const int XrPluginType = 163069107;
+        }
+
+        public static class AnnotationType
+        {
+            public const string RenderThreadingMode = "render_threading_mode";
+            public const string RenderingPath = "rendering_path";
+            public const string XrPluginType = "xr_plugin_type";
+        }
+
+        public enum RenderThreadingMode
+        {
+            Unknown,
+            Multithreaded,
+            LegacyGraphicsJobs,
+            NativeGraphicsJobs
+        }
+
+        public enum RenderingPath
+        {
+            Unknown,
+            Forward,
+            ForwardPlus,
+            Deferred
+        }
+
+        public enum XrPlugin
+        {
+            Unknown,
+            Oculus,
+            OpenXR
+        }
+    }
+
 }

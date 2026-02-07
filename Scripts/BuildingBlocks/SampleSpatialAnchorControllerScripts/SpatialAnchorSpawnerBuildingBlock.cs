@@ -22,9 +22,21 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks
 {
-    [RequireComponent(typeof(SpatialAnchorSpawnerBuildingBlock))]
+    /// <summary>
+    /// A utility class to manage instantiation of an <see cref="OVRSpatialAnchor"/> GameObject.
+    /// </summary>
+    /// <remarks>
+    /// By default <see cref="OVRSpatialAnchor"/> will be spawned at user's hand's / controller's position. Disable
+    /// <see cref="FollowHand"/> property to spawn the <see cref="OVRSpatialAnchor"/> at the specified position and orientation.
+    /// See <see cref="SpatialAnchorCoreBuildingBlock.OnAnchorCreateCompleted"/> event to get notified when the anchor is created.
+    /// See also `Editor/BuildingBlocks/BlockData/SampleSpatialAnchorController` in the Meta XR Core SDK for an example of how to use this class.
+    /// <seealso cref="BuildingBlock"/>
+    /// </remarks>
     public class SpatialAnchorSpawnerBuildingBlock : MonoBehaviour
     {
+        /// <summary>
+        /// A prefab to instantiate.
+        /// </summary>
         public GameObject AnchorPrefab
         {
             get => _anchorPrefab;
@@ -37,6 +49,9 @@ namespace Meta.XR.BuildingBlocks
             }
         }
 
+        /// <summary>
+        /// Indicates whether the <see cref="OVRSpatialAnchor"/> source prefab you instantiate will follow the user's hand.
+        /// </summary>
         public bool FollowHand
         {
             get => _followHand;
@@ -81,7 +96,7 @@ namespace Meta.XR.BuildingBlocks
         }
 
         /// <summary>
-        /// Spawn a spatial anchor.
+        /// Spawns a new <see cref="OVRSpatialAnchor"/> for the <see cref="AnchorPrefab"/> in the provided position and the provided orientation.
         /// </summary>
         /// <param name="position">Position for the new anchor.</param>
         /// <param name="rotation">Orientation of the new anchor</param>

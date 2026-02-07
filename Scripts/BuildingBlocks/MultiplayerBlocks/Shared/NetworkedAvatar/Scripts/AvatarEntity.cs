@@ -25,6 +25,8 @@ using UnityEngine;
 
 #if META_AVATAR_SDK_DEFINED
 using Oculus.Avatar2;
+using Oculus.Avatar2.Experimental;
+using CAPI = Oculus.Avatar2.CAPI;
 #endif // META_AVATAR_SDK_DEFINED
 
 namespace Meta.XR.MultiplayerBlocks.Shared
@@ -94,6 +96,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
     /// when the user is not entitled (no Meta Id) or has no avatar setup.
     /// For more information on the Meta Avatars SDK, see https://developer.oculus.com/documentation/unity/meta-avatars-overview/.
     /// </summary>
+    [DefaultExecutionOrder(50)] // after GpuSkinningConfiguration initializes
     public class AvatarEntity : OvrAvatarEntity, IAvatarStreamConfig
     {
         /// <summary>
@@ -101,9 +104,17 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         /// </summary>
         public static event Action<AvatarEntity> OnSpawned;
 
+#if META_AVATAR_SDK_28_OR_NEWER
+        [Header("Face Pose Input")]
+        [SerializeField]
+        private OvrAvatarFacePoseBehavior m_facePoseProvider;
+        [SerializeField]
+        private OvrAvatarEyePoseBehavior m_eyePoseProvider;
+#endif
+
         private byte[] _streamedData;
         private float _cycleStartTime;
-        private bool _skeletonLoaded;
+        private bool _isSkeletonLoaded;
         private bool _initialAvatarLoaded;
         private IAvatarBehaviour _avatarBehaviour;
         private StreamLOD _streamLevel = StreamLOD.Medium;
@@ -119,7 +130,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 return;
             }
 
-            _skeletonLoaded = false;
+            _isSkeletonLoaded = false;
             EntityActive = false;
             Teardown();
             CreateEntity();
@@ -156,23 +167,78 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             _initialAvatarLoaded = true;
         }
 
+#if META_AVATAR_SDK_28_OR_NEWER
+        private OvrAvatarInputManagerBehavior m_bodyTracking;
+        public OvrAvatarInputManagerBehavior BodyTracking
+        {
+            get => m_bodyTracking;
+            protected set
+            {
+                m_bodyTracking = value;
+                SetInputManager(value);
+            }
+        }
+
+        private OvrAvatarInputManagerBehavior FindAvatarInputManagerBehavior()
+        {
+            foreach (var b in FindObjectsByType<OvrAvatarInputManagerBehavior>(FindObjectsSortMode.None))
+            {
+                if (b.isActiveAndEnabled)
+                {
+                    return b;
+                }
+            }
+
+            return null;
+        }
+#endif
+
         private void ConfigureAvatar()
         {
-            if (_avatarBehaviour.HasInputAuthority)
+            var isLocal = _avatarBehaviour.HasInputAuthority;
+            SetIsLocal(isLocal);
+            gameObject.name = isLocal ? "LocalAvatar" : "RemoteAvatar";
+
+            if (isLocal)
             {
-                SetIsLocal(true);
+#if META_AVATAR_SDK_28_OR_NEWER
+                _creationInfo.features |= CAPI.ovrAvatar2EntityFeatures.Animation;
+
+                var body = FindAvatarInputManagerBehavior();
+                BodyTracking = body;
+
+                SetFacePoseProvider(m_facePoseProvider);
+                SetEyePoseProvider(m_eyePoseProvider);
+
+                AvatarLODManager.Instance.firstPersonAvatarLod = AvatarLOD;
+                AdjustAvatarLOD(_streamLevel);
+#else
                 _creationInfo.features = CAPI.ovrAvatar2EntityFeatures.Preset_Default;
                 var entityInputManager = OvrAvatarManager.Instance.gameObject.GetComponent<EntityInputManager>();
                 SetBodyTracking(entityInputManager);
+#endif
+
                 var lipSyncInput = FindObjectOfType<OvrAvatarLipSyncContext>();
                 SetLipSync(lipSyncInput);
-                gameObject.name = "LocalAvatar";
             }
             else
             {
-                SetIsLocal(false);
+#if META_AVATAR_SDK_28_OR_NEWER
+                _creationInfo.features &= ~CAPI.ovrAvatar2EntityFeatures.Animation;
+
+                SetInputManager(null);
+                SetFacePoseProvider(null);
+                SetEyePoseProvider(null);
+                SetLipSync(null);
+
+                var animationBehavior = GetComponent("OvrAvatarAnimationBehavior");
+                if (animationBehavior != null)
+                {
+                    Destroy(animationBehavior);
+                }
+#else
                 _creationInfo.features = CAPI.ovrAvatar2EntityFeatures.Preset_Remote;
-                gameObject.name = "RemoteAvatar";
+#endif
             }
         }
 
@@ -230,12 +296,12 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         protected override void OnSkeletonLoaded()
         {
             base.OnSkeletonLoaded();
-            _skeletonLoaded = true;
+            _isSkeletonLoaded = true;
         }
 
         private void Update()
         {
-            if (!_skeletonLoaded || _streamedData == null || IsLocal)
+            if (!_isSkeletonLoaded || _streamedData == null || IsLocal)
             {
                 return;
             }
@@ -253,7 +319,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
         private void LateUpdate()
         {
-            if (!_skeletonLoaded)
+            if (!_isSkeletonLoaded)
             {
                 return;
             }
@@ -288,6 +354,18 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             _streamedData = bytes;
         }
 
+#if META_AVATAR_SDK_28_OR_NEWER
+        private void AdjustAvatarLOD(StreamLOD lod)
+        {
+            var avatarLod = GetComponent<AvatarLOD>();
+
+            if (avatarLod != null)
+            {
+                avatarLod.dynamicStreamLod = lod;
+            }
+        }
+#endif
+
 #region IAvatarStreamLOD
 
         /// <summary>
@@ -303,6 +381,10 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 AvatarStreamLOD.High => StreamLOD.High,
                 _ => StreamLOD.Medium
             };
+
+#if META_AVATAR_SDK_28_OR_NEWER
+            AdjustAvatarLOD(_streamLevel);
+#endif
         }
 
         /// <summary>

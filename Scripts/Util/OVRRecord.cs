@@ -18,14 +18,9 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 namespace Assets.OVR.Scripts
 {
-    public class Record
+    internal class Record
     {
         public int sortOrder;
         public string category;
@@ -39,7 +34,7 @@ namespace Assets.OVR.Scripts
         }
     }
 
-    public class RangedRecord : Record
+    internal class RangedRecord : Record
     {
         public float value;
         public float min;
@@ -54,9 +49,9 @@ namespace Assets.OVR.Scripts
         }
     }
 
-    public delegate void FixMethodDelegate(UnityEngine.Object obj, bool isLastInSet, int selectedIndex);
+    internal delegate void FixMethodDelegate(UnityEngine.Object obj, bool isLastInSet, int selectedIndex);
 
-    public class FixRecord : Record
+    internal class FixRecord : Record
     {
         public FixMethodDelegate fixMethod;
         public UnityEngine.Object targetObject;

@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -28,6 +27,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class HandTrackingBlockData : BlockData
     {
+
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
             var cameraRigBB = Utils.GetBlocksWithType<OVRCameraRig>().First();

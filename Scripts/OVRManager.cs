@@ -48,6 +48,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -76,7 +77,12 @@ using Settings = UnityEngine.XR.XRSettings;
 using Node = UnityEngine.XR.XRNode;
 
 /// <summary>
-/// Configuration data for Oculus virtual reality.
+/// OVRManager is the main interface to the Meta Quest system and is added to the [OVRCameraRig prefab](https://developer.oculus.com/documentation/unity/unity-add-camera-rig/).
+/// It is a singleton that exposes the core Meta XR SDK functionality to Unity, and includes helper
+/// functions that use the stored Meta variables to help configure the system behavior of Meta Quest.
+/// If you are not using OVRCameraRig, you can also add OVRManager to your own game object. It should
+/// only be added once.
+/// For more information, see the Configure Settings section in [Add Camera Rig Using OVRCameraRig](https://developer.oculus.com/documentation/unity/unity-add-camera-rig/#configure-settings).
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-add-camera-rig/#configure-settings")]
 public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfiguration
@@ -390,7 +396,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
 
 
-
     /// <summary>
     /// Occurs when a passthrough layer has been rendered and presented on the HMD screen for the first time after being restarted.
     /// </summary>
@@ -406,7 +411,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// @params (OVRPlugin.BoundaryVisibility newBoundaryVisibility)
     /// </remarks>
     public static event Action<OVRPlugin.BoundaryVisibility> BoundaryVisibilityChanged;
-
 
 
     /// <summary>
@@ -597,19 +601,31 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 
     [SerializeField]
+    [HideInInspector]
     [Tooltip("Enable Dynamic Resolution. This will allocate render buffers to maxDynamicResolutionScale size and " +
              "will change the viewport to adapt performance. Mobile only.")]
     public bool enableDynamicResolution = false;
 
-    [SerializeField]
-    [Tooltip("Minimum scaling factor used when dynamic resolution is enabled.")]
-    [RangeAttribute(0.7f, 1.3f)]
+    [HideInInspector]
     public float minDynamicResolutionScale = 1.0f;
+    [HideInInspector]
+    public float maxDynamicResolutionScale = 1.0f;
 
     [SerializeField]
-    [Tooltip("Maximum scaling factor used when dynamic resolution is enabled.")]
-    [RangeAttribute(0.7f, 1.3f)]
-    public float maxDynamicResolutionScale = 1.0f;
+    [HideInInspector]
+    public float quest2MinDynamicResolutionScale = 0.7f;
+
+    [SerializeField]
+    [HideInInspector]
+    public float quest2MaxDynamicResolutionScale = 1.3f;
+
+    [SerializeField]
+    [HideInInspector]
+    public float quest3MinDynamicResolutionScale = 0.7f;
+
+    [SerializeField]
+    [HideInInspector]
+    public float quest3MaxDynamicResolutionScale = 1.6f;
 
     private const int _pixelStepPerFrame = 32;
 
@@ -696,7 +712,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     /// <summary>
     /// The TCP listening port of Oculus Profiler Service, which will be activated in Debug/Developerment builds
-    /// When the app is running on editor or device, open "Tools/Oculus/Oculus Profiler Panel" to view the realtime system metrics
+    /// When the app is running on editor or device, open "Meta/Tools/(Deprecated) Oculus Profiler Panel" to view the realtime system metrics
     /// </summary>
     public int profilerTcpPort = OVRSystemPerfMetrics.TcpListeningPort;
 
@@ -1217,7 +1233,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     // boundary logging helper to avoid spamming
     private bool _updateBoundaryLogOnce = false;
-
 
 
 
@@ -1792,7 +1807,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     [Header("Tracking")]
     [SerializeField]
     [Tooltip("Defines the current tracking origin type.")]
-    private OVRManager.TrackingOrigin _trackingOriginType = OVRManager.TrackingOrigin.EyeLevel;
+    private OVRManager.TrackingOrigin _trackingOriginType = OVRManager.TrackingOrigin.FloorLevel;
 
     /// <summary>
     /// Defines the current tracking origin type.
@@ -1810,7 +1825,10 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         set
         {
             if (!isHmdPresent)
+            {
+                _trackingOriginType = value;
                 return;
+            }
 
             OVRPlugin.TrackingOrigin newOrigin = (OVRPlugin.TrackingOrigin)value;
 
@@ -2097,6 +2115,16 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 #endif
 
+    public static int MaxDynamicResolutionVersion = 1;
+    [SerializeField]
+    [HideInInspector]
+    public int dynamicResolutionVersion = 0;
+
+    private void Reset()
+    {
+        dynamicResolutionVersion = MaxDynamicResolutionVersion;
+    }
+
     public static bool OVRManagerinitialized = false;
 
     private void InitOVRManager()
@@ -2129,7 +2157,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (OVRPlugin.version < OVRPlugin.wrapperVersion)
         {
             Debug.LogWarning(versionMessage);
-            Debug.LogWarning("You are using an old version of OVRPlugin. Some features may not work correctly. Please use 'Oculus/Tools/OVR Utilities Plugin' menu to upgrade.");
+            Debug.LogWarning("You are using an old version of OVRPlugin. Some features may not work correctly. " +
+                             "You will be prompted to restart the Editor for any OVRPlugin changes.");
         }
         else
         {
@@ -2322,6 +2351,21 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             OVRPlugin.localDimming = _localDimming;
         }
 
+        UpdateDynamicResolutionVersion();
+
+        switch (systemHeadsetType)
+        {
+            case SystemHeadsetType.Oculus_Quest_2:
+            case SystemHeadsetType.Meta_Quest_Pro:
+                minDynamicResolutionScale = quest2MinDynamicResolutionScale;
+                maxDynamicResolutionScale = quest2MaxDynamicResolutionScale;
+                break;
+            default:
+                minDynamicResolutionScale = quest3MinDynamicResolutionScale;
+                maxDynamicResolutionScale = quest3MaxDynamicResolutionScale;
+                break;
+        }
+
 #if USING_XR_SDK && UNITY_ANDROID
         if (enableDynamicResolution)
         {
@@ -2334,6 +2378,12 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 #endif
 
         InitializeBoundary();
+
+        if (OVRPlugin.HandSkeletonVersion != runtimeSettings.HandSkeletonVersion)
+        {
+            OVRPlugin.SetHandSkeletonVersion(runtimeSettings.HandSkeletonVersion);
+        }
+        Debug.Log($"[OVRManager] Current hand skeleton version is {OVRPlugin.HandSkeletonVersion}");
 
         OVRManagerinitialized = true;
     }
@@ -2372,7 +2422,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     private void Awake()
     {
-
 #if !USING_XR_SDK
         //For legacy, we should initialize OVRManager in all cases.
         //For now, in XR SDK, only initialize if OVRPlugin is initialized.
@@ -2535,15 +2584,44 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             OVRPlugin.Sizei recommendedResolution;
             if (OVRPlugin.GetEyeLayerRecommendedResolution(out recommendedResolution))
             {
-                // Don't scale up or down more than a certain number of pixels per frame to avoid submitting a viewport that has disabled tiles.
-                recommendedResolution.w = Math.Max(recommendedResolution.w,
-                    (int)(Settings.eyeTextureWidth * XRSettings.renderViewportScale) - _pixelStepPerFrame);
-                recommendedResolution.w = Math.Min(recommendedResolution.w,
-                    (int)(Settings.eyeTextureWidth * XRSettings.renderViewportScale) + _pixelStepPerFrame);
+                OVRPlugin.Sizei currentScaledResolution = new OVRPlugin.Sizei {
+                    w = (int)(XRSettings.eyeTextureWidth * XRSettings.renderViewportScale),
+                    h = (int)(XRSettings.eyeTextureHeight * XRSettings.renderViewportScale)
+                };
 
-                float scalingFactor = recommendedResolution.w / (float)Settings.eyeTextureWidth;
-                scalingFactor = Math.Max(scalingFactor, minDynamicResolutionScale / maxDynamicResolutionScale);
-                scalingFactor = Math.Min(scalingFactor, 1.0f);
+                // Don't scale up or down more than a certain number of pixels per frame to avoid submitting a viewport that has disabled tiles.
+                recommendedResolution.w = Mathf.Clamp(recommendedResolution.w,
+                    currentScaledResolution.w - _pixelStepPerFrame,
+                    currentScaledResolution.w + _pixelStepPerFrame);
+                recommendedResolution.h = Mathf.Clamp(recommendedResolution.h,
+                    currentScaledResolution.h - _pixelStepPerFrame,
+                    currentScaledResolution.h + _pixelStepPerFrame);
+
+                OVRPlugin.Sizei minResolution = new OVRPlugin.Sizei {
+                    w = (int)(XRSettings.eyeTextureWidth * minDynamicResolutionScale / maxDynamicResolutionScale),
+                    h = (int)(XRSettings.eyeTextureHeight * minDynamicResolutionScale / maxDynamicResolutionScale)
+                };
+
+                int targetWidth = Mathf.Clamp(recommendedResolution.w, minResolution.w, XRSettings.eyeTextureWidth);
+                int targetHeight = Mathf.Clamp(recommendedResolution.h, minResolution.h, XRSettings.eyeTextureHeight);
+
+                float scalingFactorX = targetWidth / (float)Settings.eyeTextureWidth;
+                float scalingFactorY = targetHeight / (float)Settings.eyeTextureHeight;
+
+                // Scaling factor is a single floating point value.
+                // Try to determine which scaling factor produces the recommended resolution.
+                float scalingFactor;
+                if ((int)(scalingFactorX * (float)Settings.eyeTextureHeight) == targetHeight) {
+                    // scalingFactorX will produce the recommended resolution for both width and height.
+                    scalingFactor = scalingFactorX;
+                } else if ((int)(scalingFactorY * (float)Settings.eyeTextureWidth) == targetWidth) {
+                    // scalingFactorY will produce the recommended resolution for both width and height.
+                    scalingFactor = scalingFactorY;
+                } else {
+                    // otherwise, use the smaller of the two to make sure we don't exceed the the recommended
+                    // resolution size.
+                    scalingFactor = Mathf.Min(scalingFactorX, scalingFactorY);
+                }
 
                 XRSettings.renderViewportScale = scalingFactor;
                 ScalableBufferManager.ResizeBuffers(scalingFactor, scalingFactor);
@@ -2854,7 +2932,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             }
         }
 
-
         if (_readOnlyWideMotionModeHandPosesEnabled != wideMotionModeHandPosesEnabled)
         {
             _readOnlyWideMotionModeHandPosesEnabled = wideMotionModeHandPosesEnabled;
@@ -2874,7 +2951,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         UpdateBoundary();
 
     }
-
 
     private void UpdateHMDEvents()
     {
@@ -2973,6 +3049,12 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     SpaceListSaveComplete?.Invoke(data.RequestId, (OVRSpatialAnchor.OperationResult)data.Result);
                     break;
                 }
+                case OVRPlugin.EventType.SpaceShareToGroupsComplete:
+                {
+                    var data = eventDataBuffer.MarshalEntireStructAs<OVRDeserialize.ShareSpacesToGroupsCompleteData>();
+                    OVRAnchor.OnShareAnchorsToGroupsComplete(data.RequestId, data.Result);
+                    break;
+                }
                 case OVRPlugin.EventType.SceneCaptureComplete:
                 {
                     var data =
@@ -2983,7 +3065,68 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                 }
 
                 break;
+                case OVRPlugin.EventType.ColocationSessionStartAdvertisementComplete:
+                {
+                    var data = eventDataBuffer
+                        .MarshalEntireStructAs<OVRDeserialize.StartColocationSessionAdvertisementCompleteData>();
+                    OVRColocationSession.OnColocationSessionStartAdvertisementComplete(data.RequestId, data.Result, data.AdvertisementUuid);
+                    break;
+                }
 
+                case OVRPlugin.EventType.ColocationSessionStopAdvertisementComplete:
+                {
+                    var data = eventDataBuffer
+                        .MarshalEntireStructAs<OVRDeserialize.StopColocationSessionAdvertisementCompleteData>();
+                    OVRColocationSession.OnColocationSessionStopAdvertisementComplete(data.RequestId, data.Result);
+                    break;
+                }
+
+                case OVRPlugin.EventType.ColocationSessionStartDiscoveryComplete:
+                {
+                    var data =
+                        eventDataBuffer.MarshalEntireStructAs<OVRDeserialize.StartColocationSessionDiscoveryCompleteData>();
+                    OVRColocationSession.OnColocationSessionStartDiscoveryComplete(data.RequestId, data.Result);
+                    break;
+                }
+
+                case OVRPlugin.EventType.ColocationSessionStopDiscoveryComplete:
+                {
+                    var data =
+                        eventDataBuffer.MarshalEntireStructAs<OVRDeserialize.StopColocationSessionDiscoveryCompleteData>();
+                    OVRColocationSession.OnColocationSessionStopDiscoveryComplete(
+                        data.RequestId,
+                        data.Result);
+                    break;
+                }
+                case OVRPlugin.EventType.ColocationSessionDiscoveryResult:
+                {
+                    unsafe
+                    {
+                        var data = eventDataBuffer
+                            .MarshalEntireStructAs<OVRDeserialize.ColocationSessionDiscoveryResultData>();
+
+                        OVRColocationSession.OnColocationSessionDiscoveryResult(
+                            data.RequestId,
+                            data.AdvertisementUuid,
+                            data.AdvertisementMetadataCount,
+                            data.AdvertisementMetadata);
+                    }
+
+                    break;
+                }
+                case OVRPlugin.EventType.ColocationSessionAdvertisementComplete:
+                {
+                    var data = eventDataBuffer
+                        .MarshalEntireStructAs<OVRDeserialize.ColocationSessionAdvertisementCompleteData>();
+                    OVRColocationSession.OnColocationSessionAdvertisementComplete(data.RequestId, data.Result);
+                    break;
+                }
+                case OVRPlugin.EventType.ColocationSessionDiscoveryComplete:
+                {
+                    var data = eventDataBuffer.MarshalEntireStructAs<OVRDeserialize.ColocationSessionDiscoveryCompleteData>();
+                    OVRColocationSession.OnColocationSessionDiscoveryComplete(data.RequestId, data.Result);
+                    break;
+                }
                 case OVRPlugin.EventType.SpaceDiscoveryComplete:
                 {
                     var data = OVRDeserialize.ByteArrayToStructure<OVRDeserialize.SpaceDiscoveryCompleteData>(
@@ -3014,7 +3157,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     OVRTask.SetResult(data.RequestId, OVRResult.From(data.Result));
                     break;
                 }
-
                 case OVRPlugin.EventType.PassthroughLayerResumed:
                 {
                     if (PassthroughLayerResumed != null)
@@ -3036,6 +3178,22 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     isBoundaryVisibilitySuppressed = data.BoundaryVisibility == OVRPlugin.BoundaryVisibility.Suppressed;
                     break;
                 }
+                case OVRPlugin.EventType.CreateDynamicObjectTrackerResult:
+                {
+                    var data = eventDataBuffer.MarshalEntireStructAs<OVRDeserialize.CreateDynamicObjectTrackerResultData>();
+                    OVRTask.SetResult(
+                        OVRTask.GetId(data.Tracker, data.EventType),
+                        OVRResult<ulong, OVRPlugin.Result>.From(data.Tracker, data.Result));
+                    break;
+                }
+                case OVRPlugin.EventType.SetDynamicObjectTrackedClassesResult:
+                {
+                    var data = eventDataBuffer.MarshalEntireStructAs<OVRDeserialize.SetDynamicObjectTrackedClassesResultData>();
+                    OVRTask.SetResult(
+                        OVRTask.GetId(data.Tracker, data.EventType),
+                        OVRResult<OVRPlugin.Result>.From(data.Result));
+                    break;
+                }
                 default:
                     foreach (var listener in eventListeners)
                     {
@@ -3045,6 +3203,19 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     break;
             }
         }
+    }
+
+    public void UpdateDynamicResolutionVersion()
+    {
+        if (dynamicResolutionVersion == 0 && enableDynamicResolution)
+        {
+            quest2MinDynamicResolutionScale = minDynamicResolutionScale;
+            quest2MaxDynamicResolutionScale = maxDynamicResolutionScale;
+            quest3MinDynamicResolutionScale = minDynamicResolutionScale;
+            quest3MaxDynamicResolutionScale = maxDynamicResolutionScale;
+        }
+
+        dynamicResolutionVersion = MaxDynamicResolutionVersion;
     }
 
 
@@ -3484,9 +3655,15 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     private void InitializeBoundary()
     {
-        if (OVRPlugin.GetBoundaryVisibility(out var boundaryVisibility) == OVRPlugin.Result.Success)
+        var result = OVRPlugin.GetBoundaryVisibility(out var boundaryVisibility);
+        if (result == OVRPlugin.Result.Success)
         {
             isBoundaryVisibilitySuppressed = boundaryVisibility == OVRPlugin.BoundaryVisibility.Suppressed;
+        }
+        else if (result == OVRPlugin.Result.Failure_Unsupported || result == OVRPlugin.Result.Failure_NotYetImplemented)
+        {
+            isBoundaryVisibilitySuppressed = false;
+            shouldBoundaryVisibilityBeSuppressed = false;
         }
         else
         {

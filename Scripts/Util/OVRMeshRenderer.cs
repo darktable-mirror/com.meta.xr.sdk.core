@@ -22,13 +22,23 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// This class combines the data from <see cref="OVRMesh"/> and <see cref="OVRSkeleton"/> to create a skinned mesh renderer used for rendering hand models obtained from the Meta Quest
+/// runtime for [hand tracking](https://developer.oculus.com/documentation/unity/unity-handtracking/?intern_source=devblog&intern_content=hand-tracking-improvements-v2-1).
+/// </summary>
 public class OVRMeshRenderer : MonoBehaviour
 {
+    /// <summary>
+    /// Provides an interface for getting a MeshRendererData. A data provider such as <see cref="OVRHand"/> can expose this interface to allow users to retrieve a Mesh Render Data from the skinned mesh.
+    /// </summary>
     public interface IOVRMeshRendererDataProvider
     {
         MeshRendererData GetMeshRendererData();
     }
 
+    /// <summary>
+    /// Struct containing information on if the data recieved from the provider is valid, if the data is high confidence, and if the system gesture pose is active.
+    /// </summary>
     public struct MeshRendererData
     {
         public bool IsDataValid { get; set; }
@@ -74,6 +84,9 @@ public class OVRMeshRenderer : MonoBehaviour
     public bool IsDataValid { get; private set; }
     public bool IsDataHighConfidence { get; private set; }
     public bool ShouldUseSystemGestureMaterial { get; private set; }
+
+    private static readonly Matrix4x4 _openXRFixup =
+        Matrix4x4.Rotate(new Quaternion(0.0f, 1.0f, 0.0f, 0.0f));
 
     private void Awake()
     {
@@ -142,10 +155,9 @@ public class OVRMeshRenderer : MonoBehaviour
         _skinnedMeshRenderer.sharedMesh = _ovrMesh.Mesh;
         _originalMaterial = _skinnedMeshRenderer.sharedMaterial;
 
-        var skeletonType = (OVRPlugin.SkeletonType?)(_ovrSkeleton?.GetSkeletonType()) ?? OVRPlugin.SkeletonType.None;
-
         if ((_ovrSkeleton != null))
         {
+            var skeletonType = _ovrSkeleton.GetSkeletonType();
             int numSkinnableBones = _ovrSkeleton.GetCurrentNumSkinnableBones();
             var bindPoses = new Matrix4x4[numSkinnableBones];
             var bones = new Transform[numSkinnableBones];
@@ -155,6 +167,11 @@ public class OVRMeshRenderer : MonoBehaviour
             {
                 bones[i] = _ovrSkeleton.Bones[i].Transform;
                 bindPoses[i] = _ovrSkeleton.BindPoses[i].Transform.worldToLocalMatrix * localToWorldMatrix;
+
+                if (skeletonType.IsOpenXRHandSkeleton())
+                {
+                    bindPoses[i] *= _openXRFixup;
+                }
             }
 
             _ovrMesh.Mesh.bindposes = bindPoses;

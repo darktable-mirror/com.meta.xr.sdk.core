@@ -21,12 +21,17 @@
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> served as the base element of any interactable UI elements of Immersive Debugger.
+    /// Manages the pointer handler and hover states of the UI element, and providing a helper function to play haptics by inherited classes.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class InteractableController : Controller
     {
         private PointerHandler _handler;
         private bool _hover;
 
-        public bool Hover
+        protected bool Hover
         {
             get => _hover;
             private set
@@ -49,16 +54,25 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _handler.Controller = this;
         }
 
+        /// <summary>
+        /// The function that is called by the <see cref="PointerHandler"/> when the pointer enters into the UI component.
+        /// </summary>
         public void OnPointerEnter()
         {
             Hover = true;
         }
-
+        /// <summary>
+        /// The function that is called by the <see cref="PointerHandler"/> when the pointer exits from the UI component.
+        /// </summary>
         public void OnPointerExit()
         {
             Hover = false;
         }
 
+        /// <summary>
+        /// The function that is called by the <see cref="PointerHandler"/> when the pointer clicked onto the UI component.
+        /// Expect to be overriden by inherited classes.
+        /// </summary>
         public virtual void OnPointerClick()
         {
 

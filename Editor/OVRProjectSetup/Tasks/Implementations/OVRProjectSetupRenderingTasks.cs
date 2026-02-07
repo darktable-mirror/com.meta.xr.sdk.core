@@ -20,6 +20,7 @@
 
 using System;
 using System.Linq;
+using Meta.XR.Editor.Utils;
 using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEngine;
@@ -35,17 +36,9 @@ using UnityEngine.XR.OpenXR;
 [InitializeOnLoad]
 internal static class OVRProjectSetupRenderingTasks
 {
-#if USING_XR_SDK_OCULUS
-    private static Unity.XR.Oculus.OculusSettings OculusSettings
-    {
-        get
-        {
-            UnityEditor.EditorBuildSettings.TryGetConfigObject<Unity.XR.Oculus.OculusSettings>(
-                "Unity.XR.Oculus.Settings", out var settings);
-            return settings;
-        }
-    }
-#endif
+    const int GRAPHICS_JOBS_MAJOR_VERSION = 2022;
+    const int GRAPHICS_JOBS_MINOR_VERSION = 3;
+    const int GRAPHICS_JOBS_PATCH_VERSION = 35;
 
 #if USING_URP && UNITY_2022_2_OR_NEWER
     // Call action for all UniversalRendererData being used, return true if all the return value of action is true
@@ -88,7 +81,7 @@ internal static class OVRProjectSetupRenderingTasks
     }
 #endif
 
-    private static GraphicsDeviceType[] GetGraphicsAPIs(BuildTargetGroup buildTargetGroup)
+    internal static GraphicsDeviceType[] GetGraphicsAPIs(BuildTargetGroup buildTargetGroup)
     {
         var buildTarget = buildTargetGroup.GetBuildTarget();
         if (PlayerSettings.GetUseDefaultGraphicsAPIs(buildTarget))
@@ -107,7 +100,7 @@ internal static class OVRProjectSetupRenderingTasks
         //[Required] Set the color space to linear
         OVRProjectSetup.AddTask(
             conditionalLevel: buildTargetGroup =>
-                OVRProjectSetupUtils.IsPackageInstalled(OVRProjectSetupXRTasks.UnityXRPackage)
+                PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.UnityXRPackage)
                     ? OVRProjectSetup.TaskLevel.Required
                     : OVRProjectSetup.TaskLevel.Recommended,
             group: targetGroup,
@@ -117,41 +110,30 @@ internal static class OVRProjectSetupRenderingTasks
             fixMessage: "PlayerSettings.colorSpace = ColorSpace.Linear"
         );
 
+        string[] versionComponents = Application.unityVersion.Split('.', 'f');
+        if (versionComponents.Length >= 3)
+        {
+            int major = int.Parse(versionComponents[0]);
+            int minor = int.Parse(versionComponents[1]);
+            int patch = int.Parse(versionComponents[2]);
 
-#if USING_XR_SDK_OCULUS && OCULUS_XR_EYE_TRACKED_FOVEATED_RENDERING && UNITY_2021_3_OR_NEWER
-        //[Required] Use Vulkan and IL2CPP/ARM64 when using ETFR
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Required,
-            group: targetGroup,
-            isDone: buildTargetGroup =>
+            if (major > GRAPHICS_JOBS_MAJOR_VERSION || (major == GRAPHICS_JOBS_MAJOR_VERSION && minor >= GRAPHICS_JOBS_MINOR_VERSION && patch >= GRAPHICS_JOBS_PATCH_VERSION))
             {
-                var useIL2CPP = PlayerSettings.GetScriptingBackend(buildTargetGroup) == ScriptingImplementation.IL2CPP;
-                var useARM64 = PlayerSettings.Android.targetArchitectures == AndroidArchitecture.ARM64;
-                var useVK = GetGraphicsAPIs(buildTargetGroup).Any(item => item == GraphicsDeviceType.Vulkan);
-                return useVK && useARM64 && useIL2CPP;
-            },
-            message: "Need to use Vulkan for Graphics APIs, IL2CPP for scripting backend, and ARM64 for target architectures when using eye-tracked foveated rendering",
-            fix: buildTargetGroup =>
-            {
-                var buildTarget = buildTargetGroup.GetBuildTarget();
-                PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
-                PlayerSettings.SetScriptingBackend(buildTargetGroup, ScriptingImplementation.IL2CPP);
-                PlayerSettings.SetGraphicsAPIs(buildTarget, new[] { GraphicsDeviceType.Vulkan });
-            },
-            fixMessage: "Set target architectures to ARM64, scripting backend to IL2CPP, and Graphics APIs to Vulkan for this build.",
-            conditionalValidity: buildTargetGroup => OculusSettings?.FoveatedRenderingMethod == Unity.XR.Oculus.OculusSettings.FoveationMethod.EyeTrackedFoveatedRendering
-        );
-#endif
-
-        //[Required] Disable Graphics Jobs
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            group: targetGroup,
-            isDone: buildTargetGroup => !PlayerSettings.graphicsJobs,
-            message: "Disable Graphics Jobs",
-            fix: buildTargetGroup => PlayerSettings.graphicsJobs = false,
-            fixMessage: "PlayerSettings.graphicsJobs = false"
-        );
+                //[Required] Enable Graphics Jobs
+                OVRProjectSetup.AddTask(
+                    level: OVRProjectSetup.TaskLevel.Recommended,
+                    group: targetGroup,
+                    isDone: buildTargetGroup => PlayerSettings.graphicsJobs,
+                    message: "Enable Legacy Graphics Jobs. This can help performance if your application is main thread bound.",
+                    fix: buildTargetGroup =>
+                    {
+                        PlayerSettings.graphicsJobs = true;
+                        PlayerSettings.graphicsJobMode = GraphicsJobMode.Legacy;
+                    },
+                    fixMessage: "PlayerSettings.graphicsJobs = true, PlayerSettings.graphicsJobMode = GraphicsJobMode.Legacy"
+                );
+            }
+        }
 
         //[Recommended] Set the Graphics API order for Android
         OVRProjectSetup.AddTask(
@@ -170,6 +152,7 @@ internal static class OVRProjectSetupRenderingTasks
             },
             fixMessage: "Set Graphics APIs for this build target to Vulkan"
         );
+
 #if !UNITY_EDITOR_OSX && !UNITY_EDITOR_LINUX
         //[Required] Set the Graphics API order for Windows
         OVRProjectSetup.AddTask(
@@ -212,48 +195,6 @@ internal static class OVRProjectSetupRenderingTasks
                     : "PlayerSettings.MTRendering = true"
         );
 
-#if USING_XR_SDK_OCULUS
-        //[Recommended] Select Low Overhead Mode
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            conditionalValidity: buildTargetGroup =>
-                GetGraphicsAPIs(buildTargetGroup).Contains(GraphicsDeviceType.OpenGLES3),
-            group: targetGroup,
-            platform: BuildTargetGroup.Android,
-            isDone: buildTargetGroup => OculusSettings?.LowOverheadMode ?? true,
-            message: "Use Low Overhead Mode",
-            fix: buildTargetGroup =>
-            {
-                var setting = OculusSettings;
-                if (setting != null)
-                {
-                    setting.LowOverheadMode = true;
-                    EditorUtility.SetDirty(setting);
-                }
-            },
-            fixMessage: "OculusSettings.LowOverheadMode = true"
-        );
-
-        //[Recommended] Enable Dash Support
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            group: targetGroup,
-            platform: BuildTargetGroup.Standalone,
-            isDone: buildTargetGroup => OculusSettings?.DashSupport ?? true,
-            message: "Enable Dash Support",
-            fix: buildTargetGroup =>
-            {
-                var setting = OculusSettings;
-                if (setting != null)
-                {
-                    setting.DashSupport = true;
-                    EditorUtility.SetDirty(setting);
-                }
-            },
-            fixMessage: "OculusSettings.DashSupport = true"
-        );
-#endif
-
         //[Recommended] Set the Display Buffer Format to 32 bit
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Recommended,
@@ -284,98 +225,14 @@ internal static class OVRProjectSetupRenderingTasks
             fixMessage: "renderingTier.renderingPath = RenderingPath.Forward"
         );
 
-        //[Recommended] Set the Stereo Rendering to Instancing
+        // [Recommended] Set the Stereo Rendering to Instancing
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Recommended,
             group: targetGroup,
-            isDone: buildTargetGroup =>
-            {
-#if USING_XR_SDK_OCULUS
-                if (OculusSettings != null)
-                {
-                    return OculusSettings.m_StereoRenderingModeAndroid ==
-                        Unity.XR.Oculus.OculusSettings.StereoRenderingModeAndroid.Multiview &&
-                        OculusSettings.m_StereoRenderingModeDesktop ==
-                        Unity.XR.Oculus.OculusSettings.StereoRenderingModeDesktop.SinglePassInstanced &&
-                        PlayerSettings.stereoRenderingPath == StereoRenderingPath.Instancing;
-                }
-#endif
-                return PlayerSettings.stereoRenderingPath == StereoRenderingPath.Instancing;
-            },
+            isDone: _ => PlayerSettings.stereoRenderingPath == StereoRenderingPath.Instancing,
             message: "Use Stereo Rendering Instancing",
-            fix: buildTargetGroup =>
-            {
-                PlayerSettings.stereoRenderingPath = StereoRenderingPath.Instancing;
-#if USING_XR_SDK_OCULUS
-                if (OculusSettings != null)
-                {
-                    OculusSettings.m_StereoRenderingModeAndroid =
-                        Unity.XR.Oculus.OculusSettings.StereoRenderingModeAndroid.Multiview;
-                    OculusSettings.m_StereoRenderingModeDesktop =
-                        Unity.XR.Oculus.OculusSettings.StereoRenderingModeDesktop.SinglePassInstanced;
-                }
-#endif
-            },
+            fix: _ => PlayerSettings.stereoRenderingPath = StereoRenderingPath.Instancing,
             fixMessage: "PlayerSettings.stereoRenderingPath = StereoRenderingPath.Instancing"
-#if USING_XR_SDK_OCULUS
-                + ", OculusSettings.m_StereoRenderingModeAndroid = Multiview"
-                + ", OculusSettings.m_StereoRenderingModeDesktop = Single Pass Instanced"
-#endif
-        );
-
-        //[Recommended] Enable Subsampled Layout
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            platform: BuildTargetGroup.Android,
-            group: targetGroup,
-            isDone: buildTargetGroup =>
-            {
-                var useVK = GetGraphicsAPIs(buildTargetGroup).Any(item => item == GraphicsDeviceType.Vulkan);
-                if (!useVK)
-                    return true;
-
-#if USING_XR_SDK_OCULUS
-                if (OculusSettings != null)
-                {
-                    return OculusSettings.SubsampledLayout;
-                }
-#elif USING_XR_SDK_OPENXR
-                var settings = OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Android);
-                if (settings)
-                {
-                    var ext = settings.GetFeature<Meta.XR.MetaXRSubsampledLayout>();
-                    if (ext)
-                        return ext.enabled;
-                }
-#endif
-                return true;
-            },
-            message: "Subsampled Layout should be enabled to improve GPU performance when foveation is enabled.",
-            fix: buildTargetGroup =>
-            {
-#if USING_XR_SDK_OCULUS
-                if (OculusSettings != null)
-                {
-                    OculusSettings.SubsampledLayout = true;
-                }
-#elif USING_XR_SDK_OPENXR
-                var settings = OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Android);
-                if (settings)
-                {
-                    var ext = settings.GetFeature<Meta.XR.MetaXRSubsampledLayout>();
-                    if (ext)
-                        ext.enabled = true;
-                }
-#endif
-                return;
-            },
-#if USING_XR_SDK_OCULUS
-            fixMessage: "OculusSettings.SubsampledLayout = true"
-#elif USING_XR_SDK_OPENXR
-            fixMessage: "OpenXRSettings.Instance.GetFeature<MetaXRSubsampledLayout>.enabled = true"
-#else
-            fixMessage: ""
-#endif
         );
 
 #if USING_URP && UNITY_2022_2_OR_NEWER
@@ -475,105 +332,107 @@ internal static class OVRProjectSetupRenderingTasks
                 if (ovrManager)
                 {
                     ovrManager.enableDynamicResolution = true;
-                    if (ovrManager.minDynamicResolutionScale == 1.0f)
-                        ovrManager.minDynamicResolutionScale = 0.7f;
-                    if (ovrManager.maxDynamicResolutionScale == 1.0f)
-                        ovrManager.maxDynamicResolutionScale = 1.3f;
                 }
             },
             fixMessage: "OVRManager.enableDynamicResolution = true, OVRManager.minDynamicResolutionScale = 0.7f, OVRManager.maxDynamicResolution = 1.3f"
         );
 
 #if USING_URP && UNITY_2022_2_OR_NEWER
-        // [Recommended] Disable Depth Texture
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            platform: BuildTargetGroup.Android,
-            group: targetGroup,
-            isDone: BuildTargetGroup =>
-            {
-                var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
-                QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
-
-                return !pipelineAssets.OfType<UniversalRenderPipelineAsset>().Any(asset => asset.supportsCameraDepthTexture);
-            },
-            fix: buildTargetGroup =>
-            {
-                var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
-                QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
-
-                foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+            // [Recommended] Disable Depth Texture
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                platform: BuildTargetGroup.Android,
+                group: targetGroup,
+                isDone: BuildTargetGroup =>
                 {
-                    urpAsset.supportsCameraDepthTexture = false;
-                }
-            },
-            message: "Enabling Depth Texture may significantly impact performance. It is recommended to disable it when it isn't required in a shader.");
+                    var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+                    QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
 
-        // [Recommended] Disable Opaque Texture
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            platform: BuildTargetGroup.Android,
-            group: targetGroup,
-            isDone: BuildTargetGroup =>
-            {
-                var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
-                QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
-
-                return !pipelineAssets.OfType<UniversalRenderPipelineAsset>().Any(asset => asset.supportsCameraOpaqueTexture);
-            },
-            fix: buildTargetGroup =>
-            {
-                var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
-                QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
-
-                foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+                    return !pipelineAssets.OfType<UniversalRenderPipelineAsset>().Any(asset => asset.supportsCameraDepthTexture);
+                },
+                fix: buildTargetGroup =>
                 {
-                    urpAsset.supportsCameraOpaqueTexture = false;
-                }
-            },
-            message: "Enabling Opaque Texture may significantly impact performance. It is recommended to disable it when it isn't required in a shader.");
+                    var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+                    QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
 
-        // [Recommended] Disable HDR
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            platform: BuildTargetGroup.Android,
-            group: targetGroup,
-            isDone: BuildTargetGroup =>
-            {
-                var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
-                QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
+                    foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+                    {
+                        urpAsset.supportsCameraDepthTexture = false;
+                    }
+                },
+                message: "Enabling Depth Texture may significantly impact performance. It is recommended to disable it when it isn't required in a shader.");
 
-                return !pipelineAssets
-                    .OfType<UniversalRenderPipelineAsset>()
-                    .Any(asset => asset.supportsHDR);
-            },
-            fix: buildTargetGroup =>
-            {
-                var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
-                QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
-
-                foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+            // [Recommended] Disable Opaque Texture
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                platform: BuildTargetGroup.Android,
+                group: targetGroup,
+                isDone: BuildTargetGroup =>
                 {
-                    urpAsset.supportsHDR = false;
-                }
-            },
-            message: "Using HDR may significantly impact performance. It is recommended to disable HDR.");
+                    var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+                    QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
 
-        // [Recommended] Disable Camera Stack
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            platform: BuildTargetGroup.Android,
-            group: targetGroup,
-            isDone: buildTargetGroup =>
-            {
-                // Any camera in the scene is using a camera stack
-                return !OVRProjectSetupUtils
-                    .FindComponentsInScene<Camera>()
-                    ?.Select(camera => camera.GetUniversalAdditionalCameraData())
-                    ?.Any(cameraData => cameraData.cameraStack?.Any() ?? false) ?? false;
-            },
-            message: "Using the camera stack may significantly impact performance. It is not recommended to use the camera stack feature."
-        );
+                    return !pipelineAssets.OfType<UniversalRenderPipelineAsset>().Any(asset => asset.supportsCameraOpaqueTexture);
+                },
+                fix: buildTargetGroup =>
+                {
+                    var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+                    QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
+
+                    foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+                    {
+                        urpAsset.supportsCameraOpaqueTexture = false;
+                    }
+                },
+                message: "Enabling Opaque Texture may significantly impact performance. It is recommended to disable it when it isn't required in a shader.");
+
+            // [Recommended] Disable HDR
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                platform: BuildTargetGroup.Android,
+                group: targetGroup,
+                isDone: BuildTargetGroup =>
+                {
+                    var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+                    QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
+
+                    return !pipelineAssets
+                        .OfType<UniversalRenderPipelineAsset>()
+                        .Any(asset => asset.supportsHDR);
+                },
+                fix: buildTargetGroup =>
+                {
+                    var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+                    QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
+
+                    foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+                    {
+                        urpAsset.supportsHDR = false;
+                    }
+                },
+                message: "Using HDR may significantly impact performance. It is recommended to disable HDR.");
+
+            // [Recommended] Disable Camera Stack
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                platform: BuildTargetGroup.Android,
+                group: targetGroup,
+                conditionalValidity: buildTargetGroup =>
+                {
+                    // We must check if the current render pipeline asset is a URP asset,
+                    // or else cameraData.cameraStack will internally derefence a null value.
+                    return GraphicsSettings.renderPipelineAsset is UniversalRenderPipelineAsset;
+                },
+                isDone: buildTargetGroup =>
+                {
+                    // Any camera in the scene is using a camera stack
+                    return !OVRProjectSetupUtils
+                        .FindComponentsInScene<Camera>()
+                        ?.Select(camera => camera.GetUniversalAdditionalCameraData())
+                        ?.Any(cameraData => cameraData.cameraStack?.Any() ?? false) ?? false;
+                },
+                message: "Using the camera stack may significantly impact performance. It is not recommended to use the camera stack feature."
+            );
 #endif
     }
 }

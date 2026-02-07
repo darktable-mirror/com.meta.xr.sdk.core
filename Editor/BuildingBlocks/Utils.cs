@@ -26,6 +26,7 @@ using Meta.XR.Editor.Callbacks;
 using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.Utils;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -55,6 +56,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal static readonly TextureContent AddIcon = TextureContent.CreateContent("ovr_icon_addblock.png",
             Utils.BuildingBlocksIcons, "Add Block to current scene");
+
 
         private const string ExperimentalTagName = "Experimental";
 
@@ -115,6 +117,8 @@ namespace Meta.XR.BuildingBlocks.Editor
         };
 
         private const string InternalTagName = "Internal";
+
+        internal const string BBOverviewDocURL = "https://developer.oculus.com/documentation/unity/bb-overview/";
 
         internal static Tag InternalTag = new(InternalTagName)
         {
@@ -247,8 +251,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 ShowOverlay = true,
             }
         };
-
-
 
         private const string DocumentationUrl = "https://developer.oculus.com/documentation/unity/unity-buildingblocks-overview";
 
@@ -470,9 +472,12 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal static bool IsPackageInstalled(string packageId)
         {
-            return CustomPackageDependencyRegistry.IsPackageDepInCustomRegistry(packageId)
-                ? CustomPackageDependencyRegistry.IsPackageInstalled(packageId)
-                : OVRProjectSetupUtils.IsPackageInstalled(packageId);
+            if (CustomPackageDependencyRegistry.IsPackageDepInCustomRegistry(packageId))
+            {
+                return CustomPackageDependencyRegistry.IsPackageInstalled(packageId);
+            }
+
+            return PackageList.IsPackageInstalledWithValidVersion(packageId);
         }
 
         internal static void UpdateBlockUsageFrequency(BlockData blockData)
@@ -591,5 +596,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                     .ThenBy(block => block.BlockName.Value);
             }
         }
+
+        internal static IEnumerable<OVRConfigurationTask> GetAssociatedRules(this BuildingBlock block)
+            => block.GetBlockData()?.GetAssociatedRules(block) ?? Enumerable.Empty<OVRConfigurationTask>();
     }
 }

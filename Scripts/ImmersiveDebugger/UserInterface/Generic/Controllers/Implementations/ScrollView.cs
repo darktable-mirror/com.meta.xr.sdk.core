@@ -24,17 +24,25 @@ using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the UI container that can be vertically scrolled. It manages the child <see cref="ScrollViewport"/>
+    /// Used by inspector debug data and console logs of Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class ScrollView : InteractableController
     {
         private ScrollRect _scrollRect;
         private ScrollViewport _viewport;
         private Mask _mask;
 
-        public ScrollRect ScrollRect => _scrollRect;
-        public Flex Flex => _viewport.Flex;
+        internal ScrollRect ScrollRect => _scrollRect;
+        internal Flex Flex => _viewport.Flex;
 
         private float _previousProgress;
 
+        /// <summary>
+        /// The progress of the scroll view, specifically representing the normalized vertical position of the rectangle.
+        /// </summary>
         public float Progress
         {
             get => _scrollRect.verticalNormalizedPosition;

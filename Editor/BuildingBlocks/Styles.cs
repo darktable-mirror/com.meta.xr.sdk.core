@@ -27,6 +27,7 @@ using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
+using static Meta.XR.Editor.UserInterface.Styles.GUIStylesContainer;
 using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.BuildingBlocks.Editor
@@ -85,6 +86,14 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             public static readonly TextureContent TagBackground =
                 TextureContent.CreateContent("ovr_bg_radius4.png", Utils.BuildingBlocksIcons);
+
+            public static readonly TextureContent BlockDetailsIcon =
+                TextureContent.CreateContent("ovr_bb_icon_details.png", Utils.BuildingBlocksIcons);
+
+            public static readonly TextureContent BackIcon =
+                TextureContent.CreateContent("ovr_bb_icon_back.png", Utils.BuildingBlocksIcons);
+
+            public static readonly TextureContent BorderedBackground = TextureContent.CreateContent("ovr_bb_sqr_back.png", Utils.BuildingBlocksIcons);
         }
 
         public class GUIStylesContainer
@@ -201,6 +210,16 @@ namespace Meta.XR.BuildingBlocks.Editor
                 stretchWidth = false
             };
 
+            public readonly GUIStyle BlockIconStyle = new GUIStyle(EditorStyles.label)
+            {
+                // margin = new RectOffset(0, 0, 0, 0),
+                // padding = new RectOffset(0, 0, 0, 0),
+                fixedWidth = SmallIconSize,
+                fixedHeight = SmallIconSize,
+                stretchWidth = false,
+                stretchHeight = false
+            };
+
             public readonly GUIStyle LargeButton = new GUIStyle(EditorStyles.miniButton)
             {
                 clipping = TextClipping.Overflow,
@@ -285,17 +304,38 @@ namespace Meta.XR.BuildingBlocks.Editor
                 border = new RectOffset(4, 4, 4, 4)
             };
 
-            public class ColorStates
-            {
-                public Color Normal;
-                public Color Hover;
-                public Color Active;
 
-                public Color GetColor(bool active, bool hover)
-                {
-                    return hover ? Hover : active ? Active : Normal;
-                }
-            }
+            public readonly GUIStyle DocumentationBox = new GUIStyle()
+            {
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                fixedWidth = 220,
+                stretchWidth = false,
+                stretchHeight = false,
+            };
+
+            public readonly GUIStyle DocumentationLabelStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+            };
+
+            public readonly GUIStyle DocumentationLinkStyle = new GUIStyle(EditorStyles.linkLabel)
+            {
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(3, 0, 0, 0),
+                fixedHeight = 14,
+                richText = true
+            };
+
+            public readonly GUIStyle BlockLinkStyle = new GUIStyle(EditorStyles.linkLabel)
+            {
+                margin = new RectOffset(3, 0, 0, MiniMargin),
+                // fixedHeight = 16,
+                richText = true
+            };
+
+
 
             public readonly GUIStyle TagIcon = new GUIStyle(EditorStyles.miniLabel)
             {
@@ -385,6 +425,9 @@ namespace Meta.XR.BuildingBlocks.Editor
                 stretchWidth = false,
                 stretchHeight = false
             };
+
+
+
         }
 
         private static GUIStylesContainer _guiStyles;

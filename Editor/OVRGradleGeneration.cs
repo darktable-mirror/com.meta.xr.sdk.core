@@ -51,6 +51,14 @@ using UnityEditor.XR.OpenXR.Features;
 using Unity.XR.Oculus;
 #endif
 
+#if USING_XR_MANAGEMENT
+using UnityEditor.XR.Management;
+#endif
+
+#if USING_URP
+using UnityEngine.Rendering.Universal;
+#endif
+
 [InitializeOnLoad]
 public class OVRGradleGeneration
     : IPreprocessBuildWithReport, IPostprocessBuildWithReport
@@ -237,6 +245,7 @@ public class OVRGradleGeneration
 #endif
 
 #if UNITY_ANDROID
+        OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
 #if PRIORITIZE_OCULUS_XR_SETTINGS
 #if !OCULUS_XR_PLUGIN_QUEST_ONE_REMOVED
         EditorBuildSettings.TryGetConfigObject("Unity.XR.Oculus.Settings", out OculusSettings deviceSettings);
@@ -246,7 +255,6 @@ public class OVRGradleGeneration
         }
 #endif
 #else
-        OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
         if (projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest))
         {
             projectConfig.targetDeviceTypes.Remove(OVRProjectConfig.DeviceType.Quest);
@@ -254,6 +262,15 @@ public class OVRGradleGeneration
             UnityEngine.Debug.Log("Quest 1 is no longer supported as a target device as of v51 and has been removed as a target device from this project.");
         };
 #endif
+        string gradlePath = Path.Combine(Application.dataPath, "..", "Library", "Bee", "Android", "Prj", "IL2CPP", "Gradle");
+        if (projectConfig.removeGradleManifest && Directory.Exists(gradlePath))
+        {
+            string gradleManifest = Path.Combine(gradlePath, "unityLibrary", "src", "main", "AndroidManifest.xml");
+            if (File.Exists(gradleManifest))
+            {
+                File.Delete(gradleManifest);
+            }
+        }
 #endif
     }
 
@@ -352,7 +369,8 @@ public class OVRGradleGeneration
             }
         }
 
-        OVRManifestPreprocessor.PatchAndroidManifest(file, enableSecurity: patchedSecurityConfig);
+        // Unity doesn't delete the entire gradle project anymore so we need to check manually if there's a manifest override in Assets/Plugins/Android
+        OVRManifestPreprocessor.PatchAndroidManifest(file, enableSecurity: patchedSecurityConfig, skipExistingAttributes: CustomManifestExists());
     }
 
     private static string GetOculusProjectNetworkSecConfigPath()
@@ -369,9 +387,17 @@ public class OVRGradleGeneration
         return relativeUri.ToString();
     }
 
+    private static bool CustomManifestExists()
+    {
+        string manifestPath = Path.Combine(Application.dataPath, "Plugins", "Android", "AndroidManifest.xml");
+        return File.Exists(manifestPath);
+    }
+
     public void OnPostprocessBuild(BuildReport report)
     {
 #if UNITY_ANDROID
+        SendProjectSettingsTelemetry();
+
         if (autoIncrementVersion)
         {
             if ((report.summary.options & BuildOptions.Development) == 0)
@@ -456,6 +482,101 @@ public class OVRGradleGeneration
             }
         }
 #endif
+    }
+
+    public void SendProjectSettingsTelemetry()
+    {
+        OVRTelemetryConstants.ProjectSettings.RenderThreadingMode mode = OVRTelemetryConstants.ProjectSettings.RenderThreadingMode.Unknown;
+        if (PlayerSettings.graphicsJobs)
+        {
+            switch (PlayerSettings.graphicsJobMode)
+            {
+                case GraphicsJobMode.Legacy:
+                    mode = OVRTelemetryConstants.ProjectSettings.RenderThreadingMode.LegacyGraphicsJobs;
+                    break;
+                case GraphicsJobMode.Native:
+                    mode = OVRTelemetryConstants.ProjectSettings.RenderThreadingMode.NativeGraphicsJobs;
+                    break;
+            }
+        }
+        else if (PlayerSettings.MTRendering)
+        {
+            mode = OVRTelemetryConstants.ProjectSettings.RenderThreadingMode.Multithreaded;
+        }
+        OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.RenderThreadingMode)
+            .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.RenderThreadingMode, mode.ToString())
+            .Send();
+
+#if USING_XR_MANAGEMENT
+        OVRTelemetryConstants.ProjectSettings.XrPlugin xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.Unknown;
+        var buildGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+#if USING_XR_SDK_OCULUS
+        if (IsLoaderActive<OculusLoader>(buildGroup))
+            xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.Oculus;
+#endif
+#if USING_XR_SDK_OPENXR
+        if (IsLoaderActive<OpenXRLoader>(buildGroup))
+            xrplugin = OVRTelemetryConstants.ProjectSettings.XrPlugin.OpenXR;
+#endif
+        OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.XrPluginType)
+            .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.XrPluginType, xrplugin.ToString())
+            .Send();
+#endif
+
+#if URP_14_OR_NEWER
+        var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+        QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
+        foreach (var pipelineAsset in pipelineAssets)
+        {
+            var urpPipelineAsset = pipelineAsset as UniversalRenderPipelineAsset;
+            if (urpPipelineAsset != null)
+            {
+                UniversalRendererData renderData = null;
+                var path = AssetDatabase.GetAssetPath(urpPipelineAsset);
+                var dependency = AssetDatabase.GetDependencies(path);
+                for (int i = 0; i < dependency.Length; i++)
+                {
+                    if (AssetDatabase.GetMainAssetTypeAtPath(dependency[i]) != typeof(UniversalRendererData))
+                        continue;
+
+                    renderData = (UniversalRendererData)AssetDatabase.LoadAssetAtPath(dependency[i], typeof(UniversalRendererData));
+                    break;
+                }
+
+                if (renderData != null)
+                {
+                    OVRTelemetryConstants.ProjectSettings.RenderingPath renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Unknown;
+                    switch (renderData.renderingMode)
+                    {
+                        case RenderingMode.Forward:
+                            renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Forward;
+                            break;
+                        case RenderingMode.ForwardPlus:
+                            renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.ForwardPlus;
+                            break;
+                        case RenderingMode.Deferred:
+                            renderingPath = OVRTelemetryConstants.ProjectSettings.RenderingPath.Deferred;
+                            break;
+                    }
+                    OVRTelemetry.Start(OVRTelemetryConstants.ProjectSettings.MarkerId.RenderingPath)
+                        .AddAnnotation(OVRTelemetryConstants.ProjectSettings.AnnotationType.RenderingPath, renderingPath.ToString())
+                        .Send();
+                }
+            }
+        }
+#endif
+    }
+
+    public bool IsLoaderActive<T>(BuildTargetGroup group)
+    {
+#if USING_XR_MANAGEMENT
+        var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(group);
+        if (settings.Manager.activeLoaders.Count > 0)
+        {
+            return settings.Manager.activeLoaders[0] is T;
+        }
+#endif
+        return false;
     }
 
 #if UNITY_ANDROID

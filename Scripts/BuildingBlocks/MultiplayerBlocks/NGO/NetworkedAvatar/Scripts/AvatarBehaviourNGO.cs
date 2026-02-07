@@ -59,6 +59,10 @@ namespace Meta.XR.MultiplayerBlocks.NGO
 #endif // META_AVATAR_SDK_DEFINED
         }
 
+        /// <summary>
+        /// Called by the Unity Netcode for Gameobjects networking framework when the network object is spawned.
+        /// This method subscribes to the Avatar change events to keep the Avatar state in sync.
+        /// </summary>
         public override void OnNetworkSpawn()
         {
             _oculusId.OnValueChanged += OnAvatarIdChanged;
@@ -66,6 +70,10 @@ namespace Meta.XR.MultiplayerBlocks.NGO
             _avatarDataStream.OnDataChanged += OnAvatarDataStreamChanged;
         }
 
+        /// <summary>
+        /// Called by the Unity Netcode for Gameobjects networking framework when the network object is despawned.
+        /// This method unsubscribes to the Avatar change events.
+        /// </summary>
         public override void OnNetworkDespawn()
         {
             _oculusId.OnValueChanged -= OnAvatarIdChanged;

@@ -24,15 +24,27 @@ using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the generic Icon UI element,
+    /// used by icons on the in-headset panels of Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class Icon : Controller
     {
         private RawImage _image;
 
+        /// <summary>
+        /// The texture used by the image of the icon
+        /// </summary>
         public Texture2D Texture
         {
             set => _image.texture = value;
         }
 
+        /// <summary>
+        /// The color used by the image of the icon,
+        /// normally used as the background color that can work together with events like hover/click
+        /// </summary>
         public Color Color
         {
             set => _image.color = value;

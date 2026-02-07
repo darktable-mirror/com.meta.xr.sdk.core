@@ -18,41 +18,43 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
-using Meta.XR.BuildingBlocks.Editor;
 using UnityEditor;
 using UnityEngine;
 
-public class PassthroughWindowBlockData : BlockData
+namespace Meta.XR.BuildingBlocks.Editor
 {
-    protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
+    public class PassthroughWindowBlockData : BlockData
     {
-        if (!OVRPassthroughHelper.IsAnyPassthroughLayerUnderlay())
+
+        protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
-            var pt = new GameObject("OVRPassthroughLayer").AddComponent<OVRPassthroughLayer>();
-            pt.overlayType = OVROverlay.OverlayType.Underlay;
-            Undo.RegisterCreatedObjectUndo(pt.gameObject, "Instantiate PT layer.");
+            if (!OVRPassthroughHelper.IsAnyPassthroughLayerUnderlay())
+            {
+                var pt = new GameObject("OVRPassthroughLayer").AddComponent<OVRPassthroughLayer>();
+                pt.overlayType = OVROverlay.OverlayType.Underlay;
+                Undo.RegisterCreatedObjectUndo(pt.gameObject, "Instantiate PT layer.");
+            }
+
+            if (selectedGameObject == null)
+            {
+                return base.InstallRoutine(selectedGameObject);
+            }
+
+            if (!selectedGameObject.TryGetComponent<Renderer>(out var renderer))
+            {
+                throw new InstallationCancelledException("A Renderer component is missing. Unable to use this surface as passthrough window.");
+            }
+
+            Undo.RegisterFullObjectHierarchyUndo(selectedGameObject, "Apply selective passthrough.");
+            renderer.sharedMaterial = Prefab.GetComponentInChildren<MeshRenderer>().sharedMaterial;
+
+            if (!Utils.FindComponentInScene<EnableUnpremultipliedAlpha>())
+            {
+                selectedGameObject.AddComponent<EnableUnpremultipliedAlpha>();
+            }
+
+            return new List<GameObject>();
         }
-
-        if (selectedGameObject == null)
-        {
-            return base.InstallRoutine(selectedGameObject);
-        }
-
-        if (!selectedGameObject.TryGetComponent<Renderer>(out var renderer))
-        {
-            throw new Exception("A Renderer component is missing. Unable to use this surface as passthrough window.");
-        }
-
-        Undo.RegisterFullObjectHierarchyUndo(selectedGameObject, "Apply selective passthrough.");
-        renderer.sharedMaterial = Prefab.GetComponentInChildren<MeshRenderer>().sharedMaterial;
-
-        if (!Utils.FindComponentInScene<EnableUnpremultipliedAlpha>())
-        {
-            selectedGameObject.AddComponent<EnableUnpremultipliedAlpha>();
-        }
-
-        return new List<GameObject>();
     }
 }

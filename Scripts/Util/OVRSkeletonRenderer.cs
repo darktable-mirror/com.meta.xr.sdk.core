@@ -23,14 +23,24 @@ using System.Collections.Generic;
 using Meta.XR.Util;
 using UnityEngine;
 
+/// <summary>
+/// Renders the skeleton of a skinned mesh using either lines or capsules. This is helpful in visualizing the skeleton structure for
+/// [hand tracking](https://developer.oculus.com/documentation/unity/unity-handtracking/?intern_source=devblog&intern_content=hand-tracking-improvements-v2-1).
+/// </summary>
 [Feature(Feature.BodyTracking)]
 public class OVRSkeletonRenderer : MonoBehaviour
 {
+    /// <summary>
+    /// Provides an interface for getting a SkeletonRenderData. A data provider such as <see cref="OVRHand"/> can expose this interface to allow users to retrieve a Skeleton Render Data from the skinned mesh.
+    /// </summary>
     public interface IOVRSkeletonRendererDataProvider
     {
         SkeletonRendererData GetSkeletonRendererData();
     }
 
+    /// <summary>
+    /// Struct containing information including the root scale, whether the data recieved from the provider is valid, whether the data is high confidence, and whether the system gesture pose is active.
+    /// </summary>
     public struct SkeletonRendererData
     {
         public float RootScale { get; set; }

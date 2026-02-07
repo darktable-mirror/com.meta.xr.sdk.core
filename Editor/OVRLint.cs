@@ -39,6 +39,7 @@ using Oculus.VR.Editor;
 
 #if USING_XR_MANAGEMENT && USING_XR_SDK_OCULUS
 using Unity.XR.Oculus;
+using OculusSettings = Unity.XR.Oculus.OculusSettings;
 #endif
 
 /// <summary>
@@ -507,8 +508,11 @@ public class OVRLint : EditorWindow
         var tier = UnityEngine.Rendering.GraphicsTier.Tier1;
         var tierSettings = UnityEditor.Rendering.EditorGraphicsSettings.GetTierSettings(target, tier);
 
-        if ((tierSettings.renderingPath == RenderingPath.DeferredShading ||
-             tierSettings.renderingPath == RenderingPath.DeferredLighting))
+        var usingDeferred = tierSettings.renderingPath == RenderingPath.DeferredShading;
+#if !UNITY_2022_2_OR_NEWER
+        usingDeferred = usingDeferred || tierSettings.renderingPath == RenderingPath.DeferredLighting;
+#endif
+        if (usingDeferred)
         {
             AddFix(eRecordType.StaticCommon, "Optimize Rendering Path",
                 "For CPU performance, please do not use deferred shading.",

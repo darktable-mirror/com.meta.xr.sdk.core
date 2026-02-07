@@ -885,7 +885,6 @@ partial class OVRSpatialAnchor
 
         private IReadOnlyList<Guid> _uuids;
 
-
         internal OVRSpaceQuery.Options ToQueryOptions() => new OVRSpaceQuery.Options
         {
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -904,7 +903,6 @@ partial class OVRSpatialAnchor
         Development.LogRequestResult(requestId, queryResult,
             $"{nameof(OVRPlugin.QuerySpaces)}: Query succeeded.",
             $"{nameof(OVRPlugin.QuerySpaces)}: Query failed.");
-
         var hasPendingTask = OVRTask.GetExisting<UnboundAnchor[]>(requestId).IsPending;
 
         if (!hasPendingTask)
@@ -970,7 +968,4 @@ partial class OVRSpatialAnchor
         { OVRSpace.StorageLocation.Cloud, new List<OVRSpatialAnchor>() },
         { OVRSpace.StorageLocation.Local, new List<OVRSpatialAnchor>() },
     };
-
-
-
 }

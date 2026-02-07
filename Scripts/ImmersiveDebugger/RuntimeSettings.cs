@@ -27,13 +27,29 @@ using UnityEditor;
 
 namespace Meta.XR.ImmersiveDebugger
 {
+    /// <summary>
+    /// A serializable structure holding the debug data used by Immersive Debugger. Indexed by each assembly.
+    /// It represents the debug types with the metadata of assembly name and class names within the same assembly.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     [Serializable]
     public class DebugData
     {
+        /// <summary>
+        /// String of the assembly, should be full name so it's identifiable
+        /// </summary>
         [SerializeField]
         public string AssemblyName;
+        /// <summary>
+        /// A list of strings of the class names, each should be full name containing namespaces
+        /// </summary>
         [SerializeField]
         public List<string> DebugTypes;
+        /// <summary>
+        /// Constructor of the DebugData.
+        /// </summary>
+        /// <param name="assemblyName">String of the assembly, should be full name so it's identifiable</param>
+        /// <param name="types">A list of strings of the class names, each should be full name containing namespaces</param>
         public DebugData(string assemblyName, List<string> types)
         {
             AssemblyName = assemblyName;
@@ -42,10 +58,19 @@ namespace Meta.XR.ImmersiveDebugger
     }
 
     /// <summary>
-    /// Runtime settings and Cache for Immersive Debugger to understand which assemblies and types are interested to populate for debugging
+    /// A ScriptableObject named ImmersiveDebuggerSettings.asset to store:
+    /// 1. various runtime settings
+    /// 2. cache for Immersive Debugger debug types to understand which assemblies and types are interested to monitor for debugging
+    /// This is linked to the Editor settings which can be found under Meta > Immersive Debugger.
+    /// This file will be placed under "Assets/Resources" folder.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     public class RuntimeSettings : OVRRuntimeAssetsBase, ISerializationCallbackReceiver
     {
+        /// <summary>
+        /// Options of the panel's distance in relation to the player,
+        /// applicable for all the in-headset panels of Immersive Debugger.
+        /// </summary>
         public enum DistanceOption
         {
             Close, Default, Far
@@ -59,7 +84,7 @@ namespace Meta.XR.ImmersiveDebugger
             _instance = null;
         }
         private static RuntimeSettings _instance;
-        public static RuntimeSettings Instance
+        internal static RuntimeSettings Instance
         {
             get
             {
@@ -79,8 +104,8 @@ namespace Meta.XR.ImmersiveDebugger
         internal Dictionary<string, List<string>> debugTypesDict;
 
         [SerializeField] private bool immersiveDebuggerEnabled = false;
-        public static event Action OnImmersiveDebuggerEnabledChanged;
-        public bool ImmersiveDebuggerEnabled
+        internal static event Action OnImmersiveDebuggerEnabledChanged;
+        internal bool ImmersiveDebuggerEnabled
         {
             get => immersiveDebuggerEnabled;
             set
@@ -94,140 +119,140 @@ namespace Meta.XR.ImmersiveDebugger
         }
 
         [SerializeField] private bool immersiveDebuggerDisplayAtStartup = false;
-        public bool ImmersiveDebuggerDisplayAtStartup
+        internal bool ImmersiveDebuggerDisplayAtStartup
         {
             get => immersiveDebuggerDisplayAtStartup;
             set => immersiveDebuggerDisplayAtStartup = value;
         }
 
         [SerializeField] private OVRInput.Button immersiveDebuggerToggleDisplayButton = OVRInput.Button.Two;
-        public OVRInput.Button ImmersiveDebuggerToggleDisplayButton
+        internal OVRInput.Button ImmersiveDebuggerToggleDisplayButton
         {
             get => immersiveDebuggerToggleDisplayButton;
             set => immersiveDebuggerToggleDisplayButton = value;
         }
 
         [SerializeField] private bool showInspectors = false;
-        public bool ShowInspectors
+        internal bool ShowInspectors
         {
             get => showInspectors;
             set => showInspectors = value;
         }
 
         [SerializeField] private bool showConsole = false;
-        public bool ShowConsole
+        internal bool ShowConsole
         {
             get => showConsole;
             set => showConsole = value;
         }
 
         [SerializeField] private bool followOverride = true;
-        public bool FollowOverride
+        internal bool FollowOverride
         {
             get => followOverride;
             set => followOverride = value;
         }
 
         [SerializeField] private bool rotateOverride = false;
-        public bool RotateOverride
+        internal bool RotateOverride
         {
             get => rotateOverride;
             set => rotateOverride = value;
         }
 
         [SerializeField] private bool showInfoLog = false;
-        public bool ShowInfoLog
+        internal bool ShowInfoLog
         {
             get => showInfoLog;
             set => showInfoLog = value;
         }
 
         [SerializeField] private bool showWarningLog = true;
-        public bool ShowWarningLog
+        internal bool ShowWarningLog
         {
             get => showWarningLog;
             set => showWarningLog = value;
         }
 
         [SerializeField] private bool showErrorLog = true;
-        public bool ShowErrorLog
+        internal bool ShowErrorLog
         {
             get => showErrorLog;
             set => showErrorLog = value;
         }
 
         [SerializeField] private bool collapsedIdenticalLogEntries = false;
-        public bool CollapsedIdenticalLogEntries
+        internal bool CollapsedIdenticalLogEntries
         {
             get => collapsedIdenticalLogEntries;
             set => collapsedIdenticalLogEntries = value;
         }
 
         [SerializeField] private int maximumNumberOfLogEntries = 1000;
-        public int MaximumNumberOfLogEntries
+        internal int MaximumNumberOfLogEntries
         {
             get => maximumNumberOfLogEntries;
             set => maximumNumberOfLogEntries = value;
         }
 
         [SerializeField] private DistanceOption panelDistance = DistanceOption.Default;
-        public DistanceOption PanelDistance
+        internal DistanceOption PanelDistance
         {
             get => panelDistance;
             set => panelDistance = value;
         }
 
         [SerializeField] private bool createEventSystem = true;
-        public bool CreateEventSystem
+        internal bool CreateEventSystem
         {
             get => createEventSystem;
             set => createEventSystem = value;
         }
 
         [SerializeField] private bool automaticLayerCullingUpdate = true;
-        public bool AutomaticLayerCullingUpdate
+        internal bool AutomaticLayerCullingUpdate
         {
             get => automaticLayerCullingUpdate;
             set => automaticLayerCullingUpdate = value;
         }
 
         [SerializeField] private int panelLayer = 20;
-        public int PanelLayer
+        internal int PanelLayer
         {
             get => panelLayer;
             set => panelLayer = value;
         }
 
         [SerializeField] private int meshRendererLayer = 21;
-        public int MeshRendererLayer
+        internal int MeshRendererLayer
         {
             get => meshRendererLayer;
             set => meshRendererLayer = value;
         }
 
         [SerializeField] private int overlayDepth = 10;
-        public int OverlayDepth
+        internal int OverlayDepth
         {
             get => overlayDepth;
             set => overlayDepth = value;
         }
 
         [SerializeField] private List<bool> inspectedDataEnabled = new();
-        public List<bool> InspectedDataEnabled
+        internal List<bool> InspectedDataEnabled
         {
             get => inspectedDataEnabled;
             set => inspectedDataEnabled = value;
         }
 
         [SerializeField] private List<InspectedData> inspectedDataAssets = new();
-        public List<InspectedData> InspectedDataAssets
+        internal List<InspectedData> InspectedDataAssets
         {
             get => inspectedDataAssets;
             set => inspectedDataAssets = value;
         }
 
         [SerializeField] private bool useCustomIntegrationConfig = false;
-        public bool UseCustomIntegrationConfig
+        internal bool UseCustomIntegrationConfig
         {
             get => useCustomIntegrationConfig;
             set => useCustomIntegrationConfig = value;
@@ -235,14 +260,14 @@ namespace Meta.XR.ImmersiveDebugger
 
         [SerializeField] private string customIntegrationConfigClassName = null;
 
-        public string CustomIntegrationConfigClassName
+        internal string CustomIntegrationConfigClassName
         {
             get => customIntegrationConfigClassName;
             set => customIntegrationConfigClassName = value;
         }
 
 #if UNITY_EDITOR
-        public static void UpdateAllDebugTypesForInstance(List<Type> types)
+        internal static void UpdateAllDebugTypesForInstance(List<Type> types)
         {
             UpdateAllDebugTypes(types, Instance);
         }
@@ -262,7 +287,7 @@ namespace Meta.XR.ImmersiveDebugger
             }
         }
 
-        public static void UpdateTypes(string assemblyName, List<string> types, RuntimeSettings instance = null)
+        internal static void UpdateTypes(string assemblyName, List<string> types, RuntimeSettings instance = null)
         {
             var targetInstance = instance ? instance : Instance;
             var existingDebugTypesDict = targetInstance.debugTypesDict;
@@ -292,12 +317,16 @@ namespace Meta.XR.ImmersiveDebugger
         }
 #endif
 
-        public RuntimeSettings()
+        internal RuntimeSettings()
         {
             debugTypes = new List<DebugData>();
             debugTypesDict = new Dictionary<string, List<string>>();
         }
 
+        /// <summary>
+        /// Implementation of OnBeforeSerialize from <see cref="ISerializationCallbackReceiver"/>.
+        /// Reset the <see cref="debugTypes"/> and re-add everything from the cached <see cref="debugTypesDict"/> so it's serialized properly.
+        /// </summary>
         public void OnBeforeSerialize()
         {
             debugTypes.Clear();
@@ -307,6 +336,10 @@ namespace Meta.XR.ImmersiveDebugger
             }
         }
 
+        /// <summary>
+        /// Implementation of OnAfterDeserialize from <see cref="ISerializationCallbackReceiver"/>.
+        /// Load every debug data pair from the <see cref="debugTypes"/> so the cached data is up to date.
+        /// </summary>
         public void OnAfterDeserialize()
         {
             foreach (var debugDataPair in debugTypes)

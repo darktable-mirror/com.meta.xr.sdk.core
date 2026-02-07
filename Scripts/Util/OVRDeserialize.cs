@@ -137,6 +137,83 @@ internal static class OVRDeserialize
         public int Result;
     }
 
+    public struct StartColocationSessionAdvertisementCompleteData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Result Result;
+
+        public Guid AdvertisementUuid;
+    }
+
+    public struct StopColocationSessionAdvertisementCompleteData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Result Result;
+    }
+
+    public struct StartColocationSessionDiscoveryCompleteData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Result Result;
+    }
+
+    public struct StopColocationSessionDiscoveryCompleteData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Result Result;
+    }
+
+    public unsafe struct ColocationSessionDiscoveryResultData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Guid AdvertisementUuid;
+
+        public UInt32 AdvertisementMetadataCount;
+
+        public fixed byte AdvertisementMetadata[1024];
+    }
+
+    public struct ColocationSessionAdvertisementCompleteData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Result Result;
+    }
+
+    public struct ColocationSessionDiscoveryCompleteData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Result Result;
+    }
+
+    public struct ShareSpacesToGroupsCompleteData
+    {
+        public EventType EventType;
+
+        public UInt64 RequestId;
+
+        public Result Result;
+    }
 
     public struct SpaceDiscoveryCompleteData
     {
@@ -174,11 +251,25 @@ internal static class OVRDeserialize
         public int LayerId;
     }
 
-
     public struct BoundaryVisibilityChangedData
     {
         public BoundaryVisibility BoundaryVisibility;
     }
+
+    public struct CreateDynamicObjectTrackerResultData
+    {
+        public EventType EventType;
+        public ulong Tracker;
+        public Result Result;
+    }
+
+    public struct SetDynamicObjectTrackedClassesResultData
+    {
+        public EventType EventType;
+        public ulong Tracker;
+        public Result Result;
+    }
+
 
 
 

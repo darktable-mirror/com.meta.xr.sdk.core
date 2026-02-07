@@ -27,10 +27,17 @@ namespace Meta.XR.InputActions
     [CreateAssetMenu(menuName = "Meta/Action Set")]
     public class InputActionSet : ScriptableObject
     {
+        /// <summary>
+        /// The Interaction Profile these actions should be used with.
+        /// See the OpenXR spec for info on Interaction Profiles and the Action system in general.
+        /// </summary>
         [InlineLink("https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#semantic-path-interaction-profiles")]
         [Tooltip("The interaction profile of the device these actions should be applied to.")]
         public string InteractionProfile;
 
+        /// <summary>
+        /// A list of Input Actions.
+        /// </summary>
         [Tooltip("A list of the different Input Actions that this device supports.")]
         public List<InputActionDefinition> InputActionDefinitions = new List<InputActionDefinition>();
 
@@ -40,6 +47,10 @@ namespace Meta.XR.InputActions
         }
 
 #if UNITY_EDITOR
+        /// <summary>
+        /// This method is used to propogate changes to the input actions menu, which will save them to the RuntimeActionBindings.json file used to deliver the actions to OVRPlugin.
+        /// If this particular input action set hasn't been selected in the Input Actions Menu, the InputActionSetChanged method will do nothing.
+        /// </summary>
         public void OnValidate()
         {
             RuntimeSettings.Instance?.InputActionSetChanged(this);

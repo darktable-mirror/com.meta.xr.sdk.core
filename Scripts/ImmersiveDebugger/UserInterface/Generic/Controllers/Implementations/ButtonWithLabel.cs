@@ -21,13 +21,25 @@
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> used for Button UI element that is represented by a label text.
+    /// Used by mainly the debug data's action button UI in the in-headset Inspector panel in Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class ButtonWithLabel : Button
     {
         protected Label _label;
         protected Background _background;
+        /// <summary>
+        /// The background of the button
+        /// </summary>
         public Background Background => _background;
 
         protected ImageStyle _backgroundStyle;
+        /// <summary>
+        /// The style of the background, can specify the detailed properties such as sprite and pixel density multiplier.
+        /// Upon setting the style, a refresh of the style would be invoked to reflect in UI.
+        /// </summary>
         public ImageStyle BackgroundStyle
         {
             set
@@ -39,11 +51,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// The style (including alignment, color, font) of the text that is being displayed on top of the button UI
+        /// </summary>
         public TextStyle TextStyle
         {
             set => _label.TextStyle = value;
         }
 
+        /// <summary>
+        /// String of the label text that is being displayed on top of the button UI.
+        /// </summary>
         public string Label
         {
             set => _label.Content = value;

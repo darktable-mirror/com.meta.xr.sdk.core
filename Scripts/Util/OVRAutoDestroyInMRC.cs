@@ -22,8 +22,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// If there is a game object under the main camera which should not be cloned under Mixed Reality Capture,
-// attaching this component would auto destroy that after the MRC camera get cloned
+/// <summary>
+/// If there is a game object under the main camera which should not be cloned under [Mixed Reality Capture](https://developer.oculus.com/documentation/unity/unity-mrc/),
+/// attaching this component would auto destroy that after the MRC camera get cloned.
+/// </summary>
 public class OVRAutoDestroyInMRC : MonoBehaviour
 {
     // Use this for initialization

@@ -21,13 +21,14 @@
 using UnityEngine;
 
 /// <summary>
-/// Allows you to toggle chromatic aberration correction with a gamepad button press.
+/// Place this script on a GameObject to have a quick way to turn off [chromatic aberration](https://en.wikipedia.org/wiki/Chromatic_aberration)
+/// correction using a button on a controller or gamepad. This is not intended for use with other scripts.
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-core-overview/#scripts")]
 public class OVRChromaticAberration : MonoBehaviour
 {
     /// <summary>
-    /// The button that will toggle chromatic aberration correction.
+    /// The button that will toggle chromatic aberration correction. You can change this to any other button.
     /// </summary>
     public OVRInput.RawButton toggleButton = OVRInput.RawButton.X;
 

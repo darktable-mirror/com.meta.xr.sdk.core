@@ -243,6 +243,9 @@ public class OVRProjectConfigEditor : Editor
                     hasModified = true;
                 }
 
+                OVREditorUtil.SetupEnumField(projectConfig, "Colocation Session Support",
+                    ref projectConfig.colocationSessionSupport, ref hasModified);
+
 
                 // Scene Support
                 var sceneTooltip =
@@ -431,6 +434,10 @@ public class OVRProjectConfigEditor : Editor
                         "If checked, IL2CPP will compile code with link time optimization in release build."),
                     ref projectConfig.enableIL2CPPLTO, ref hasModified,
                     "https://clang.llvm.org/docs/ThinLTO.html");
+
+                OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Remove Existing Gradle AndroidManifest per Build",
+                    "If checked, this will always delete the AndroidManifest file in the gradle project before a build which is known to prevent the AndroidManfiest from updating properly."),
+                    ref projectConfig.removeGradleManifest, ref hasModified);
                 break;
 
             case eProjectConfigTab.Security:
@@ -456,7 +463,6 @@ public class OVRProjectConfigEditor : Editor
                 OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Experimental Features Enabled",
                         "If checked, this application can use experimental features. Note that such features are for developer use only. This option must be disabled when submitting to the Oculus Store."),
                     ref projectConfig.experimentalFeaturesEnabled, ref hasModified);
-
 
                 break;
         }

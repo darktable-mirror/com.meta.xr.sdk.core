@@ -21,6 +21,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
+using UnityEngine;
 using static OVRPlugin;
 
 partial struct OVRAnchor
@@ -128,6 +129,39 @@ partial struct OVRAnchor
         }
 
         var result = QuerySpacesWithResult(queryInfo, out var requestId);
+        Telemetry.SetSyncResult(telemetryMarker, requestId, result);
+
+        if (!result.IsSuccess())
+        {
+            return OVRTask.FromResult(result);
+        }
+
+        var task = OVRTask.FromRequest<Result>(requestId);
+        task.SetInternalData(anchors);
+        return task;
+    }
+
+    internal static OVRTask<Result> FetchAnchorsByGroup(IList<OVRAnchor> anchors, OVRPlugin.SpaceQueryInfo2 queryInfo)
+    {
+        if (anchors == null)
+        {
+            throw new ArgumentNullException(nameof(anchors));
+        }
+
+        anchors.Clear();
+
+        var telemetryMarker = OVRTelemetry
+            .Start((int)Telemetry.MarkerId.QuerySpaces)
+            .AddAnnotation(Telemetry.Annotation.Timeout, (double)queryInfo.Timeout)
+            .AddAnnotation(Telemetry.Annotation.MaxResults, (long)queryInfo.MaxQuerySpaces)
+            .AddAnnotation(Telemetry.Annotation.StorageLocation, (long)queryInfo.Location);
+
+        if (queryInfo is { FilterType: SpaceQueryFilterType.Group })
+        {
+            telemetryMarker.AddAnnotation(Telemetry.Annotation.GroupCount, 1);
+        }
+
+        var result = QuerySpaces2(queryInfo, out var requestId);
         Telemetry.SetSyncResult(telemetryMarker, requestId, result);
 
         if (!result.IsSuccess())

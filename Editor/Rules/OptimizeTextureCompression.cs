@@ -19,12 +19,13 @@
  */
 
 using System;
-using System.Reflection;
+using Meta.XR.Editor.Reflection;
 using UnityEditor;
 
 namespace Meta.XR.Editor.Rules
 {
     [InitializeOnLoad]
+    [Reflection]
     internal static class OptimizeTextureCompression
     {
         static OptimizeTextureCompression()
@@ -74,7 +75,7 @@ namespace Meta.XR.Editor.Rules
                     // GetDefaultTextureCompressionFormat takes a BuildTargetGroup as parameter before Unity 6
                     var target = targetGroup;
 #endif
-                    var compressionFormat = GetDefaultTextureCompressionFormat?.Invoke(null, new object[] { target }) as Enum;
+                    var compressionFormat = GetDefaultTextureCompressionFormat.Invoke(target);
                     var name = compressionFormat?.ToString();
                     switch (name)
                     {
@@ -82,7 +83,7 @@ namespace Meta.XR.Editor.Rules
                             return TextureCompressionFormat.ASTC;
                         case "ETC2":
                             return TextureCompressionFormat.ETC2;
-                        case null :
+                        case null:
                             return TextureCompressionFormat.Unknown;
                         default:
                             return TextureCompressionFormat.Other;
@@ -117,9 +118,14 @@ namespace Meta.XR.Editor.Rules
         public static void Fix(BuildTargetGroup targetGroup) =>
             EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
 
-
-        private static MethodInfo _getDefaultTextureCompressionFormat = null;
-        private static MethodInfo GetDefaultTextureCompressionFormat => _getDefaultTextureCompressionFormat ??=
-            typeof(PlayerSettings).GetMethod("GetDefaultTextureCompressionFormat", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+        [Reflection(Type = typeof(PlayerSettings), Name = "GetDefaultTextureCompressionFormat")]
+#if UNITY_6000_0_OR_NEWER
+        // GetDefaultTextureCompressionFormat takes a BuildTarget as parameter in Unity 6 onward
+        private static readonly StaticMethodInfoHandleWithWrapper<BuildTarget, Enum>
+#else
+        // GetDefaultTextureCompressionFormat takes a BuildTargetGroup as parameter before Unity 6
+        private static readonly StaticMethodInfoHandleWithWrapper<BuildTargetGroup, Enum>
+#endif
+            GetDefaultTextureCompressionFormat = new();
     }
 }

@@ -39,10 +39,6 @@ public static partial class OVRScene
     /// Requests Space Setup.
     /// </summary>
     /// <remarks>
-    /// [Space Setup](https://developer.oculus.com/documentation/unity/unity-scene-overview/#how-does-scene-work) pauses
-    /// the application and prompts the user to setup their Space. The app resumes when the user either cancels or
-    /// completes Space Setup.
-    ///
     /// <parmaref name="labels"/> is collection of comma-separated semantic labels that the user must define during
     /// Space Setup. You may specify the same label multiple times.
     /// <example>
@@ -52,18 +48,12 @@ public static partial class OVRScene
     /// ]]></code>
     /// would prompt the user to define two tables.
     /// </example>
-    ///
-    /// See <see cref="OVRSemanticLabels"/> for creating the string.
-    ///
-    /// This method is asynchronous. The result of the task indicates whether the operation was successful. `False`
-    /// usually indicates an unexpected failure; if the user cancels Space Setup, the operation still completes
-    /// successfully.
     /// </remarks>
     /// <param name="labels">The types of anchors that the user should define.</param>
     /// <returns>Returns a task that can be used to track the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="labels"/> contains a label that is not one of
     /// those provided by <see cref="OVRSemanticLabels.Classification"/></exception>
-    [Obsolete(OVRSemanticLabels.DeprecationMessage)]
+    [Obsolete("Requesting space setup with labels is deprecated (v71) with no replacement.")]
     public static OVRTask<bool> RequestSpaceSetup(string labels)
     {
 #if DEVELOPMENT_BUILD || OVRPLUGIN_TESTING
@@ -79,31 +69,34 @@ public static partial class OVRScene
     }
 
     /// <summary>
-    /// Requests Space Setup using a list of classifications (may be null or empty).
+    /// Requests Space Setup
     /// </summary>
     /// <remarks>
-    /// [Space Setup](https://developer.oculus.com/documentation/unity/unity-scene-overview/#how-does-scene-work)
-    /// pauses the application and prompts the user to setup their Space. The app resumes when the user
+    /// Requests [Space Setup](https://developer.oculus.com/documentation/unity/unity-scene-overview/#how-does-scene-work).
+    /// Space Setup pauses the application and prompts the user to setup their Space. The app resumes when the user
     /// either cancels or completes Space Setup.
     ///
-    /// If not null or empty, <parmaref name="classifications"/> is a list of semantic labels that the user
-    /// must define during Space Setup. You may specify the same label multiple times. For example,
-    /// <code><![CDATA[
-    /// await RequestSpaceSetup(new [] {Classification.Table, Classification.Table});
-    /// ]]></code>
-    /// would prompt the user to define two tables.
-    ///
-    /// See <see cref="OVRSemanticLabels.Classification"/> for a list of all labels.
-    ///
-    /// This method is asynchronous. The result of the task indicates whether the operation was successful. `false`
+    /// This method is asynchronous. The result of the task indicates whether the operation was successful. `False`
     /// usually indicates an unexpected failure; if the user cancels Space Setup, the operation still completes
     /// successfully.
     /// </remarks>
-    /// <param name="classifications">(Optional) The types of anchors that the user should define.</param>
+    /// <returns>A task that can be used to track the asynchronous operation.</returns>
+    public static OVRTask<bool> RequestSpaceSetup()
+    {
+        return RequestSceneCapture(string.Empty, out var requestId)
+            ? OVRTask.FromRequest<bool>(requestId)
+            : OVRTask.FromResult(false);
+    }
+
+    /// <summary>
+    /// Requests Space Setup using a list of classifications
+    /// </summary>
+    /// <param name="classifications">The types of anchors that the user should define.</param>
     /// <returns>Returns a task that can be used to track the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="classifications"/> contains a label that is not
     /// one of those provided by <see cref="OVRSemanticLabels.Classification"/></exception>
-    public static OVRTask<bool> RequestSpaceSetup(IReadOnlyList<OVRSemanticLabels.Classification> classifications = null) =>
+    [Obsolete("Requesting space setup with labels is deprecated (v71) with no replacement.")]
+    public static OVRTask<bool> RequestSpaceSetup(IReadOnlyList<OVRSemanticLabels.Classification> classifications) =>
 #pragma warning disable CS0618 // Type or member is obsolete
         RequestSpaceSetup(OVRSemanticLabels.ToApiString(classifications));
 #pragma warning restore CS0618 // Type or member is obsolete

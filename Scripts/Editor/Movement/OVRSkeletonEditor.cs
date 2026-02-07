@@ -20,27 +20,41 @@
 
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEngine;
 
 [CustomEditor(typeof(OVRSkeleton))]
 public class OVRSkeletonEditor : Editor
 {
+    private OVRSkeleton _skeleton;
+
+    private static OVRHandSkeletonVersion GlobalVersion =>
+        OVRRuntimeSettings.GetRuntimeSettings().HandSkeletonVersion;
+
     public override void OnInspectorGUI()
     {
-        var skeleton = (OVRSkeleton)target;
+        _skeleton = (OVRSkeleton)target;
 
-        if ((OVRPlugin.SkeletonType)skeleton.GetSkeletonType() == OVRPlugin.SkeletonType.None)
+        if ((OVRPlugin.SkeletonType)_skeleton.GetSkeletonType() == OVRPlugin.SkeletonType.None)
         {
             EditorGUILayout.HelpBox("Please select a SkeletonType.", MessageType.Warning);
         }
 
-        if (!IsSkeletonProperlyConfigured(skeleton))
+        if (!IsSkeletonProperlyConfigured(_skeleton))
         {
             if (OVREditorUIElements.RenderWarningWithButton(
-                    $"An OVRBody component with the `{skeleton.GetRequiredBodyJointSet()}` joint set is required.",
+                    $"An OVRBody component with the `{_skeleton.GetRequiredBodyJointSet()}` joint set is required.",
                     "Add OVRBody component"))
             {
-                FixOVRBodyConfiguration(skeleton, skeleton.GetRequiredBodyJointSet());
+                FixOVRBodyConfiguration(_skeleton, _skeleton.GetRequiredBodyJointSet());
+            }
+        }
+
+        if (!IsHandVersionCorrect())
+        {
+            if (OVREditorUIElements.RenderWarningWithButton(
+                    $"You must select an {GlobalVersion} hand skeleton type.",
+                    "Fix Skeleton Type"))
+            {
+                FixHandSkeletonType();
             }
         }
 
@@ -65,4 +79,41 @@ public class OVRSkeletonEditor : Editor
         Undo.SetCurrentGroupName("Add OVRBody component");
     }
 
+    private bool IsHandVersionCorrect()
+    {
+        var skeletonType = _skeleton.GetSkeletonType();
+        if (!skeletonType.IsHand() ||
+            !_skeleton.TryGetComponent<OVRHand>(out _))
+        {
+            return true;
+        }
+
+        return GlobalVersion switch
+        {
+            OVRHandSkeletonVersion.OVR => skeletonType.IsOVRHandSkeleton(),
+            OVRHandSkeletonVersion.OpenXR => skeletonType.IsOpenXRHandSkeleton(),
+            _ => true
+        };
+    }
+
+    private void FixHandSkeletonType()
+    {
+        var skeletonType = _skeleton.GetSkeletonType();
+        var prop = serializedObject.FindProperty("_skeletonType");
+        if (!skeletonType.IsHand() || prop == null)
+        {
+            return;
+        }
+        if (GlobalVersion == OVRHandSkeletonVersion.OVR)
+        {
+            prop.intValue = skeletonType.IsLeft() ? (int)OVRSkeleton.SkeletonType.HandLeft :
+                (int)OVRSkeleton.SkeletonType.HandRight;
+        }
+        else if (GlobalVersion == OVRHandSkeletonVersion.OpenXR)
+        {
+            prop.intValue = skeletonType.IsLeft() ? (int)OVRSkeleton.SkeletonType.XRHandLeft :
+                (int)OVRSkeleton.SkeletonType.XRHandRight;
+        }
+        serializedObject.ApplyModifiedProperties();
+    }
 }

@@ -23,13 +23,18 @@ using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> for the UI that can be vertically scrolled, specifically the part that's scrollable (viewport).
+    /// Used by inspector debug data and console logs of Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class ScrollViewport : Controller
     {
         private Image _image;
         private Mask _mask;
         private Flex _flex;
 
-        public Flex Flex => _flex;
+        internal Flex Flex => _flex;
 
         protected override void Setup(Controller owner)
         {

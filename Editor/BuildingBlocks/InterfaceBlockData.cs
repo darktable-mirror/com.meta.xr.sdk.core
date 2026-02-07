@@ -28,6 +28,9 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class InterfaceBlockData : BlockData
     {
+        // Stateful singleton of the current VariantsSelection
+        internal static VariantsSelection Selection = new();
+
         private InstallationRoutine _selectedRoutine;
 
         protected override bool UsesPrefab => false;
@@ -44,7 +47,13 @@ namespace Meta.XR.BuildingBlocks.Editor
             block.InstallationRoutineCheckpoint = _selectedRoutine.ToCheckpoint();
         }
 
-        internal override bool CanBeAdded => HasInstallationRoutine && base.CanBeAdded;
+        internal override bool IsInstallable => HasInstallationRoutine && base.IsInstallable;
+
+        internal override bool IsInteractable =>
+            HasInstallationRoutine
+            && !HasMissingDependencies
+            && !IsSingletonAndAlreadyPresent
+            && !Utils.IsApplicationPlaying();
 
         internal IReadOnlyList<string> ComputeMissingPackageDependencies(VariantsSelection selection)
         {
@@ -52,9 +61,16 @@ namespace Meta.XR.BuildingBlocks.Editor
                 .Where(packageId => !Utils.IsPackageInstalled(packageId)).ToList();
         }
 
+        internal static IEnumerable<BlockData> ComputeOptionalDependencies(InterfaceBlockData blockData, VariantsSelection selection)
+        {
+            var possibleRoutines = selection.ComputePossibleInstallationRoutines(blockData);
+            var idealRoutine = selection.ComputeIdealInstallationRoutine(possibleRoutines);
+            return idealRoutine != null ? idealRoutine.ComputeOptionalDependencies(selection) : Enumerable.Empty<BlockData>();
+        }
+
         internal static IEnumerable<string> ComputePackageDependencies(InterfaceBlockData blockData, VariantsSelection selection)
         {
-            var possibleRoutines = InstallationRoutineSelector.ComputePossibleRoutines(blockData);
+            var possibleRoutines = selection.ComputePossibleInstallationRoutines(blockData);
             var idealRoutine = selection.ComputeIdealInstallationRoutine(possibleRoutines);
             var dependencies = blockData.PackageDependencies ?? Enumerable.Empty<string>();
             if (idealRoutine != null)
@@ -88,11 +104,17 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal override async Task<List<GameObject>> InstallWithDependencies(List<GameObject> selectedGameObjects)
         {
-            InstallationRoutineSelector.Selection.Setup(this);
+            Selection.SetupForSelection(this);
 
             try
             {
-                _selectedRoutine = await InstallationRoutineSelector.GetSelected(this);
+                _selectedRoutine = await Selection.SelectInstallationRoutine(this);
+
+                if (Selection.Canceled)
+                {
+                    throw new InstallationCancelledException();
+                }
+
                 var createdObjects = new List<GameObject>();
                 if (_selectedRoutine != null)
                 {
@@ -103,14 +125,14 @@ namespace Meta.XR.BuildingBlocks.Editor
                 }
                 // reset the static caches
                 _selectedRoutine = null;
-                InstallationRoutineSelector.Selection.Release(this);
+                Selection.Release(this);
                 return createdObjects;
             }
             catch (Exception)
             {
                 // reset the static caches
                 _selectedRoutine = null;
-                InstallationRoutineSelector.Selection.Release(this, true);
+                Selection.Release(this, true);
                 throw;
             }
         }
@@ -122,6 +144,10 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         protected override async Task<List<GameObject>> InstallRoutineAsync(GameObject selectedGameObject)
             => await _selectedRoutine.InstallAsync(this, selectedGameObject);
+
+        internal override IEnumerable<OVRConfigurationTask> GetAssociatedRules(BuildingBlock block)
+            => Utils.GetInstallationRoutine(block.InstallationRoutineCheckpoint?.InstallationRoutineId)
+                ?.GetAssociatedRules(block) ?? Enumerable.Empty<OVRConfigurationTask>();
 
         #region InstallationRoutine
 

@@ -32,26 +32,26 @@ namespace Meta.XR.BuildingBlocks.Editor
 
     internal static class CustomPackageDependencyRegistry
     {
-        private static Dictionary<string, CustomPackageDependencyInfo> _customPackageDependencies = new();
+        private static readonly Dictionary<string, CustomPackageDependencyInfo> CustomPackageDependencies = new();
 
         internal static void RegisterCustomPackageDependency(string packageId, CustomPackageDependencyInfo customPackageDepInfo)
         {
-            _customPackageDependencies.TryAdd(packageId, customPackageDepInfo);
+            CustomPackageDependencies.TryAdd(packageId, customPackageDepInfo);
         }
 
         internal static bool IsPackageDepInCustomRegistry(string packageId)
         {
-            return _customPackageDependencies.ContainsKey(packageId);
+            return CustomPackageDependencies.ContainsKey(packageId);
         }
 
         internal static bool IsPackageInstalled(string packageId)
         {
-            return _customPackageDependencies.TryGetValue(packageId, out var value) && value.IsPackageInstalled();
+            return CustomPackageDependencies.TryGetValue(packageId, out var value) && value.IsPackageInstalled();
         }
 
         internal static CustomPackageDependencyInfo GetPackageDepInfo(string packageId)
         {
-            if (!_customPackageDependencies.TryGetValue(packageId, out var value))
+            if (!CustomPackageDependencies.TryGetValue(packageId, out var value))
             {
                 throw new InvalidOperationException(
                     "Try to get non-existed package dependency info from custom registry");

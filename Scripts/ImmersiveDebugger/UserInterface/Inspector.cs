@@ -32,6 +32,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Flex _flex;
         private Background _background;
         private readonly Dictionary<MemberInfo, Member> _registry = new Dictionary<MemberInfo, Member>();
+        private ImageStyle _backgroundImageStyle;
 
         public ImageStyle BackgroundStyle
         {
@@ -56,7 +57,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // Background
             _background = Append<Background>("background");
             _background.LayoutStyle = Style.Load<LayoutStyle>("Fill");
-            BackgroundStyle = Style.Load<ImageStyle>("InspectorBackground");
+            _backgroundImageStyle = Style.Load<ImageStyle>("InspectorBackground");
+            BackgroundStyle = _backgroundImageStyle;
 
             // Flex
             _flex = Append<Flex>("list");
@@ -66,6 +68,18 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _title = _flex.Append<Label>("title");
             _title.LayoutStyle = Style.Load<LayoutStyle>("InspectorTitle");
             _title.TextStyle = Style.Load<TextStyle>("InspectorTitle");
+        }
+
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            _background.Color = Transparent ? _backgroundImageStyle.colorOff : _backgroundImageStyle.color;
+        }
+
+        public void UpdateBackground(bool transparent)
+        {
+            Transparent = transparent;
+            OnTransparencyChanged();
         }
 
         public IMember RegisterMember(MemberInfo memberInfo, DebugMember attribute)
@@ -89,4 +103,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         }
     }
 }
-

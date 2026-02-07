@@ -23,14 +23,24 @@ using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
+    /// <summary>
+    /// This is a <see cref="MonoBehaviour"/> used for Button UI element that is represented by an Image icon.
+    /// Used by multiple controls UI in the in-headset panels in Immersive Debugger.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
+    /// </summary>
     public class ButtonWithIcon : Button
     {
         protected Icon _icon;
         protected Background _background;
 
         protected ImageStyle _backgroundStyle;
+        /// <summary>
+        /// The style of the background, can specify the detailed properties such as sprite and pixel density multiplier.
+        /// Upon setting the style, a refresh of the style would be invoked to reflect in UI.
+        /// </summary>
         public ImageStyle BackgroundStyle
         {
+            get => _backgroundStyle;
             set
             {
                 if (_backgroundStyle == value) return;
@@ -44,6 +54,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
 
         protected ImageStyle _iconStyle;
+        /// <summary>
+        /// The style of the icon, similar to background can specify detailed properties.
+        /// Upon setting the style, a refresh of the style would be invoked to reflect in UI.
+        /// </summary>
         public ImageStyle IconStyle
         {
             set
@@ -53,6 +67,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// The texture used for the icon
+        /// </summary>
         public Texture2D Icon
         {
             set => _icon.Texture = value;
@@ -105,6 +122,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 _icon.Hide();
             }
         }
+
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+
+            if (BackgroundStyle == null || !BackgroundStyle.enabled)
+                return;
+
+            BackgroundStyle.color.a = Transparent ? 0.25f : 1f;
+            BackgroundStyle.colorHover.a = Transparent ? 0.5f : 1f;
+            RefreshStyle();
+        }
     }
 }
-

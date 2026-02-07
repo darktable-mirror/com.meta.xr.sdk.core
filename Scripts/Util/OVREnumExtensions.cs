@@ -18,9 +18,7 @@
  * limitations under the License.
  */
 
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using System;
 
 public static class OVREnumExtensions
 {
@@ -30,12 +28,32 @@ public static class OVREnumExtensions
         {
             return true;
         }
+        if (skeletonType == OVRSkeleton.SkeletonType.XRHandLeft || skeletonType == OVRSkeleton.SkeletonType.XRHandRight)
+        {
+            return true;
+        }
         return false;
+    }
+
+    public static bool IsOpenXRHandSkeleton(this OVRSkeleton.SkeletonType skeletonType)
+    {
+        return skeletonType == OVRSkeleton.SkeletonType.XRHandLeft ||
+               skeletonType == OVRSkeleton.SkeletonType.XRHandRight;
+    }
+
+    public static bool IsOVRHandSkeleton(this OVRSkeleton.SkeletonType skeletonType)
+    {
+        return skeletonType == OVRSkeleton.SkeletonType.HandLeft ||
+               skeletonType == OVRSkeleton.SkeletonType.HandRight;
     }
 
     public static bool IsLeft(this OVRSkeleton.SkeletonType type)
     {
         if (type == OVRSkeleton.SkeletonType.HandLeft)
+        {
+            return true;
+        }
+        if (type == OVRSkeleton.SkeletonType.XRHandLeft)
         {
             return true;
         }
@@ -47,14 +65,18 @@ public static class OVREnumExtensions
         switch (skeletonType)
         {
             case OVRSkeleton.SkeletonType.HandLeft:
+            case OVRSkeleton.SkeletonType.XRHandLeft:
                 return OVRHand.Hand.HandLeft;
             case OVRSkeleton.SkeletonType.HandRight:
+            case OVRSkeleton.SkeletonType.XRHandRight:
                 return OVRHand.Hand.HandRight;
             default:
                 return OVRHand.Hand.None;
         }
     }
 
+
+    [Obsolete("Use the overload which takes an " + nameof(OVRHandSkeletonVersion) + "instead.")]
     public static OVRSkeleton.SkeletonType AsSkeletonType(this OVRHand.Hand hand)
     {
         switch (hand)
@@ -68,6 +90,23 @@ public static class OVREnumExtensions
         }
     }
 
+    public static OVRSkeleton.SkeletonType AsSkeletonType(this OVRHand.Hand hand,
+        OVRHandSkeletonVersion version)
+    {
+        switch (hand)
+        {
+            case OVRHand.Hand.HandLeft:
+                return version == OVRHandSkeletonVersion.OVR ?
+                    OVRSkeleton.SkeletonType.HandLeft : OVRSkeleton.SkeletonType.XRHandLeft;
+            case OVRHand.Hand.HandRight:
+                return version == OVRHandSkeletonVersion.OVR ?
+                    OVRSkeleton.SkeletonType.HandRight : OVRSkeleton.SkeletonType.XRHandRight;
+            default:
+                return OVRSkeleton.SkeletonType.None;
+        }
+    }
+
+    [Obsolete("Use the overload which takes an " + nameof(OVRHandSkeletonVersion) + "instead.")]
     public static OVRMesh.MeshType AsMeshType(this OVRHand.Hand hand)
     {
         switch (hand)
@@ -81,13 +120,73 @@ public static class OVREnumExtensions
         }
     }
 
+
+    public static bool IsOpenXRHandMesh(this OVRMesh.MeshType meshType)
+    {
+        return meshType == OVRMesh.MeshType.XRHandLeft ||
+               meshType == OVRMesh.MeshType.XRHandRight;
+    }
+
+    public static bool IsOVRHandMesh(this OVRMesh.MeshType meshType)
+    {
+        return meshType == OVRMesh.MeshType.HandLeft ||
+               meshType == OVRMesh.MeshType.HandRight;
+    }
+
+    public static OVRMesh.MeshType AsMeshType(this OVRHand.Hand hand,
+    OVRHandSkeletonVersion version)
+    {
+        switch (hand)
+        {
+            case OVRHand.Hand.HandLeft:
+                return version == OVRHandSkeletonVersion.OVR ?
+                    OVRMesh.MeshType.HandLeft : OVRMesh.MeshType.XRHandLeft;
+            case OVRHand.Hand.HandRight:
+                return version == OVRHandSkeletonVersion.OVR ?
+                    OVRMesh.MeshType.HandRight : OVRMesh.MeshType.XRHandRight;
+            default:
+                return OVRMesh.MeshType.None;
+        }
+    }
+
+    public static bool IsLeft(this OVRMesh.MeshType type)
+    {
+        if (type == OVRMesh.MeshType.HandLeft)
+        {
+            return true;
+        }
+
+        if (type == OVRMesh.MeshType.XRHandLeft)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsHand(this OVRMesh.MeshType meshType)
+    {
+        if (meshType == OVRMesh.MeshType.HandLeft || meshType == OVRMesh.MeshType.HandRight)
+        {
+            return true;
+        }
+        if (meshType == OVRMesh.MeshType.XRHandLeft || meshType == OVRMesh.MeshType.XRHandRight)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     public static OVRHand.Hand AsHandType(this OVRMesh.MeshType meshType)
     {
         switch (meshType)
         {
             case OVRMesh.MeshType.HandLeft:
+            case OVRMesh.MeshType.XRHandLeft:
                 return OVRHand.Hand.HandLeft;
             case OVRMesh.MeshType.HandRight:
+            case OVRMesh.MeshType.XRHandRight:
                 return OVRHand.Hand.HandRight;
             default:
                 return OVRHand.Hand.None;

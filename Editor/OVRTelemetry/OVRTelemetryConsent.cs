@@ -52,18 +52,11 @@ internal static class OVRTelemetryConsent
     public static bool SetTelemetryEnabled(bool enabled, OVRTelemetryConstants.OVRManager.ConsentOrigins origin)
     {
         Result result = OVRPlugin.SetDeveloperTelemetryConsent(enabled ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
-        if (result == Result.Success)
-        {
-            TelemetryEnabled = enabled;
-            OVRPlugin.Qpl.SetConsent(enabled ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
-            SendConsentEvent(origin);
-            OnTelemetrySet?.Invoke(enabled);
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        TelemetryEnabled = enabled;
+        OVRPlugin.Qpl.SetConsent(enabled ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+        SendConsentEvent(origin);
+        OnTelemetrySet?.Invoke(enabled);
+        return result == Result.Success;
     }
 
     public static void SendConsentEvent(OVRTelemetryConstants.OVRManager.ConsentOrigins origin)

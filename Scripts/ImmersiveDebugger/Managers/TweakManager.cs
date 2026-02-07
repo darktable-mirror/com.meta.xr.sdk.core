@@ -67,6 +67,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var tweak = memberController.GetTweak();
                 if (!tweak?.Matches(member, instance) ?? true)
                 {
+                    TweakUtils.ProcessMinMaxRange(member, attribute, instance);
                     memberController.RegisterTweak(TweakUtils.Create(member, attribute, instance));
                 }
             });
@@ -85,4 +86,3 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
     }
 }
-

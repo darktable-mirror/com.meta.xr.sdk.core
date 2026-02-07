@@ -115,6 +115,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public FeatureSupport faceTrackingSupport = FeatureSupport.None;
     public FeatureSupport eyeTrackingSupport = FeatureSupport.None;
     public FeatureSupport virtualKeyboardSupport = FeatureSupport.None;
+    public FeatureSupport colocationSessionSupport = FeatureSupport.None;
     public FeatureSupport sceneSupport = FeatureSupport.None;
     public FeatureSupport boundaryVisibilitySupport = FeatureSupport.None;
 
@@ -125,6 +126,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool skipUnneededShaders = false;
 
     public bool enableIL2CPPLTO = false;
+
+    public bool removeGradleManifest = true;
 
     [System.Obsolete("Focus awareness is now required. The option will be deprecated.", false)]
     public bool focusAware = true;
@@ -211,13 +214,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
 
     internal static string ComputeOculusProjectAssetPath(string assetName)
     {
-        var so = ScriptableObject.CreateInstance(typeof(OVRPluginInfo));
-        var script = MonoScript.FromScriptableObject(so);
-        string assetPath = AssetDatabase.GetAssetPath(script);
-        string editorDir = Directory.GetParent(assetPath).FullName;
-        string ovrDir = Directory.GetParent(editorDir).FullName;
-        string oculusDir = Directory.GetParent(ovrDir).FullName;
-
+        string oculusDir;
         if (OVRPluginInfo.IsInsidePackageDistribution())
         {
             oculusDir = Path.GetFullPath(Path.Combine(Application.dataPath, "Oculus"));
@@ -225,6 +222,15 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
             {
                 Directory.CreateDirectory(oculusDir);
             }
+        }
+        else
+        {
+            var so = ScriptableObject.CreateInstance(typeof(OVRPluginInfo));
+            var script = MonoScript.FromScriptableObject(so);
+            string assetPath = AssetDatabase.GetAssetPath(script);
+            string editorDir = Directory.GetParent(assetPath).FullName;
+            string ovrDir = Directory.GetParent(editorDir).FullName;
+            oculusDir = Directory.GetParent(ovrDir).FullName;
         }
 
         string configAssetPath = Path.GetFullPath(Path.Combine(oculusDir, assetName));
@@ -279,6 +285,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
             projectConfig.faceTrackingSupport = FeatureSupport.None;
             projectConfig.eyeTrackingSupport = FeatureSupport.None;
             projectConfig.virtualKeyboardSupport = FeatureSupport.None;
+            projectConfig.colocationSessionSupport = FeatureSupport.None;
             projectConfig.sceneSupport = FeatureSupport.None;
             projectConfig.boundaryVisibilitySupport = FeatureSupport.None;
             projectConfig.disableBackups = true;

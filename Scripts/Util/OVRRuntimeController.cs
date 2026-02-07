@@ -22,22 +22,39 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// This class connects the behavior of an <see cref="OVRInput.Controller"/> to a rendered 3D model.
+/// </summary>
+/// <remarks>
+/// This implementation is highly specialized for and tightly coupled to the 3D model with which it is used
+/// in provided prefabs; usage without that model is not supported.
+/// </remarks>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-runtime-controller/")]
 public class OVRRuntimeController : MonoBehaviour
 {
     /// <summary>
-    /// The controller that determines whether or not to enable rendering of the controller model.
+    /// The <see cref="OVRInput.Controller"/> that determines whether or not to enable rendering of the
+    /// controller model. This value will be passed to <see cref="OVRInput"/> when reading controller
+    /// state.
     /// </summary>
     public OVRInput.Controller m_controller;
 
     /// <summary>
-    /// Shader that will be used for the controller model
+    /// Shader that will be used for the controller model. This is needed in order to correctly initialize
+    /// the material for the loaded glTF asset.
     /// </summary>
     public Shader m_controllerModelShader;
 
     /// <summary>
-    /// Support render model animation
+    /// Flag indicating whether the rendered model should or shouldn't be animated.
     /// </summary>
+    /// <remarks>
+    /// If true, values
+    /// from <see cref="OVRInput.Get(OVRInput.Axis1D, OVRInput.Controller)"/>,
+    /// <see cref="OVRInput.Get(OVRInput.Axis2D, OVRInput.Controller)"/>, etc. will be used to set
+    /// the animation state of the rendered model, causing its various buttons to move in immitation
+    /// of their real-world counterparts.
+    /// </remarks>
     public bool m_supportAnimation = true;
 
     private GameObject m_controllerObject;
@@ -202,11 +219,19 @@ public class OVRRuntimeController : MonoBehaviour
                     : OVRInput.RawAxis2D.RThumbstick));
     }
 
+    /// <summary>
+    /// Informs this instance that the associated controller (designated by <see cref="m_controller"/>) is
+    /// considered by the app to have input focus, which affects how the controller is displayed.
+    /// </summary>
     public void InputFocusAquired()
     {
         m_hasInputFocus = true;
     }
 
+    /// <summary>
+    /// Informs this instance that the associated controller (designated by <see cref="m_controller"/>) is
+    /// considered by the app to not have input focus, which affects how the controller is displayed.
+    /// </summary>
     public void InputFocusLost()
     {
         m_hasInputFocus = false;

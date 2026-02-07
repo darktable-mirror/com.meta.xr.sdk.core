@@ -24,21 +24,37 @@ using UnityEngine;
 namespace Meta.XR.ImmersiveDebugger
 {
     /// <summary>
-    /// Example of how custom integration could be specified to override camera/controller used by ImmersiveDebugger
-    /// (if not using Standard OVRCameraRig)
+    /// An example implementation of how a custom integration could be specified
+    /// to override camera/controller used by Immersive Debugger.
+    /// (use it if you're not using Standard OVRCameraRig as camera and controllers)
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     public class ExampleCustomIntegrationConfig : CustomIntegrationConfigBase
     {
+        /// <summary>
+        /// Indicates how a camera should be found in the application.
+        /// This should be dynamically managed across scenes. If previous camera is destroyed,
+        /// Immersive Debugger will call this function again to retrieve camera.
+        /// </summary>
+        /// <returns>The camera component Immersive Debugger is using to position panels</returns>
         public override Camera GetCamera()
         {
             return GameObject.Find("MainCamera").GetComponent<Camera>();
         }
 
+        /// <summary>
+        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
+        /// </summary>
+        /// <returns>The left controller component Immersive Debugger is using to detect ray casting for panels</returns>
         public override Transform GetLeftControllerTransform()
         {
             return GameObject.Find("LeftController").transform;
         }
 
+        /// <summary>
+        /// Same as Camera, it'll be called again if Camera is invalid to find controller.
+        /// </summary>
+        /// <returns>The right controller component Immersive Debugger is using to detect ray casting for panels</returns>
         public override Transform GetRightControllerTransform()
         {
             return GameObject.Find("RightController").transform;
