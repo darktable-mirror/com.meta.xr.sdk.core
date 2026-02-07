@@ -18,23 +18,22 @@
  * limitations under the License.
  */
 
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using System;
+using System.IO;
+
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor;
-using System.IO;
-using System.Diagnostics;
+
+using UnityEngine;
+
 
 public class OVRDumpBuildInfo : IPreprocessBuildWithReport, IPostprocessBuildWithReport
 {
     public int callbackOrder => 0;
 
-
     public void OnPreprocessBuild(BuildReport report)
     {
-
         PrepareRuntimeActionBindings();
     }
 

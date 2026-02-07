@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
@@ -27,12 +28,13 @@ namespace Meta.XR.Editor.UserInterface
     /// <summary>
     /// Make a read-only label.
     /// </summary>
-    internal class Label : IUserInterfaceItem
+    internal class Label : IUserInterfaceItem, IDynamicColorItem
     {
         public bool Hide { get; set; }
-        public GUIContent LabelContent { get; }
+        public GUIContent LabelContent { get; set; }
         public readonly GUIStyle GUIStyle;
         private readonly GUILayoutOption[] _options;
+        public Func<IDynamicColorItem, Color> FetchDynamicColor { get; set; }
 
         public Label(string label, params GUILayoutOption[] options) : this(label, UIStyles.GUIStyles.Label, options)
         {
@@ -47,7 +49,20 @@ namespace Meta.XR.Editor.UserInterface
 
         public void Draw()
         {
-            EditorGUILayout.LabelField(LabelContent.text, GUIStyle, _options);
+            if (FetchDynamicColor != null)
+            {
+                var expectedColor = FetchDynamicColor?.Invoke(this) ?? Color.white;
+                // Splitting the behaviour to not play with color scope in case no color was set at all
+                using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, expectedColor))
+                {
+                    EditorGUILayout.LabelField(LabelContent.text, GUIStyle, _options);
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField(LabelContent.text, GUIStyle, _options);
+            }
+
         }
 
         public float GetHeight(float contentWidth = UIStyles.Constants.DefaultWidth - LargeMargin) => GUIStyle.CalcHeight(LabelContent, contentWidth);

@@ -25,7 +25,10 @@
         "Meta.XR.Editor.Settings",
         "Meta.XR.Editor.Id",
         "Meta.XR.Editor.ToolingSupport",
-        "Meta.XR.Editor.UPST.Notifications"
+        "Meta.XR.Editor.UPST.Notifications",
+        "Meta.XR.Editor.RemoteContent",
+        "Meta.XR.Editor.EditorCoroutine",
+        "meta.xr.mrutilitykit"
     ],
     "includePlatforms": [
         "Editor"
@@ -56,6 +59,11 @@
             "name": "com.meta.xr.sdk.haptics",
             "expression": "71.99.99",
             "define": "USING_META_XR_HAPTICS_SDK"
+        },
+        {
+            "name": "com.meta.xr.mrutilitykit",
+            "expression": "78.99.99",
+            "define": "USING_META_XR_MR_UTILITYKIT_SDK"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

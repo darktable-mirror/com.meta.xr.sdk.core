@@ -22,10 +22,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEditor.PackageManager.UI;
+using UnityEditor.Search;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Meta.XR.Editor.Utils
@@ -35,11 +37,34 @@ namespace Meta.XR.Editor.Utils
     {
         private static ListRequest _packageManagerListRequest;
         private static Dictionary<string, PackageInfo> _packagesDictionary;
+        public static event Action OnPackageListRefreshed;
 
         static PackageList()
         {
+            Meta.XR.Editor.Callbacks.InitializeOnLoad.Register(Initialize);
+        }
+
+        private static async void Initialize()
+        {
             _packageManagerListRequest = Client.List(offlineMode: false, includeIndirectDependencies: true);
             Events.registeringPackages += RegisteringPackagesEventHandler;
+            await WaitUntil(() => PackageManagerListAvailable);
+            OnPackageListRefreshed?.Invoke();
+        }
+
+        private static async Task WaitUntil(Func<bool> predicate, int sleep = 50)
+        {
+            while (!predicate())
+            {
+                await Task.Delay(sleep);
+            }
+        }
+
+        internal struct PackageData
+        {
+            public string Name;
+            public string Version;
+            public string SampleName;
         }
 
         private static void RegisteringPackagesEventHandler(PackageRegistrationEventArgs args)
@@ -48,19 +73,20 @@ namespace Meta.XR.Editor.Utils
             {
                 return;
             }
+
             _packagesDictionary ??= _packageManagerListRequest.Result.ToDictionary(package => package.name);
 
-            foreach (PackageInfo addedPackage in args.added)
+            foreach (var addedPackage in args.added)
             {
                 _packagesDictionary.Add(addedPackage.name, addedPackage);
             }
 
-            foreach (PackageInfo removedPackage in args.removed)
+            foreach (var removedPackage in args.removed)
             {
                 _packagesDictionary.Remove(removedPackage.name);
             }
 
-            foreach (PackageInfo changedTo in args.changedTo)
+            foreach (var changedTo in args.changedTo)
             {
                 _packagesDictionary[changedTo.name] = changedTo;
             }
@@ -77,11 +103,11 @@ namespace Meta.XR.Editor.Utils
 
             _packagesDictionary ??= _packageManagerListRequest.Result.ToDictionary(package => package.name);
 
-            var (name, _, _) = ParsePackageId(packageId);
-            return _packagesDictionary.GetValueOrDefault(name);
+            var package = ParsePackageId(packageId);
+            return _packagesDictionary.GetValueOrDefault(package.Name);
         }
 
-        internal static (string name, string version, string sampleName) ParsePackageId(string packageId)
+        internal static PackageData ParsePackageId(string packageId)
         {
             if (string.IsNullOrEmpty(packageId))
             {
@@ -93,13 +119,14 @@ namespace Meta.XR.Editor.Utils
 
             return (containsSampleName, containsVersion) switch
             {
-                (true, true) => throw new ArgumentException("Setting both sample name and version in the packageId is not supported."),
+                (true, true) => throw new ArgumentException(
+                    "Setting both sample name and version in the packageId is not supported."),
                 (true, false) => ParseWithSampleName(packageId),
                 (false, true) => ParseWithVersion(packageId),
-                (false, false) => (packageId, null, null)
+                (false, false) => new PackageData { Name = packageId }
             };
 
-            (string, string, string) ParseWithSampleName(string s)
+            PackageData ParseWithSampleName(string s)
             {
                 var (packageName, sampleName) = SplitStringBySeparator(s, ":");
 
@@ -108,10 +135,14 @@ namespace Meta.XR.Editor.Utils
                     throw new ArgumentException($"{nameof(sampleName)} cannot be null or empty");
                 }
 
-                return (packageName, null, sampleName);
+                return new PackageData
+                {
+                    Name = packageName,
+                    SampleName = sampleName,
+                };
             }
 
-            (string, string, string) ParseWithVersion(string s)
+            PackageData ParseWithVersion(string s)
             {
                 var (packageName, packageVersion) = SplitStringBySeparator(s, "@");
 
@@ -120,7 +151,11 @@ namespace Meta.XR.Editor.Utils
                     throw new ArgumentException($"{nameof(packageVersion)} cannot be null or empty");
                 }
 
-                return (packageName, packageVersion, null);
+                return new PackageData
+                {
+                    Name = packageName,
+                    Version = packageVersion
+                };
             }
 
             (string, string) SplitStringBySeparator(string s, string separator)
@@ -136,7 +171,7 @@ namespace Meta.XR.Editor.Utils
 
         public static bool IsPackageInstalledWithValidVersion(string packageId)
         {
-            var (_, expectedPackageVersion, sampleName) = ParsePackageId(packageId);
+            var expectedData = ParsePackageId(packageId);
             var installedPacked = GetPackage(packageId);
 
             if (installedPacked == null)
@@ -148,24 +183,26 @@ namespace Meta.XR.Editor.Utils
 
             bool ValidatePackageVersion()
             {
-                return string.IsNullOrEmpty(expectedPackageVersion) || IsVersionValid(expectedPackageVersion, installedPacked.version);
+                return string.IsNullOrEmpty(expectedData.Version) ||
+                       IsVersionValid(expectedData.Version, installedPacked.version);
             }
 
             bool ValidateSample()
             {
-                if (string.IsNullOrEmpty(sampleName))
+                if (string.IsNullOrEmpty(expectedData.SampleName))
                 {
                     return true;
                 }
 
                 return Sample.FindByPackage(installedPacked.name, installedPacked.version)
-                    .Any(sample => sample.displayName == sampleName && sample.isImported);
+                    .Any(sample => sample.displayName == expectedData.SampleName && sample.isImported);
             }
         }
 
         internal static bool IsValidPackageName(string packageName)
         {
-            const string pattern = @"^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}(@([0-9]+\.){2}[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?)?$";
+            const string pattern =
+                @"^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}(@([0-9]+\.){2}[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?)?$";
             var regex = new Regex(pattern, RegexOptions.IgnoreCase);
             return regex.IsMatch(packageName);
         }
@@ -174,19 +211,19 @@ namespace Meta.XR.Editor.Utils
         {
             try
             {
-                var (packageName, packageVersion, sampleName) = ParsePackageId(packageId);
+                var package = ParsePackageId(packageId);
 
-                if (!IsValidPackageName(packageName))
+                if (!IsValidPackageName(package.Name))
                 {
                     return false;
                 }
 
-                if (packageVersion != null)
+                if (package.Version != null)
                 {
-                    return IsValidSemanticVersion(packageVersion);
+                    return IsValidSemanticVersion(package.Version);
                 }
 
-                return sampleName == null || sampleName.Length > 0;
+                return package.SampleName == null || package.SampleName.Length > 0;
             }
             catch (Exception)
             {

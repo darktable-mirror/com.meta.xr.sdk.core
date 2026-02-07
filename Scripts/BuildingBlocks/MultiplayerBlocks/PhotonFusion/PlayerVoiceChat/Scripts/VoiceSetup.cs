@@ -64,7 +64,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
                 audioSource.bypassReverbZones = true;
                 audioSource.spatialBlend = 1;
                 var recorder = voiceObject.AddComponent<Recorder>();
-                recorder.StopRecordingWhenPaused = true;
+                recorder.StopRecordingWhenPaused = false;
                 recorder.SamplingRate = SamplingRate.Sampling48000;
                 voiceObject.AddComponent<Speaker>();
                 voiceObject.AddComponent<LipSyncPhotonFix>();

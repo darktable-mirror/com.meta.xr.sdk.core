@@ -97,6 +97,11 @@ internal static class OVRProjectSetupUpdater
             return;
         }
 
+        if (!OVRProjectSetupUtils.IsCoreModuleLoaded)
+        {
+            return;
+        }
+
         if (OVRProjectSetup.ProcessorQueue.Busy)
         {
             return;

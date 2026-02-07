@@ -33,14 +33,19 @@ float SampleEnvironmentDepthLinear(float2 uv)
   const float inputDepthEye = SampleEnvironmentDepth(uv);
 
   const float inputDepthNdc = inputDepthEye * 2.0 - 1.0;
+  if (inputDepthNdc == 1.0f) {
+    // When 'inputDepthNdc == 1.0f', this will produce division by zero because '_EnvironmentDepthZBufferParams.y == -1.0'
+    // So we return a big linear value when this happens. 10km should be enough for applications that rely on Depth API.
+    return 10000;
+  }
   const float linearDepth = (1.0f / (inputDepthNdc + _EnvironmentDepthZBufferParams.y)) * _EnvironmentDepthZBufferParams.x;
 
   return linearDepth;
 }
 
-float CalculateEnvironmentDepthHardOcclusion(float2 depthUv, float sceneDepth)
+float CalculateEnvironmentDepthHardOcclusion(float2 depthUv, float linearSceneDepth)
 {
-  return SampleEnvironmentDepthLinear(depthUv) > sceneDepth;
+  return SampleEnvironmentDepthLinear(depthUv) > linearSceneDepth;
 }
 
 float CalculateEnvironmentDepthSoftOcclusion(float2 uvCoords, float linearSceneDepth) {

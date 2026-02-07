@@ -230,11 +230,21 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         static Utils()
         {
+            BlockBaseData.Registry.OnRefresh += _ => MarkFilteredRegistryDirty();
+            BlocksContentManager.OnContentChanged += MarkFilteredRegistryDirty;
         }
 
 
+        public static IReadOnlyList<BlockBaseData> UnfilteredRegistry => BlockBaseData.Registry.Values;
+
+        private static IReadOnlyList<BlockBaseData> _filteredRegistry;
+        public static IReadOnlyList<BlockBaseData> FilteredRegistry
+            => _filteredRegistry ??= BlocksContentManager.FilterBlockWindowContent(UnfilteredRegistry);
+
+        public static void MarkFilteredRegistryDirty() => _filteredRegistry = null;
+
         private static int ComputeNumberOfNewBlocks() =>
-            BlockBaseData.Registry.Values.Count(data => !data.Hidden && (data.Tags.Contains(NewTag) || data.Tags.Contains(NewVersionTag)));
+            FilteredRegistry.Count(data => !data.Hidden && (data.Tags.Contains(NewTag) || data.Tags.Contains(NewVersionTag)));
 
         private static (string, Color?) ComputeInfoText()
         {

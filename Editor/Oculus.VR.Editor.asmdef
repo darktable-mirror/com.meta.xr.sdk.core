@@ -9,6 +9,7 @@
         "Unity.XR.Management",
         "Unity.XR.Management.Editor",
         "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.GPUDriven.Runtime",
         "Unity.XR.CoreUtils.Editor",
         "Meta.XR.BuildingBlocks",
         "Meta.XR.Editor.Callbacks",
@@ -21,7 +22,9 @@
         "Meta.XR.Editor.Id",
         "Unity.TextMeshPro.Editor",
         "Unity.TextMeshPro",
-        "Meta.XR.Guides.Editor"
+        "Meta.XR.Guides.Editor",
+        "Meta.XR.Editor.RemoteContent",
+        "Meta.XR.Editor.EditorCoroutine"
     ],
     "includePlatforms": [
         "Editor"
@@ -137,6 +140,16 @@
             "name": "com.unity.xr.openxr",
             "expression": "1.11.0",
             "define": "UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.14.0",
+            "define": "UNITY_OPENXR_PLUGIN_1_14_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.15.0-pre",
+            "define": "UNITY_OPENXR_PLUGIN_1_15_0_OR_NEWER"
         },
         {
             "name": "Unity",

@@ -23,8 +23,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Meta.XR.Editor.Callbacks;
+using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.Tags;
-using Oculus.VR.Editor.Utils;
 using UnityEditor;
 using UnityEngine;
 
@@ -33,12 +34,14 @@ namespace Meta.XR.BuildingBlocks.Editor
     [InitializeOnLoad]
     internal static class BlocksContentManager
     {
+        public static event Action OnContentChanged;
+
         private const double CacheDurationInHours = 6;
         private const string CommonTag = "Common";
 
         private const string DownloadPath = "https://www.facebook.com/building-blocks-content";
 
-        private static readonly RemoteContentDownloader Downloader;
+        private static readonly RemoteJsonContentDownloader Downloader;
 
         private static BlockData[] _contentFilter;
 
@@ -51,7 +54,16 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         static BlocksContentManager()
         {
-            Downloader = new RemoteContentDownloader(CacheDurationInHours, "bb_content.json", DownloadPath);
+            Downloader = new RemoteJsonContentDownloader("bb_content.json", DownloadPath)
+                .WithCacheDuration(TimeSpan.FromHours(CacheDurationInHours))
+                .WithMachineIdUrlParameter()
+                .WithSDKVersionUrlParameter();
+
+            InitializeOnLoad.Register(Initialize);
+        }
+
+        private static void Initialize()
+        {
 #pragma warning disable CS4014
             InitializeAsync();
 #pragma warning restore CS4014
@@ -72,8 +84,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 Downloader.ClearCache();
             }
-            var (success, jsonData) = await Downloader.RefreshAndLoad();
-            return success && LoadContentJsonData(jsonData);
+
+            var result = await Downloader.Fetch();
+            return result.IsSuccess && LoadContentJsonData(result.Content);
         }
 
         public static BlockModifiableProperty[] GetBlockModifiablePropertyById(string blockId)
@@ -116,6 +129,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             public string description;
 
         }
+
         [Serializable]
         internal struct BlockDocumentation
         {
@@ -196,7 +210,10 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             ParseTagsData(response);
 
-            return _contentFilter is { Length: > 0 };
+            var success = _contentFilter is { Length: > 0 };
+            OnContentChanged?.Invoke();
+
+            return success;
         }
 
         private static void ParseModifiableProperties(BlockDataResponse response)
@@ -215,8 +232,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 _documentationsData[doc.tag] = doc.urls;
             }
-
         }
+
         private static void ParseTagsData(BlockDataResponse response)
         {
             RemoteCollections.Clear();
@@ -283,7 +300,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 blockBaseData.BlockName.SetOverride(contentFilterDictionary[blockBaseData.Id].value.blockName);
                 blockBaseData.Description.SetOverride(contentFilterDictionary[blockBaseData.Id].value.description);
-                blockBaseData.OverridableTags.SetOverride(GenerateTagArrayFromTags(contentFilterDictionary[blockBaseData.Id].value.tags));
+                blockBaseData.OverridableTags.SetOverride(
+                    GenerateTagArrayFromTags(contentFilterDictionary[blockBaseData.Id].value.tags));
             }
 
             return filteredContent;

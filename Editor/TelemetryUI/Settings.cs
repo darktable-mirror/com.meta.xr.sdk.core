@@ -48,7 +48,7 @@ namespace Meta.XR.Editor.TelemetryUI
             }
 
             var items =
-                Utils.GetGuideItemsForMarkdownText(telemetryConsentText)
+                MarkdownUtils.GetGuideItemsForMarkdownText(telemetryConsentText)
                     .Select(item =>
                     {
                         switch (item)

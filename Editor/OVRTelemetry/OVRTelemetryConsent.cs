@@ -24,11 +24,15 @@ using static OVRPlugin;
 internal static class OVRTelemetryConsent
 {
     public static Action<bool> OnTelemetrySet;
+    public static Action<bool> OnLibrariesConsentSet;
+
     public static bool ShareAdditionalData
     {
         get => UnifiedConsent.GetUnifiedConsent() is true;
         private set => UnifiedConsent.SaveUnifiedConsent(value);
     }
+
+    public static bool HasUnifiedConsentValue => UnifiedConsent.GetUnifiedConsent().HasValue;
 
     public static void SetTelemetryEnabled(bool enabled)
     {
@@ -41,5 +45,6 @@ internal static class OVRTelemetryConsent
     {
         SetDeveloperTelemetryConsent(enabled ? Bool.True : Bool.False);
         Qpl.SetConsent(enabled ? Bool.True : Bool.False);
+        OnLibrariesConsentSet?.Invoke(enabled);
     }
 }

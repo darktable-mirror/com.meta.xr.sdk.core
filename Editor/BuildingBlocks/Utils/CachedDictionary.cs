@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.Id;
@@ -29,6 +30,8 @@ namespace Meta.XR.BuildingBlocks.Editor
     public class CachedIdDictionary<T>
         where T : ScriptableObject, IIdentified
     {
+        public event Action<CachedIdDictionary<T>> OnRefresh;
+
         private readonly Dictionary<string, T> _dictionary = new();
         private readonly List<T> _list = new();
         private bool _dirty = true;
@@ -65,6 +68,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             _dirty = !_list.Any();
+
+            OnRefresh?.Invoke(this);
         }
 
         public T this[string key]
@@ -94,7 +99,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             return _dictionary.TryGetValue(key, out value);
         }
 
-        public IEnumerable<T> Values
+        public IReadOnlyList<T> Values
         {
             get
             {

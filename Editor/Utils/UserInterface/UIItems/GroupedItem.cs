@@ -26,11 +26,12 @@ namespace Meta.XR.Editor.UserInterface
 {
     internal class GroupedItem : IUserInterfaceItem
     {
+        public List<IUserInterfaceItem> Items { get; set; }
+
         public bool Hide { get; set; }
         private readonly GUILayoutOption[] _options;
-        private readonly List<IUserInterfaceItem> _items;
         private readonly Utils.UIItemPlacementType _placementType;
-        private readonly GUIStyle _style;
+        public GUIStyle Style { get; set; }
 
         public GroupedItem(IEnumerable<IUserInterfaceItem> items,
             Utils.UIItemPlacementType placementType = Utils.UIItemPlacementType.Horizontal,
@@ -43,24 +44,24 @@ namespace Meta.XR.Editor.UserInterface
             Utils.UIItemPlacementType placementType = Utils.UIItemPlacementType.Horizontal,
             params GUILayoutOption[] options)
         {
-            _items = new List<IUserInterfaceItem>(items);
-            _style = style;
+            Items = new List<IUserInterfaceItem>(items);
+            Style = style;
             _placementType = placementType;
             _options = options;
         }
 
-        public void Draw()
+        public virtual void Draw()
         {
             if (_placementType == Utils.UIItemPlacementType.Horizontal)
             {
-                EditorGUILayout.BeginHorizontal(_style, _options);
+                EditorGUILayout.BeginHorizontal(Style, _options);
             }
             else
             {
-                EditorGUILayout.BeginVertical(_style, _options);
+                EditorGUILayout.BeginVertical(Style, _options);
             }
 
-            foreach (var item in _items)
+            foreach (var item in Items)
             {
                 if (item.Hide) continue;
                 item.Draw();

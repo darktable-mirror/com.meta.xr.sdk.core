@@ -101,8 +101,6 @@ internal class OVRConfigurationTaskUpdaterSummary
                         HighestFixLevel?.ToString() ?? "None")
                     .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Count,
                         GetNumberOfFixes(HighestFixLevel ?? OVRProjectSetup.TaskLevel.Required).ToString())
-                    .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
-                        HighestFixLevel?.ToString() ?? "None")
                     .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value,
                         GetTotalNumberOfFixes().ToString())
                     .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,

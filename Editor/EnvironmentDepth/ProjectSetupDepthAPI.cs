@@ -106,7 +106,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
                     return false;
                 },
 #if UNITY_6000_0_OR_NEWER
-                message: $"DepthAPI requires either XR Oculus {xrOculusRequiredVersion} or OpenXR {openXrMetaRequiredVersion}. Please upgrade in the package manager."
+                message: $"DepthAPI requires either XR Oculus {xrOculusRequiredVersion} or Unity OpenXR Meta {openXrMetaRequiredVersion}. Please upgrade in the package manager."
 #else
                 message: $"DepthAPI requires XR Oculus {xrOculusRequiredVersion}. Please upgrade in the package manager."
 #endif

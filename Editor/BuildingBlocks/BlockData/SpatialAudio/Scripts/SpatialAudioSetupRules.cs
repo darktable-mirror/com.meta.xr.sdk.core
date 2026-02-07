@@ -62,6 +62,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     foreach (var block in blocks)
                     {
                         block.GetComponent<AudioSource>().spatialBlend = 1.0f;
+                        EditorUtility.SetDirty(block.gameObject);
                     }
                 },
                 fixMessage: "Set Spatial Blend to 1"
@@ -121,6 +122,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     {
                         AddComponentIfMissing<AudioSource>(block.gameObject);
                         AddComponentIfMissing<MetaXRAudioSource>(block.gameObject);
+                        EditorUtility.SetDirty(block.gameObject);
                     }
                 },
                 fixMessage: "Add the audio source components"

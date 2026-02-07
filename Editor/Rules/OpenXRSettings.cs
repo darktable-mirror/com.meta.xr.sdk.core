@@ -26,6 +26,7 @@ using UnityEngine.XR.OpenXR;
 using UnityEngine.XR.OpenXR.Features;
 using UnityEngine.XR.OpenXR.Features.Interactions;
 using Meta.XR.Editor.Utils;
+using UnityEditor.XR.OpenXR.Features;
 
 #if USING_XR_SDK_OCULUS
 using Unity.XR.Oculus;
@@ -78,6 +79,7 @@ namespace Meta.XR.Editor.Rules
                     var ext = settings.GetFeature<Meta.XR.MetaXRSubsampledLayout>();
                     if (ext)
                         ext.enabled = true;
+                    FeatureHelpers.RefreshFeatures(buildTargetGroup);
                 },
                 fixMessage: "OpenXRSettings.Instance.GetFeature<MetaXRSubsampledLayout>.enabled = true"
             );
@@ -116,6 +118,7 @@ namespace Meta.XR.Editor.Rules
                         throw new OVRConfigurationTaskException("Could not find Oculus Touch Interaction Profile in OpenXR settings");
                     }
                     touchFeature.enabled = true;
+                    FeatureHelpers.RefreshFeatures(buildTargetGroup);
                 },
                 fixMessage: "Add Oculus Touch Controller Interaction Profile"
             );

@@ -54,7 +54,7 @@ internal class OVRConfigurationTaskRegistry
     }
 
 #if UNITY_XR_CORE_UTILS
-    private void RegisterToBuildValidator(OVRConfigurationTask task)
+    private static void RegisterToBuildValidator(OVRConfigurationTask task)
     {
         if (task.Platform == BuildTargetGroup.Unknown)
         {
@@ -71,8 +71,13 @@ internal class OVRConfigurationTaskRegistry
         }
     }
 
-    private void RegisterToBuildValidator(BuildTargetGroup targetGroup, OVRConfigurationTask task)
+    private static void RegisterToBuildValidator(BuildTargetGroup targetGroup, OVRConfigurationTask task)
     {
+        if (task.IsIgnored(targetGroup))
+        {
+            return;
+        }
+
         if (task.Level.GetValue(targetGroup) == OVRProjectSetup.TaskLevel.Optional)
         {
             return;

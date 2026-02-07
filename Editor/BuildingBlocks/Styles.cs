@@ -18,10 +18,6 @@
  * limitations under the License.
  */
 
-#if UNITY_2021_2_OR_NEWER
-#define OVR_BB_DRAGANDDROP
-#endif
-
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
@@ -65,9 +61,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             public const float CollectionThumbnailZoomingSpeed = 7.0f;
             public const float CollectionThumbnailZoomingEpsilon = 0.01f;
 
-#if OVR_BB_DRAGANDDROP
             public const float DragOpacity = 0.5f;
-#endif // OVR_BB_DRAGANDDROP
         }
 
         public static class Contents

@@ -5,11 +5,10 @@
         "Meta.XR.Editor.UserInterface",
         "Meta.XR.Editor.Id",
         "Meta.XR.Editor.Reflection",
-        "Meta.XR.Guides.Editor",
         "Meta.XR.Editor.ToolingSupport",
+        "Meta.XR.Editor.Settings",
         "Oculus.VR",
-        "Oculus.VR.Editor",
-        "Meta.XR.Editor.Settings"
+        "Meta.XR.Editor.RemoteContent"
     ],
     "includePlatforms": [
         "Editor"

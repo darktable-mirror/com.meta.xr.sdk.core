@@ -26,8 +26,8 @@ namespace Meta.XR.Editor.UserInterface
     internal class LinkLabel : IUserInterfaceItem
     {
         public bool Hide { get; set; }
+        public LinkDescription LinkDescription { get; }
 
-        private readonly LinkDescription _linkDescription;
         private readonly GUILayoutOption[] _options;
 
         public LinkLabel(GUIContent label, string url, IIdentified originData, params GUILayoutOption[] options) :
@@ -43,13 +43,13 @@ namespace Meta.XR.Editor.UserInterface
 
         public LinkLabel(LinkDescription description, params GUILayoutOption[] options)
         {
-            _linkDescription = description;
+            LinkDescription = description;
             _options = options;
         }
 
         public virtual void Draw()
         {
-            _linkDescription.Draw();
+            LinkDescription.Draw();
         }
     }
 }

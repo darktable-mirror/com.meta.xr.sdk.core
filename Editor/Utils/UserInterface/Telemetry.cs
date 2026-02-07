@@ -22,7 +22,7 @@ using static OVRTelemetry;
 
 namespace Meta.XR.Editor.UserInterface
 {
-    public static class Telemetry
+    internal static class Telemetry
     {
         [Markers]
         public static class MarkerId
@@ -30,7 +30,6 @@ namespace Meta.XR.Editor.UserInterface
             public const int LinkClick = 163057622;
             public const int PageOpen = 163063708;
             public const int PageClose = 163065149;
-            public const int SettingsChanged = 163056413;
         }
 
         public static class AnnotationType

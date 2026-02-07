@@ -117,8 +117,6 @@ namespace Meta.XR.EnvironmentDepth
         /// </summary>
         [field: SerializeField] public List<MeshFilter> MaskMeshFilters { get; set; } = new List<MeshFilter>();
 
-        private bool _isCameraRigCached;
-        [SerializeField, HideInInspector] private OVRCameraRig _cameraRig;
         private static IDepthProvider _provider;
         private bool _hasPermission;
         private Material _preprocessMaterial;
@@ -234,14 +232,14 @@ namespace Meta.XR.EnvironmentDepth
                 $"Environment Depth: more than one {nameof(EnvironmentDepthManager)} component. Only one instance is allowed at a time. Current instance: {name}");
             if (!IsSupported)
             {
-#if UNITY_EDITOR_WIN
+#if UNITY_EDITOR
                 Debug.LogError("Environment Depth could not be retrieved! Please ensure the following:" +
                     "\n\n" +
                     "When running over Link, the spatial data feature needs to be enabled in the Meta Quest Link app.\n" +
                     " (Settings > Beta > Spatial Data over Meta Quest Link)." +
                     "\n\n" +
                     "Check the Project Setup Tool for any project related issues.\n" +
-                    " (Oculus > Tools > Project Setup Tool" +
+                    " (Meta > Tools > Project Setup Tool)" +
                     "\n\n" +
                     "You are using a Quest 3 or newer device.");
 #endif
@@ -260,7 +258,7 @@ namespace Meta.XR.EnvironmentDepth
             if (!IsSupported)
             {
                 Debug.LogError($"Environment Depth is not supported. Please check {nameof(EnvironmentDepthManager)}.{nameof(IsSupported)} before enabling {nameof(EnvironmentDepthManager)}.\n" +
-                                            "Open 'Oculus -> Tools -> Project Setup Tool' to see requirements.\n");
+                                            "Open 'Meta > Tools > Project Setup Tool' to see requirements.\n");
                 enabled = false;
                 return;
             }
@@ -329,19 +327,6 @@ namespace Meta.XR.EnvironmentDepth
             Shader.SetGlobalMatrixArray(ReprojectionMatricesID, _reprojectionMatrices);
         }
 
-#if UNITY_EDITOR
-        private void Reset() => CacheCameraRig();
-        private void OnValidate() => CacheCameraRig();
-#endif
-
-        private void CacheCameraRig()
-        {
-            if (_cameraRig == null)
-#pragma warning disable CS0618 // Type or member is obsolete
-                _cameraRig = FindObjectOfType<OVRCameraRig>();
-#pragma warning restore CS0618 // Type or member is obsolete
-        }
-
         private static void SetOcclusionShaderKeywords(OcclusionShadersMode mode)
         {
             switch (mode)
@@ -401,12 +386,8 @@ namespace Meta.XR.EnvironmentDepth
             {
                 return CustomTrackingSpace.worldToLocalMatrix;
             }
-            if (!_isCameraRigCached)
-            {
-                _isCameraRigCached = true;
-                CacheCameraRig();
-            }
-            return _cameraRig != null ? _cameraRig.trackingSpace.worldToLocalMatrix : Matrix4x4.identity;
+            var trackingSpace = OVRCameraRig.GetTrackingSpace();
+            return trackingSpace ? trackingSpace.worldToLocalMatrix : Matrix4x4.identity;
         }
 
         private class Mask

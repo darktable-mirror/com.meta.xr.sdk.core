@@ -32,11 +32,11 @@ internal static class OVRProjectSetupSceneTasks
             level: OVRProjectSetup.TaskLevel.Required,
             group: Group,
 #pragma warning disable CS0618 // Type or member is obsolete
-            isDone: buildTargetGroup => OVRProjectSetupUtils.FindComponentInScene<OVRSceneManager>() == null ||
+            isDone: _ => OVRProjectSetupUtils.FindComponentInScene<OVRSceneManager>() == null ||
 #pragma warning restore CS0618 // Type or member is obsolete
                                         OVRProjectConfig.CachedProjectConfig.sceneSupport != OVRProjectConfig.FeatureSupport.None,
             message: "When using Scene in your project it's required to enable its capability in the project config",
-            fix: buildTargetGroup =>
+            fix: _ =>
             {
                 // we also need anchorSupport
                 var projectConfig = OVRProjectConfig.CachedProjectConfig;
@@ -50,7 +50,7 @@ internal static class OVRProjectSetupSceneTasks
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Optional,
             group: Group,
-            isDone: buildTargetGroup =>
+            isDone: _ =>
             {
                 var usingScene = OVRProjectConfig.CachedProjectConfig.sceneSupport !=
                     OVRProjectConfig.FeatureSupport.None;
@@ -66,11 +66,12 @@ internal static class OVRProjectSetupSceneTasks
             message: "When using Scene in your project, it's required to perform a runtime permission request. " +
                 "Hit Apply to have OVRManager request the permission automatically on app startup. It is " +
                 "recommended to hit Ignore and manage the runtime permission yourself.",
-            fix: buildTargetGroup =>
+            fix: _ =>
             {
                 var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
                 if (ovrManager == null) return;
                 ovrManager.requestScenePermissionOnStartup = true;
+                EditorUtility.SetDirty(ovrManager);
             },
             fixMessage: "OVRManager will request Scene runtime permission on app startup"
         );

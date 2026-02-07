@@ -21,10 +21,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Oculus.VR.Editor.Utils;
+using Meta.XR.Editor.RemoteContent;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Oculus.VR.Editor.OVRProjectSetup
 {
@@ -34,12 +33,16 @@ namespace Oculus.VR.Editor.OVRProjectSetup
         private const double CacheDurationInHours = 6;
         private const string DownloadUrl = "https://www.facebook.com/upst_configuration";
 
-        private static readonly RemoteContentDownloader Downloader;
-        private static HashSet<string> _disabledRuleIds = new HashSet<string>();
+        private static readonly RemoteJsonContentDownloader Downloader;
+        private static readonly HashSet<string> DisabledRuleIds = new();
 
         static UPSTContentManager()
         {
-            Downloader = new RemoteContentDownloader(CacheDurationInHours, "upst_configuration.json", DownloadUrl);
+            Downloader = new RemoteJsonContentDownloader("upst_configuration.json", DownloadUrl)
+                .WithCacheDuration(TimeSpan.FromHours(CacheDurationInHours))
+                .WithMachineIdUrlParameter()
+                .WithSDKVersionUrlParameter();
+
 #pragma warning disable CS4014
             InitializeAsync();
 #pragma warning restore CS4014
@@ -56,7 +59,7 @@ namespace Oculus.VR.Editor.OVRProjectSetup
 
         public static bool IsTaskDisabled(OVRConfigurationTask task)
         {
-            return _disabledRuleIds.Contains(task.Uid.ToString());
+            return DisabledRuleIds.Contains(task.Uid.ToString());
         }
 
         public static async Task<bool> Reload(bool forceRedownload)
@@ -65,15 +68,9 @@ namespace Oculus.VR.Editor.OVRProjectSetup
             {
                 Downloader.ClearCache();
             }
-            var result = await Downloader.RefreshAndLoad();
-            if (result.Item1)
-            {
-                return LoadContentJsonData(result.Item2);
-            }
-            else
-            {
-                return false;
-            }
+
+            var result = await Downloader.Fetch();
+            return result.IsSuccess && LoadContentJsonData(result.Content);
         }
 
         [Serializable]
@@ -93,11 +90,12 @@ namespace Oculus.VR.Editor.OVRProjectSetup
             var response = ParseJsonData(jsonData);
             if (response.disabled_rules != null)
             {
-                _disabledRuleIds.Clear();
+                DisabledRuleIds.Clear();
                 foreach (var rule in response.disabled_rules)
                 {
-                    _disabledRuleIds.Add(rule.uid);
+                    DisabledRuleIds.Add(rule.uid);
                 }
+
                 return true;
             }
             else

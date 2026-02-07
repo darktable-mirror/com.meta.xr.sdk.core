@@ -25,6 +25,21 @@ MonoBehaviour:
       Category: Meta XR
       DisplayName: 
     memberName: isInsightPassthroughEnabled
+    _editorSelectedGizmoIndex: 0
+  - enabled: 1
+    typeName: OVRManager, Oculus.VR
+    attribute:
+      GizmoType: 0
+      ShowGizmoByDefault: 0
+      Color: {r: 0, g: 0, b: 0, a: 0}
+      Tweakable: 1
+      Min: 0
+      Max: 1
+      Category: Meta XR
+      Description:
+      DisplayName: Suppress Boundary Visibility
+    memberName: shouldBoundaryVisibilityBeSuppressed
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:

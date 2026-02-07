@@ -27,3 +27,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.ToolingSupport")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.UserInterface")]

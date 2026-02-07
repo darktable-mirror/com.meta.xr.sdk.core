@@ -69,10 +69,12 @@ internal static class OVRProjectSetupMovementSDKConfigurationTasks
             fix: _ =>
             {
                 var manager = Object.FindFirstObjectByType<OVRManager>();
-                if (manager != null && manager.SimultaneousHandsAndControllersEnabled)
+                if (manager == null || !manager.SimultaneousHandsAndControllersEnabled)
                 {
-                    manager.SimultaneousHandsAndControllersEnabled = false;
+                    return;
                 }
+                manager.SimultaneousHandsAndControllersEnabled = false;
+                EditorUtility.SetDirty(manager);
             },
             fixMessage: "Turn off simultaneous hands and controllers"
         );

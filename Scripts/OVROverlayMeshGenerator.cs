@@ -258,6 +258,10 @@ public class OVROverlayMeshGenerator : MonoBehaviour
                 BuildSphere(verts, uvs, tris, position, rotation, scale, rect);
 
                 break;
+            case OVROverlay.OverlayShape.ScaledEquirect:
+                BuildSphere(verts, uvs, tris, Vector3.zero, Quaternion.identity, scale, rect, scale.z);
+
+                break;
             case OVROverlay.OverlayShape.Cubemap:
             case OVROverlay.OverlayShape.OffcenterCubemap:
                 BuildCube(verts, uvs, cubeUVs, tris, position, rotation, scale);

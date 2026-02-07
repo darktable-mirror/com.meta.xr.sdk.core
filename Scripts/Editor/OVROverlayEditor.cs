@@ -336,6 +336,7 @@ public class OVROverlayEditor : Editor
 
         if (overlay.currentOverlayShape == OVROverlay.OverlayShape.Cylinder ||
             overlay.currentOverlayShape == OVROverlay.OverlayShape.Equirect ||
+            overlay.currentOverlayShape == OVROverlay.OverlayShape.ScaledEquirect ||
             overlay.currentOverlayShape == OVROverlay.OverlayShape.Quad ||
             overlay.currentOverlayShape == OVROverlay.OverlayShape.Fisheye)
         {
@@ -587,7 +588,7 @@ public class OVROverlayEditor : Editor
                         overlay.destRectRight = destRectRight;
                     }
 
-                    if (overlay.currentOverlayShape == OVROverlay.OverlayShape.Equirect)
+                    if (overlay.currentOverlayShape == OVROverlay.OverlayShape.Equirect || overlay.currentOverlayShape == OVROverlay.OverlayShape.ScaledEquirect)
                     {
                         EditorGUILayout.BeginHorizontal();
                         if (GUILayout.Button(new GUIContent("360 Video", "Display the full 360 layer")))

@@ -51,7 +51,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             "All elements inside the Building Block are modifiable, like any other GameObjects and their components. ";
 
         private const string ModifiablePropertiesTitle =
-            "Here are some properties you may want to customize:";
+            "Here are some features you may want to customize:";
 
         private const string AdvancedOptionsLabel = "Advanced Options";
         private const string AdvancedOptionsHandle = "advanced_options";
@@ -160,10 +160,28 @@ namespace Meta.XR.BuildingBlocks.Editor
                     EditorGUILayout.BeginHorizontal();
                     Action action = () =>
                         {
-                            highlightStartTime = (float)EditorApplication.timeSinceStartup;
                             // Below delay is needed otherwise the the highligher can interupt layouts
                             // If the target is on other windows, then we can remove "Inspector" and put it into sitevar, but it is not needed for now.
-                            EditorApplication.delayCall += () => Highlighter.Highlight("Inspector", highlightIdentifier);
+                            EditorApplication.delayCall += () =>
+                            {
+                                //If the highlightIdentifier starts with a `/` then we assume it is a local path to a gameobject.
+                                //In this case we use the PingObject to highlight the gameobject in the hierarchy window.
+                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(highlightIdentifier, @"^/(.*)");
+                                if (match.Success)
+                                {
+                                    UnityEngine.Transform child = _block.transform.Find(match.Groups[1].Value);
+                                    if (child != null)
+                                    {
+                                        EditorGUIUtility.PingObject(child.gameObject);
+                                    }
+                                }
+                                //Otherwise we assume it is a field in a local component.
+                                //In this case we use the Highlighter to highlight it in the Inspector Window.
+                                else if (Highlighter.Highlight("Inspector", highlightIdentifier))
+                                {
+                                    highlightStartTime = (float)EditorApplication.timeSinceStartup;
+                                }
+                            };
                         };
                     var tooltip = $"Click to customize '{displayName}'";
                     new ActionLinkDescription()

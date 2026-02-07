@@ -24,6 +24,7 @@ using Meta.XR.Editor.Callbacks;
 using Meta.XR.Editor.Utils;
 using UnityEditor;
 using UnityEditor.Rendering;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 #if USING_URP
@@ -307,6 +308,33 @@ internal static class OVRProjectSetupRenderingTasks
             fixMessage: "PlayerSettings.gpuSkinning = true"
         );
 
+#if USING_XR_SDK_OPENXR && !UNITY_2022_3_49_OR_NEWER
+        //[Optional] Dynamic Resolution w/ OpenXR Requires Unity 2022.3.49+
+        OVRProjectSetup.AddTask(
+            level: OVRProjectSetup.TaskLevel.Optional,
+            platform: BuildTargetGroup.Android,
+            group: targetGroup,
+            conditionalValidity: _ => OVRProjectSetupUtils.FindComponentInScene<OVRManager>() &&
+                                      PackageList.IsPackageInstalled("com.unity.xr.openxr"),
+            isDone: _ =>
+            {
+                var ovrMan = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+                return !ovrMan || !ovrMan.enableDynamicResolution;
+            },
+            fix: _ => {
+                var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+                if (ovrManager != null)
+                {
+                    ovrManager.enableDynamicResolution = false;
+                    EditorUtility.SetDirty(ovrManager);
+                    EditorSceneManager.MarkSceneDirty(ovrManager.gameObject.scene);
+                }
+            },
+            message: "Please note that OpenXR Plugin (com.unity.xr.openxr) support for Dynamic Resolution" +
+                     " is only available from Unity 2022.3.49f1 onwards." +
+                     " Click 'Apply' to disable Dynamic Resolution in this scene."
+        );
+#else // if !USING_XR_SDK_OPENXR || UNITY_2022_3_49_OR_NEWER ...
         //[Recommended] Dynamic Resolution
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Recommended,
@@ -340,10 +368,14 @@ internal static class OVRProjectSetupRenderingTasks
                         ovrManager.quest3MinDynamicResolutionScale = 0.7f;
                         ovrManager.quest3MaxDynamicResolutionScale = 1.6f;
                     }
+
+                    EditorUtility.SetDirty(ovrManager);
+                    EditorSceneManager.MarkSceneDirty(ovrManager.gameObject.scene);
                 }
             },
             fixMessage: "OVRManager.enableDynamicResolution = true, OVRManager.quest2MinDynamicResolutionScale = 0.7f, OVRManager.quest2MaxDynamicResolutionScale = 1.3f, OVRManager.quest3MinDynamicResolutionScale = 0.7f, OVRManager.quest3MaxDynamicResolutionScale = 1.6f"
         );
+#endif // !USING_XR_SDK_OPENXR || UNITY_2022_3_49_OR_NEWER
 
 #if USING_URP && UNITY_2022_2_OR_NEWER
         // [Recommended] Disable Depth Texture

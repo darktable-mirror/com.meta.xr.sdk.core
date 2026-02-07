@@ -33,26 +33,31 @@ namespace Meta.XR.Editor.UserInterface
     internal class BulletedLabel : IUserInterfaceItem
     {
         public bool Hide { get; set; }
-        private Label _labelItem;
-        private Color _color;
+        public GUIStyle HorizontalStyle { get; set; } = GUIStyle.none;
+        public Label LabelItem { get; }
+        public Color Color { get; set; }
 
-        public BulletedLabel(string label, UIStyles.ContentStatusType contentStatusType = UIStyles.ContentStatusType.Normal, params GUILayoutOption[] options) :
+        public BulletedLabel(string label,
+            UIStyles.ContentStatusType contentStatusType = UIStyles.ContentStatusType.Normal,
+            params GUILayoutOption[] options) :
             this(label, UIStyles.GUIStyles.Label, contentStatusType, options)
         {
         }
 
-        public BulletedLabel(string label, GUIStyle style, UIStyles.ContentStatusType contentStatusType = UIStyles.ContentStatusType.Normal, params GUILayoutOption[] options)
+        public BulletedLabel(string label, GUIStyle style,
+            UIStyles.ContentStatusType contentStatusType = UIStyles.ContentStatusType.Normal,
+            params GUILayoutOption[] options)
         {
             Style = new GUIStyle(style);
-            _labelItem = new Label(label, Style, options);
+            LabelItem = new Label(label, Style, options);
             SetStatus(contentStatusType);
         }
 
         public void Draw()
         {
-            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.BeginHorizontal(HorizontalStyle);
 
-            using (new Meta.XR.Editor.UserInterface.Utils.ColorScope(Meta.XR.Editor.UserInterface.Utils.ColorScope.Scope.Content, _color))
+            using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, Color))
             {
                 EditorGUILayout.LabelField(
                     UIStyles.Contents.DefaultIcon,
@@ -60,14 +65,18 @@ namespace Meta.XR.Editor.UserInterface
                     GUILayout.Height(SmallIconSize));
             }
 
-            _labelItem.Draw();
+            LabelItem.Draw();
 
             EditorGUILayout.EndHorizontal();
         }
 
-        public void SetStatus(UIStyles.ContentStatusType statusType) => _color = Utils.GetColorByStatus(statusType);
+        public void SetStatus(UIStyles.ContentStatusType statusType) => Color = Utils.GetColorByStatus(statusType);
+        public void SetLabel(string text) => LabelItem.LabelContent.text = text;
         public GUIStyle Style { get; }
-        public float GetHeight(float contentWidth = UIStyles.Constants.DefaultWidth - LargeMargin) => Style.CalcHeight(_labelItem.LabelContent, contentWidth);
-        public float GetWidth() => _labelItem.GetWidth() + SmallIconSize;
+
+        public float GetHeight(float contentWidth = UIStyles.Constants.DefaultWidth - LargeMargin) =>
+            Style.CalcHeight(LabelItem.LabelContent, contentWidth);
+
+        public float GetWidth() => LabelItem.GetWidth() + SmallIconSize;
     }
 }

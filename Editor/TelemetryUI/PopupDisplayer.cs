@@ -21,6 +21,7 @@
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Notifications;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
 
@@ -84,7 +85,7 @@ namespace Meta.XR.Editor.TelemetryUI
                 Icon = UserInterface.Styles.Contents.MetaWhiteIcon,
                 Duration = 20f,
                 ShowCloseButton = true,
-                Items = Utils.GetGuideItemsForMarkdownText(noticeMarkdownText)
+                Items = MarkdownUtils.GetGuideItemsForMarkdownText(noticeMarkdownText)
             };
 
             notification.OnShow += () => { OVRPlugin.UnifiedConsent.SetNotificationShown(); };

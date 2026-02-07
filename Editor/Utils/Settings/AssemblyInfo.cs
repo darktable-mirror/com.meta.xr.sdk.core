@@ -36,4 +36,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Oculus.VR.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.UPST.Notifications")]
 [assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.RemoteContent")]
 

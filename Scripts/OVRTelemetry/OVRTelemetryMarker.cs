@@ -24,7 +24,6 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using static OVRTelemetry;
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -44,7 +43,6 @@ internal struct OVRTelemetryMarker : IDisposable
     }
 
 
-
     private OVRTelemetryMarkerState State { get; set; }
 
     public bool Sent => State.Sent;
@@ -55,20 +53,21 @@ internal struct OVRTelemetryMarker : IDisposable
 
     private readonly TelemetryClient _client;
 
+
     public OVRTelemetryMarker(
         int markerId,
         int instanceKey = OVRPlugin.Qpl.DefaultInstanceKey,
         long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs, string joindId = null)
-        : this(
-            OVRTelemetry.Client,
+        : this(OVRTelemetry.Client,
             markerId,
             instanceKey,
             timestampMs, joindId)
     {
     }
 
+
     internal OVRTelemetryMarker(
-        TelemetryClient client,
+        OVRTelemetry.TelemetryClient client,
         int markerId,
         int instanceKey = OVRPlugin.Qpl.DefaultInstanceKey,
         long timestampMs = OVRPlugin.Qpl.AutoSetTimestampMs,
@@ -78,7 +77,6 @@ internal struct OVRTelemetryMarker : IDisposable
         InstanceKey = instanceKey;
         _client = client;
         State = new OVRTelemetryMarkerState(false, OVRPlugin.Qpl.ResultType.Success);
-
         _client.MarkerStart(markerId, instanceKey, timestampMs, joinId);
     }
 

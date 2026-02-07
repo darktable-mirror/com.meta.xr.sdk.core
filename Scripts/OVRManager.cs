@@ -1294,6 +1294,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// </summary>
     [SerializeField, HideInInspector]
     internal bool requestRecordAudioPermissionOnStartup;
+
+    [SerializeField, HideInInspector]
+    internal bool requestPassthroughCameraAccessPermissionOnStartup;
     #endregion
 
     /// <summary>
@@ -2387,7 +2390,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 
         // Apply validation criteria to _localDimming toggle to ensure it isn't active on invalid systems
-        if (!OVRPlugin.localDimmingSupported)
+        if (_localDimming && !OVRPlugin.localDimmingSupported)
         {
             Debug.LogWarning("Local Dimming feature is not supported");
             _localDimming = false;
@@ -2497,6 +2500,11 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (requestRecordAudioPermissionOnStartup)
         {
             permissions.Add(OVRPermissionsRequester.Permission.RecordAudio);
+        }
+
+        if (requestPassthroughCameraAccessPermissionOnStartup)
+        {
+            permissions.Add(OVRPermissionsRequester.Permission.PassthroughCameraAccess);
         }
 
         OVRPermissionsRequester.Request(permissions);
@@ -2666,6 +2674,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             ShutdownInsightPassthrough();
 
 #if UNITY_EDITOR
+            // Unity destroys the xrswapchain/urp resource when setting isPlaying=false without waiting for gpu finish rendering.
+            // Sleep here to reduce the chance of destroying an image that is actively being used.
+            System.Threading.Thread.Sleep(10);
             UnityEditor.EditorApplication.isPlaying = false;
             // do an early return to avoid calling the rest of the Update() logic.
             return;

@@ -99,7 +99,7 @@ internal static class OVRProjectSetupPassthrough
                        // Apply the rule only when there are no building blocks present in the scene
                        !OVRProjectSetupUtils.FindComponentInScene<BuildingBlock>();
             },
-            message: "When using Passthrough as an underlay it's required set the camera background to transparent",
+            message: "When using Passthrough as an underlay, set the camera background to transparent to reveal the passthrough feed",
             fix: _ =>
             {
                 var ovrCameraRig = OVRProjectSetupUtils.FindComponentInScene<OVRCameraRig>();

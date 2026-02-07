@@ -143,7 +143,7 @@ public class OVRProjectConfigEditor : Editor
                 OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Hand Tracking Frequency",
                         "Note that a higher tracking frequency will reserve some performance headroom from the application's budget."),
                     ref projectConfig.handTrackingFrequency, ref hasModified,
-                    "https://developer.oculus.com/documentation/unity/unity-handtracking/#enable-hand-tracking");
+                    "https://developers.meta.com/horizon/documentation/unity/fast-motion-mode");
 
                 OVREditorUtil.SetupEnumField(projectConfig, "Hand Tracking Version",
                     ref projectConfig.handTrackingVersion, ref hasModified);
@@ -452,8 +452,10 @@ public class OVRProjectConfigEditor : Editor
                     OVREditorUtil.SetupPopupField(projectConfig, "Minimum SDK Version", ref minSdkIndex, sdkLabels, ref hasModified);
                     OVREditorUtil.SetupPopupField(projectConfig, "Target SDK Version", ref targetSdkIndex, sdkLabels, ref hasModified);
 
-                    projectConfig.minHorizonOsSdkVersion = OVRProjectConfig.horizonOsSdkVersions[minSdkIndex];
-                    projectConfig.targetHorizonOsSdkVersion = OVRProjectConfig.horizonOsSdkVersions[targetSdkIndex];
+                    if (minSdkIndex >= 0 && minSdkIndex < OVRProjectConfig.horizonOsSdkVersions.Length)
+                        projectConfig.minHorizonOsSdkVersion = OVRProjectConfig.horizonOsSdkVersions[minSdkIndex];
+                    if (targetSdkIndex >= 0 && targetSdkIndex < OVRProjectConfig.horizonOsSdkVersions.Length)
+                        projectConfig.targetHorizonOsSdkVersion = OVRProjectConfig.horizonOsSdkVersions[targetSdkIndex];
                 }
                 break;
 

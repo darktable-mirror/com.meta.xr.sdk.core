@@ -19,9 +19,13 @@
  */
 
 using System.Linq;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Guides.Editor;
 using UnityEditor;
 using UnityEngine;
+using static Meta.XR.Editor.UserInterface.Styles;
+using static Meta.XR.Editor.UserInterface.Styles.Constants;
 
 namespace Meta.XR.Editor.TelemetryUI
 {
@@ -30,6 +34,14 @@ namespace Meta.XR.Editor.TelemetryUI
         private Vector2 _size = new(600f, 320f);
         private GroupedItem _groupedUIItems;
         private string _consentMarkdownText;
+
+        private GUIStyle _contentContainer;
+        private GUIStyle _buttonsContainer;
+        private GUIStyle _headerContainer;
+        private GUIStyle _titleLabel;
+
+        private ActionLinkDescription _shareAdditional;
+        private ActionLinkDescription _onlyEssential;
 
         public static void ShowWindow()
         {
@@ -49,43 +61,72 @@ namespace Meta.XR.Editor.TelemetryUI
             window.titleContent = new GUIContent(consentTitle);
             window._consentMarkdownText = consentText;
             window.ShowUtility();
+
+            // Ensure the window appears front and center
+            window.CenterWindow();
+        }
+
+        private void OnEnable()
+        {
+            _contentContainer = new()
+            {
+                padding = new RectOffset(LargeMargin, LargeMargin, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0)
+            };
+
+            _buttonsContainer = new()
+            {
+                margin = new RectOffset(LargeMargin, LargeMargin, DoubleMargin, LargeMargin),
+            };
+
+            _headerContainer = new()
+            {
+                padding = new RectOffset(DoubleMargin + Margin, Margin, DoubleMargin, DoubleMargin),
+                margin = new RectOffset(0, 0, 0, DoubleMargin),
+                normal = { background = Colors.CharcoalGraySemiTransparent.ToTexture() },
+                fixedHeight = Meta.XR.Editor.UserInterface.UIStyles.Constants.DefaultHeaderHeight
+            };
+
+            _titleLabel = new()
+            {
+                fontStyle = FontStyle.Bold,
+                stretchHeight = true,
+                fontSize = 12,
+                fixedHeight = 52,
+                normal =
+                {
+                    textColor = Color.white
+                },
+                hover =
+                {
+                    textColor = Color.white
+                },
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                wordWrap = true
+            };
+
+            Notifications.Notification.Manager.RequestSnooze(this);
+        }
+
+        private void OnDisable()
+        {
+            Notifications.Notification.Manager.ReleaseSnooze(this);
         }
 
         private void OnGUI()
         {
-            if (_groupedUIItems == null)
-            {
-                var contentItems = Utils.GetGuideItemsForMarkdownText(_consentMarkdownText).ToList();
-                if (contentItems is not { Count: > 0 })
-                {
-                    return;
-                }
+            // Overall vertical wrapper
+            var rect = EditorGUILayout.BeginVertical(GUIStyles.NoMargin);
 
-                _groupedUIItems = new GroupedItem(contentItems, UserInterface.Utils.UIItemPlacementType.Vertical);
-            }
+            // Header
+            DrawHeaderTitle();
 
-            var rect = EditorGUILayout.BeginVertical();
-            _groupedUIItems.Draw();
+            // Content
+            DrawContent();
 
-            EditorGUILayout.BeginHorizontal();
-
-            var buttonLayout = GUILayout.Height(40);
-
-            if (GUILayout.Button("Only share essential data", buttonLayout))
-            {
-                RecordConsent(false);
-            }
-
-            using (new UserInterface.Utils.ColorScope(UserInterface.Utils.ColorScope.Scope.Background,
-                       Utils.ButtonAcceptColor))
-            {
-                if (GUILayout.Button("Share additional data", buttonLayout))
-                {
-                    RecordConsent(true);
-                }
-            }
-
-            EditorGUILayout.EndHorizontal();
+            // Buttons
+            DrawButtons();
 
             EditorGUILayout.EndVertical();
             UpdateHeight(rect);
@@ -104,10 +145,69 @@ namespace Meta.XR.Editor.TelemetryUI
                 return;
             }
 
-            const float bottomMargin = 3;
-            _size.y = rect.height + bottomMargin;
+            _size.y = rect.height;
             minSize = _size;
             maxSize = _size;
+        }
+
+        private void DrawHeaderTitle()
+        {
+            using var indentScope = new UserInterface.Utils.IndentScope(0);
+            EditorGUILayout.BeginVertical(_headerContainer);
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.BeginHorizontal(UIStyles.GUIStyles.HeaderLargeHorizontal, GUILayout.ExpandHeight(false));
+            EditorGUILayout.LabelField(GuideStyles.Contents.HeaderIcon, UIStyles.GUIStyles.HeaderIconStyleLarge,
+                GUILayout.Width(UIStyles.GUIStyles.HeaderIconStyleLarge.fixedWidth), GUILayout.ExpandWidth(false));
+            EditorGUILayout.LabelField(titleContent, _titleLabel);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawContent()
+        {
+            if (_groupedUIItems == null)
+            {
+                var contentItems = MarkdownUtils.GetGuideItemsForMarkdownText(_consentMarkdownText).ToList();
+                if (contentItems is not { Count: > 0 })
+                {
+                    return;
+                }
+
+                _groupedUIItems = new GroupedItem(contentItems, UserInterface.Utils.UIItemPlacementType.Vertical);
+            }
+
+            EditorGUILayout.BeginVertical(_contentContainer);
+            _groupedUIItems.Draw();
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawButtons()
+        {
+            _onlyEssential ??= new ActionLinkDescription()
+            {
+                Action = () => { RecordConsent(false); },
+                Content = new GUIContent("Only share essential data"),
+                Style = GUIStyles.LargeButton,
+                ActionData = null,
+                Origin = Origins.Self,
+                OriginData = null,
+            };
+
+            _shareAdditional ??= new ActionLinkDescription()
+            {
+                Action = () => { RecordConsent(true); },
+                Content = new GUIContent("Share additional data"),
+                Style = GUIStyles.LargeButton,
+                ActionData = null,
+                Origin = Origins.Self,
+                OriginData = null,
+                BackgroundColor = Utils.ButtonAcceptColor,
+            };
+
+            EditorGUILayout.BeginHorizontal(_buttonsContainer);
+            _onlyEssential.Draw();
+            _shareAdditional.Draw();
+            EditorGUILayout.EndHorizontal();
         }
     }
 }

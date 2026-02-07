@@ -128,7 +128,7 @@ partial struct OVRAnchor
         /// </summary>
         /// <remarks>
         /// This method provides the types of trackables that this configuration would enable. Use this in conjunction
-        /// with <see cref="FetchOptions.TrackableTypes"/> and
+        /// with <see cref="OVRAnchor.TrackableType"/> and
         /// <see cref="OVRAnchor.FetchAnchorsAsync(System.Collections.Generic.List{OVRAnchor},OVRAnchor.FetchOptions,System.Action{System.Collections.Generic.List{OVRAnchor},int})"/>
         /// </remarks>
         /// <param name="trackableTypes">The list of <see cref="TrackableType"/> to populate. The list is cleared

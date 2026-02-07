@@ -22,4 +22,5 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Meta.XR.Editor.TelemetryUI")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.UPST.Notifications")]
+[assembly: InternalsVisibleTo("Meta.XR.Guides.Editor")]
 [assembly: InternalsVisibleTo("MetaXrSimulator.Editor")]

@@ -31,10 +31,11 @@ namespace Meta.XR.Editor.UserInterface
     {
         public bool Hide { get; set; }
         public string LabelText { get; set; }
+        public GUIStyle Style { get; set; }
+        public Color Color { get; set; }
 
         private readonly GUILayoutOption[] _options;
         private readonly TextureContent _icon;
-        private readonly Color _color;
 
         public Icon(TextureContent icon, params GUILayoutOption[] options) : this(icon, Color.white, "",
             options)
@@ -44,7 +45,7 @@ namespace Meta.XR.Editor.UserInterface
         public Icon(TextureContent icon, Color iconColor, string labelText = "", params GUILayoutOption[] options)
         {
             _icon = icon;
-            _color = iconColor;
+            Color = iconColor;
             LabelText = labelText;
 
             var layoutOptions = new List<GUILayoutOption>
@@ -55,6 +56,13 @@ namespace Meta.XR.Editor.UserInterface
 
             layoutOptions.AddRange(options);
             _options = layoutOptions.ToArray();
+            Style = new GUIStyle(Styles.GUIStyles.IconUIItemStyle);
+        }
+
+        public Icon(TextureContent icon, Color iconColor, GUIStyle style, params GUILayoutOption[] options) :
+            this(icon, iconColor, string.Empty, options)
+        {
+            Style = new GUIStyle(style);
         }
 
         public void Draw()
@@ -64,9 +72,9 @@ namespace Meta.XR.Editor.UserInterface
                 EditorGUILayout.BeginHorizontal();
             }
 
-            using (new ColorScope(ColorScope.Scope.Content, _color))
+            using (new ColorScope(ColorScope.Scope.Content, Color))
             {
-                EditorGUILayout.LabelField(_icon, Styles.GUIStyles.IconStyle, _options);
+                EditorGUILayout.LabelField(_icon, Style, _options);
             }
 
             if (LabelTextAvailable)

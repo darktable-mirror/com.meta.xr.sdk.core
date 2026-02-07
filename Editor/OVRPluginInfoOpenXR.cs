@@ -25,6 +25,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Meta.XR.Editor.Settings;
 using UnityEditor;
 using UnityEngine;
 
@@ -56,7 +57,10 @@ namespace Oculus.VR.Editor
     [InitializeOnLoad]
     public class OVRPluginInfoOpenXR : IOVRPluginInfoSupplier
     {
-        private static readonly string _isRestartPendingKey = "OVRPluginInfoOpenXR_IsRestartPending";
+        private static readonly SessionBool IsRestartPending = new()
+        { Uid = "OVRPluginInfoIsRestartPending" };
+        private static readonly OnlyOncePerSessionBool FirstCheck = new()
+        { Uid = "OVRPluginInfoFirstCheck" };
 
         public static readonly IReadOnlyDictionary<PluginPlatform, PluginPlatformInfo> _pluginInfos =
             new Dictionary<PluginPlatform, PluginPlatformInfo>(){
@@ -85,44 +89,39 @@ namespace Oculus.VR.Editor
 
         private static void CheckHasPluginChanged(bool forceUpdate)
         {
-            string win64Path = GetOVRPluginPath(PluginPlatform.Win64OpenXR);
-            string androidPath = GetOVRPluginPath(PluginPlatform.AndroidOpenXR);
+            var settings = OVRLocalProjectSettings.Instance;
+            var win64Path = GetOVRPluginPath(PluginPlatform.Win64OpenXR);
+            var androidPath = GetOVRPluginPath(PluginPlatform.AndroidOpenXR);
+            var md5Win64Actual = File.Exists(win64Path) ? GetFileChecksum(win64Path) : string.Empty;
+            var md5AndroidActual = File.Exists(androidPath) ? GetFileChecksum(androidPath) : string.Empty;
 
-            string md5Win64Actual = "";
-            string md5AndroidActual = "";
-            if (File.Exists(win64Path))
-            {
-                md5Win64Actual = GetFileChecksum(win64Path);
-            }
-            if (File.Exists(androidPath))
-            {
-                md5AndroidActual = GetFileChecksum(androidPath);
-            }
+            var changeDetected = settings.OVRPluginMd5Win64 != md5Win64Actual || settings.OVRPluginMd5Android != md5AndroidActual;
+            if (!forceUpdate && !changeDetected) return;
 
-            if (!forceUpdate && OVRLocalProjectSettings.Instance.OVRPluginMd5Win64 == md5Win64Actual &&
-                OVRLocalProjectSettings.Instance.OVRPluginMd5Android == md5AndroidActual)
-            {
-                return;
-            }
+            var hasBeenSetBefore = settings.OVRPluginMd5Win64 != string.Empty || settings.OVRPluginMd5Android != string.Empty;
+            var hasBeenCheckedBefore = !FirstCheck.Get();
+            var restartRequired = (hasBeenCheckedBefore || hasBeenSetBefore) && !Application.isBatchMode;
 
             if (OVRPluginInfo.IsCoreSDKModifiable())
             {
                 if (File.Exists(win64Path))
                 {
-                    PluginImporter win64Plugin = AssetImporter.GetAtPath(win64Path) as PluginImporter;
+                    var win64Plugin = AssetImporter.GetAtPath(win64Path) as PluginImporter;
                     ConfigurePlugin(win64Plugin, PluginPlatform.Win64OpenXR);
                 }
                 if (File.Exists(androidPath))
                 {
-                    PluginImporter androidPlugin = AssetImporter.GetAtPath(androidPath) as PluginImporter;
+                    var androidPlugin = AssetImporter.GetAtPath(androidPath) as PluginImporter;
                     ConfigurePlugin(androidPlugin, PluginPlatform.AndroidOpenXR);
                 }
             }
 
-            OVRLocalProjectSettings.Instance.OVRPluginMd5Win64 = md5Win64Actual;
-            OVRLocalProjectSettings.Instance.OVRPluginMd5Android = md5AndroidActual;
+            settings.OVRPluginMd5Win64 = md5Win64Actual;
+            settings.OVRPluginMd5Android = md5AndroidActual;
 
-            bool userAgreedToRestart = !Application.isBatchMode && EditorUtility.DisplayDialog(
+            if (!restartRequired) return;
+
+            var userAgreedToRestart = EditorUtility.DisplayDialog(
                 "Restart Unity",
                 "Changes to OVRPlugin detected. Plugin updates require a restart. Please restart Unity to complete the update.",
                 "Restart Editor",
@@ -215,22 +214,25 @@ namespace Oculus.VR.Editor
             }
             plugin.SaveAndReimport();
 
+            if (!plugin.GetIsOverridable()) // no SetIsOverridable :(
+                return;
+
             // Manually mark local OVRPlugin as non-overridable, and reimport
             string metaFilePath = Path.GetFullPath(plugin.assetPath) + ".meta";
             string metaFile = File.ReadAllText(metaFilePath).Replace("isOverridable: 1", "isOverridable: 0");
             File.WriteAllText(metaFilePath, metaFile);
-            plugin = AssetImporter.GetAtPath(plugin.assetPath) as PluginImporter;
-            plugin.SaveAndReimport();
+            AssetDatabase.ImportAsset(plugin.assetPath);
         }
 
         private static bool GetIsRestartPending()
         {
-            return SessionState.GetBool(_isRestartPendingKey, false);
+            return IsRestartPending.Get();
         }
+
 
         private static void SetIsRestartPending(bool isRestartPending)
         {
-            SessionState.SetBool(_isRestartPendingKey, isRestartPending);
+            IsRestartPending.Set(isRestartPending);
         }
 
     }

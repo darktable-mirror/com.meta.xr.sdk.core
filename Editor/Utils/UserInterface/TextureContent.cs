@@ -116,7 +116,7 @@ namespace Meta.XR.Editor.UserInterface
         }
 
         private GUIContent _content;
-        public GUIContent Content => _content ??= new GUIContent
+        public virtual GUIContent Content => _content ??= new GUIContent
         {
             image = null,
             tooltip = _tooltip
@@ -143,14 +143,14 @@ namespace Meta.XR.Editor.UserInterface
             get => _tooltip;
         }
 
-        private TextureContent(string name, Category category, string tooltip = null)
+        protected TextureContent(string name, Category category, string tooltip = null)
         {
             _name = name;
             _tooltip = tooltip;
             _category = category;
         }
 
-        public GUIContent GUIContent
+        public virtual GUIContent GUIContent
         {
             get
             {
@@ -163,8 +163,8 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
-        public bool Valid => _name != null && GUIContent.image != null;
-        public Texture Image => GUIContent.image;
+        public virtual bool Valid => _name != null && GUIContent.image != null;
+        public virtual Texture Image => GUIContent.image;
 
         private void LoadContent()
         {
@@ -208,11 +208,11 @@ namespace Meta.XR.Editor.UserInterface
         /// But when working with the new UI pattern of Unity, initialization of objects is done only once and
         /// potentially too early for this TextureContent to be valid.
         /// </summary>
-        public void RegisterToImageLoaded(OnImageLoadedDelegate del)
+        public virtual void RegisterToImageLoaded(OnImageLoadedDelegate @delegate)
         {
             if (Valid)
             {
-                del?.Invoke(Image);
+                @delegate?.Invoke(Image);
                 return;
             }
 
@@ -223,7 +223,7 @@ namespace Meta.XR.Editor.UserInterface
             }
 
             // Registering the new delegate
-            OnImageLoadedEvent += del;
+            OnImageLoadedEvent += @delegate;
         }
     }
 }

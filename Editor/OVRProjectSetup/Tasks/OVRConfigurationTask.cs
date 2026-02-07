@@ -20,10 +20,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Meta.XR.Editor.Id;
+using Meta.XR.Editor.Reflection;
 using Meta.XR.Editor.Settings;
-using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
@@ -32,21 +31,30 @@ using static OVRProjectSetupDrawer.Styles;
 using static OVRProjectSetupDrawer.Styles.Contents;
 using Styles = Meta.XR.Editor.UserInterface.Styles;
 using Utils = Meta.XR.Editor.UserInterface.Utils;
-using Meta.XR.Guides.Editor;
 
+[Reflection]
 internal class OVRConfigurationTask : IIdentified
 {
+#if UNITY_XR_CORE_UTILS
+    [Reflection(AssemblyTypeReference = typeof(Unity.XR.CoreUtils.Editor.BuildValidator), TypeName = "Unity.XR.CoreUtils.Editor.BuildValidator", Name = "s_PlatformRules")]
+    private static readonly FieldInfoHandle<Dictionary<BuildTargetGroup, List<Unity.XR.CoreUtils.Editor.BuildValidationRule>>> UnityValidatorRulesDict = new();
+#endif
+
     internal static readonly string ConsoleLinkHref = "OpenProjectSetupTool";
-    private static readonly GUIContent FixButtonContent = new GUIContent("Fix", "Fix with recommended settings");
-    private static readonly GUIContent ApplyButtonContent = new GUIContent("Apply", "Apply the recommended settings");
+    private static readonly GUIContent FixButtonContent = new("Fix", "Fix with recommended settings");
+    private static readonly GUIContent ApplyButtonContent = new("Apply", "Apply the recommended settings");
+
     private static readonly GUIContent MarkAsFixedButtonContent =
-        new GUIContent("Mark as Fixed", "Mark this as fixed. It will no longer be reported as a problem.");
+        new("Mark as Fixed", "Mark this as fixed. It will no longer be reported as a problem.");
+
     private static readonly GUIContent UnmarkAsFixedButtonContent =
-        new GUIContent("Unmark as Fixed", "Unmark this as fixed. It will go back under open items.");
+        new("Unmark as Fixed", "Unmark this as fixed. It will go back under open items.");
+
     private static readonly GUIContent ShowGuidedSetupButtonContent =
-        new GUIContent("How to setup", "Show how to manually set this up.");
+        new("How to setup", "Show how to manually set this up.");
+
     private static readonly GUIContent DocumentationButtonContent =
-        new GUIContent("Documentation", "Open documentation for this feature");
+        new("Documentation", "Open documentation for this feature");
 
     public Hash128 Uid { get; }
     public string Id => Uid.ToString();
@@ -76,13 +84,11 @@ internal class OVRConfigurationTask : IIdentified
 
     public bool FixAutomatic { get; }
 
-    private readonly Dictionary<BuildTargetGroup, Setting<bool>> _ignoreSettings =
-        new Dictionary<BuildTargetGroup, Setting<bool>>();
+    private readonly Dictionary<BuildTargetGroup, Setting<bool>> _ignoreSettings = new();
 
-    private readonly Dictionary<BuildTargetGroup, Setting<bool>> _markedAsFixedSettings =
-        new Dictionary<BuildTargetGroup, Setting<bool>>();
+    private readonly Dictionary<BuildTargetGroup, Setting<bool>> _markedAsFixedSettings = new();
 
-    private readonly Dictionary<BuildTargetGroup, bool> _isDoneCache = new Dictionary<BuildTargetGroup, bool>();
+    private readonly Dictionary<BuildTargetGroup, bool> _isDoneCache = new();
 
 
     public OVRConfigurationTask(
@@ -98,7 +104,8 @@ internal class OVRConfigurationTask : IIdentified
         OptionalLambdaType<BuildTargetGroup, bool> valid,
         bool fixAutomatic)
         :
-        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, fix, level, message, fixMessage, url, manualSetup, valid, fixAutomatic)
+        this(group, OVRProjectSetup.TaskTags.None, platform, isDone, fix, level, message, fixMessage, url, manualSetup,
+            valid, fixAutomatic)
     {
     }
 
@@ -165,6 +172,7 @@ internal class OVRConfigurationTask : IIdentified
             {
                 throw new ArgumentException(nameof(FixAction), "Fix action should be null");
             }
+
             if (_isDone != null)
             {
                 throw new ArgumentException(nameof(_isDone), "isDone should be null");
@@ -200,7 +208,38 @@ internal class OVRConfigurationTask : IIdentified
     public void SetIgnored(BuildTargetGroup buildTargetGroup, bool ignored)
     {
         GetIgnoreSetting(buildTargetGroup).SetValue(ignored);
+        OnIgnore(buildTargetGroup, ignored);
     }
+
+#if UNITY_XR_CORE_UTILS
+    private void RemoveFromBuildValidator(BuildTargetGroup buildTargetGroup)
+    {
+        try
+        {
+            if (!UnityValidatorRulesDict.Valid)
+            {
+                return;
+            }
+
+            var dict = UnityValidatorRulesDict.Get(null);
+            if (dict == null || !dict.TryGetValue(buildTargetGroup, out var rules))
+            {
+                return;
+            }
+
+            var message = Message.GetValue(buildTargetGroup);
+            var ruleToRemove = rules.Find(rule => rule.Message == message);
+            if (ruleToRemove != null)
+            {
+                rules.Remove(ruleToRemove);
+            }
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
+    }
+#endif
 
     public bool IsMarkedAsFixed(BuildTargetGroup buildTargetGroup)
     {
@@ -232,6 +271,7 @@ internal class OVRConfigurationTask : IIdentified
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
             fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
         }
+
         InvalidateCache(buildTargetGroup);
         var currentResult = IsDone(buildTargetGroup);
 
@@ -264,19 +304,21 @@ internal class OVRConfigurationTask : IIdentified
 
     private Setting<bool> GetIgnoreSetting(BuildTargetGroup buildTargetGroup)
     {
-        if (!_ignoreSettings.TryGetValue(buildTargetGroup, out var item))
+        if (_ignoreSettings.TryGetValue(buildTargetGroup, out var item))
         {
-            item = new OVRProjectSetupSettings.SettingBool()
-            {
-                Owner = this,
-                Uid = $"Ignored.{buildTargetGroup.ToString()}",
-                OldKey = $"OVRProjectSetup.{GetType().Name}.{Uid}.Ignored.{buildTargetGroup.ToString()}",
-                Default = false,
-                Label = "Ignore"
-            };
-
-            _ignoreSettings.Add(buildTargetGroup, item);
+            return item;
         }
+
+        item = new OVRProjectSetupSettings.SettingBool
+        {
+            Owner = this,
+            Uid = $"Ignored.{buildTargetGroup.ToString()}",
+            OldKey = $"OVRProjectSetup.{GetType().Name}.{Uid}.Ignored.{buildTargetGroup.ToString()}",
+            Default = false,
+            Label = "Ignore"
+        };
+
+        _ignoreSettings.Add(buildTargetGroup, item);
 
         return item;
     }
@@ -285,7 +327,7 @@ internal class OVRConfigurationTask : IIdentified
     {
         if (!_markedAsFixedSettings.TryGetValue(buildTargetGroup, out var item))
         {
-            item = new OVRProjectSetupSettings.SettingBool()
+            item = new OVRProjectSetupSettings.SettingBool
             {
                 Owner = this,
                 Uid = $"MarkedAsFixed.{buildTargetGroup.ToString()}",
@@ -343,10 +385,12 @@ internal class OVRConfigurationTask : IIdentified
         {
             return IsMarkedAsFixed(buildTargetGroup);
         }
+
         if (_isDoneCache.TryGetValue(buildTargetGroup, out var cachedState))
         {
             return cachedState;
         }
+
         var result = _isDone(buildTargetGroup);
         _isDoneCache[buildTargetGroup] = result;
         return result;
@@ -401,15 +445,21 @@ internal class OVRConfigurationTask : IIdentified
             {
                 manualSetup.ShowWindow(Origins.Component, true);
             }
-            if (!IsMarkedAsFixed(buildTargetGroup) && GUILayout.Button(MarkAsFixedButtonContent, GUIStyles.MarkAsFixedButton))
+
+            if (!IsMarkedAsFixed(buildTargetGroup) &&
+                GUILayout.Button(MarkAsFixedButtonContent, GUIStyles.MarkAsFixedButton))
             {
                 SetMarkedAsFixed(buildTargetGroup, true);
-                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.MarkedAsFixed);
+                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction
+                    .MarkedAsFixed);
             }
-            if (IsMarkedAsFixed(buildTargetGroup) && GUILayout.Button(UnmarkAsFixedButtonContent, GUIStyles.UnmarkAsFixedButton))
+
+            if (IsMarkedAsFixed(buildTargetGroup) &&
+                GUILayout.Button(UnmarkAsFixedButtonContent, GUIStyles.UnmarkAsFixedButton))
             {
                 SetMarkedAsFixed(buildTargetGroup, false);
-                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.UnmarkedAsFixed);
+                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction
+                    .UnmarkedAsFixed);
             }
         }
 
@@ -462,15 +512,24 @@ internal class OVRConfigurationTask : IIdentified
                 new object[] { buildTargetGroup, this });
         }
 
-        GetIgnoreSetting(buildTargetGroup).DrawForMenu(menu, Origins.Self, this, OnIgnore);
+        GetIgnoreSetting(buildTargetGroup).DrawForMenu(menu, Origins.Self, this, () =>
+        {
+            OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Ignored);
+            OnIgnore(buildTargetGroup, IsIgnored(buildTargetGroup));
+        });
 
         menu.ShowAsContext();
     }
 
 
-    private static void OnIgnore()
+    private void OnIgnore(BuildTargetGroup buildTargetGroup, bool ignored)
     {
-        OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.Ignored);
+#if UNITY_XR_CORE_UTILS
+        if (ignored)
+        {
+            RemoveFromBuildValidator(buildTargetGroup);
+        }
+#endif
     }
 
     private static void OnDocumentation(object args)
@@ -488,7 +547,7 @@ internal class OVRConfigurationTask : IIdentified
     {
         OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.WentToSource);
 
-        ReadContextMenuArguments(args, out var buildTargetGroup, out var task);
+        ReadContextMenuArguments(args, out _, out var task);
         task?.SourceCode.Open();
     }
 
@@ -505,7 +564,7 @@ internal class OVRConfigurationTask : IIdentified
 #if UNITY_XR_CORE_UTILS
     internal Unity.XR.CoreUtils.Editor.BuildValidationRule ToValidationRule(BuildTargetGroup platform)
     {
-        if(FixAction == null)
+        if (FixAction == null)
         {
             return null;
         }

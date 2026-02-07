@@ -134,6 +134,28 @@ public class OVRCameraRig : MonoBehaviour
     /// </summary>
     public Transform trackerAnchor { get; private set; }
 
+    private static OVRCameraRig _instance;
+    private static bool _isInstanceCached;
+
+    internal static OVRCameraRig Instance
+    {
+        get
+        {
+            if (_instance == null && !_isInstanceCached)
+            {
+                _isInstanceCached = true;
+                _instance = FindAnyObjectByType<OVRCameraRig>();
+            }
+            return _instance;
+        }
+    }
+
+    internal static Transform GetTrackingSpace()
+    {
+        var instance = Instance;
+        return instance ? instance.trackingSpace : null;
+    }
+
     /// <summary>
     /// Occurs when the eye pose anchors have been set.
     /// </summary>
@@ -193,6 +215,15 @@ public class OVRCameraRig : MonoBehaviour
 
     protected virtual void Awake()
     {
+        if (_instance != null)
+        {
+            if (gameObject.scene.IsValid()) // avoid logging error when viewing a prefab
+                Debug.LogError("Only one instance of OVRCameraRig should be created at once!");
+        }
+        else
+        {
+            _instance = this;
+        }
         _skipUpdate = true;
         EnsureGameObjectIntegrity();
     }
@@ -223,6 +254,10 @@ public class OVRCameraRig : MonoBehaviour
 
     protected virtual void OnDestroy()
     {
+        if (_instance == this)
+        {
+            _instance = null;
+        }
         Application.onBeforeRender -= OnBeforeRenderCallback;
     }
 

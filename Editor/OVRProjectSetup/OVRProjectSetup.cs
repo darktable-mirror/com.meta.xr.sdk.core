@@ -155,17 +155,17 @@ public static class OVRProjectSetup
         };
 
     private static string _statusMenuSubText;
-    private static OVRConfigurationTaskUpdaterSummary _latestSummary;
+    internal static OVRConfigurationTaskUpdaterSummary LatestSummary { get; private set; }
 
     private static void RefreshBuildStatusMenuSubText(OVRConfigurationTaskProcessor processor)
     {
         var updater = processor as OVRConfigurationTaskUpdater;
         var summary = updater?.Summary;
         _statusMenuSubText = summary?.ComputeInfoMessage();
-        _latestSummary = summary;
+        LatestSummary = summary;
     }
 
-    private static (string, Color?) ComputeInfoText() => _latestSummary?.HighestFixLevel switch
+    private static (string, Color?) ComputeInfoText() => LatestSummary?.HighestFixLevel switch
     {
         TaskLevel.Optional => (_statusMenuSubText, InfoColor),
         TaskLevel.Recommended => (_statusMenuSubText, WarningColor),
@@ -175,7 +175,7 @@ public static class OVRProjectSetup
 
     private static (TextureContent, Color?, bool) ComputePillIcon()
     {
-        return _latestSummary?.HighestFixLevel switch
+        return LatestSummary?.HighestFixLevel switch
         {
             TaskLevel.Optional => (Styles.Contents.InfoIcon, InfoColor, true),
             TaskLevel.Recommended => (Styles.Contents.ErrorIcon, WarningColor,
@@ -292,7 +292,8 @@ public static class OVRProjectSetup
             OptionalLambdaType<BuildTargetGroup, string>.Create(fixMessage, conditionalFixMessage, true);
         var optionalUrl = OptionalLambdaType<BuildTargetGroup, string>.Create(url, conditionalUrl, true);
         var optionalValidity = OptionalLambdaType<BuildTargetGroup, bool>.Create(validity, conditionalValidity, true);
-        var optionalManualSetup = OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup>.Create(manualSetup, conditionalManualSetup, true);
+        var optionalManualSetup =
+            OptionalLambdaType<BuildTargetGroup, UPSTGuidedSetup>.Create(manualSetup, conditionalManualSetup, true);
         var rule = new OVRConfigurationTask(group, tags, platform, isDone, fix, optionalLevel, optionalMessage,
             optionalFixMessage, optionalUrl, optionalManualSetup, optionalValidity, fixAutomatic);
         RegisterTask(rule);

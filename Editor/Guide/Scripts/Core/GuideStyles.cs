@@ -56,6 +56,19 @@ namespace Meta.XR.Guides.Editor
 
             public static readonly TextureContent MetaQuestDeveloperHub =
                 TextureContent.CreateContent("ovr_develop_03.jpg", Utils.GuidedAccountSetupTextures);
+
+            // Remote images
+            public static readonly TextureContent ObWelcome =
+                new RemoteTextureContent("ob_welcome.jpeg", 23879511181667769, Utils.GuidedAccountSetupTextures);
+
+            public static readonly TextureContent ObTools =
+                new RemoteTextureContent("ob_tools.jpeg", 23909742932048545, Utils.GuidedAccountSetupTextures);
+
+            public static readonly TextureContent ObRelease =
+                new RemoteTextureContent("ob_release.jpeg", 10094379697281995, Utils.GuidedAccountSetupTextures);
+
+            public static readonly TextureContent ObResources =
+                new RemoteTextureContent("ob_resources.jpeg", 9937139393065108, Utils.GuidedAccountSetupTextures);
         }
 
         public static class Constants
@@ -67,7 +80,9 @@ namespace Meta.XR.Guides.Editor
             public const int ImageBorderWidth = 1;
             public const int DefaultHeaderHeight = 84;
             public const float BorderRadius = 4.0f;
-            public static Vector4 RoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
+
+            public static Vector4 RoundedBorderVectors =
+                new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
         }
     }
 }

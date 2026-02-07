@@ -346,7 +346,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             // The Pose we get from OVR is in the tracking space,
             // We'll need to convert to it to world space.
-            ovrPose = ovrPose.ToWorldSpacePose(_debugInterface.Camera);
+            if (_debugInterface.Camera)
+            {
+                ovrPose = ovrPose.ToWorldSpacePose(_debugInterface.Camera);
+            }
 
             rayTransform.SetPositionAndRotation(ovrPose.position, ovrPose.orientation);
         }

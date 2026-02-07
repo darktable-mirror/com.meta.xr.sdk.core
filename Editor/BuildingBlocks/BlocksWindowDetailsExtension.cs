@@ -18,15 +18,12 @@
  * limitations under the License.
  */
 
-#if UNITY_2021_2_OR_NEWER
-#define OVR_BB_DRAGANDDROP
-#endif
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Assets.Oculus.VR.Editor;
+using Meta.XR.Editor.EditorCoroutine;
 using Meta.XR.Editor.Id;
 using UnityEditor;
 using UnityEngine;
@@ -49,8 +46,6 @@ namespace Meta.XR.BuildingBlocks.Editor
         private const float RightPaneAmount = 0.7f;
 
         private static BlockData _selectedBlock;
-        private static bool _blockDragStarted;
-        private static Vector2 _initialDragStartMousePosition;
         private static Vector2 _installationStepsScrollPosition;
         private static bool _prereqFoldout = true;
         private static bool _stepsFoldout = true;
@@ -140,12 +135,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             lastRect.y = expectedHeight - 1;
             DrawSeparator(lastRect, Styles.Colors.AccentColor.ToTexture());
 
-#if OVR_BB_DRAGANDDROP
             var blockRect = lastRect;
             blockRect.height = expectedHeight;
             blockRect.y -= expectedHeight;
             ShowDragAndDrop(_selectedBlock, blockRect, _selectedBlock.IsInteractable);
-#endif // OVR_BB_DRAGANDDROP
 
             // Title, tags, descriptions
             ShowDetailViewTitles(_selectedBlock, leftPaneWidth);
@@ -545,7 +538,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 if (block == _selectedBlock)
                     continue;
 
-                OVRPlatformTool.EditorCoroutine.Start(ToggleDetailPane(block, Origins.BlockDetails, _selectedBlock));
+                EditorCoroutine.Start(ToggleDetailPane(block, Origins.BlockDetails, _selectedBlock));
                 return;
             }
 

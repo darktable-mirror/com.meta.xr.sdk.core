@@ -68,6 +68,11 @@ public static class OVRPermissionsRequester
         /// Represents the Audio Recording permission (required for audio based Face Tracking capability).
         /// </summary>
         RecordAudio,
+
+        /// <summary>
+        /// Represents the Passthrough Camera Access permission.
+        /// </summary>
+        PassthroughCameraAccess
     }
 
     /// <summary>
@@ -96,6 +101,11 @@ public static class OVRPermissionsRequester
     public const string RecordAudioPermission = "android.permission.RECORD_AUDIO";
 
     /// <summary>
+    /// Android permission string for Passthrough Camera Access.
+    /// </summary>
+    public const string PassthroughCameraAccessPermission = "horizonos.permission.HEADSET_CAMERA";
+
+    /// <summary>
     /// Returns the permission ID of the given <see cref="Permission"/> to be requested from the user.
     /// </summary>
     /// <param name="permission">The <see cref="Permission"/> to get the ID of.</param>
@@ -114,6 +124,7 @@ public static class OVRPermissionsRequester
             Permission.EyeTracking => EyeTrackingPermission,
             Permission.Scene => ScenePermission,
             Permission.RecordAudio => RecordAudioPermission,
+            Permission.PassthroughCameraAccess => PassthroughCameraAccessPermission,
             _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null)
         };
     }
@@ -128,6 +139,7 @@ public static class OVRPermissionsRequester
             // Scene is a no-op on unsupported platforms, but the request can always be made
             Permission.Scene => true,
             Permission.RecordAudio => true,
+            Permission.PassthroughCameraAccess => true,
             _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null)
         };
     }

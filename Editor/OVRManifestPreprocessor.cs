@@ -902,6 +902,14 @@ public class OVRManifestPreprocessor
                 "targetSdkVersion",
                 projectConfig.targetHorizonOsSdkVersion.ToString());
         }
+
+        AddOrRemoveTag(doc,
+            androidNamespaceURI,
+            "/manifest",
+            "uses-permission",
+            OVRPermissionsRequester.PassthroughCameraAccessPermission,
+            projectConfig.isPassthroughCameraAccessEnabled && projectConfig.insightPassthroughSupport != OVRProjectConfig.FeatureSupport.None,
+            modifyIfFound);
     }
 
 

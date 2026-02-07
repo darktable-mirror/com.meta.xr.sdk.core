@@ -18,19 +18,14 @@
  * limitations under the License.
  */
 
-#if UNITY_2021_2_OR_NEWER
-#define OVR_BB_DRAGANDDROP
-#endif
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Assets.Oculus.VR.Editor;
+using Meta.XR.Editor.EditorCoroutine;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Tags;
-using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
@@ -44,14 +39,12 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public partial class BuildingBlocksWindow : EditorWindow
     {
-        private const int MenuPriority = 2;
         private const string WindowName = Utils.BlocksPublicName;
 
-#if OVR_BB_DRAGANDDROP
         private const string DragAndDropLabel = "Dragging Block";
-        private const string DragAndDropBlockDataLabel = "block";
-        private const string DragAndDropBlockThumbnailLabel = "blockThumbnail";
-#endif // OVR_BB_DRAGANDDROP
+        private const string DragAndDropBlockDataLabel = nameof(BuildingBlocksWindow) + nameof(DragAndDropBlockDataLabel);
+        private const string DragAndDropBlockThumbnailLabel = nameof(BuildingBlocksWindow) + nameof(DragAndDropBlockThumbnailLabel);
+        private const string DragAndDropStartMousePosition = nameof(BuildingBlocksWindow) + nameof(DragAndDropStartMousePosition);
 
         internal static readonly GUIContent Description =
             new GUIContent("<b>Building Blocks</b> helps you get up and running faster thanks to a library of XR capabilities" +
@@ -93,67 +86,6 @@ namespace Meta.XR.BuildingBlocks.Editor
         private const string SortTypeMostPopular = "Most popular";
         private static string[] _sortTypes = { SortTypeMostPopular, SortTypeAlphabetically, SortTypeMostUsed };
         private static int _selectedSortTypeIndex;
-
-        private class Repainter
-        {
-            private bool NeedsRepaint { get; set; }
-            private bool NeedsFocus { get; set; }
-            private Vector2 MousePosition { get; set; }
-            private EditorWindow _lastWindowAssessed;
-
-            public void Assess(EditorWindow window)
-            {
-                if (window == null) return;
-                if (Event.current != null && Event.current.type != EventType.Layout) return;
-
-                _lastWindowAssessed = window;
-
-                var fullRect = new Rect(0, 0, window.position.width, window.position.height);
-                if (Event.current != null)
-                {
-                    var isMoving = Event.current.mousePosition != MousePosition;
-                    MousePosition = Event.current.mousePosition;
-                    var isMovingOver = fullRect.Contains(Event.current.mousePosition);
-                    if (isMoving && isMovingOver)
-                    {
-                        NeedsRepaint = true;
-                    }
-                }
-
-                if (NeedsRepaint)
-                {
-                    window.Repaint();
-                    NeedsRepaint = false;
-                }
-
-                if (NeedsFocus)
-                {
-                    window.Focus();
-                    NeedsFocus = false;
-                }
-            }
-
-            public void RequestRepaint(bool force = false)
-            {
-                NeedsRepaint = true;
-                if (force)
-                {
-                    Assess(_lastWindowAssessed);
-                }
-            }
-
-            public void RequestFocus()
-            {
-                NeedsFocus = true;
-            }
-
-            public void OnDisable()
-            {
-                NeedsFocus = false;
-                NeedsRepaint = false;
-                _lastWindowAssessed = null;
-            }
-        }
 
         internal class Dimensions
         {
@@ -221,7 +153,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (showDetailPane)
             {
-                OVRPlatformTool.EditorCoroutine.Start(window.ToggleDetailPane(data, origin, originData));
+                EditorCoroutine.Start(window.ToggleDetailPane(data, origin, originData));
             }
         }
 
@@ -230,7 +162,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             // To get mouse position relative to base window.
             CurrentMousePosition = Event.current.mousePosition;
 
-            if (Event.current.type == EventType.MouseMove)
+            if (HandleMouseEvents())
             {
                 _repainter.RequestRepaint();
                 return;
@@ -242,9 +174,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             ShowList(_dimensions);
 
-#if OVR_BB_DRAGANDDROP
-            RefreshDragAndDrop(_dimensions);
-#endif // OVR_BB_DRAGANDDROP
+            DrawDragAndDrop(_dimensions);
 
             _repainter.Assess(this);
         }
@@ -317,10 +247,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             RefreshBlockList();
             RefreshCollectionTags();
 
-#if OVR_BB_DRAGANDDROP
-            DragAndDrop.AddDropHandler(SceneDropHandler);
-            DragAndDrop.AddDropHandler(HierarchyDropHandler);
-#endif // OVR_BB_DRAGANDDROP
+            BlocksContentManager.OnContentChanged += RefreshBlockList;
+            BlocksContentManager.OnContentChanged += RefreshCollectionTags;
+
             wantsMouseMove = true;
             RefreshShowTutorial();
 
@@ -350,7 +279,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
             else
             {
-                _blockList = BlocksContentManager.FilterBlockWindowContent(GetList());
+                _blockList = Utils.FilteredRegistry;
+
+                _blockList = Utils.Sort.MostPopular(_blockList).ToList();
             }
 
             _blockList = _blockList.Where(block => !block.Hidden).ToList();
@@ -361,21 +292,18 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void OnDisable()
         {
-#if OVR_BB_DRAGANDDROP
-            DragAndDrop.RemoveDropHandler(SceneDropHandler);
-            DragAndDrop.RemoveDropHandler(HierarchyDropHandler);
-#endif // OVR_BB_DRAGANDDROP
             _requestFilterSearchFocus = true;
 
             _horizontalPageRatio = 0.0f;
+
+            BlocksContentManager.OnContentChanged -= RefreshCollectionTags;
+            BlocksContentManager.OnContentChanged -= RefreshBlockList;
 
             _repainter.OnDisable();
         }
 
         private static IReadOnlyList<BlockBaseData> _blockList;
         private static IList<Tag> _tagList;
-
-        private static IReadOnlyList<BlockBaseData> GetList() => Utils.Sort.MostPopular(BlockBaseData.Registry.Values).ToList();
 
         private void ShowList(Dimensions dimensions)
         {
@@ -692,7 +620,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-#if OVR_BB_DRAGANDDROP
         private void ShowDragAndDrop(BlockBaseData block, Rect blockRect, bool canBeAdded)
         {
             var hoverGrid = HoverHelper.IsHover(block.Id + "Grid", Event.current, blockRect);
@@ -712,7 +639,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 }
             }
         }
-#endif // OVR_BB_DRAGANDDROP
 
         private void DrawEmptyGridItem(int expectedThumbnailWidth, int expectedThumbnailHeight)
         {
@@ -762,9 +688,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             ShowBlockInstallButton(block, blockRect, canBeAdded, canBeSelected);
 
-#if OVR_BB_DRAGANDDROP
             ShowDragAndDrop(block, blockRect, canBeAdded);
-#endif // OVR_BB_DRAGANDDROP
             EditorGUILayout.EndVertical();
 
             if (isHover)
@@ -823,41 +747,86 @@ namespace Meta.XR.BuildingBlocks.Editor
             _repainter.RequestRepaint();
         }
 
-#if OVR_BB_DRAGANDDROP
-        private void RefreshDragAndDrop(Dimensions dimensions)
+        private void DrawDragAndDrop(Dimensions dimensions)
         {
+            if (!DragAndDropStarted) return;
+
             var blockThumbnail = DragAndDrop.GetGenericData(DragAndDropBlockThumbnailLabel) as Texture2D;
-            var dragDistance = Vector2.Distance(CurrentMousePosition, _initialDragStartMousePosition);
+            var startMousePosition = (Vector2)(DragAndDrop.GetGenericData(DragAndDropStartMousePosition) ?? Vector2.zero);
+            var dragDistance = Vector2.Distance(CurrentMousePosition, startMousePosition);
             if (blockThumbnail && dragDistance >= BlockDragStartThreshold)
             {
-                var cursorOffset = new Vector2(dimensions.ExpectedThumbnailWidth / 2.0f, dimensions.ExpectedThumbnailHeight / 2.0f);
-                var cursorRect = new Rect(Event.current.mousePosition - cursorOffset, new Vector2(dimensions.ExpectedThumbnailWidth, dimensions.ExpectedThumbnailHeight));
+                var cursorOffset = new Vector2(dimensions.ExpectedThumbnailWidth / 2.0f,
+                    dimensions.ExpectedThumbnailHeight / 2.0f);
+                var cursorRect = new Rect(Event.current.mousePosition - cursorOffset,
+                    new Vector2(dimensions.ExpectedThumbnailWidth, dimensions.ExpectedThumbnailHeight));
                 GUI.color = new Color(1, 1, 1, Styles.Constants.DragOpacity);
                 GUI.DrawTexture(cursorRect, blockThumbnail, ScaleMode.ScaleAndCrop, false,
-                    Styles.Constants.ThumbnailSourceRatio, GUI.color, Vector4.zero , Styles.Constants.RoundedBorderVectors);
+                    Styles.Constants.ThumbnailSourceRatio, GUI.color, Vector4.zero,
+                    Styles.Constants.RoundedBorderVectors);
                 GUI.color = Color.white;
-
-                // Enforce a repaint next frame, as we need to move this thumbnail every frame
-                _repainter.RequestRepaint();
             }
 
-            if (Event.current.type == EventType.DragExited)
+            _repainter.RequestRepaint();
+        }
+
+        private bool HandleMouseEvents()
+        {
+            var needsRepaint = false;
+
+            var currentEvent = Event.current;
+
+            switch (currentEvent.type)
             {
-                ResetDragThumbnail();
-                if(CurrentTargetPage != Page.Details)
+                case EventType.MouseMove:
                 {
-                    _blockDragStarted = false;
-                    if(dragDistance < BlockDragStartThreshold)
+                    if (DragAndDropStarted)
                     {
-                        SwitchToPage(Page.Details, Origins.BlockGrid, _selectedBlock, _selectedBlock);
+                        ResetDragAndDrop();
                     }
+
+                    needsRepaint = true;
                 }
+                break;
+
+                case EventType.DragUpdated:
+                {
+                    if (!DragAndDropStarted) break;
+
+                    DragAndDrop.visualMode = DragAndDropVisualMode.Move;
+                    needsRepaint = true;
+
+                    currentEvent.Use();
+                }
+                break;
+
+                case EventType.DragPerform:
+                {
+                    if (!DragAndDropStarted) break;
+
+                    if (CurrentTargetPage != Page.Details)
+                    {
+                        var startMousePosition = (Vector2)(DragAndDrop.GetGenericData(DragAndDropStartMousePosition) ?? Vector2.zero);
+                        var dragDistance = Vector2.Distance(CurrentMousePosition, startMousePosition);
+                        if (dragDistance < BlockDragStartThreshold)
+                        {
+                            _selectedBlock = DragAndDrop.GetGenericData(DragAndDropBlockDataLabel) as BlockData;
+                            SwitchToPage(Page.Details, Origins.BlockGrid, _selectedBlock, _selectedBlock);
+                        }
+                    }
+                    ResetDragAndDrop();
+                    needsRepaint = true;
+
+                    currentEvent.Use();
+                }
+                break;
+
+                default:
+                    needsRepaint = false;
+                    break;
             }
 
-            if (Event.current.type == EventType.DragUpdated)
-            {
-                DragAndDrop.visualMode = DragAndDropVisualMode.Move;
-            }
+            return needsRepaint;
         }
 
         private static DragAndDropVisualMode HierarchyDropHandler(
@@ -912,28 +881,30 @@ namespace Meta.XR.BuildingBlocks.Editor
             return DragAndDropVisualMode.Generic;
         }
 
-        private static void SetDragAndDrop(BlockBaseData block)
+        private static bool DragAndDropStarted => DragAndDrop.GetGenericData(DragAndDropBlockDataLabel) != null;
+
+        private void SetDragAndDrop(BlockBaseData block)
         {
-            if (_blockDragStarted) return;
+            if (DragAndDropStarted) return;
+
+            ResetDragAndDrop();
 
             DragAndDrop.PrepareStartDrag();
             DragAndDrop.SetGenericData(DragAndDropBlockDataLabel, block);
             DragAndDrop.SetGenericData(DragAndDropBlockThumbnailLabel, block.Thumbnail);
+            DragAndDrop.SetGenericData(DragAndDropStartMousePosition, CurrentMousePosition);
+            DragAndDrop.AddDropHandler(SceneDropHandler);
+            DragAndDrop.AddDropHandler(HierarchyDropHandler);
             DragAndDrop.StartDrag(DragAndDropLabel);
-
-            _selectedBlock = (BlockData)block;
-            _blockDragStarted = true;
-            _initialDragStartMousePosition = CurrentMousePosition;
-        }
-
-        private static void ResetDragThumbnail()
-        {
-            DragAndDrop.SetGenericData(DragAndDropBlockThumbnailLabel, null);
         }
 
         private static void ResetDragAndDrop()
         {
             DragAndDrop.SetGenericData(DragAndDropBlockDataLabel, null);
+            DragAndDrop.SetGenericData(DragAndDropBlockThumbnailLabel, null);
+            DragAndDrop.SetGenericData(DragAndDropStartMousePosition, null);
+            DragAndDrop.RemoveDropHandler(SceneDropHandler);
+            DragAndDrop.RemoveDropHandler(HierarchyDropHandler);
         }
 
         private void OnSelectTag(Tag tag)
@@ -948,6 +919,5 @@ namespace Meta.XR.BuildingBlocks.Editor
                 TagSearch.Add(tag);
             }
         }
-#endif // OVR_BB_DRAGANDDROP
     }
 }

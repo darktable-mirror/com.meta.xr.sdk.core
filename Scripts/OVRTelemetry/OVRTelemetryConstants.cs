@@ -38,6 +38,7 @@ internal static class OVRTelemetryConstants
             public const string Origin = "Origin";
             public const string BatchMode = "BatchMode";
             public const string ProcessorType = "ProcessorType";
+            public const string FeatureRampUpValues = "FeatureRampUpValues";
         }
 
         public static readonly MarkerPoint InitializeInsightPassthrough = new("InitializeInsightPassthrough");
@@ -54,6 +55,7 @@ internal static class OVRTelemetryConstants
             public const int Build = 163066733;
             public const int ComponentAdd = 163060094;
             public const int FeaturesInScene = 163069415;
+            public const int StartRampKeys = 163066800;
         }
 
         public static class AnnotationType
@@ -187,6 +189,13 @@ internal static class OVRTelemetryConstants
             public const string XrPluginType = "xr_plugin_type";
         }
 
+        public enum GPUResidentDrawerMode
+        {
+            Disabled,
+            InstancedDrawing,
+            Unknown
+        }
+
         public enum FoveatedRenderingMode
         {
             Unknown,
@@ -199,6 +208,22 @@ internal static class OVRTelemetryConstants
             Unknown,
             Legacy,
             SRP
+        }
+
+        public enum LatencyOptimization
+        {
+            PrioritizeRendering,
+            PrioritizeInputPolling,
+            Unknown
+        }
+        public enum ColorSubmissionMode
+        {
+            Color8888,
+            Color1010102_Float,
+            Color16161616_Float,
+            Color565,
+            Color111110_Float,
+            Unknown
         }
 
         public enum DepthSubmissionMode

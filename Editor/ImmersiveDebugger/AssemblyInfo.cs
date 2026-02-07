@@ -22,3 +22,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Oculus.VR.Scripts.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.About")]

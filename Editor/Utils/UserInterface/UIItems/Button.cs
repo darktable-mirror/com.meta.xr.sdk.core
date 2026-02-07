@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-using Meta.XR.Editor.UserInterface;
+using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
@@ -26,21 +26,28 @@ namespace Meta.XR.Editor.UserInterface
     internal class Button : IUserInterfaceItem
     {
         public bool Hide { get; set; }
+        public bool Disable { get; set; }
+        public bool Invisible { get; set; }
+        public ActionLinkDescription Action { get; set; }
+        public GUIStyle Style { get; set; }
 
         private GUIContent Label { get; }
-        private readonly ActionLinkDescription _action;
         private readonly GUILayoutOption[] _options;
 
         public Button(ActionLinkDescription action, params GUILayoutOption[] options)
         {
-            _action = action;
+            Action = action;
             _options = options;
         }
 
         public void Draw()
         {
-            _action.Style = GUI.skin.button;
-            _action.Draw(_options);
+            EditorGUI.BeginDisabledGroup(Disable);
+            using var allColor = new Utils.ColorScope(Utils.ColorScope.Scope.All, Invisible ? new Color(0, 0, 0, 0) : Color.white);
+            Style ??= new GUIStyle(GUI.skin.button);
+            Action.Style = Style;
+            Action.Draw(_options);
+            EditorGUI.EndDisabledGroup();
         }
     }
 }

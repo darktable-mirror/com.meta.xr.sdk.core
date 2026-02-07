@@ -89,6 +89,8 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                 ? ("Enabled", XR.Editor.UserInterface.Styles.Colors.SuccessColor)
                 : ("Disabled", XR.Editor.UserInterface.Styles.Colors.DisabledColor);
 
+        public static bool IsEnabled => RuntimeSettings.Instance.ImmersiveDebuggerEnabled;
+
         private static void OnStatusMenuClick(Origins origin)
         {
             ToolDescriptor.OpenProjectSettings(origin);

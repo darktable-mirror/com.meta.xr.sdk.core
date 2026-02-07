@@ -124,6 +124,7 @@ namespace Meta.XR
             "XR_FB_composition_layer_settings " +
             "XR_META_automatic_layer_filter " +
             "XR_METAX1_spatial_entity_marker " +
+            "XR_META_environment_raycast " +
             "XR_EXT_future " +
             "XR_EXTX2_stationary_reference_space " +
             "XR_META_recommended_layer_resolution " +

@@ -63,7 +63,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_110_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_113_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -493,6 +493,7 @@ public static partial class OVRPlugin
         Cubemap = 2,
         OffcenterCubemap = 4,
         Equirect = 5,
+        ScaledEquirect = 6,
         ReconstructionPassthrough = 7,
         SurfaceProjectedPassthrough = 8,
         Fisheye = 9,
@@ -3807,13 +3808,13 @@ public static partial class OVRPlugin
     {
         get
         {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-            return 2;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM || UNITY_EDITOR
+            return 4;
 #else
             if (version >= OVRP_1_6_0.version)
                 return OVRP_1_6_0.ovrp_GetSystemRecommendedMSAALevel();
             else
-                return 2;
+                return 4;
 #endif
         }
     }
@@ -4467,6 +4468,16 @@ public static partial class OVRPlugin
             {
 #if UNITY_ANDROID && !UNITY_EDITOR
                 if (version < OVRP_1_21_0.version)
+                    return false;
+#else
+                return false;
+#endif
+            }
+
+            if (shape == OverlayShape.ScaledEquirect)
+            {
+#if UNITY_ANDROID && !UNITY_EDITOR
+                if (version < OVRP_1_112_0.version)
                     return false;
 #else
                 return false;
@@ -7714,6 +7725,28 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public static string GetMachineID()
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM || OVRPLUGIN_EDITOR_MOCK_ENABLED
+        return "";
+#else
+        if (version < OVRP_1_113_0.version) return "";
+
+        IntPtr textPtr = Marshal.AllocHGlobal(sizeof(byte) * OVRP_1_113_0.OVRP_MACHINE_ID_MAX_LENGTH);
+        Result result = OVRP_1_113_0.ovrp_GetMachineID(textPtr);
+
+        if (result != Result.Success)
+        {
+            Marshal.FreeHGlobal(textPtr);
+            return "";
+        }
+
+        string machineId = Marshal.PtrToStringAnsi(textPtr);
+        Marshal.FreeHGlobal(textPtr);
+        return machineId;
+#endif
+    }
+
     public static bool SendEvent(string name, string param = "", string source = "")
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM || OVRPLUGIN_EDITOR_MOCK_ENABLED
@@ -8852,6 +8885,136 @@ public static partial class OVRPlugin
                 handState.FingerConfidences[4] = cachedHandState.FingerConfidences_4;
                 handState.RequestedTimeStamp = cachedHandState.RequestedTimeStamp;
                 handState.SampleTimeStamp = cachedHandState.SampleTimeStamp;
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+#endif
+    }
+
+    public static bool GetHandStateAtTime(double time, Hand hand, ref HandState handState)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return false;
+#else
+        if (nativeXrApi != XrApi.OpenXR)
+        {
+            Debug.LogWarning("GetHandStateAtTime only supported in OpenXR");
+            return false;
+        }
+
+        if (version >= OVRP_1_113_0.version && HandSkeletonVersion == OVRHandSkeletonVersion.OpenXR)
+        {
+            Result res = Result.Failure;
+            res = OVRP_1_113_0.ovrp_GetHandStateAtTime(time, hand, out cachedHandState3);
+
+            if (res == Result.Success)
+            {
+                // attempt to avoid allocations if client provides appropriately pre-initialized HandState
+                if (handState.BoneRotations == null ||
+                    handState.BoneRotations.Length != (int)SkeletonConstants.MaxXRHandBones)
+                {
+                    handState.BoneRotations = new Quatf[(int)SkeletonConstants.MaxXRHandBones];
+                }
+
+                if (handState.BonePositions == null ||
+                    handState.BonePositions.Length != (int)SkeletonConstants.MaxXRHandBones)
+                {
+                    handState.BonePositions = new Vector3f[(int)SkeletonConstants.MaxXRHandBones];
+                }
+
+                if (handState.PinchStrength == null || handState.PinchStrength.Length != (int)HandFinger.Max)
+                {
+                    handState.PinchStrength = new float[(int)HandFinger.Max];
+                }
+
+                if (handState.FingerConfidences == null || handState.FingerConfidences.Length != (int)HandFinger.Max)
+                {
+                    handState.FingerConfidences = new TrackingConfidence[(int)HandFinger.Max];
+                }
+
+                // unrolling the arrays is necessary to avoid per-frame allocations during marshaling
+                handState.Status = cachedHandState3.Status;
+                handState.RootPose = cachedHandState3.RootPose;
+
+                handState.BoneRotations[0] =    cachedHandState3.BonePoses_0.Orientation;
+                handState.BoneRotations[1] =    cachedHandState3.BonePoses_1.Orientation;
+                handState.BoneRotations[2] =    cachedHandState3.BonePoses_2.Orientation;
+                handState.BoneRotations[3] =    cachedHandState3.BonePoses_3.Orientation;
+                handState.BoneRotations[4] =    cachedHandState3.BonePoses_4.Orientation;
+                handState.BoneRotations[5] =    cachedHandState3.BonePoses_5.Orientation;
+                handState.BoneRotations[6] =    cachedHandState3.BonePoses_6.Orientation;
+                handState.BoneRotations[7] =    cachedHandState3.BonePoses_7.Orientation;
+                handState.BoneRotations[8] =    cachedHandState3.BonePoses_8.Orientation;
+                handState.BoneRotations[9] =    cachedHandState3.BonePoses_9.Orientation;
+                handState.BoneRotations[10] =   cachedHandState3.BonePoses_10.Orientation;
+                handState.BoneRotations[11] =   cachedHandState3.BonePoses_11.Orientation;
+                handState.BoneRotations[12] =   cachedHandState3.BonePoses_12.Orientation;
+                handState.BoneRotations[13] =   cachedHandState3.BonePoses_13.Orientation;
+                handState.BoneRotations[14] =   cachedHandState3.BonePoses_14.Orientation;
+                handState.BoneRotations[15] =   cachedHandState3.BonePoses_15.Orientation;
+                handState.BoneRotations[16] =   cachedHandState3.BonePoses_16.Orientation;
+                handState.BoneRotations[17] =   cachedHandState3.BonePoses_17.Orientation;
+                handState.BoneRotations[18] =   cachedHandState3.BonePoses_18.Orientation;
+                handState.BoneRotations[19] =   cachedHandState3.BonePoses_19.Orientation;
+                handState.BoneRotations[20] =   cachedHandState3.BonePoses_20.Orientation;
+                handState.BoneRotations[21] =   cachedHandState3.BonePoses_21.Orientation;
+                handState.BoneRotations[22] =   cachedHandState3.BonePoses_22.Orientation;
+                handState.BoneRotations[23] =   cachedHandState3.BonePoses_23.Orientation;
+                handState.BoneRotations[24] =   cachedHandState3.BonePoses_24.Orientation;
+                handState.BoneRotations[25] =   cachedHandState3.BonePoses_25.Orientation;
+
+                handState.BonePositions[0] = cachedHandState3.BonePoses_0.Position;
+                handState.BonePositions[1] = cachedHandState3.BonePoses_1.Position;
+                handState.BonePositions[2] = cachedHandState3.BonePoses_2.Position;
+                handState.BonePositions[3] = cachedHandState3.BonePoses_3.Position;
+                handState.BonePositions[4] = cachedHandState3.BonePoses_4.Position;
+                handState.BonePositions[5] = cachedHandState3.BonePoses_5.Position;
+                handState.BonePositions[6] = cachedHandState3.BonePoses_6.Position;
+                handState.BonePositions[7] = cachedHandState3.BonePoses_7.Position;
+                handState.BonePositions[8] = cachedHandState3.BonePoses_8.Position;
+                handState.BonePositions[9] = cachedHandState3.BonePoses_9.Position;
+                handState.BonePositions[10] = cachedHandState3.BonePoses_10.Position;
+                handState.BonePositions[11] = cachedHandState3.BonePoses_11.Position;
+                handState.BonePositions[12] = cachedHandState3.BonePoses_12.Position;
+                handState.BonePositions[13] = cachedHandState3.BonePoses_13.Position;
+                handState.BonePositions[14] = cachedHandState3.BonePoses_14.Position;
+                handState.BonePositions[15] = cachedHandState3.BonePoses_15.Position;
+                handState.BonePositions[16] = cachedHandState3.BonePoses_16.Position;
+                handState.BonePositions[17] = cachedHandState3.BonePoses_17.Position;
+                handState.BonePositions[18] = cachedHandState3.BonePoses_18.Position;
+                handState.BonePositions[19] = cachedHandState3.BonePoses_19.Position;
+                handState.BonePositions[20] = cachedHandState3.BonePoses_20.Position;
+                handState.BonePositions[21] = cachedHandState3.BonePoses_21.Position;
+                handState.BonePositions[22] = cachedHandState3.BonePoses_22.Position;
+                handState.BonePositions[23] = cachedHandState3.BonePoses_23.Position;
+                handState.BonePositions[24] = cachedHandState3.BonePoses_24.Position;
+                handState.BonePositions[25] = cachedHandState3.BonePoses_25.Position;
+
+                handState.Pinches = cachedHandState3.Pinches;
+                handState.PinchStrength[0] = cachedHandState3.PinchStrength_0;
+                handState.PinchStrength[1] = cachedHandState3.PinchStrength_1;
+                handState.PinchStrength[2] = cachedHandState3.PinchStrength_2;
+                handState.PinchStrength[3] = cachedHandState3.PinchStrength_3;
+                handState.PinchStrength[4] = cachedHandState3.PinchStrength_4;
+                handState.PointerPose = cachedHandState3.PointerPose;
+                handState.HandScale = cachedHandState3.HandScale;
+                handState.HandConfidence = cachedHandState3.HandConfidence;
+                handState.FingerConfidences[0] = cachedHandState3.FingerConfidences_0;
+                handState.FingerConfidences[1] = cachedHandState3.FingerConfidences_1;
+                handState.FingerConfidences[2] = cachedHandState3.FingerConfidences_2;
+                handState.FingerConfidences[3] = cachedHandState3.FingerConfidences_3;
+                handState.FingerConfidences[4] = cachedHandState3.FingerConfidences_4;
+                handState.RequestedTimeStamp = cachedHandState3.RequestedTimeStamp;
+                handState.SampleTimeStamp = cachedHandState3.SampleTimeStamp;
 
                 return true;
             }
@@ -10587,6 +10750,24 @@ public static partial class OVRPlugin
         }
 
         return 0;
+#endif
+    }
+
+    public static IntPtr GetUnityInterfaces()
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return IntPtr.Zero;
+#else
+        if (version >= OVRP_1_113_0.version)
+        {
+            IntPtr unityInterfaces;
+            if (OVRP_1_113_0.ovrp_GetUnityInterfaces(out unityInterfaces) == Result.Success)
+            {
+                return unityInterfaces;
+            }
+        }
+
+        return IntPtr.Zero;
 #endif
     }
 
@@ -12363,8 +12544,20 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version < OVRP_1_87_0.version) return Result.Failure_NotYetImplemented;
-        return OVRP_1_87_0.ovrp_GetPassthroughPreferences(out preferences);
+        if (version < OVRP_1_87_0.version)
+        {
+            Debug.LogWarning("ovrp_GetPassthroughPreferences() not yet supported by OVRPlugin. Result of " +
+                             "GetPassthroughPreferences() is not accurate.");
+            return Result.Failure_NotYetImplemented;
+        }
+        Result result = OVRP_1_87_0.ovrp_GetPassthroughPreferences(out preferences);
+        if (result != Result.Success)
+        {
+            Debug.LogError(
+                "Unable to retrieve passthrough preferences. Try calling GetPassthroughPreferences() " +
+                "while the XR plug-in is initialized. Failed with reason: " + result);
+        }
+        return result;
 #endif // OVRPLUGIN_UNSUPPORTED_PLATFORM
     }
 
@@ -12491,6 +12684,120 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public enum RaycastFilterType
+    {
+        None = 0,
+        Distance = 1000592005
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RaycastFilterHeader
+    {
+        public RaycastFilterType Type;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct RaycastDistanceFilter
+    {
+        public RaycastFilterType Type;
+        public void* next;
+        public float MaxDistance;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct RaycastHitPointGetInfo
+    {
+        public Vector3f StartPoint;
+        public Vector3f Direction;
+        public uint NumFilter;
+        public RaycastFilterHeader** Filters;
+    }
+
+    public enum EnvironmentRaycastStatus
+    {
+        EnvironmentRaycastStatus_Hit = 1,
+        EnvironmentRaycastStatus_NoHit = 2,
+        EnvironmentRaycastStatus_HitPointOccluded = 3,
+        EnvironmentRaycastStatus_HitPointOutsideFoV = 4,
+        EnvironmentRaycastStatus_RayOccluded = 5,
+        EnvironmentRaycastStatus_InvalidOrientation = 6,
+        EnvironmentRaycastStatus_Max = 0x7FFFFFFF
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct EnvironmentRaycastHit
+    {
+        public EnvironmentRaycastStatus Status;
+        public Posef Pose;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct EnvironmentRaycasterCreateCompletion
+    {
+        public Result FutureResult;
+        public ulong EnvironmentRaycaster;
+    }
+
+    public static Result CreateEnvironmentRaycasterAsync(out ulong future)
+    {
+        future = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_111_0.version
+            ? OVRP_1_111_0.ovrp_CreateEnvironmentRaycasterAsync(out future)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result CreateEnvironmentRaycasterComplete(ulong future, out EnvironmentRaycasterCreateCompletion completion)
+    {
+        completion = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_111_0.version
+            ? OVRP_1_111_0.ovrp_CreateEnvironmentRaycasterComplete(future, out completion)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result DestroyEnvironmentRaycaster(ulong handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+         return version >= OVRP_1_111_0.version
+             ? OVRP_1_111_0.ovrp_DestroyEnvironmentRaycaster(handle)
+             : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result PerformEnvironmentRaycast(ulong handle, in RaycastHitPointGetInfo getInfo, out EnvironmentRaycastHit hit)
+    {
+        hit = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        return version >= OVRP_1_111_0.version
+            ? OVRP_1_111_0.ovrp_PerformEnvironmentRaycast(handle, getInfo, out hit)
+            : Result.Failure_NotYetImplemented;
+#endif
+    }
+
+    public static Result GetEnvironmentRaycastSupported(out bool value)
+    {
+        value = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_111_0.version) return Result.Failure_Unsupported;
+
+        var result = OVRP_1_111_0.ovrp_GetEnvironmentRaycastSupported(out var supported);
+        value = supported == Bool.True;
+        return result;
+#endif
+    }
 
     public enum FutureState
     {
@@ -15155,12 +15462,26 @@ public static partial class OVRPlugin
 
 
 
-
     }
 
     private static class OVRP_1_111_0
     {
         public static readonly System.Version version = new System.Version(1, 111, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_CreateEnvironmentRaycasterAsync(out ulong future);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_CreateEnvironmentRaycasterComplete(ulong future, out EnvironmentRaycasterCreateCompletion completion);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_DestroyEnvironmentRaycaster(ulong tracker);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_PerformEnvironmentRaycast(ulong handle, in RaycastHitPointGetInfo getInfo, out EnvironmentRaycastHit hit);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetEnvironmentRaycastSupported(out Bool value);
     }
 
     private static class OVRP_1_112_0
@@ -15170,7 +15491,17 @@ public static partial class OVRPlugin
 
     private static class OVRP_1_113_0
     {
+        public const int OVRP_MACHINE_ID_MAX_LENGTH = 64;
         public static readonly System.Version version = new System.Version(1, 113, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetUnityInterfaces(out IntPtr unityInterfaces);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetHandStateAtTime(double time, Hand hand, out HandState3Internal handState);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetMachineID(IntPtr machineId);
     }
 
     private static class OVRP_1_114_0

@@ -18,17 +18,28 @@
  * limitations under the License.
  */
 
+using Meta.XR.Editor.Reflection;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
 {
+    [Reflection]
     internal static class Utils
     {
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.ContainerWindow")]
+        private static readonly TypeHandle ContainerWindowType = new();
+
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.ContainerWindow",
+            Name = "m_ShowMode")]
+        private static readonly FieldInfoHandle<int> ShowMode = new();
+
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.ContainerWindow",
+            Name = "position")]
+        private static readonly PropertyInfoHandle<Rect> Position = new();
+
         private static readonly Dictionary<object, bool> Foldouts = new();
 
         public static bool ShouldRenderEditorUI()
@@ -216,10 +227,108 @@ namespace Meta.XR.Editor.UserInterface
                 UIStyles.ContentStatusType.Success => Styles.Colors.SuccessColor,
                 UIStyles.ContentStatusType.Warning => Styles.Colors.WarningColor,
                 UIStyles.ContentStatusType.Error => Styles.Colors.ErrorColor,
+                UIStyles.ContentStatusType.Disabled => Styles.Colors.DisabledColor,
                 _ => Styles.Colors.LightGray
             };
 
             return color;
+        }
+
+        private static Rect GetEditorMainWindowPosition()
+        {
+            // Defaulting to assuming the main window display is at position 0,0
+            var defaultRectangle =
+                new Rect(0, 0, Screen.mainWindowDisplayInfo.width, Screen.mainWindowDisplayInfo.height);
+
+            // If reflection is not valid, default
+            if (!ContainerWindowType.Valid
+                || !ShowMode.Valid
+                || !Position.Valid) return defaultRectangle;
+
+            // Try to find the main editor window
+            var windows = Resources.FindObjectsOfTypeAll(ContainerWindowType.Target);
+            foreach (var window in windows)
+            {
+                var showMode = ShowMode.Get(window);
+                // ShowMode == 4 indicates Main Editor Window
+                var isMainEditorWindow = showMode == 4;
+                if (isMainEditorWindow)
+                {
+                    return Position.Get(window);
+                }
+            }
+
+            // If not main editor window was found, default
+            return defaultRectangle;
+        }
+
+        internal static void CenterWindow(this EditorWindow window)
+        {
+            // Aligning center of passed window with Editor Main Window
+            var positionProxy = window.position;
+            positionProxy.center = GetEditorMainWindowPosition().center;
+            window.position = positionProxy;
+        }
+
+        internal class Repainter
+        {
+            private bool NeedsRepaint { get; set; }
+            private bool NeedsFocus { get; set; }
+            private Vector2 MousePosition { get; set; }
+            private EditorWindow _lastWindowAssessed;
+
+            public void Assess(EditorWindow window)
+            {
+                if (window == null) return;
+                if (Event.current != null && Event.current.type != EventType.Layout) return;
+
+                _lastWindowAssessed = window;
+
+                var fullRect = new Rect(0, 0, window.position.width, window.position.height);
+                if (Event.current != null)
+                {
+                    var isMoving = Event.current.mousePosition != MousePosition;
+                    MousePosition = Event.current.mousePosition;
+                    var isMovingOver = fullRect.Contains(Event.current.mousePosition);
+                    if (isMoving && isMovingOver)
+                    {
+                        NeedsRepaint = true;
+                    }
+                }
+
+                if (NeedsRepaint)
+                {
+                    window.Repaint();
+                    NeedsRepaint = false;
+                }
+
+                if (NeedsFocus)
+                {
+                    window.Focus();
+                    NeedsFocus = false;
+                }
+            }
+
+            public void RequestRepaint(bool force = false)
+            {
+                NeedsRepaint = true;
+                if (force)
+                {
+                    Assess(_lastWindowAssessed);
+                }
+            }
+
+            public void RequestFocus()
+            {
+                NeedsFocus = true;
+            }
+
+            public void OnDisable()
+            {
+                NeedsFocus = false;
+                NeedsRepaint = false;
+                _lastWindowAssessed = null;
+            }
         }
     }
 }

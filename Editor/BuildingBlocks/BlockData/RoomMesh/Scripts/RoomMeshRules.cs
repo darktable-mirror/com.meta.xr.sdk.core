@@ -38,6 +38,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 {
                     var projectConfig = OVRProjectConfig.CachedProjectConfig;
                     projectConfig.targetDeviceTypes.Add(OVRProjectConfig.DeviceType.Quest3);
+                    OVRProjectConfig.CommitProjectConfig(projectConfig);
                 },
                 fixMessage: "Set Quest 3 as a target device"
             );

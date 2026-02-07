@@ -8,7 +8,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 You may obtain a copy of the License at
 
-https://developer.oculus.com/licenses/oculussdk/
+https://developers.meta.com/horizon/licenses/oculussdk/
 
 Unless required by applicable law or agreed to in writing, the Oculus SDK
 distributed under the License is distributed on an "AS IS" BASIS,

@@ -18,6 +18,9 @@
  * limitations under the License.
  */
 
+using System;
+using UnityEngine;
+
 namespace Meta.XR.Editor.UserInterface
 {
     /// <summary>
@@ -27,5 +30,10 @@ namespace Meta.XR.Editor.UserInterface
     {
         public void Draw();
         public bool Hide { get; set; }
+    }
+
+    internal interface IDynamicColorItem
+    {
+        public Func<IDynamicColorItem, Color> FetchDynamicColor { get; set; }
     }
 }

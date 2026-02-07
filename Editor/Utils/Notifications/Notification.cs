@@ -20,6 +20,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UserInterface;
 using UnityEngine;
@@ -29,14 +30,56 @@ namespace Meta.XR.Editor.Notifications
 {
     internal class Notification : IIdentified
     {
-        private static class Manager
+        internal static class Manager
         {
             // Although it's going to be treated like a queue, we actually may have to be able to remove
             // any item an any time, so a list is more appropriate.
             private static readonly List<Notification> Notifications = new();
 
+            // Snooze logic, keeping track of the caller object in order to remove it
+            // from the set later, on release
+            private static readonly HashSet<object> SnoozeSet = new();
+
+            private static bool Snoozed => SnoozeSet.Count > 0;
+
+            static Manager()
+            {
+#pragma warning disable CS4014
+                WarmUp();
+#pragma warning restore CS4014
+            }
+
+            /// To avoid notifications right on start-up, especially in an environment
+            /// that is potentially still initializing, we are delaying notifications
+            /// during the first 5 seconds
+            static async Task WarmUp()
+            {
+                const int delayInMs = 5000;
+                var task = Task.Delay(delayInMs);
+                RequestSnooze(task);
+                await task;
+                ReleaseSnooze(task);
+            }
+
+            public static void RequestSnooze(object caller)
+            {
+                if (caller == null) return;
+
+                SnoozeSet.Add(caller);
+            }
+
+            public static void ReleaseSnooze(object caller)
+            {
+                if (caller == null) return;
+
+                SnoozeSet.Remove(caller);
+
+                Refresh();
+            }
+
             public static void Enqueue(Notification notification, Origins origin)
             {
+                if (notification == null) return;
                 if (Notifications.Contains(notification)) return;
 
                 // We're still considering Open and Close telemetry to be linked to the request of showing the notification
@@ -50,12 +93,12 @@ namespace Meta.XR.Editor.Notifications
 
                 Notifications.Add(notification);
 
-                // Show the first one
-                Notifications.First().Show();
+                Refresh();
             }
 
             public static void Remove(Notification notification, Origins origin)
             {
+                if (notification == null) return;
                 if (!Notifications.Contains(notification)) return;
 
                 // We're still considering Open and Close telemetry to be linked to the request of showing the notification
@@ -72,8 +115,18 @@ namespace Meta.XR.Editor.Notifications
 
                 Notifications.Remove(notification);
 
-                // Show the first one
-                Notifications.FirstOrDefault()?.Show();
+                Refresh();
+            }
+
+            private static void Refresh()
+            {
+                if (Snoozed) return;
+
+                var notificationToShow = Notifications.FirstOrDefault();
+                if (notificationToShow == null
+                    || notificationToShow.Shown) return;
+
+                notificationToShow.Show();
             }
         }
         public string Id { get; }

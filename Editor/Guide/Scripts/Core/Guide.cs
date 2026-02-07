@@ -32,8 +32,6 @@ namespace Meta.XR.Guides.Editor
     /// </summary>
     internal class Guide
     {
-        internal static Dictionary<int, GuideWindow> GuideWindowIntances = new();
-
         /// <summary>
         /// This will create a <see cref="GuideWindow"/> type of <see cref="EditorWindow"/>.
         /// </summary>
@@ -115,17 +113,57 @@ namespace Meta.XR.Guides.Editor
         public static GuideWindow Create(
             string title,
             string description,
-            IIdentified populator,
+            IIdentified populator, // [NotNull]
             GuideWindow.GuideOptions guideOptions)
         {
-            if (GuideWindowIntances.TryGetValue(GetGuideHash(title, description), out var window))
+            string key = populator.Id;
+
+            if (s_GuideWindowInstances.TryGetValue(key, out var window) && window)
+            {
+                window.Setup(title, description, populator, guideOptions);
                 return window;
+            }
 
             window = ScriptableObject.CreateInstance<GuideWindow>();
             window.Setup(title, description, populator, guideOptions);
+            s_GuideWindowInstances[key] = window;
+            window.OnWindowDestroy += () => s_GuideWindowInstances.Remove(key);
             return window;
         }
 
-        internal static int GetGuideHash(string title, string description) => (title + description).GetHashCode();
+        static readonly Dictionary<string, GuideWindow> s_GuideWindowInstances = new();
+
+        /// <summary>
+        ///     (Internal) This is intended to be called only in
+        ///     GuideWindow.Awake for the edge case where a guide window has
+        ///     been left open (likely docked in a background tab) when the
+        ///     Editor gets restarted. The window with precedence would be
+        ///     deserialized in this case, as opposed to being instantiated by
+        ///     Guide.<see cref="Create(string,string,IIdentified)"/>.
+        /// </summary>
+        internal static void NotifyWindowAwake(string populatorId, GuideWindow window)
+        {
+            if (populatorId is null)
+            {
+                // means the window was *just* instantiated, not deserialized.
+                return;
+            }
+
+            if (!window)
+            {
+                s_GuideWindowInstances.Remove(populatorId);
+                return;
+            }
+
+            if (s_GuideWindowInstances.TryGetValue(populatorId, out var existing) && existing)
+            {
+                if (window != existing)
+                    UnityEngine.Object.DestroyImmediate(window);
+                return;
+            }
+
+            s_GuideWindowInstances[populatorId] = window;
+            window.OnWindowDestroy += () => s_GuideWindowInstances.Remove(populatorId);
+        }
     }
 }

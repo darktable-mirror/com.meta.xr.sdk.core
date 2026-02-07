@@ -29,7 +29,8 @@ namespace Meta.XR.Editor.UserInterface
     {
         public static class Contents
         {
-            public static readonly TextureContent DefaultIcon = TextureContent.CreateContent("ovr_bullet.png", TextureContent.Categories.Generic);
+            public static readonly TextureContent DefaultIcon =
+                TextureContent.CreateContent("ovr_bullet.png", TextureContent.Categories.Generic);
         }
 
         public static class Constants
@@ -42,7 +43,8 @@ namespace Meta.XR.Editor.UserInterface
             public const int DefaultHeaderHeight = 84;
             public const float BorderRadius = 4.0f;
 
-            public static Vector4 RoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
+            public static Vector4 RoundedBorderVectors =
+                new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
         }
 
         public class GUIStylesContainer
@@ -167,9 +169,14 @@ namespace Meta.XR.Editor.UserInterface
                 stretchWidth = false
             };
 
+            public readonly GUIStyle ContentPadding = new()
+            {
+                padding = new RectOffset(LargeMargin, LargeMargin, LargeMargin, LargeMargin)
+            };
+
             public readonly GUIStyle ContentMargin = new()
             {
-                margin = new RectOffset(LargeMargin, LargeMargin, Margin, Margin)
+                margin = new RectOffset(0, 0, Margin, 0)
             };
 
             public readonly GUIStyle LabelTopPadding = new(EditorStyles.label)
@@ -239,6 +246,18 @@ namespace Meta.XR.Editor.UserInterface
                 padding = new RectOffset(DoubleMargin, DoubleMargin, DoubleMargin, DoubleMargin),
                 normal = { background = CharcoalGray.ToTexture() }
             };
+
+            public readonly GUIStyle OnboardingDescriptionText = new(EditorStyles.label)
+            {
+                fontSize = 12,
+                alignment = TextAnchor.UpperLeft,
+                wordWrap = true,
+                richText = true,
+                normal =
+                {
+                    textColor = Color.white
+                }
+            };
         }
 
         private static GUIStylesContainer _guiStyles;
@@ -246,7 +265,11 @@ namespace Meta.XR.Editor.UserInterface
 
         public enum ContentStatusType
         {
-            Normal, Warning, Error, Success
+            Normal,
+            Warning,
+            Error,
+            Success,
+            Disabled
         }
     }
 }

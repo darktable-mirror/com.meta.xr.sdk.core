@@ -50,6 +50,7 @@ using UnityEngine.Rendering;
 ///   * Note: if transform.position's magnitude is greater than 1, which will cause some cube map pixel always invisible
 ///     Which is usually not what people wanted, we don't kill the ability for developer to do so here, but will warn out.
 /// 5. Equirect: Display overlay as a 360-degree equirectangular skybox.
+/// 6. ScaledEquirect: Display overlay as a 360-degree equirectangular sphere with a radius, centered at the location of the overlay.
 /// </summary>
 [ExecuteInEditMode]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-ovroverlay/")]
@@ -67,6 +68,7 @@ public class OVROverlay : MonoBehaviour
         Cubemap = OVRPlugin.OverlayShape.Cubemap,
         OffcenterCubemap = OVRPlugin.OverlayShape.OffcenterCubemap,
         Equirect = OVRPlugin.OverlayShape.Equirect,
+        ScaledEquirect = OVRPlugin.OverlayShape.ScaledEquirect,
         ReconstructionPassthrough = OVRPlugin.OverlayShape.ReconstructionPassthrough,
         SurfaceProjectedPassthrough = OVRPlugin.OverlayShape.SurfaceProjectedPassthrough,
         Fisheye = OVRPlugin.OverlayShape.Fisheye,

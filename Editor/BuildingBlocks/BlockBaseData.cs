@@ -43,11 +43,13 @@ namespace Meta.XR.BuildingBlocks.Editor
         [SerializeField, OVRReadOnly] internal int version = 1;
         public int Version => version;
 
-        private static readonly TextureContent DefaultThumbnailTexture = TextureContent.CreateContent("bb_thumb_default.jpg",
-            Utils.BuildingBlocksThumbnails);
+        private static TextureContent _defaultThumbnailTexture;
+        private static TextureContent DefaultThumbnailTexture => _defaultThumbnailTexture ??=
+            TextureContent.CreateContent("bb_thumb_default.jpg", Utils.BuildingBlocksThumbnails);
 
-        internal static readonly TextureContent DefaultInternalThumbnailTexture = TextureContent.CreateContent("bb_thumb_internal.jpg",
-            Utils.BuildingBlocksThumbnails);
+        private static TextureContent _defaultInternalThumbnailTexture;
+        internal static TextureContent DefaultInternalThumbnailTexture => _defaultInternalThumbnailTexture ??=
+            TextureContent.CreateContent("bb_thumb_internal.jpg", Utils.BuildingBlocksThumbnails);
 
         [SerializeField] internal string blockName;
         public Overridable<string> BlockName { get; private set; } = new("");

@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.UserInterface;
@@ -112,4 +113,8 @@ internal static class OVRProjectSetupUtils
             _ => BuildTarget.NoTarget
         };
     }
+
+    public static bool IsCoreModuleLoaded =>
+        AppDomain.CurrentDomain.GetAssemblies()
+            .Any(assembly => assembly.GetName().Name == "UnityEngine.CoreModule");
 }

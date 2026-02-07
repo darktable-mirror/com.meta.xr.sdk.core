@@ -54,8 +54,20 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
 
     public enum HandTrackingFrequency
     {
+        [InspectorName("Low (Default)")]
+        [Tooltip("Low: The default hand tracking mode provides the right balance " +
+                 "between accuracy and speed for most apps.")]
         LOW = 0,
+
+        [InspectorName("High (Fast Motion Mode)")]
+        [Tooltip("High: Fast Motion Mode (FMM), previously known as 'High Frequency Hand Tracking', " +
+                 "provides improved tracking of fast movements. It is highly recommended to only " +
+                 "enable this if you observe high tracking loss due to fast hand motion.")]
         HIGH = 1,
+
+        [InspectorName("Max (Fast Motion Mode)")]
+        [Tooltip("Max: Fast Motion Mode (FMM). There is no functional difference between " +
+                 "High and Max values as both track hands at high frequency.")]
         MAX = 2
     }
 
@@ -99,9 +111,9 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         Required = 2
     }
 
-    public static readonly int minSdkVersion = 68;
+    public static readonly int minSdkVersion = 60;
     public static readonly int[] skippedSdkVersions = { 70, 73, 75 };
-    public static int currentSdkVersion = OVRPlugin.wrapperVersion.Minor - 32;
+    public static int currentSdkVersion = (OVRPlugin.wrapperVersion == null || OVRPlugin.wrapperVersion == new Version(0, 0, 0)) ? minSdkVersion : OVRPlugin.wrapperVersion.Minor - 32;
     public static int[] horizonOsSdkVersions = Enumerable.Range(minSdkVersion, currentSdkVersion - minSdkVersion + 1)
     .Except(skippedSdkVersions)
     .ToArray();
@@ -158,6 +170,9 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
 
     [SerializeField]
     internal FeatureSupport _insightPassthroughSupport = FeatureSupport.None;
+
+    [SerializeField]
+    public bool isPassthroughCameraAccessEnabled;
 
     public ProcessorFavor processorFavor
     {

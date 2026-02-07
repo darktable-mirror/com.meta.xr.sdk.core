@@ -24,19 +24,19 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
-using Meta.XR.Editor.ToolingSupport;
 using UnityEditor;
-using Oculus.VR.Editor.Utils;
 using UnityEngine;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.RemoteContent;
 
 namespace Meta.XR.Editor.Notifications
 {
     [InitializeOnLoad]
     internal static class RemoteNotificationManager
     {
-        private static readonly RemoteContentDownloader Downloader;
+        private static readonly RemoteJsonContentDownloader Downloader;
         private static readonly Validator Validator = new();
+
         private static readonly CustomBool InitSession = new OnlyOncePerSessionBool
         {
             Owner = null,
@@ -51,10 +51,12 @@ namespace Meta.XR.Editor.Notifications
                 return;
             }
 
-            Downloader = new RemoteContentDownloader(
-                cacheDurationInHours: 2,
-                cacheFile: "remote_notifications.json",
-                downloadPath: "https://www.facebook.com/developerframeworktools/unity/notifications");
+            Downloader = new RemoteJsonContentDownloader(
+                    cacheFile: "remote_notifications.json",
+                    url: "https://www.facebook.com/developerframeworktools/unity/notifications")
+                .WithCacheDuration(TimeSpan.FromHours(2))
+                .WithMachineIdUrlParameter()
+                .WithSDKVersionUrlParameter();
 
 #pragma warning disable CS4014
             InitializeAsync();
@@ -79,13 +81,13 @@ namespace Meta.XR.Editor.Notifications
 
         private static async Task<bool> Reload()
         {
-            var (downloadSuccess, jsonData) = await Downloader.RefreshAndLoad();
-            if (!downloadSuccess)
+            var result = await Downloader.Fetch();
+            if (!result.IsSuccess)
             {
                 return false;
             }
 
-            var (parseSuccess, notifications) = GetNotificationsFromJsonString(jsonData);
+            var (parseSuccess, notifications) = GetNotificationsFromJsonString(result.Content);
             if (!parseSuccess)
             {
                 return false;
@@ -102,8 +104,8 @@ namespace Meta.XR.Editor.Notifications
                 var response = JsonUtility.FromJson<NotificationsResponse>(jsonData);
                 var notifications =
                     (response.notifications ?? Enumerable.Empty<NotificationData>())
-                        .Where(data => data.IsNotificationValid(Validator))
-                        .Select(data => data.BuildNotificationFromData());
+                    .Where(data => data.IsNotificationValid(Validator))
+                    .Select(data => data.BuildNotificationFromData());
                 return (true, notifications);
             }
             catch (Exception)

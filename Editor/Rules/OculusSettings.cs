@@ -47,7 +47,11 @@ namespace Meta.XR.Editor.Rules
                 platform: BuildTargetGroup.Android,
                 isDone: _ => Settings.LowOverheadMode,
                 message: "Use Low Overhead Mode",
-                fix: _ => Settings.LowOverheadMode = true,
+                fix: _ =>
+                {
+                    Settings.LowOverheadMode = true;
+                    EditorUtility.SetDirty(Settings);
+                },
                 fixMessage: "OculusSettings.LowOverheadMode = true"
             );
 
@@ -58,7 +62,11 @@ namespace Meta.XR.Editor.Rules
                 platform: BuildTargetGroup.Standalone,
                 isDone: _ => Settings.DashSupport,
                 message: "Enable Dash Support",
-                fix: _ => Settings.DashSupport = true,
+                fix: _ =>
+                {
+                    Settings.DashSupport = true;
+                    EditorUtility.SetDirty(Settings);
+                },
                 fixMessage: "OculusSettings.DashSupport = true",
                 conditionalValidity: _ => Settings != null
             );
@@ -97,7 +105,11 @@ namespace Meta.XR.Editor.Rules
                 group: OVRProjectSetup.TaskGroup.Rendering,
                 isDone: _ => Settings.FoveatedRenderingMethod == FixedFoveatedRendering,
                 message: "Fixed Foveated Rendering is recommended",
-                fix: _ => Settings.FoveatedRenderingMethod = FixedFoveatedRendering,
+                fix: _ =>
+                {
+                    Settings.FoveatedRenderingMethod = FixedFoveatedRendering;
+                    EditorUtility.SetDirty(Settings);
+                },
                 fixMessage: "OculusSettings.FoveatedRenderingMethod = FoveationMethod.FixedFoveatedRendering",
                 conditionalValidity: _ => Settings != null
             );
@@ -107,14 +119,15 @@ namespace Meta.XR.Editor.Rules
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Recommended,
                 group: OVRProjectSetup.TaskGroup.Rendering,
-                isDone: buildTargetGroup =>
+                isDone: _ =>
                     Settings.m_StereoRenderingModeAndroid == StereoRenderingModeAndroid.Multiview
                     && Settings.m_StereoRenderingModeDesktop == StereoRenderingModeDesktop.SinglePassInstanced,
                 message: "Use Stereo Rendering Instancing in Oculus Settings",
-                fix: buildTargetGroup =>
+                fix: _ =>
                 {
                         Settings.m_StereoRenderingModeAndroid = StereoRenderingModeAndroid.Multiview;
                         Settings.m_StereoRenderingModeDesktop = StereoRenderingModeDesktop.SinglePassInstanced;
+                        EditorUtility.SetDirty(Settings);
                 },
                 fixMessage: "OculusSettings.m_StereoRenderingModeAndroid = Multiview"
                             + ", OculusSettings.m_StereoRenderingModeDesktop = Single Pass Instanced",
@@ -150,7 +163,7 @@ namespace Meta.XR.Editor.Rules
                 fixMessage: "Add Oculus to the XR Plugin active loaders"
             );
             OVRProjectSetup.AddTask(
-               conditionalValidity: buildTargetGroup =>
+               conditionalValidity: _ =>
                 PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.XRPluginManagementPackageName) && PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.XRSimulatorPackageName),
                level: OVRProjectSetup.TaskLevel.Required,
                platform: BuildTargetGroup.Android,

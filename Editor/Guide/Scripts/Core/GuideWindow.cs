@@ -37,7 +37,6 @@ namespace Meta.XR.Guides.Editor
 
         [SerializeField] private string _title = "Meta XR Guide";
         [SerializeField] private string _description = "Description placeholder.";
-        private bool _isVisible;
         private Vector2 _scrollPosition = Vector2.zero;
 
         public Action OnWindowFocus;
@@ -46,10 +45,13 @@ namespace Meta.XR.Guides.Editor
         public Action OnWindowDestroy;
         public Action<Rect> DrawCustomHeaderTitle;
         public Action DrawCustomNotice;
+        public Action DrawBefore;
+        public Action DrawHeader;
+        public Action DrawAfter;
         public Func<OVRTelemetryMarker, OVRTelemetryMarker> AddAdditionalTelemetryAnnotations;
 
         private CustomBool _dontShowAgain;
-        private CustomBool DontShowAgain => _dontShowAgain ??= new UserBool()
+        public CustomBool DontShowAgain => _dontShowAgain ??= new UserBool()
         {
             Owner = this,
             Label = "Don't Show Again",
@@ -88,6 +90,7 @@ namespace Meta.XR.Guides.Editor
             public TextureContent HeaderImage;
             public int HeaderHeight;
             public int BottomMargin;
+            public bool ShowAsUtility;
 
             public GuideOptions(GuideOptions options)
             {
@@ -102,6 +105,7 @@ namespace Meta.XR.Guides.Editor
                 HeaderImage = options.HeaderImage;
                 HeaderHeight = options.HeaderHeight;
                 BottomMargin = options.BottomMargin;
+                ShowAsUtility = options.ShowAsUtility;
             }
         }
 
@@ -117,6 +121,7 @@ namespace Meta.XR.Guides.Editor
             MaxWindowHeight = GuideStyles.Constants.DefaultHeight,
             HeaderHeight = GuideStyles.Constants.DefaultHeaderHeight,
             BottomMargin = LargeMargin - Margin,
+            ShowAsUtility = false
         };
 
         public void Setup(string title, string description, IIdentified populator, GuideOptions guideOptions)
@@ -140,13 +145,41 @@ namespace Meta.XR.Guides.Editor
 
         internal void Show(Origins origin, bool ignoreDontShowAgainFlag = false)
         {
-            if (Application.isBatchMode) return;
+            if (Application.isBatchMode || hasFocus) return;
 
-            if ((ignoreDontShowAgainFlag || !_guideOptions.ShowDontShowAgainOption || !DontShowAgain.Value) && !_isVisible)
+            if (ignoreDontShowAgainFlag || !DontShowAgain.Value)
             {
                 OnOpen(origin);
-                base.Show();
+                if (_guideOptions.ShowAsUtility)
+                {
+                    base.ShowUtility();
+                }
+                else
+                {
+                    base.Show();
+                }
+
+                if (docked)
+                {
+                    base.ShowTab();
+                }
+                else
+                {
+                    // Ensure Guide Window is centered (for better visibility and avoiding the risk of it
+                    // being somewhere else (other screen or in a corner)
+                    this.CenterWindow();
+                }
+
+                if (ignoreDontShowAgainFlag)
+                {
+                    base.Focus();
+                }
             }
+        }
+
+        void Awake()
+        {
+            Guide.NotifyWindowAwake(_populatorId, this);
         }
 
         internal void OnGUI()
@@ -156,6 +189,9 @@ namespace Meta.XR.Guides.Editor
             {
                 // Search for the bespoke initialization method and call it
                 GuideProcessor.InitializeWindow(_populatorId, this);
+
+                // Further initialize
+                DrawHeader ??= DrawDefaultHeader;
 
                 // Search for the bespoke items
                 Items = GuideProcessor.GetItems(_populatorId);
@@ -168,10 +204,17 @@ namespace Meta.XR.Guides.Editor
                 }
             }
 
+            DrawBefore?.Invoke();
+
+            // Scroll View
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, Styles.GUIStyles.NoMargin);
 
-            DrawHeader();
+            // Header
+            DrawHeader?.Invoke();
 
+            EditorGUILayout.BeginVertical(UIStyles.GUIStyles.ContentPadding);
+
+            // Content
             XRGuideBeginVertical();
             BeforeItemDraw();
 
@@ -184,13 +227,20 @@ namespace Meta.XR.Guides.Editor
             AfterItemDraw();
             XRGuideEndVertical();
 
-            DrawFooters();
-            EditorGUILayout.Space(_guideOptions.BottomMargin);
-            OnWindowDraw?.Invoke();
+            GUILayout.FlexibleSpace();
 
+            // Footers
+            DrawFooters();
+
+            EditorGUILayout.EndVertical();
             EditorGUILayout.EndScrollView();
 
+            // Draw After
+            DrawAfter?.Invoke();
+
             UpdateMinimumSize();
+
+            OnWindowDraw?.Invoke();
         }
 
         private void UpdateMinimumSize()
@@ -221,24 +271,12 @@ namespace Meta.XR.Guides.Editor
             maxSize = idealMaxSize;
         }
 
-        private void OnBecameVisible()
-        {
-            Guide.GuideWindowIntances.TryAdd(GetHashCode(), this);
-            _isVisible = true;
-        }
-
-        private void OnBecameInvisible()
-        {
-            _isVisible = false;
-        }
-
         private void OnFocus() => OnWindowFocus?.Invoke();
         private void OnLostFocus() => OnWindowLostFocus?.Invoke();
         private void OnDestroy()
         {
             OnClose();
             OnWindowDestroy?.Invoke();
-            Guide.GuideWindowIntances.Remove(GetHashCode());
         }
 
         private void OnClose()
@@ -246,6 +284,8 @@ namespace Meta.XR.Guides.Editor
             var marker = OVRTelemetry.Start(XR.Editor.UserInterface.Telemetry.MarkerId.PageClose);
             marker = AddTelemetryAnnotations(marker, Origins.Self);
             marker.Send();
+
+            Meta.XR.Editor.Notifications.Notification.Manager.ReleaseSnooze(this);
         }
 
         private void OnOpen(Origins origin)
@@ -253,6 +293,8 @@ namespace Meta.XR.Guides.Editor
             var marker = OVRTelemetry.Start(XR.Editor.UserInterface.Telemetry.MarkerId.PageOpen);
             marker = AddTelemetryAnnotations(marker, origin);
             marker.Send();
+
+            Meta.XR.Editor.Notifications.Notification.Manager.RequestSnooze(this);
         }
 
         private OVRTelemetryMarker AddTelemetryAnnotations(OVRTelemetryMarker marker, Origins origin)
@@ -271,9 +313,7 @@ namespace Meta.XR.Guides.Editor
             return marker;
         }
 
-        public override int GetHashCode() => Guide.GetGuideHash(_title, _description);
-
-        private void DrawHeader()
+        private void DrawDefaultHeader()
         {
             DrawHeaderImage();
             DrawHeaderTitle();

@@ -172,6 +172,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
                                  out var isEnabled, out _) && isEnabled;
 
     /// <summary>
+    /// Whether this anchor is current considered tracked.
+    /// </summary>
+    /// <remarks>
+    /// An anchor may become temporarily untracked if, for example, it cannot be seen by the device.
+    /// </remarks>
+    public bool IsTracked { get; private set; }
+
+    /// <summary>
     /// Async method that completes when localization completes.
     /// </summary>
     /// <remarks>
@@ -734,6 +742,8 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         ShareRequests.Clear();
     }
 
+    private void OnDisable() => IsTracked = false;
+
     private void OnDestroy()
     {
         if (_anchor != OVRAnchor.Null)
@@ -778,9 +788,9 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         }
     }
 
-    internal static bool TryGetPose(OVRSpace space, out OVRPose pose)
+    internal static bool TryGetPose(OVRSpace space, out OVRPose pose, out OVRPlugin.SpaceLocationFlags locationFlags)
     {
-        var tryLocateSpace = OVRPlugin.TryLocateSpace(space, OVRPlugin.GetTrackingOriginType(), out var posef, out var locationFlags);
+        var tryLocateSpace = OVRPlugin.TryLocateSpace(space, OVRPlugin.GetTrackingOriginType(), out var posef, out locationFlags);
         if (!tryLocateSpace || !locationFlags.IsOrientationValid() || !locationFlags.IsPositionValid())
         {
             pose = OVRPose.identity;
@@ -797,9 +807,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         return true;
     }
 
+    [Obsolete("Use the overload that provides an out parameter for the " + nameof(OVRPlugin.SpaceLocationFlags))]
+    internal static bool TryGetPose(OVRSpace space, out OVRPose pose) => TryGetPose(space, out pose, out _);
+
     private void UpdateTransform()
     {
-        if (TryGetPose(_anchor.Handle, out var pose))
+        bool hasPose = TryGetPose(_anchor.Handle, out var pose, out var flags);
+        IsTracked = hasPose && flags.IsOrientationTracked() && flags.IsPositionTracked();
+        if (hasPose)
         {
             transform.SetPositionAndRotation(pose.position, pose.orientation);
         }
@@ -997,7 +1012,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
             if (!locatable.IsEnabled)
                 throw new InvalidOperationException($"The anchor {Uuid} is not localized. An anchor must be localized before getting the pose.");
 
-            if (OVRSpatialAnchor.TryGetPose(_space, out var ovrPose))
+            if (OVRSpatialAnchor.TryGetPose(_space, out var ovrPose, out _))
             {
                 pose = new Pose(ovrPose.position, ovrPose.orientation);
                 return true;

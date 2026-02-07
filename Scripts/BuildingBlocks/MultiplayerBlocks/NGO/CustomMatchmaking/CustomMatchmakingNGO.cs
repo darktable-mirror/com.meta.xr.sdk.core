@@ -65,6 +65,32 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         private static bool IsLobbyHost(Lobby lobby) =>
             lobby != null && lobby.HostId == AuthenticationService.Instance.PlayerId;
 
+        private async Task<bool> WaitForSignIn()
+        {
+#if UNITY_SERVICES_INSTALLED
+            if (AuthenticationService.Instance.IsSignedIn)
+            {
+                return true;
+            }
+            var signInComplete = new TaskCompletionSource<bool>();
+            void OnSignedIn()
+            {
+                signInComplete.SetResult(true);
+                AuthenticationService.Instance.SignedIn -= OnSignedIn;
+            }
+            void OnSignInFailed(RequestFailedException e)
+            {
+                signInComplete.SetResult(false);
+                Debug.LogError($"Error signing in: {e.Message}");
+                AuthenticationService.Instance.SignInFailed -= OnSignInFailed;
+            }
+
+            AuthenticationService.Instance.SignedIn += OnSignedIn;
+            AuthenticationService.Instance.SignInFailed += OnSignInFailed;
+            return await signInComplete.Task;
+#endif
+        }
+
         private IEnumerator HeartbeatLobbyCoroutine(string lobbyId, float waitTimeSeconds)
         {
             var delay = new WaitForSecondsRealtime(waitTimeSeconds);
@@ -139,6 +165,14 @@ namespace Meta.XR.MultiplayerBlocks.NGO
             CustomMatchmaking.RoomCreationOptions roomCreationOptions)
         {
 #if UNITY_SERVICES_INSTALLED
+            if (!await WaitForSignIn())
+            {
+                return new CustomMatchmaking.RoomOperationResult
+                {
+                    ErrorMessage = "Sign in failed."
+                };
+            }
+
             var hostAllocation =
                 await RelayService.Instance.CreateAllocationAsync(roomCreationOptions.MaxPlayersPerRoom);
             var joinCode = await RelayService.Instance.GetJoinCodeAsync(hostAllocation.AllocationId);
@@ -203,6 +237,14 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         public async Task<CustomMatchmaking.RoomOperationResult> JoinRoom(string roomToken, string roomPassword = null)
         {
 #if UNITY_SERVICES_INSTALLED
+            if (!await WaitForSignIn())
+            {
+                return new CustomMatchmaking.RoomOperationResult
+                {
+                    ErrorMessage = "Sign in failed."
+                };
+            }
+
             try
             {
                 var options = string.IsNullOrEmpty(roomPassword)

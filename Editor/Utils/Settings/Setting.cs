@@ -19,9 +19,7 @@
  */
 
 using System;
-using System.Collections.Generic;
 using Meta.XR.Editor.Id;
-using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -109,6 +107,7 @@ namespace Meta.XR.Editor.Settings
         {
             DrawForMenuImplementation(menu, origin, originData, callback);
         }
+
 
         public void DrawForGUI(Origins origin, IIdentified originData, Action callback = null)
         {
@@ -325,81 +324,44 @@ namespace Meta.XR.Editor.Settings
             }, Content, typeof(T));
     }
 
-    internal class OnlyOncePerSessionBool : CustomBool
+    internal class SessionBool : CustomBool
     {
-        public OnlyOncePerSessionBool()
+        public SessionBool()
         {
-            Get = OnlyOnce;
-            Set = null;
+            Get = () => SessionState.GetBool(Key, Default);
+            Set = value => SessionState.SetBool(Key, value);
         }
-
-        private static readonly HashSet<string> OnlyOnceSettings = new();
-
-        private CustomFloat _previousTimestamp;
-        private CustomFloat PreviousTimestamp => _previousTimestamp ??= new UserFloat
-        {
-            Owner = this,
-            Uid = $"{Uid}_timestamp",
-            Default = 0.0f,
-            SendTelemetry = false
-        };
-
-        private CustomFloat _previousTimeSinceStartup;
-        private CustomFloat PreviousTimeSinceStartup => _previousTimeSinceStartup ??= new UserFloat
-        {
-            Owner = this,
-            Uid = $"{Uid}_timesincestartup",
-            Default = 0.0f,
-            SendTelemetry = false
-        };
 
         public override void Reset()
         {
-            base.Reset();
+            SessionState.EraseBool(Key);
+        }
+    }
 
-            OnlyOnceSettings.Remove(Uid);
-            PreviousTimestamp.Reset();
-            PreviousTimeSinceStartup.Reset();
+    internal class OnlyOncePerSessionBool : SessionBool
+    {
+        public OnlyOncePerSessionBool()
+        {
+            Get = () =>
+            {
+                var value = SessionState.GetBool(Key, true);
+                Set(false);
+                return value;
+            };
+        }
+    }
+
+    internal class SessionInt : CustomInt
+    {
+        public SessionInt()
+        {
+            Get = () => SessionState.GetInt(Key, Default);
+            Set = value => SessionState.SetInt(Key, value);
         }
 
-        private bool OnlyOnce()
+        public override void Reset()
         {
-            if (OnlyOnceSettings.Contains(Uid))
-            {
-                // If the tuple was found, this means we already went through this test
-                // So either it was the first time the previous time
-                // or it wasn't the first time...so neither is current time
-                return false;
-            }
-
-            // From now on, we can be sure next time won't be the first
-            // So we add it to the HashSet
-            OnlyOnceSettings.Add(Uid);
-
-            var currentTimestamp = (float)DateTime.UtcNow.TimeOfDay.TotalSeconds;
-            // Better timestamp would be absolute number of seconds
-            // But this is too big to be stored in float or int, and EditorPrefs do not allow double or long.
-            var currentTimeSinceStartup = (float)EditorApplication.timeSinceStartup;
-
-            // The tuple was not found, so this is the first time we're testing it
-            // since last compile
-            // We're getting the previous saved timestamps
-            var timeStampDiff = currentTimestamp - PreviousTimestamp.Value;
-            var timeSinceStartupDiff = currentTimeSinceStartup - PreviousTimeSinceStartup.Value;
-
-            // If the difference between timestamps is very close
-            // to the difference between timeSinceStartups
-            // Then we're very probably on the same instance of the Editor
-            const float closeThreshold = 5.0f;
-            if (Mathf.Abs(timeSinceStartupDiff - timeStampDiff) < closeThreshold)
-            {
-                return false;
-            }
-
-            // And we're storing the current timestamp for next time
-            PreviousTimestamp.SetValue(currentTimestamp);
-            PreviousTimeSinceStartup.SetValue(currentTimeSinceStartup);
-            return true;
+            SessionState.EraseInt(Key);
         }
     }
 }

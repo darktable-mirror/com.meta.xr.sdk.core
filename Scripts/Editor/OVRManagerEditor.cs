@@ -31,6 +31,7 @@ public class OVRManagerEditor : Editor
     private SerializedProperty _requestEyeTrackingPermissionOnStartup;
     private SerializedProperty _requestScenePermissionOnStartup;
     private SerializedProperty _requestRecordAudioPermissionOnStartup;
+    private SerializedProperty _requestPassthroughCameraAccessPermissionOnStartup;
     private bool _expandPermissionsRequest;
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_ANDROID
     private bool _showFaceTrackingDataSources = false;
@@ -48,6 +49,8 @@ public class OVRManagerEditor : Editor
             serializedObject.FindProperty(nameof(OVRManager.requestScenePermissionOnStartup));
         _requestRecordAudioPermissionOnStartup =
             serializedObject.FindProperty(nameof(OVRManager.requestRecordAudioPermissionOnStartup));
+        _requestPassthroughCameraAccessPermissionOnStartup =
+            serializedObject.FindProperty(nameof(OVRManager.requestPassthroughCameraAccessPermissionOnStartup));
 
         OVRManager manager = target as OVRManager;
         manager?.UpdateDynamicResolutionVersion();
@@ -229,6 +232,15 @@ public class OVRManagerEditor : Editor
 #endif
         OVREditorUtil.SetupBoolField(target, enablePassthroughContent, ref manager.isInsightPassthroughEnabled,
             ref modified);
+
+        bool prevIsPassthroughCameraAccessEnabled = projectConfig.isPassthroughCameraAccessEnabled;
+        OVREditorUtil.SetupBoolField(target, new GUIContent("Enable Passthrough Camera Access",
+            "Use 'PassthroughCameraAccess' component from 'Mixed Reality Utility Kit (MRUK)' package to access passthrough camera."), ref projectConfig.isPassthroughCameraAccessEnabled, ref modified);
+        if (prevIsPassthroughCameraAccessEnabled != projectConfig.isPassthroughCameraAccessEnabled)
+        {
+            EditorUtility.SetDirty(projectConfig);
+        }
+
 #if UNITY_ANDROID
         EditorGUI.EndDisabledGroup();
 #endif
@@ -382,8 +394,16 @@ public class OVRManagerEditor : Editor
 #endif
 
         #region DynamicResolution
+
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Dynamic Resolution", EditorStyles.boldLabel);
+#if USING_XR_SDK_OPENXR && !UNITY_2022_3_49_OR_NEWER
+        EditorGUILayout.HelpBox(
+            "When using OpenXR Plugin, Dynamic Resolution is not available until Unity 2022.3.49f1 or newer.",
+            manager.enableDynamicResolution ? MessageType.Warning : MessageType.Info,
+            wide: true
+        );
+#endif
         bool enableDynamicResolution = manager.enableDynamicResolution;
         OVREditorUtil.SetupBoolField(target, "Enable Dynamic Resolution", ref enableDynamicResolution, ref modified, "https://developers.meta.com/horizon/documentation/unity/dynamic-resolution-unity");
         manager.enableDynamicResolution = enableDynamicResolution;
@@ -392,6 +412,7 @@ public class OVRManagerEditor : Editor
             OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 2/Pro Range", "Quest2/Pro resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest2MinDynamicResolutionScale, ref manager.quest2MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
             OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 3/3S Range", "Quest3/3S Resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest3MinDynamicResolutionScale, ref manager.quest3MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
         }
+
         #endregion
 
         #region PermissionRequests
@@ -437,6 +458,8 @@ public class OVRManagerEditor : Editor
                 "Record Audio for audio based Face Tracking", "Face Tracking", _requestRecordAudioPermissionOnStartup);
             AddPermissionGroup(projectConfig.sceneSupport != OVRProjectConfig.FeatureSupport.None,
                 "Scene", "Scene", _requestScenePermissionOnStartup);
+            AddPermissionGroup(projectConfig.isPassthroughCameraAccessEnabled,
+                "Passthrough Camera Access", "Passthrough Camera Access", _requestPassthroughCameraAccessPermissionOnStartup);
         }
 
         EditorGUILayout.EndFoldoutHeaderGroup();
