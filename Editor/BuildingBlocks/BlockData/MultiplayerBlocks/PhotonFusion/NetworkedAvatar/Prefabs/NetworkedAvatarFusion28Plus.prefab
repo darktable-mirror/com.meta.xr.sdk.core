@@ -244,17 +244,45 @@ PrefabInstance:
       propertyPath: maxVerticesToSkin
       value: 60000
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 1182142148035470165, guid: 643ab75508755d4468bbc11300c9d3e3, type: 3}
     m_RemovedGameObjects:
     - {fileID: 4205552417605622653, guid: 643ab75508755d4468bbc11300c9d3e3, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 7481538547979176742, guid: 643ab75508755d4468bbc11300c9d3e3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5746325477137711534}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3944957699152140839, guid: 643ab75508755d4468bbc11300c9d3e3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4985103198563424935}
   m_SourcePrefab: {fileID: 100100000, guid: 643ab75508755d4468bbc11300c9d3e3, type: 3}
 --- !u!4 &1556711579153493726 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7481538547979176742, guid: 643ab75508755d4468bbc11300c9d3e3, type: 3}
   m_PrefabInstance: {fileID: 8235200552747574776}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4969160772547084255 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3944957699152140839, guid: 643ab75508755d4468bbc11300c9d3e3, type: 3}
+  m_PrefabInstance: {fileID: 8235200552747574776}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4985103198563424935
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4969160772547084255}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6937544d08e2ba34da6ff4ab90cbfd84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _bodyTrackingMode: 0
+  _useAsyncBodySolver: 0
+  _enableHipLock: 0
+  _ovrCameraRig: {fileID: 0}
+  _debugDrawTrackingLocations: 0
+  HeadsetInputSimulator: {fileID: 0}
+  disableSampleSceneLocomotion: 0

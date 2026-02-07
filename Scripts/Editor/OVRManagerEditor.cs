@@ -20,6 +20,7 @@
 
 using UnityEngine;
 using UnityEditor;
+using System.IO;
 using UnityEditor.SceneManagement;
 
 [CustomEditor(typeof(OVRManager))]
@@ -50,6 +51,21 @@ public class OVRManagerEditor : Editor
 
         OVRManager manager = target as OVRManager;
         manager?.UpdateDynamicResolutionVersion();
+
+        OVRRuntimeSettings runtimeSettings = OVRRuntimeSettings.GetRuntimeSettings();
+        if (!runtimeSettings.QuestVisibilityMeshOverriden)
+        {
+            string occlusionMeshShaderPath = "Packages/com.unity.render-pipelines.universal/Shaders/XR/XROcclusionMesh.shader";
+            if (File.Exists(occlusionMeshShaderPath))
+            {
+                string shaderText = File.ReadAllText(occlusionMeshShaderPath);
+                if (shaderText.Contains("USE_XR_OCCLUSION_MESH_COMBINED_MULTIVIEW"))
+                {
+                    runtimeSettings.VisibilityMesh = true;
+                    OVRRuntimeSettings.CommitRuntimeSettings(runtimeSettings);
+                }
+            }
+        }
     }
 
     public override void OnInspectorGUI()
@@ -79,9 +95,19 @@ public class OVRManagerEditor : Editor
             "https://developer.oculus.com/documentation/unity/unity-color-space/");
         manager.colorGamut = colorGamut;
 
+        bool visibilityMesh = runtimeSettings.VisibilityMesh;
+#if UNITY_ANDROID
+        OVREditorUtil.SetupBoolField(target, new GUIContent("Visibility Mesh", "Toggle Visibility Mesh for Quest. This feature is supported on OpenXR with URP 14.0.7 Meta Fork or URP 17.0.3."), ref visibilityMesh, ref modified);
+#endif
+
         if (modified)
         {
             runtimeSettings.colorSpace = colorGamut;
+            if (runtimeSettings.VisibilityMesh != visibilityMesh)
+            {
+                runtimeSettings.VisibilityMesh = visibilityMesh;
+                runtimeSettings.QuestVisibilityMeshOverriden = true;
+            }
             OVRRuntimeSettings.CommitRuntimeSettings(runtimeSettings);
         }
 #endif
@@ -359,10 +385,13 @@ public class OVRManagerEditor : Editor
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Dynamic Resolution", EditorStyles.boldLabel);
         bool enableDynamicResolution = manager.enableDynamicResolution;
-        OVREditorUtil.SetupBoolField(target, "Enable Dynamic Resolution", ref enableDynamicResolution, ref modified);
+        OVREditorUtil.SetupBoolField(target, "Enable Dynamic Resolution", ref enableDynamicResolution, ref modified, "https://developers.meta.com/horizon/documentation/unity/dynamic-resolution-unity");
         manager.enableDynamicResolution = enableDynamicResolution;
-        OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 2/Pro Range", "Quest2/Pro resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest2MinDynamicResolutionScale, ref manager.quest2MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
-        OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 3/3S Range", "Quest3/3S Resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest3MinDynamicResolutionScale, ref manager.quest3MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
+        if (manager.enableDynamicResolution)
+        {
+            OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 2/Pro Range", "Quest2/Pro resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest2MinDynamicResolutionScale, ref manager.quest2MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
+            OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 3/3S Range", "Quest3/3S Resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest3MinDynamicResolutionScale, ref manager.quest3MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
+        }
         #endregion
 
         #region PermissionRequests

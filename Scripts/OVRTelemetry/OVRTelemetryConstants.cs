@@ -29,7 +29,6 @@ internal static class OVRTelemetryConstants
         public static class MarkerId
         {
             public const int Init = 163069401;
-            public const int Consent = 163056770;
         }
 
         public static class AnnotationTypes
@@ -41,17 +40,9 @@ internal static class OVRTelemetryConstants
             public const string ProcessorType = "ProcessorType";
         }
 
-        public enum ConsentOrigins
-        {
-            Popup,
-            Settings,
-            Legacy
-        }
+        public static readonly MarkerPoint InitializeInsightPassthrough = new("InitializeInsightPassthrough");
 
-        public static readonly MarkerPoint InitializeInsightPassthrough =
-            new MarkerPoint("InitializeInsightPassthrough");
-
-        public static readonly MarkerPoint InitPermissionRequest = new MarkerPoint("InitPermissionRequest");
+        public static readonly MarkerPoint InitPermissionRequest = new("InitPermissionRequest");
     }
 
     public static class Editor
@@ -71,12 +62,6 @@ internal static class OVRTelemetryConstants
             public const string AssemblyName = "AssemblyName";
             public const string UsesProSkin = "UsesProSkin";
             public const string Origin = "Origin";
-        }
-
-        public enum AnnotationVariant
-        {
-            Required,
-            Optional
         }
     }
 
@@ -128,25 +113,6 @@ internal static class OVRTelemetryConstants
         {
             public const string HasAppId = "app_id_exist";
             public const string HasNewVersionAvailable = "new_version_available";
-        }
-    }
-
-    public static class XRSim
-    {
-        [Markers]
-        public static class MarkerId
-        {
-            public const int SESInteraction = 163056472;
-            public const int ToggleState = 163059165;
-            public const int EditorRun = 163063015;
-        }
-
-        public static class AnnotationType
-        {
-            public const string IsActive = "active";
-            public const string Action = "action";
-            public const string XRSimEnabled = "xrsimenabled";
-            public const string EngineXRSimSession = "engine_xrsim_session";
         }
     }
 

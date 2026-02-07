@@ -88,7 +88,7 @@ internal struct OVRTelemetryMarker : IDisposable
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, string annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, string annotationValue)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
@@ -97,96 +97,74 @@ internal struct OVRTelemetryMarker : IDisposable
 
         annotationValue ??= string.Empty;
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, bool annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, bool annotationValue)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
             return this;
         }
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, double annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, double annotationValue)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
             return this;
         }
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotation(string annotationKey, long annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public OVRTelemetryMarker AddAnnotation(string annotationKey, long annotationValue)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
             return this;
         }
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValue, InstanceKey);
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, byte** annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, byte** annotationValues, int count)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
             return this;
         }
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, ReadOnlySpan<long> annotationValues,
-        OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType =
-            OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, ReadOnlySpan<long> annotationValues)
     {
         fixed (long* ptr = annotationValues)
         {
-            return AddAnnotation(annotationKey, ptr, annotationValues.Length, eAnnotationType);
+            return AddAnnotation(annotationKey, ptr, annotationValues.Length);
         }
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, long* annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, long* annotationValues, int count)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
             return this;
         }
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation<T>(string annotationKey, ReadOnlySpan<T> annotationValues,
-        OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType =
-            OVRTelemetryConstants.Editor.AnnotationVariant.Required) where T : unmanaged, Enum
+    public unsafe OVRTelemetryMarker AddAnnotation<T>(string annotationKey, ReadOnlySpan<T> annotationValues) where T : unmanaged, Enum
     {
         // If the underlying type is already a long or ulong, we can just cast it.
         var underlyingType = Enum.GetUnderlyingType(typeof(T));
@@ -194,7 +172,7 @@ internal struct OVRTelemetryMarker : IDisposable
         {
             fixed (T* values = annotationValues)
             {
-                return AddAnnotation(annotationKey, (long*)values, annotationValues.Length, eAnnotationType);
+                return AddAnnotation(annotationKey, (long*)values, annotationValues.Length);
             }
         }
 
@@ -207,7 +185,7 @@ internal struct OVRTelemetryMarker : IDisposable
                 longs[i] = UnsafeUtility.EnumToInt(annotationValues[i]);
             }
 
-            return AddAnnotation(annotationKey, (long*)longs.GetUnsafeReadOnlyPtr(), longs.Length, eAnnotationType);
+            return AddAnnotation(annotationKey, (long*)longs.GetUnsafeReadOnlyPtr(), longs.Length);
         }
         finally
         {
@@ -215,57 +193,47 @@ internal struct OVRTelemetryMarker : IDisposable
         }
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, ReadOnlySpan<double> annotationValues,
-        OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType =
-            OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, ReadOnlySpan<double> annotationValues)
     {
         fixed (double* ptr = annotationValues)
         {
-            return AddAnnotation(annotationKey, ptr, annotationValues.Length, eAnnotationType);
+            return AddAnnotation(annotationKey, ptr, annotationValues.Length);
         }
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, double* annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, double* annotationValues, int count)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
             return this;
         }
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
         return this;
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, ReadOnlySpan<OVRPlugin.Bool> annotationValues,
-        OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType =
-            OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, ReadOnlySpan<OVRPlugin.Bool> annotationValues)
     {
         fixed (OVRPlugin.Bool* ptr = annotationValues)
         {
-            return AddAnnotation(annotationKey, ptr, annotationValues.Length, eAnnotationType);
+            return AddAnnotation(annotationKey, ptr, annotationValues.Length);
         }
     }
 
-    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, OVRPlugin.Bool* annotationValues, int count, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public unsafe OVRTelemetryMarker AddAnnotation(string annotationKey, OVRPlugin.Bool* annotationValues, int count)
     {
         if (string.IsNullOrEmpty(annotationKey))
         {
             return this;
         }
 
-        if (eAnnotationType == OVRTelemetryConstants.Editor.AnnotationVariant.Required || GetOVRTelemetryConsent())
-        {
-            _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
-        }
+        _client.MarkerAnnotation(MarkerId, annotationKey, annotationValues, count, InstanceKey);
         return this;
     }
 
-    public OVRTelemetryMarker AddAnnotationIfNotNullOrEmpty(string annotationKey, string annotationValue, OVRTelemetryConstants.Editor.AnnotationVariant eAnnotationType = OVRTelemetryConstants.Editor.AnnotationVariant.Required)
+    public OVRTelemetryMarker AddAnnotationIfNotNullOrEmpty(string annotationKey, string annotationValue)
     {
-        return string.IsNullOrEmpty(annotationValue) ? this : AddAnnotation(annotationKey, annotationValue, eAnnotationType);
+        return string.IsNullOrEmpty(annotationValue) ? this : AddAnnotation(annotationKey, annotationValue);
     }
 
     private static string _applicationIdentifier;
@@ -292,7 +260,7 @@ internal struct OVRTelemetryMarker : IDisposable
     public OVRTelemetryMarker Send()
     {
 
-        AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProjectName, ApplicationIdentifier, OVRTelemetryConstants.Editor.AnnotationVariant.Optional);
+        AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProjectName, ApplicationIdentifier);
         AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProjectGuid, OVRRuntimeSettings.Instance.TelemetryProjectGuid);
         AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.BatchMode, IsBatchMode);
         AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProcessorType, SystemInfo.processorType);

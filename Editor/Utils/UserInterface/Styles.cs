@@ -46,6 +46,7 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly Color WarningColor = HexToColor("e9974e");
             public static readonly Color InfoColor = HexToColor("c4c4c4");
             public static readonly Color SuccessColor = HexToColor("4ee99e");
+            public static readonly Color LightMeta = HexToColor("#99c2ff");
             public static readonly Color Meta = HexToColor("#1977f3");
             public static readonly Color Yellow = HexToColor("#ffd74e");
             public static readonly Color SelectedWhite = HexToColor("#f0f0f0");

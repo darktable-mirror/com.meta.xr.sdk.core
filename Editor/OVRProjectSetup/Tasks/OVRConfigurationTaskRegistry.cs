@@ -120,6 +120,12 @@ internal class OVRConfigurationTaskRegistry
 
     internal IEnumerable<OVRConfigurationTask> GetTasks(BuildTargetGroup buildTargetGroup)
     {
+        if (OVRProjectConfig.CachedProjectConfig == null)
+        {
+            // OVRProjectConfig failed to load, don't run UPST
+            return Enumerable.Empty<OVRConfigurationTask>();
+        }
+
         return Tasks.Where
         (
             task => (task.Platform == BuildTargetGroup.Unknown || task.Platform == buildTargetGroup) && !UPSTContentManager.IsTaskDisabled(task)

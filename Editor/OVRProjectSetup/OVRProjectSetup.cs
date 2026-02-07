@@ -29,6 +29,7 @@ using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
+using Styles = Meta.XR.Editor.UserInterface.Styles;
 
 /// <summary>
 /// Core System for the OVRProjectSetup Tool
@@ -64,7 +65,8 @@ public static class OVRProjectSetup
     {
         None = 0,
         HeavyProcessing = 1,
-        RegenerateAndroidManifest = 2
+        RegenerateAndroidManifest = 2,
+        ManuallyFixable = 4,
     }
 
     private static readonly OVRConfigurationTaskRegistry _principalRegistry;
@@ -137,6 +139,15 @@ public static class OVRProjectSetup
             Default = false
         };
 
+    internal static readonly Setting<bool> EnableNotifications =
+        new OVRProjectSetupSettings.SettingBool
+        {
+            Owner = ToolDescriptor,
+            Uid = "NotificationsScheduler.EnableNotifications",
+            Label = "Enable Notifications",
+            Default = true
+        };
+
     private static string _statusMenuSubText;
     private static OVRConfigurationTaskUpdaterSummary _latestSummary;
 
@@ -154,10 +165,10 @@ public static class OVRProjectSetup
     {
         return _latestSummary?.HighestFixLevel switch
         {
-            TaskLevel.Optional => (OVRProjectSetupDrawer.Styles.Contents.InfoIcon, InfoColor, true),
-            TaskLevel.Recommended => (OVRProjectSetupDrawer.Styles.Contents.WarningIcon, WarningColor,
+            TaskLevel.Optional => (Styles.Contents.InfoIcon, InfoColor, true),
+            TaskLevel.Recommended => (Styles.Contents.ErrorIcon, WarningColor,
                 true),
-            TaskLevel.Required => (OVRProjectSetupDrawer.Styles.Contents.ErrorIcon, ErrorColor, true),
+            TaskLevel.Required => (Styles.Contents.ErrorIcon, ErrorColor, true),
             _ => (null, null, false)
         };
     }
@@ -308,7 +319,7 @@ public static class OVRProjectSetup
     /// - a task with the same unique ID already has been registered (conflict in hash generated from description message).</exception>
     public static void AddTask(
         TaskGroup group,
-        Func<BuildTargetGroup, bool> isDone,
+        Func<BuildTargetGroup, bool> isDone = null,
         BuildTargetGroup platform = BuildTargetGroup.Unknown,
         Action<BuildTargetGroup> fix = null,
         TaskLevel level = TaskLevel.Recommended,

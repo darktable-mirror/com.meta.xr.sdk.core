@@ -91,6 +91,8 @@ public class OVRManifestPreprocessor
         ShowAndroidManifestInProject();
     }
 
+    [MenuItem("Meta/Tools/Update AndroidManifest.xml", isValidateFunction: true)]
+    [MenuItem("Meta/Tools/Remove AndroidManifest.xml", isValidateFunction: true)]
     public static bool DoesAndroidManifestExist()
     {
         // IO methods use absolute paths
@@ -364,9 +366,32 @@ public class OVRManifestPreprocessor
             {
                 NewLineChars = GetSuggestedLineEnding(sourceFile),
                 Indent = true,
+                Encoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
             };
-            using var writer = XmlWriter.Create(destinationFile, settings);
-            doc.Save(writer);
+
+            using (var writer = XmlWriter.Create(destinationFile, settings))
+            {
+                doc.Save(writer);
+            }
+
+            // noeol is an error to many linters. and POSIX.
+            // due to internal encoder discrepancies, we must re-open the file in order to remedy noeol.
+            using (var fileRW = new FileStream(destinationFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            using (var reader = new StreamReader(fileRW, settings.Encoding, detectEncodingFromByteOrderMarks: false, bufferSize: 256, leaveOpen: true))
+            using (var writer = new StreamWriter(fileRW, settings.Encoding, bufferSize: 256, leaveOpen: false))
+            {
+                string compliantNewline = settings.NewLineChars.EndsWith('\n') ? settings.NewLineChars : "\n";
+
+                fileRW.Seek(-1 * settings.Encoding.GetByteCount(compliantNewline), SeekOrigin.End);
+
+                var buf = new char[compliantNewline.Length];
+                _ = reader.ReadBlock(new System.Span<char>(buf));
+                if (new string(buf) != compliantNewline)
+                {
+                    writer.NewLine = compliantNewline;
+                    writer.Write(compliantNewline);
+                }
+            }
         }
         catch (System.Exception e)
         {
@@ -388,7 +413,13 @@ public class OVRManifestPreprocessor
                     return prevChar == '\r' ? "\r\n" : "\n";
                 prevChar = curChar;
             }
-            return System.Environment.NewLine;
+
+            return EditorSettings.lineEndingsForNewScripts switch
+            {
+                LineEndingsMode.Unix => "\n",
+                LineEndingsMode.Windows => "\r\n",
+                _ => System.Environment.NewLine,
+            };
         }
     }
 

@@ -25,7 +25,8 @@ using System.Text.RegularExpressions;
 
 #if UNITY_EDITOR
 using UnityEditor;
-#endif
+using Meta.XR.Editor.Callbacks;
+#endif // UNITY_EDITOR
 
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -59,20 +60,27 @@ namespace Meta.XR.InputActions
         [InitializeOnLoadMethod]
         static void RegisterPlaymodeListener()
         {
-            UpdateBindingsOnDisk(clean: true);
-
-            EditorApplication.playModeStateChanged += state =>
+            static void RegisterListener()
             {
-                switch (state)
+                UpdateBindingsOnDisk(clean: true);
+
+                EditorApplication.playModeStateChanged += state =>
                 {
-                    case PlayModeStateChange.ExitingEditMode:
-                        UpdateBindingsOnDisk(supportPlaymode: true);
-                        break;
-                    case PlayModeStateChange.EnteredEditMode:
-                        UpdateBindingsOnDisk(clean: true);
-                        break;
-                }
-            };
+                    switch (state)
+                    {
+                        case PlayModeStateChange.ExitingEditMode:
+                            UpdateBindingsOnDisk(supportPlaymode: true);
+                            break;
+                        case PlayModeStateChange.EnteredEditMode:
+                            UpdateBindingsOnDisk(clean: true);
+                            break;
+                    }
+                };
+            }
+
+            // Registering this after the safe InitializeOnLoad to avoid
+            // singleton access of InputActions.asset before it's imported.
+            InitializeOnLoad.Register(RegisterListener);
         }
 
         public static string GetRuntimeActionBindings()

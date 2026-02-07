@@ -18,22 +18,36 @@
  * limitations under the License.
  */
 
+#if USING_XR_MANAGEMENT && (USING_XR_SDK_OCULUS || USING_XR_SDK_OPENXR)
+#define USING_XR_SDK
+#endif
+
 using System;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Serialization;
+using UnityEngine.XR;
 
-[RequireComponent(typeof(Canvas))]
+[RequireComponent(typeof(RectTransform))]
 [ExecuteAlways]
 public class OVROverlayCanvas : OVRRayTransformer
 {
     public enum DrawMode
     {
-        Opaque,
-        OpaqueWithClip,
-        TransparentDefaultAlpha,
-        TransparentCorrectAlpha,
-        AlphaToMask,
+        Opaque = 0,
+        OpaqueWithClip = 1,
+        Transparent = 2,
+
+#if UNITY_2020_1_OR_NEWER
+        [Obsolete("Deprecated. Use Transparent", false)]
+#endif
+        TransparentDefaultAlpha = 2,
+#if UNITY_2020_1_OR_NEWER
+        [Obsolete("Deprecated. Use Transparent", false)]
+#endif
+        TransparentCorrectAlpha = 3,
+        AlphaToMask = 4,
     }
 
     public enum CanvasShape
@@ -44,9 +58,8 @@ public class OVROverlayCanvas : OVRRayTransformer
 
     // The optimal resolution for the display is approximately 2x the initial eye texture resolution
     private const float kOptimalResolutionScale = 2.0f;
+    private int CanvasRenderLayer => OVROverlayCanvasSettings.Instance.CanvasRenderLayer;
 
-    private RectTransform _rectTransform;
-    private Canvas _canvas;
     private Camera _camera;
     private OVROverlay _overlay;
     private MeshRenderer _meshRenderer;
@@ -66,26 +79,38 @@ public class OVROverlayCanvas : OVRRayTransformer
     private Vector2 _imposterTextureOffset;
     private Vector2 _imposterTextureScale;
 
-    private bool _hasRenderedFirstFrame;
+    private bool _frameIsReady;
     private bool _useTempRT;
 
-    private readonly bool _scaleViewport = Application.isMobilePlatform;
+    [SerializeField] internal bool _enableMipmapping = false;
+    [SerializeField] internal bool _dynamicResolution = true;
+    [SerializeField] internal int _redrawResolutionThreshold = int.MaxValue;
+    private bool ShouldScaleViewport => _dynamicResolution;
 
+    public RectTransform rectTransform;
     [FormerlySerializedAs("MaxTextureSize")] public int maxTextureSize = 2048;
+    public bool manualRedraw = false;
     [FormerlySerializedAs("DrawRate")] public int renderInterval = 1;
     [FormerlySerializedAs("DrawFrameOffset")] public int renderIntervalFrameOffset = 0;
     [FormerlySerializedAs("Expensive")] public bool expensive = false;
     [FormerlySerializedAs("Layer")] public int layer = 5;
-    [FormerlySerializedAs("Opacity")] public DrawMode opacity = DrawMode.TransparentDefaultAlpha;
+    [FormerlySerializedAs("Opacity")] public DrawMode opacity = DrawMode.Transparent;
     public CanvasShape shape = CanvasShape.Flat;
     public float curveRadius = 1.0f;
     public bool overlapMask = false;
+    public OVROverlay.OverlayType overlayType = OVROverlay.OverlayType.Underlay;
 
     [SerializeField]
-    private bool _overlayEnabled = true;
+    internal bool _overlayEnabled = true;
 
     private static readonly Plane[] _FrustumPlanes = new Plane[6];
     private static readonly Vector3[] _Corners = new Vector3[4];
+
+    private bool _nonUniformScaleWarningShown;
+    private (int frameCount, float? score) _lastViewPriorityScore = (-1, null);
+
+    public bool IsCanvasPriority => OVROverlayCanvasManager.Instance?.IsCanvasPriority(this) is true;
+    public bool ShouldShowImposter => !IsCanvasPriority || !overlayEnabled || overlayType is OVROverlay.OverlayType.Underlay;
 
     public bool overlayEnabled
     {
@@ -105,8 +130,14 @@ public class OVROverlayCanvas : OVRRayTransformer
     // Start is called before the first frame update
     void Start()
     {
-        _canvas = GetComponent<Canvas>();
-        _rectTransform = _canvas.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = GetComponent<RectTransform>();
+        }
+
+        Debug.Assert(
+            rectTransform.gameObject == gameObject,
+            $"{nameof(rectTransform)} must be the same GameObject as the {nameof(OVROverlayCanvas)}");
 
         HideFlags hideFlags = HideFlags.DontSave | HideFlags.NotEditable | HideFlags.HideInHierarchy;
 
@@ -115,7 +146,7 @@ public class OVROverlayCanvas : OVRRayTransformer
 
         _camera = overlayCamera.AddComponent<Camera>();
         _camera.stereoTargetEye = StereoTargetEyeMask.None;
-        _camera.transform.position = transform.position - transform.forward;
+        _camera.transform.position = transform.position - _camera.transform.forward;
         _camera.orthographic = true;
         _camera.enabled = false;
         _camera.clearFlags = CameraClearFlags.SolidColor;
@@ -135,9 +166,7 @@ public class OVROverlayCanvas : OVRRayTransformer
         _overlay = overlay.AddComponent<OVROverlay>();
         _overlay.enabled = false;
         _overlay.isDynamic = true;
-        _overlay.noDepthBufferTesting = true;
-        _overlay.isAlphaPremultiplied = true;
-        _overlay.currentOverlayType = OVROverlay.OverlayType.Underlay;
+        UpdateOverlaySettings();
 
         // On mobile we need to use a temporary copy texture for best performance
         // on versions without the viewport flag
@@ -146,16 +175,31 @@ public class OVROverlayCanvas : OVRRayTransformer
         InitializeRenderTexture();
     }
 
+    public void UpdateOverlaySettings()
+    {
+        InitializeRenderTexture();
+        _meshRenderer.enabled = ShouldShowImposter;
+        _overlay.noDepthBufferTesting = ShouldShowImposter;
+        _overlay.isAlphaPremultiplied = true;
+        _overlay.currentOverlayType = overlayType;
+        _overlay.enabled = overlayEnabled;
+    }
+
     private void InitializeRenderTexture()
     {
-        float rectWidth = _rectTransform.rect.width;
-        float rectHeight = _rectTransform.rect.height;
+        if (rectTransform == null)
+        {
+            rectTransform = GetComponent<RectTransform>();
+        }
+
+        float rectWidth = rectTransform.rect.width;
+        float rectHeight = rectTransform.rect.height;
 
         float aspectX = rectWidth >= rectHeight ? 1 : rectWidth / rectHeight;
         float aspectY = rectHeight >= rectWidth ? 1 : rectHeight / rectWidth;
 
         // if we are scaling the viewport we don't need to add a border
-        int pixelBorder = _scaleViewport ? 0 : 8;
+        int pixelBorder = ShouldScaleViewport ? 0 : 8;
         int innerWidth = Mathf.CeilToInt(aspectX * (maxTextureSize - pixelBorder * 2));
         int innerHeight = Mathf.CeilToInt(aspectY * (maxTextureSize - pixelBorder * 2));
         int width = innerWidth + pixelBorder * 2;
@@ -164,12 +208,6 @@ public class OVROverlayCanvas : OVRRayTransformer
         float paddedWidth = rectWidth * (width / (float)innerWidth);
         float paddedHeight = rectHeight * (height / (float)innerHeight);
 
-        float insetRectWidth = innerWidth / (float)width;
-        float insetRectHeight = innerHeight / (float)height;
-
-        _imposterTextureOffset = new Vector2(0.5f - 0.5f * insetRectWidth, 0.5f - 0.5f * insetRectHeight);
-        _imposterTextureScale = new Vector2(insetRectWidth, insetRectHeight);
-
         if (_renderTexture == null || _renderTexture.width != width || _renderTexture.height != height)
         {
             if (_renderTexture != null)
@@ -177,15 +215,18 @@ public class OVROverlayCanvas : OVRRayTransformer
                 DestroyImmediate(_renderTexture);
             }
 
-            _renderTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTextureDescriptor descriptor = new RenderTextureDescriptor(width, height,
+                GraphicsFormat.R8G8B8A8_SRGB, GraphicsFormat.D24_UNorm_S8_UInt);
             // if we can't scale the viewport, generate mipmaps instead
-            _renderTexture.useMipMap = !_scaleViewport;
+            descriptor.autoGenerateMips = descriptor.useMipMap = _enableMipmapping;
+            _renderTexture = new RenderTexture(descriptor);
             _renderTexture.filterMode = FilterMode.Trilinear;
+            _renderTexture.name = name;
         }
 
-        _camera.orthographicSize = 0.5f * paddedHeight * _rectTransform.localScale.y;
+        _camera.orthographicSize = 0.5f * paddedHeight * GetRectTransformScale().y;
         _camera.targetTexture = _renderTexture;
-        _camera.cullingMask = 1 << gameObject.layer;
+        _camera.cullingMask = 1 << CanvasRenderLayer;
 
         Shader shader = OVROverlayCanvasSettings.Instance.GetShader(opacity);
 
@@ -207,6 +248,7 @@ public class OVROverlayCanvas : OVRRayTransformer
             _imposterMaterial.DisableKeyword("WITH_CLIP");
         }
 
+#if !UNITY_2020_1_OR_NEWER
         if (opacity == DrawMode.TransparentDefaultAlpha)
         {
             _imposterMaterial.EnableKeyword("ALPHA_SQUARED");
@@ -215,6 +257,7 @@ public class OVROverlayCanvas : OVRRayTransformer
         {
             _imposterMaterial.DisableKeyword("ALPHA_SQUARED");
         }
+#endif
 
         if (expensive)
         {
@@ -236,7 +279,7 @@ public class OVROverlayCanvas : OVRRayTransformer
             _imposterMaterial.SetInt("_AlphaToMask", 0);
         }
 
-        if (overlapMask)
+        if (overlayEnabled && overlapMask)
         {
             _imposterMaterial.EnableKeyword("OVERLAP_MASK");
         }
@@ -246,7 +289,7 @@ public class OVROverlayCanvas : OVRRayTransformer
         }
 
         _imposterMaterial.mainTexture = _renderTexture;
-        _imposterMaterial.color = Color.black;
+        _imposterMaterial.color = CalcImposterColor();
         _imposterMaterial.mainTextureOffset = _imposterTextureOffset;
         _imposterMaterial.mainTextureScale = _imposterTextureScale;
 
@@ -270,13 +313,21 @@ public class OVROverlayCanvas : OVRRayTransformer
         _overlay.currentOverlayShape = shape == CanvasShape.Flat
             ? OVROverlay.OverlayShape.Quad
             : OVROverlay.OverlayShape.Cylinder;
+        _overlay.hidden = !IsCanvasPriority;
 
         _overlay.useExpensiveSuperSample = expensive;
         _overlay.enabled = Application.isPlaying && _overlayEnabled;
+        // always turn on autofiltering
+        _overlay.useAutomaticFiltering = true;
 
         _meshGenerator.SetOverlay(_overlay);
 
         OVROverlayCanvasSettings.Instance.ApplyGlobalSettings();
+    }
+
+    private Color CalcImposterColor()
+    {
+        return overlayEnabled && IsCanvasPriority && overlayType is OVROverlay.OverlayType.Underlay ? Color.black : Color.white;
     }
 
     private void OnDestroy()
@@ -295,15 +346,19 @@ public class OVROverlayCanvas : OVRRayTransformer
 
     private void OnEnable()
     {
+        OVROverlayCanvasManager.AddCanvas(this);
+
         if (_overlay)
         {
-            _meshRenderer.enabled = true;
+            _meshRenderer.enabled = ShouldShowImposter;
             _overlay.enabled = Application.isPlaying && _overlayEnabled;
         }
     }
 
     private void OnDisable()
     {
+        OVROverlayCanvasManager.RemoveCanvas(this);
+
         if (_overlay)
         {
             _overlay.enabled = false;
@@ -313,9 +368,23 @@ public class OVROverlayCanvas : OVRRayTransformer
 
     protected virtual bool ShouldRender()
     {
+        if (manualRedraw && _frameIsReady)
+        {
+            // Check if the resolution has changed enough to trigger a redraw
+            if (_dynamicResolution && _redrawResolutionThreshold != int.MaxValue && CalculateScaledResolution() is var (width, height))
+            {
+                return width - _lastPixelWidth >= _redrawResolutionThreshold ||
+                    height - _lastPixelHeight >= _redrawResolutionThreshold;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         if (renderInterval > 1)
         {
-            if (Time.frameCount % renderInterval != renderIntervalFrameOffset % renderInterval && _hasRenderedFirstFrame)
+            if (Time.frameCount % renderInterval != renderIntervalFrameOffset % renderInterval && _frameIsReady)
             {
                 return false;
             }
@@ -327,10 +396,34 @@ public class OVROverlayCanvas : OVRRayTransformer
             return true;
         }
 
+        return IsInFrustum();
+    }
+
+    private bool IsInFrustum()
+    {
         var mainCamera = OVRManager.FindMainCamera();
         if (mainCamera != null)
         {
             // Perform Frustum culling
+#if USING_XR_SDK
+            XRDisplaySubsystem currentDisplaySubsystem = OVRManager.GetCurrentDisplaySubsystem();
+            if (currentDisplaySubsystem != null && currentDisplaySubsystem.GetRenderPassCount() > 0)
+            {
+                for (int i = 0; i < currentDisplaySubsystem.GetRenderPassCount(); i++)
+                {
+                    currentDisplaySubsystem.GetRenderPass(i, out var renderPass);
+                    currentDisplaySubsystem.GetCullingParameters(mainCamera, renderPass.cullingPassIndex, out var cullingParameters);
+
+                    var mat = cullingParameters.stereoProjectionMatrix * cullingParameters.stereoViewMatrix;
+                    GeometryUtility.CalculateFrustumPlanes(mat, _FrustumPlanes);
+                    if (GeometryUtility.TestPlanesAABB(_FrustumPlanes, _meshRenderer.bounds))
+                    {
+                        return true;
+                    }
+                }
+            }
+            else
+#endif
             if (mainCamera.stereoEnabled)
             {
                 for (int i = 0; i < 2; i++)
@@ -362,11 +455,15 @@ public class OVROverlayCanvas : OVRRayTransformer
 
     private void Update()
     {
-        if (!ShouldRender())
+        UpdateOverlaySettings();
+
+        var shouldRender = ShouldRender();
+        _overlay.isDynamic = shouldRender;
+        if (!shouldRender)
             return;
 
         ApplyViewportScale();
-        _hasRenderedFirstFrame = true;
+        _frameIsReady = true;
 
         RenderCamera();
     }
@@ -374,25 +471,116 @@ public class OVROverlayCanvas : OVRRayTransformer
     private void LateUpdate()
     {
         // Update our impostor color to switch between visible and punch-a-hole
-        _imposterMaterial.color = _overlay.enabled && _overlay.isOverlayVisible ? Color.black : Color.white;
+        _imposterMaterial.color = CalcImposterColor();
         // Update the scale and offset each frame to avoid a bug where Unity likes to reset them for some reason
         _imposterMaterial.mainTextureScale = _imposterTextureScale;
         _imposterMaterial.mainTextureOffset = _imposterTextureOffset;
     }
 
-    private void OnValidate()
+    public float? GetViewPriorityScore()
     {
-        UnityEngine.Assertions.Assert.IsNotNull(OVROverlayCanvasSettings.Instance);
+        var frameCount = Time.renderedFrameCount;
+        if (_lastViewPriorityScore.frameCount != frameCount)
+        {
+            _lastViewPriorityScore = (frameCount, score: GetViewPriorityScoreImpl());
+        }
+        return _lastViewPriorityScore.score;
     }
 
-    private void ApplyViewportScale()
+    private float? GetViewPriorityScoreImpl()
     {
-        if (!_scaleViewport)
-            return;
+        var mainCamera = OVRManager.FindMainCamera();
+        if (mainCamera == null)
+            return null;
+
+        if (!_overlayEnabled)
+            return null;
+
+        rectTransform.GetWorldCorners(_Corners);
+        for (var i = 0; i != 4; ++i)
+        {
+            var anchor = mainCamera.WorldToViewportPoint(_Corners[i]);
+            anchor.x = Mathf.Clamp01(anchor.x) - 0.5f;
+            anchor.y = Mathf.Clamp01(anchor.y) - 0.5f;
+
+            // if it's behind the camera, use NaN to flag it
+            // otherwise, ignore Z
+            anchor.z = anchor.z < 0 ? float.NaN : 0;
+            _Corners[i] = anchor;
+        }
+
+        var area = TriangleArea(_Corners[0], _Corners[1], _Corners[2]) + TriangleArea(_Corners[1], _Corners[2], _Corners[3]);
+        var midpoint = (_Corners[0] + _Corners[1] + _Corners[2] + _Corners[3]) * 0.25f;
+        var score = area / Mathf.Max(midpoint.magnitude, 0.01f); // divide by distance from center to prioritize center
+        return float.IsNaN(area) ? null : score;
+    }
+
+    private static float TriangleArea(Vector3 a, Vector3 b, Vector3 c) => Vector3.Cross(b - a, c - a).magnitude * 0.5f;
+
+    private void OnValidate()
+    {
+#if UNITY_EDITOR
+        if (Meta.XR.Editor.Callbacks.InitializeOnLoad.EditorReady)
+        {
+            UnityEngine.Assertions.Assert.IsNotNull(OVROverlayCanvasSettings.Instance);
+        }
+#endif
+    }
+
+    private Vector3 GetRectTransformScale()
+    {
+        // Allow the rect transform to scale non-uniformly (often z scale may be different than x and y)
+        Vector3 localScale = rectTransform.localScale;
+
+        Vector3 parentScale = rectTransform.parent != null ? rectTransform.parent.lossyScale : Vector3.one;
+        // Check that the parent scale is uniform (otherwise our lossy scale might produce unexpected results)
+        if (!Mathf.Approximately(parentScale.x, parentScale.y) || !Mathf.Approximately(parentScale.y, parentScale.z))
+        {
+            if (!_nonUniformScaleWarningShown)
+            {
+                Debug.LogWarning($"[OVROverlayCanvas][{name}] Non Uniform Parent Scale. This will result in unexpected behavior!", this);
+                _nonUniformScaleWarningShown = true;
+            }
+        }
+        return new Vector3(parentScale.x * localScale.x, parentScale.y * localScale.y, parentScale.z * localScale.z);
+    }
+
+    private Matrix4x4 GetWorldToViewportMatrix(Camera mainCamera)
+    {
+#if USING_XR_SDK
+        XRDisplaySubsystem currentDisplaySubsystem = OVRManager.GetCurrentDisplaySubsystem();
+        if (currentDisplaySubsystem != null && currentDisplaySubsystem.GetRenderPassCount() > 0)
+        {
+            currentDisplaySubsystem.GetRenderPass(0, out var renderPass);
+            renderPass.GetRenderParameter(mainCamera, 0, out var renderParameter);
+            return renderParameter.projection * mainCamera.worldToCameraMatrix;
+        }
+        else
+#endif
+        {
+            return mainCamera.projectionMatrix * mainCamera.worldToCameraMatrix;
+        }
+    }
+
+    private (int pixelWidth, int pixelHeight)? CalculateScaledResolution()
+    {
+#if UNITY_EDITOR
+        if (!ShouldScaleViewport || !Application.isPlaying)
+#else
+        if (!ShouldScaleViewport)
+#endif
+        {
+            return (_renderTexture.width, _renderTexture.height);
+        }
+
+        if (!IsInFrustum())
+        {
+            return (32, 32);
+        }
 
         var mainCamera = OVRManager.FindMainCamera();
         if (mainCamera == null)
-            return;
+            return null;
 
         if (!_optimalResolutionInitialized && UnityEngine.XR.XRSettings.isDeviceActive)
         {
@@ -405,9 +593,9 @@ public class OVROverlayCanvas : OVRRayTransformer
             _optimalResolutionInitialized = _optimalResolutionWidth > 0 && _optimalResolutionHeight > 0;
         }
 
-        _rectTransform.GetLocalCorners(_Corners);
+        rectTransform.GetLocalCorners(_Corners);
 
-        var localToWorldMatrix = _rectTransform.localToWorldMatrix;
+        var localToWorldMatrix = rectTransform.localToWorldMatrix;
         if (shape == CanvasShape.Curved)
         {
             // for curve, the world corners aren't a great way to determine texture scale.
@@ -416,7 +604,7 @@ public class OVROverlayCanvas : OVRRayTransformer
             localToWorldMatrix *= CalculateCurveViewBillboardMatrix(mainCamera);
         }
 
-        var worldToViewport = mainCamera.projectionMatrix * mainCamera.worldToCameraMatrix;
+        var worldToViewport = GetWorldToViewportMatrix(mainCamera);
         var viewportToTexture =
             Matrix4x4.Scale(new Vector3(0.5f * _optimalResolutionWidth, 0.5f * _optimalResolutionHeight, 0.0f));
 
@@ -436,8 +624,15 @@ public class OVROverlayCanvas : OVRRayTransformer
         int pixelWidth = ((width + 1) / 2) * 2 * (expensive ? 2 : 1) + 4;
 
         // clamp our viewport to the texture size
-        pixelHeight = Mathf.Min(pixelHeight, _renderTexture.height);
-        pixelWidth = Mathf.Min(pixelWidth, _renderTexture.width);
+        pixelHeight = Mathf.Clamp(pixelHeight, 32, _renderTexture.height);
+        pixelWidth = Mathf.Clamp(pixelWidth, 32, _renderTexture.width);
+        return (pixelWidth, pixelHeight);
+    }
+
+    private void ApplyViewportScale()
+    {
+        if (CalculateScaledResolution() is not var (pixelWidth, pixelHeight))
+            return;
 
         // Don't change texture sizes unless our image would change more than four pixels to avoid judder
         if (Math.Abs(pixelHeight - _lastPixelHeight) < 4 && Math.Abs(pixelWidth - _lastPixelWidth) < 4)
@@ -455,9 +650,10 @@ public class OVROverlayCanvas : OVRRayTransformer
         int innerPixelHeight = pixelHeight - 4;
         int innerPixelWidth = pixelWidth - 4;
 
-        float orthoHeight = _rectTransform.rect.height * _rectTransform.localScale.y *
+        var rectTransformScale = GetRectTransformScale();
+        float orthoHeight = rectTransform.rect.height * rectTransformScale.y *
             pixelHeight / (float)innerPixelHeight;
-        float orthoWidth = _rectTransform.rect.width * _rectTransform.localScale.x *
+        float orthoWidth = rectTransform.rect.width * rectTransformScale.x *
             pixelWidth / (float)innerPixelWidth;
 
         _camera.orthographicSize = (0.5f * orthoHeight);
@@ -480,19 +676,59 @@ public class OVROverlayCanvas : OVRRayTransformer
         _overlay.SetSrcDestRects(src, src, dst, dst);
 
         // Update our material offset and scale
-        _imposterTextureOffset = src.min;
-        _imposterTextureScale = src.size;
+        var pixelBorder = ShouldScaleViewport ? 0 : 8;
+        var res = new Vector2(pixelWidth, pixelHeight);
+        var pixelSize = new Vector2(1.0f / pixelWidth, 1.0f / pixelHeight);
+        _imposterTextureOffset = (src.min * res + Vector2.one * pixelBorder) * pixelSize;
+        _imposterTextureScale = (src.size * res - Vector2.one * pixelBorder * 2) * pixelSize;
+    }
+
+    public struct ScopedCallback : IDisposable
+    {
+        public event Action OnDispose;
+        void IDisposable.Dispose() => OnDispose?.Invoke();
     }
 
     private void RenderCamera()
     {
+        _camera.transform.position = transform.position - _camera.transform.forward;
+
         var rect = _camera.rect;
         int pixWidth = (int)(rect.width * _renderTexture.width);
         int pixHeight = (int)(rect.height * _renderTexture.height);
 
+        using var scopedCallback = new ScopedCallback();
+
+        if (GraphicsSettings.defaultRenderPipeline == null)
+        {
+            // switch all targeted renderers to another layer, so we don't render things outside of this object
+            _camera.cullingMask = 1 << CanvasRenderLayer;
+
+            var targetLayer = gameObject.layer;
+            var transforms = GetComponentsInChildren<Transform>();
+            foreach (var tf in transforms)
+                if (tf.gameObject.layer == targetLayer)
+                    tf.gameObject.layer = CanvasRenderLayer;
+
+            scopedCallback.OnDispose += () =>
+            {
+                // revert to the original layers
+                foreach (var tf in transforms)
+                    if (tf.gameObject.layer == CanvasRenderLayer)
+                        tf.gameObject.layer = targetLayer;
+            };
+        }
+        else
+        {
+            _camera.cullingMask = 1 << gameObject.layer;
+        }
+
         if (_useTempRT && (pixWidth < _renderTexture.width || pixHeight < _renderTexture.height))
         {
-            RenderTexture tempRT = RenderTexture.GetTemporary(pixWidth, pixHeight, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTextureDescriptor descriptor = new RenderTextureDescriptor(pixWidth, pixHeight,
+                GraphicsFormat.R8G8B8A8_SRGB, GraphicsFormat.D24_UNorm_S8_UInt, 0);
+            var tempRT = RenderTexture.GetTemporary(descriptor);
+            tempRT.Create();
 
             // override render texture with the temporary one
             _camera.targetTexture = tempRT;
@@ -511,20 +747,19 @@ public class OVROverlayCanvas : OVRRayTransformer
         {
             _camera.Render();
         }
-
     }
 
     // Calculate a billboard rotation of our rect based on the curve parameters and the current camera position
     private Matrix4x4 CalculateCurveViewBillboardMatrix(Camera mainCamera)
     {
-        var relativeViewPos = Quaternion.Inverse(_rectTransform.rotation) *
-                              (mainCamera.transform.position - _rectTransform.position);
+        var relativeViewPos = Quaternion.Inverse(rectTransform.rotation) *
+                              (mainCamera.transform.position - rectTransform.position);
 
         // calculate the billboard angle based on the x and z positions
         float angle = Mathf.Atan2(-relativeViewPos.x, -relativeViewPos.z);
 
-        Vector3 lossyScale = _rectTransform.lossyScale;
-        float fullAngleWidth = _rectTransform.rect.width * lossyScale.x / curveRadius;
+        Vector3 lossyScale = GetRectTransformScale();
+        float fullAngleWidth = rectTransform.rect.width * lossyScale.x / curveRadius;
 
         // clamp angle to the maximum curvature
         angle = Mathf.Clamp(angle, -0.5f * fullAngleWidth, 0.5f * fullAngleWidth);
@@ -601,5 +836,32 @@ public class OVROverlayCanvas : OVRRayTransformer
 
         distance = mu1 >= 0 ? mu1 : mu2;
         return true;
+    }
+
+    public OVROverlay Overlay => _overlay;
+
+    public void SetFrameDirty() => _frameIsReady = false;
+
+    public void SetCanvasLayer(int layer, bool forceUpdate)
+    {
+        SetLayerRecursive(gameObject, layer, gameObject.layer, forceUpdate);
+    }
+
+    private static void SetLayerRecursive(GameObject gameObject, int layer, int previousLayer, bool forceUpdate)
+    {
+        if (gameObject.layer == previousLayer || forceUpdate)
+        {
+            gameObject.layer = layer;
+        }
+
+        for (int i = 0; i < gameObject.transform.childCount; i++)
+        {
+            var c = gameObject.transform.GetChild(i).gameObject;
+            if ((c.hideFlags &= HideFlags.DontSave) != 0)
+            {
+                continue;
+            }
+            SetLayerRecursive(c, layer, previousLayer, forceUpdate);
+        }
     }
 }

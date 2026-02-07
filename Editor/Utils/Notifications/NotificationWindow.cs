@@ -106,7 +106,7 @@ namespace Meta.XR.Editor.Notifications
             GUI.DrawTexture(rect, DarkGray.ToTexture(), ScaleMode.ScaleAndCrop, false, 1f,
                 GUI.color, Vector4.zero, Styles.Constants.RoundedBorderVectors);
             GUI.DrawTexture(rect, Styles.Contents.NotificationGradientNeutral.Image, ScaleMode.StretchToFill, false, 16f,
-                UserInterface.Styles.Colors.Meta, Vector4.zero, Styles.Constants.RoundedBorderVectors);
+                _notification.GradientColor, Vector4.zero, Styles.Constants.RoundedBorderVectors);
 
             // Left Icon
             if (_notification.Icon != null)
@@ -158,12 +158,11 @@ namespace Meta.XR.Editor.Notifications
         {
             if (Event.current.type != EventType.Repaint) return;
 
-            const int expectedWidth = Styles.Constants.Width;
             var expectedRect = MainViewRect;
             var expectedHeight = rect.height;
 
             // The x position is the right of the main window minus the necessary width and a bit of a margin
-            var x = expectedRect.x + expectedRect.width - Styles.Constants.Width - DoubleMargin;
+            var x = expectedRect.x + expectedRect.width - _notification.ExpectedWidth - DoubleMargin;
 
             // This is how far from the expected position we want to be
             var expectedOffset = Mathf.Max((expectedHeight + DoubleMargin + 24) * _transitionIn.Current, 1);
@@ -178,9 +177,9 @@ namespace Meta.XR.Editor.Notifications
             // and limit the height by that different
             var actualHeight = Mathf.Min(expectedHeight, parentOffset - y);
 
-            position = new Rect(x, y, expectedWidth, actualHeight);
-            minSize = new Vector2(Styles.Constants.Width, actualHeight);
-            maxSize = new Vector2(Styles.Constants.Width, actualHeight);
+            position = new Rect(x, y, _notification.ExpectedWidth, actualHeight);
+            minSize = new Vector2(_notification.ExpectedWidth, actualHeight);
+            maxSize = new Vector2(_notification.ExpectedWidth, actualHeight);
         }
 
         private bool DrawButton(TextureContent icon)

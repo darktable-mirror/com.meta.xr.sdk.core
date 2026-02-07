@@ -44,11 +44,28 @@ using Device = UnityEngine.XR.XRDevice;
 /// <summary>
 /// Miscellaneous extension methods that any script can use.
 /// </summary>
+/// <remarks>
+/// This class encapulsates several extension methods that help convert between the Quest's coordinate system and
+/// Unity's coorindate system. Use these methods to convert to and from the Quest's local tracking space and Unity's
+/// world space, for example.
+///
+/// This class also contains several methods to facilitate native interop, as the native plugin uses a different
+/// coordinate system than Unity (for example, <see cref="OVRPlugin.Posef"/>). These methods are used by the
+/// Meta XR Core SDK, but typically should not necessary in application code.
+/// </remarks>
 public static partial class OVRExtensions
 {
     /// <summary>
-    /// Converts the given world-space transform to an OVRPose in tracking space.
+    /// Converts the given world-space <paramref name="transform"/> to an <see cref="OVRPose"/> in tracking space.
     /// </summary>
+    /// <remarks>
+    /// The "tracking space" refers to the local coordinate system of the Quest device. This method uses a camera's
+    /// world-space transform to calculate the transform between the Quest's tracking space and Unity's world space,
+    /// then applies it to the <paramref name="transform"/> to compute that transform in the device's tracking space.
+    /// </remarks>
+    /// <param name="transform">A transform that will be converted to a tracking space pose.</param>
+    /// <param name="camera">The camera whose transform is driven by the HMD. This is often the main camera.</param>
+    /// <returns>Returns the pose of the <paramref name="transform"/> in tracking space.</returns>
     public static OVRPose ToTrackingSpacePose(this Transform transform, Camera camera)
     {
         // Initializing to identity, but for all Oculus headsets, down below the pose will be initialized to the runtime's pose value, so identity will never be returned.
@@ -71,6 +88,15 @@ public static partial class OVRExtensions
     /// <summary>
     /// Converts the given pose from tracking-space to world-space.
     /// </summary>
+    /// <remarks>
+    /// \deprecated This method is obsolete. Use <see cref="ToWorldSpacePose(OVRPose, Camera)"/> instead.
+    ///
+    /// The "tracking space" refers to the local coordinate system of the Quest device. This method uses the main
+    /// camera's world-space transform to calculate the transform between the Quest's tracking space and Unity's world
+    /// space, then applies it to the <paramref name="trackingSpacePose"/> to compute that pose in Unity world space.
+    /// </remarks>
+    /// <param name="trackingSpacePose">The pose, in tracking-space, to convert to world space.</param>
+    /// <returns>The <paramref name="trackingSpacePose"/> in world space.</returns>
     [Obsolete("ToWorldSpacePose should be invoked with an explicit mainCamera parameter")]
     public static OVRPose ToWorldSpacePose(this OVRPose trackingSpacePose)
     {
@@ -80,6 +106,17 @@ public static partial class OVRExtensions
     /// <summary>
     /// Converts the given pose from tracking-space to world-space.
     /// </summary>
+    /// <remarks>
+    /// The "tracking space" refers to the local coordinate system of the Quest device. This method uses
+    /// <paramref name="mainCamera"/>'s world-space transform to calculate the transform between the Quest's tracking
+    /// space and Unity's world space, then applies it to the <paramref name="trackingSpacePose"/> to compute that pose
+    /// in Unity world space.
+    ///
+    /// This is the inverse operation of <see cref="ToTrackingSpacePose"/>.
+    /// </remarks>
+    /// <param name="trackingSpacePose">The pose to convert to world-space.</param>
+    /// <param name="mainCamera">The camera whose transform is driven by the HMD. This is often the main camera.</param>
+    /// <returns><paramref name="trackingSpacePose"/> in world space.</returns>
     public static OVRPose ToWorldSpacePose(this OVRPose trackingSpacePose, Camera mainCamera)
     {
         // Transform from tracking-Space to head-Space
@@ -100,6 +137,12 @@ public static partial class OVRExtensions
     /// <summary>
     /// Converts the given pose from tracking-space to head-space.
     /// </summary>
+    /// <remarks>
+    /// The "tracking space" refers to the local coordinate system of the Quest device. This method converts a pose
+    /// in tracking space to a pose relative to the <see cref="XRNode.Head"/>.
+    /// </remarks>
+    /// <param name="trackingSpacePose">The pose, in tracking space, that should be converted to head space.</param>
+    /// <returns><paramref name="trackingSpacePose"/> in head space.</returns>
     public static OVRPose ToHeadSpacePose(this OVRPose trackingSpacePose)
     {
         OVRPose headPose = OVRPose.identity;
@@ -121,6 +164,13 @@ public static partial class OVRExtensions
     /// <summary>
     /// Converts the given world-space transform to an OVRPose in head space.
     /// </summary>
+    /// <remarks>
+    /// The "head space" refers to the local coordinate system of the Quest HMD. This method converts the given
+    /// <paramref name="transform"/> to an equivalent pose relative to the user's head.
+    /// </remarks>
+    /// <param name="transform">The transform to convert to head space.</param>
+    /// <param name="camera">The camera whose transform is driven by the Quest HMD. This is often the main camera.</param>
+    /// <returns><paramref name="transform"/> converted to a head relative pose.</returns>
     public static OVRPose ToHeadSpacePose(this Transform transform, Camera camera)
     {
         // The Quaternion used in OVRPose is not 1-1 mapped with the Transform[0:3,0:3] (which is Scale * Rotation), need to calculate rotation and position separately.
@@ -133,6 +183,13 @@ public static partial class OVRExtensions
         };
     }
 
+    /// <summary>
+    /// Converts the given transform to an <see cref="OVRPose"/>.
+    /// </summary>
+    /// <param name="t">The transform to convert to a pose.</param>
+    /// <param name="isLocal">If true, uses the local position and transform of <paramref name="t"/>. Otherwise, uses
+    /// the world space position and rotation.</param>
+    /// <returns><paramref name="t"/> as a <see cref="OVRPose"/>.</returns>
     public static OVRPose ToOVRPose(this Transform t, bool isLocal = false)
     {
         OVRPose pose;
@@ -141,6 +198,13 @@ public static partial class OVRExtensions
         return pose;
     }
 
+    /// <summary>
+    /// Sets a transform to the given <see cref="OVRPose"/>.
+    /// </summary>
+    /// <param name="t">The transform whose position and rotation will be set.</param>
+    /// <param name="pose">The <see cref="OVRPose"/> to convert to <paramref name="t"/>.</param>
+    /// <param name="isLocal">If true, <paramref name="t"/>'s local position and transform are set. Otherwise, sets
+    /// the world position and rotation.</param>
     public static void FromOVRPose(this Transform t, OVRPose pose, bool isLocal = false)
     {
         if (isLocal)
@@ -155,6 +219,20 @@ public static partial class OVRExtensions
         }
     }
 
+    /// <summary>
+    /// Converts an <see cref="OVRPlugin.Posef"/> to an <see cref="OVRPose"/>.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="OVRPlugin.Posef"/> is typically used for native interop with native plugins, and uses a different
+    /// coordinate system (right-handed as opposed to Unity's left-handed coordinate system).
+    ///
+    /// This method converts the right-handed <see cref="OVRPlugin.Posef"/> to a left-handed <see cref="OVRPose"/>
+    /// compatible with Unity's coordinate system.
+    ///
+    /// This method is for advanced usage.
+    /// </remarks>
+    /// <param name="p">A right-handed pose acquired from a native function call.</param>
+    /// <returns><paramref name="p"/> converted to an <see cref="OVRPose"/>.</returns>
     public static OVRPose ToOVRPose(this OVRPlugin.Posef p)
     {
         return new OVRPose()
@@ -164,6 +242,17 @@ public static partial class OVRExtensions
         };
     }
 
+    /// <summary>
+    /// Converts an <see cref="OVRPlugin.Frustumf"/> to an <see cref="OVRTracker.Frustum"/>.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="OVRPlugin.Frustumf"/> is typically used for native interop with native plugins. This method converts
+    /// that native format into a format that is more compatible with Unity.
+    ///
+    /// This method is for advanced usage.
+    /// </remarks>
+    /// <param name="f">The <see cref="OVRPlugin.Frustumf"/> to convert to <see cref="OVRTracker.Frustum"/>.</param>
+    /// <returns><paramref name="f"/> converted to an <see cref="OVRTracker.Frustum"/>.</returns>
     public static OVRTracker.Frustum ToFrustum(this OVRPlugin.Frustumf f)
     {
         return new OVRTracker.Frustum()
@@ -179,121 +268,421 @@ public static partial class OVRExtensions
         };
     }
 
+    /// <summary>
+    /// Converts a <see cref="OVRPlugin.Colorf"/> to a UnityEngine `Color`.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert color data between the native <see cref="OVRPlugin.Colorf"/> format and a
+    /// UnityEngine [Color](https://docs.unity3d.com/ScriptReference/Color.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="c">A color in native color format.</param>
+    /// <returns><paramref name="c"/> as a UnityEngine `Color`.</returns>
     public static Color FromColorf(this OVRPlugin.Colorf c)
     {
         return new Color() { r = c.r, g = c.g, b = c.b, a = c.a };
     }
 
+    /// <summary>
+    /// Converts a UnityEngine `Color` to a <see cref="OVRPlugin.Colorf"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert color data between the native <see cref="OVRPlugin.Colorf"/> format and a
+    /// UnityEngine [Color](https://docs.unity3d.com/ScriptReference/Color.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="c">A color in Unity's `Color` format.</param>
+    /// <returns><paramref name="c"/> as a <see cref="OVRPlugin.Colorf"/>.</returns>
     public static OVRPlugin.Colorf ToColorf(this Color c)
     {
         return new OVRPlugin.Colorf() { r = c.r, g = c.g, b = c.b, a = c.a };
     }
 
+    /// <summary>
+    /// Converts a <see cref="OVRPlugin.Sizef"/> to a UnityEngine `Vector2`.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert size data between the native <see cref="OVRPlugin.Sizef"/> format and a
+    /// UnityEngine [Vector2](https://docs.unity3d.com/ScriptReference/Vector2.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A size in OVRPlugin's native format.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector2`.</returns>
     public static Vector2 FromSizef(this OVRPlugin.Sizef v)
     {
         return new Vector2() { x = v.w, y = v.h };
     }
 
+    /// <summary>
+    /// Converts a `Vector2` to a <see cref="OVRPlugin.Sizef"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert size data between the native <see cref="OVRPlugin.Sizef"/> format and a
+    /// UnityEngine [Vector2](https://docs.unity3d.com/ScriptReference/Vector2.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A size as a `Vector2`.</param>
+    /// <returns><paramref name="v"/> as an OVRPlugin compatible <see cref="OVRPlugin.Sizef"/>.</returns>
     public static OVRPlugin.Sizef ToSizef(this Vector2 v)
     {
         return new OVRPlugin.Sizef() { w = v.x, h = v.y };
     }
 
+    /// <summary>
+    /// Converts a <see cref="OVRPlugin.Vector2f"/> to a UnityEngine `Vector2`.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert vector data between the native <see cref="OVRPlugin.Vector2f"/> format and a
+    /// UnityEngine [Vector2](https://docs.unity3d.com/ScriptReference/Vector2.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A vector in OVRPlugin's native format.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector2`.</returns>
     public static Vector2 FromVector2f(this OVRPlugin.Vector2f v)
     {
         return new Vector2() { x = v.x, y = v.y };
     }
 
+    /// <summary>
+    /// Converts a <see cref="OVRPlugin.Vector2f"/> to a UnityEngine `Vector2`.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert vector data between the native <see cref="OVRPlugin.Vector2f"/> format and a
+    /// UnityEngine [Vector2](https://docs.unity3d.com/ScriptReference/Vector2.html).
+    ///
+    /// This method negates the X component of the <see cref="OVRPlugin.Vector2f"/>.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A vector in OVRPlugin's native format.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector2`.</returns>
     public static Vector2 FromFlippedXVector2f(this OVRPlugin.Vector2f v)
     {
         return new Vector2() { x = -v.x, y = v.y };
     }
 
+    /// <summary>
+    /// Converts a `Vector2` to a <see cref="OVRPlugin.Vector2f"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert vector data between the native <see cref="OVRPlugin.Vector2f"/> format and a
+    /// UnityEngine [Vector2](https://docs.unity3d.com/ScriptReference/Vector2.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A UnityEngine `Vector2`.</param>
+    /// <returns><paramref name="v"/> as a <see cref="OVRPlugin.Vector2f"/>.</returns>
     public static OVRPlugin.Vector2f ToVector2f(this Vector2 v)
     {
         return new OVRPlugin.Vector2f() { x = v.x, y = v.y };
     }
 
+    /// <summary>
+    /// Converts size information between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert size data between the native <see cref="OVRPlugin.Size3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A size as a <see cref="OVRPlugin.Size3f"/>.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector3`.</returns>
     public static Vector3 FromSize3f(this OVRPlugin.Size3f v)
     {
         return new Vector3() { x = v.w, y = v.h, z = v.d };
     }
 
+    /// <summary>
+    /// Converts size information between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert size data between the native <see cref="OVRPlugin.Size3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A size as a UnityEngine `Vector3`.</param>
+    /// <returns><paramref name="v"/> as a <see cref="OVRPlugin.Size3f"/>.</returns>
     public static OVRPlugin.Size3f ToSize3f(this Vector3 v)
     {
         return new OVRPlugin.Size3f() { w = v.x, h = v.y, d = v.z };
     }
 
+    /// <summary>
+    /// Converts a 3d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as an <see cref="OVRPlugin.Vector3f"/>.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector3`.</returns>
     public static Vector3 FromVector3f(this OVRPlugin.Vector3f v)
     {
         return new Vector3() { x = v.x, y = v.y, z = v.z };
     }
 
+    /// <summary>
+    /// Converts a 3d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method negates the X component of <paramref name="v"/>.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as an <see cref="OVRPlugin.Vector3f"/>.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector3`.</returns>
     public static Vector3 FromFlippedXVector3f(this OVRPlugin.Vector3f v)
     {
         return new Vector3() { x = -v.x, y = v.y, z = v.z };
     }
 
+    /// <summary>
+    /// Converts a 3d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method negates the Z component of <paramref name="v"/>.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as an <see cref="OVRPlugin.Vector3f"/>.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector3`.</returns>
     public static Vector3 FromFlippedZVector3f(this OVRPlugin.Vector3f v)
     {
         return new Vector3() { x = v.x, y = v.y, z = -v.z };
     }
 
+    /// <summary>
+    /// Converts a 3d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as UnityEngine `Vector3`.</param>
+    /// <returns><paramref name="v"/> as an <see cref="OVRPlugin.Vector3f"/>.</returns>
+    /// <seealso cref="FromVector3f"/>
     public static OVRPlugin.Vector3f ToVector3f(this Vector3 v)
     {
         return new OVRPlugin.Vector3f() { x = v.x, y = v.y, z = v.z };
     }
 
+    /// <summary>
+    /// Converts a 3d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method negates the X component of <paramref name="v"/>.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as UnityEngine `Vector3`.</param>
+    /// <returns><paramref name="v"/> as an <see cref="OVRPlugin.Vector3f"/>.</returns>
+    /// <seealso cref="FromFlippedXVector3f"/>
     public static OVRPlugin.Vector3f ToFlippedXVector3f(this Vector3 v)
     {
         return new OVRPlugin.Vector3f() { x = -v.x, y = v.y, z = v.z };
     }
 
+    /// <summary>
+    /// Converts a 3d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html).
+    ///
+    /// This method negates the Z component of <paramref name="v"/>.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as UnityEngine `Vector3`.</param>
+    /// <returns><paramref name="v"/> as an <see cref="OVRPlugin.Vector3f"/>.</returns>
+    /// <seealso cref="FromFlippedZVector3f"/>
     public static OVRPlugin.Vector3f ToFlippedZVector3f(this Vector3 v)
     {
         return new OVRPlugin.Vector3f() { x = v.x, y = v.y, z = -v.z };
     }
 
+    /// <summary>
+    /// Converts a 4d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 4d vector between the native <see cref="OVRPlugin.Vector4f"/> format and a
+    /// UnityEngine [Vector4](https://docs.unity3d.com/ScriptReference/Vector4.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 4d vector as an <see cref="OVRPlugin.Vector4f"/>.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector4`.</returns>
+    /// <seealso cref="ToVector4f"/>
     public static Vector4 FromVector4f(this OVRPlugin.Vector4f v)
     {
         return new Vector4() { x = v.x, y = v.y, z = v.z, w = v.w };
     }
 
+    /// <summary>
+    /// Converts a 4d vector between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 4d vector between the native <see cref="OVRPlugin.Vector4f"/> format and a
+    /// UnityEngine [Vector4](https://docs.unity3d.com/ScriptReference/Vector4.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 4d vector as UnityEngine `Vector4`.</param>
+    /// <returns><paramref name="v"/> as an <see cref="OVRPlugin.Vector4f"/>.</returns>
+    /// <seealso cref="FromVector4f"/>
     public static OVRPlugin.Vector4f ToVector4f(this Vector4 v)
     {
         return new OVRPlugin.Vector4f() { x = v.x, y = v.y, z = v.z, w = v.w };
     }
 
+    /// <summary>
+    /// Converts a quaternion between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a quaternion between the native <see cref="OVRPlugin.Quatf"/> format and a
+    /// UnityEngine [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="q">A quaternion as an <see cref="OVRPlugin.Quatf"/>.</param>
+    /// <returns><paramref name="q"/> as a UnityEngine `Quaternion`.</returns>
+    /// <seealso cref="ToQuatf"/>
     public static Quaternion FromQuatf(this OVRPlugin.Quatf q)
     {
         return new Quaternion() { x = q.x, y = q.y, z = q.z, w = q.w };
     }
 
+    /// <summary>
+    /// Converts a quaternion between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a quaternion between the native <see cref="OVRPlugin.Quatf"/> format and a
+    /// UnityEngine [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html).
+    ///
+    /// This method negates the Y and Z components of the quaternion, which has the effect of flipping the rotation
+    /// about the X axis.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="q">A quaternion as an <see cref="OVRPlugin.Quatf"/>.</param>
+    /// <returns><paramref name="q"/> as a UnityEngine `Quaternion`.</returns>
+    /// <seealso cref="ToFlippedXQuatf"/>
     public static Quaternion FromFlippedXQuatf(this OVRPlugin.Quatf q)
     {
         return new Quaternion() { x = q.x, y = -q.y, z = -q.z, w = q.w };
     }
 
+    /// <summary>
+    /// Converts a quaternion between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a quaternion between the native <see cref="OVRPlugin.Quatf"/> format and a
+    /// UnityEngine [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html).
+    ///
+    /// This method negates the X and Y components of the quaternion, which has the effect of flipping the rotation
+    /// about the Z axis.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="q">A quaternion as an <see cref="OVRPlugin.Quatf"/>.</param>
+    /// <returns><paramref name="q"/> as a UnityEngine `Quaternion`.</returns>
+    /// <seealso cref="ToFlippedZQuatf"/>
     public static Quaternion FromFlippedZQuatf(this OVRPlugin.Quatf q)
     {
         return new Quaternion() { x = -q.x, y = -q.y, z = q.z, w = q.w };
     }
 
+    /// <summary>
+    /// Converts a quaternion between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a quaternion between the native <see cref="OVRPlugin.Quatf"/> format and a
+    /// UnityEngine [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="q">A quaternion as a UnityEngine `Quaternion`.</param>
+    /// <returns><paramref name="q"/> as an <see cref="OVRPlugin.Quatf"/>.</returns>
+    /// <seealso cref="FromQuatf"/>
     public static OVRPlugin.Quatf ToQuatf(this Quaternion q)
     {
         return new OVRPlugin.Quatf() { x = q.x, y = q.y, z = q.z, w = q.w };
     }
 
+    /// <summary>
+    /// Converts a quaternion between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a quaternion between the native <see cref="OVRPlugin.Quatf"/> format and a
+    /// UnityEngine [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html).
+    ///
+    /// This method negates the Y and Z components of the quaternion, which has the effect of flipping the rotation
+    /// about the X axis.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="q">A quaternion as a UnityEngine `Quaternion`.</param>
+    /// <returns><paramref name="q"/> as an <see cref="OVRPlugin.Quatf"/>.</returns>
+    /// <seealso cref="FromFlippedXQuatf"/>
     public static OVRPlugin.Quatf ToFlippedXQuatf(this Quaternion q)
     {
         return new OVRPlugin.Quatf() { x = q.x, y = -q.y, z = -q.z, w = q.w };
     }
 
+    /// <summary>
+    /// Converts a quaternion between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a quaternion between the native <see cref="OVRPlugin.Quatf"/> format and a
+    /// UnityEngine [Quaternion](https://docs.unity3d.com/ScriptReference/Quaternion.html).
+    ///
+    /// This method negates the X and Y components of the quaternion, which has the effect of flipping the rotation
+    /// about the Z axis.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="q">A quaternion as a UnityEngine `Quaternion`.</param>
+    /// <returns><paramref name="q"/> as an <see cref="OVRPlugin.Quatf"/>.</returns>
+    /// <seealso cref="FromFlippedZQuatf"/>
     public static OVRPlugin.Quatf ToFlippedZQuatf(this Quaternion q)
     {
         return new OVRPlugin.Quatf() { x = -q.x, y = -q.y, z = q.z, w = q.w };
     }
 
+    /// <summary>
+    /// Converts a matrix between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a matrix between the native <see cref="OVR.OpenVR.HmdMatrix34_t"/> format and a
+    /// UnityEngine [Matrix4x4](https://docs.unity3d.com/ScriptReference/Matrix4x4.html).
+    ///
+    /// This method negates the Z axis of the rotation and translation, which converts between the native right-handed
+    /// coordinate system and Unity's left-handed coordinate system.
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="m">The `Matrix4x4` to convert.</param>
+    /// <returns>Returns <see cref="m"/> as an <see cref="OVR.OpenVR.HmdMatrix34_t"/>.</returns>
     public static OVR.OpenVR.HmdMatrix34_t ConvertToHMDMatrix34(this Matrix4x4 m)
     {
         OVR.OpenVR.HmdMatrix34_t pose = new OVR.OpenVR.HmdMatrix34_t();
@@ -316,6 +705,19 @@ public static partial class OVRExtensions
         return pose;
     }
 
+    /// <summary>
+    /// Recursively searches for a child transform with the given name.
+    /// </summary>
+    /// <remarks>
+    /// Note that only children of <paramref name="parent"/> are considered. <paramref name="parent"/> itself is not
+    /// included in the search.
+    ///
+    /// A child transform is considered a match if any part of its name contains <paramref name="name"/>.
+    /// </remarks>
+    /// <param name="parent">The transform at which to begin the search.</param>
+    /// <param name="name">The name of the transform to find.</param>
+    /// <returns>Returns the first child of <paramref name="parent"/> with <paramref name="name"/>, or `null`, if no
+    /// such child exists.</returns>
     public static Transform FindChildRecursive(this Transform parent, string name)
     {
         for (int i = 0; i < parent.childCount; i++)
@@ -332,6 +734,12 @@ public static partial class OVRExtensions
         return null;
     }
 
+    /// <summary>
+    /// Compares two <see cref="Gradient"/>s for equality.
+    /// </summary>
+    /// <param name="gradient">The <see cref="Gradient"/> to compare with <see cref="otherGradient"/>.</param>
+    /// <param name="otherGradient">The <see cref="Gradient"/> to compare with <see cref="gradient"/>.</param>
+    /// <returns>Returns `true` if <paramref name="gradient"/> is equal to <paramref name="otherGradient"/>.</returns>
     public static bool Equals(this Gradient gradient, Gradient otherGradient)
     {
         if (gradient.colorKeys.Length != otherGradient.colorKeys.Length ||
@@ -357,6 +765,11 @@ public static partial class OVRExtensions
         return true;
     }
 
+    /// <summary>
+    /// Copies one gradiant into another.
+    /// </summary>
+    /// <param name="gradient">The <see cref="Gradient"/> that <paramref name="otherGradient"/> will be copied into.</param>
+    /// <param name="otherGradient">The <see cref="Gradient"/> to copy into <paramref name="gradient"/>.</param>
     public static void CopyFrom(this Gradient gradient, Gradient otherGradient)
     {
         GradientColorKey[] colorKeys = new GradientColorKey[otherGradient.colorKeys.Length];
@@ -717,7 +1130,7 @@ public struct OVRPose
 }
 
 /// <summary>
-/// Encapsulates an 8-byte-aligned of unmanaged memory.
+/// Encapsulates an 8-byte-aligned buffer of unmanaged memory.
 /// </summary>
 public class OVRNativeBuffer : IDisposable
 {

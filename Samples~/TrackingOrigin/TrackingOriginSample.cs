@@ -20,7 +20,14 @@
 
 using UnityEngine;
 using UnityEngine.UI;
+using Meta.XR.Samples;
 
+/// <summary>
+/// This class displays all supported tracking origins, and cycles
+/// through each to show how a virtual cube placed at a specific position
+/// changes in relation to the active tracking origin.
+/// </summary>
+[MetaCodeSample("CoreSDK-TrackingOrigin")]
 public class TrackingOriginSample : MonoBehaviour
 {
     public GameObject Axes;

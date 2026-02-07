@@ -214,7 +214,7 @@ namespace Meta.XR.Editor.Settings
     {
         public UserBool()
         {
-            Get = () => EditorPrefs.GetBool(Key, EditorPrefs.GetBool(OldKey, Default));
+            Get = () => EditorPrefs.GetBool(Key, string.IsNullOrEmpty(OldKey) ? Default : EditorPrefs.GetBool(OldKey, Default));
             Set = value => EditorPrefs.SetBool(Key, value);
         }
     }
@@ -236,7 +236,7 @@ namespace Meta.XR.Editor.Settings
     {
         public UserInt()
         {
-            Get = () => EditorPrefs.GetInt(Key, EditorPrefs.GetInt(OldKey, Default));
+            Get = () => EditorPrefs.GetInt(Key, string.IsNullOrEmpty(OldKey) ? Default : EditorPrefs.GetInt(OldKey, Default));
             Set = value => EditorPrefs.SetInt(Key, value);
         }
     }
@@ -263,7 +263,7 @@ namespace Meta.XR.Editor.Settings
     {
         public UserFloat()
         {
-            Get = () => EditorPrefs.GetFloat(Key, EditorPrefs.GetFloat(OldKey, Default));
+            Get = () => EditorPrefs.GetFloat(Key, string.IsNullOrEmpty(OldKey) ? Default : EditorPrefs.GetFloat(OldKey, Default));
             Set = value => EditorPrefs.SetFloat(Key, value);
         }
     }
@@ -301,7 +301,7 @@ namespace Meta.XR.Editor.Settings
     {
         public UserString()
         {
-            Get = () => EditorPrefs.GetString(Key, EditorPrefs.GetString(OldKey, Default));
+            Get = () => EditorPrefs.GetString(Key, string.IsNullOrEmpty(OldKey) ? Default : EditorPrefs.GetString(OldKey, Default));
             Set = value => EditorPrefs.SetString(Key, value);
         }
     }

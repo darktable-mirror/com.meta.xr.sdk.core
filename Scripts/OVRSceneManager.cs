@@ -947,18 +947,23 @@ public class OVRSceneManager : MonoBehaviour
     /// Requests scene capture from the Room Setup.
     /// </summary>
     /// <returns>Returns true if scene capture succeeded, otherwise false.</returns>
-    public bool RequestSceneCapture() => RequestSceneCapture("");
-
-    /// <summary>
-    /// Requests scene capture with specified types of <see cref="OVRSceneAnchor"/>
-    /// </summary>
-    /// <param name="requestedAnchorClassifications">A list of <see cref="OVRSceneManager.Classification"/>.</param>
-    /// <returns>Returns true if scene capture succeeded, otherwise false.</returns>
-    [Obsolete("Requesting space setup with labels is deprecated (v71) with no replacement.")]
-    public bool RequestSceneCapture(IEnumerable<string> requestedAnchorClassifications)
+    public bool RequestSceneCapture()
     {
-        CheckIfClassificationsAreValid(requestedAnchorClassifications);
-        return RequestSceneCapture(String.Join(OVRSemanticClassification.LabelSeparator.ToString(), requestedAnchorClassifications));
+#if !UNITY_EDITOR
+        bool result = OVRPlugin.RequestSceneCapture(out _sceneCaptureRequestId);
+        if (!result)
+        {
+            UnexpectedErrorWithSceneCapture?.Invoke();
+        }
+        // When a scene capture has been successfuly requested, silent fall through as it does not imply a successful scene capture
+        return result;
+#else
+        Development.LogWarning(nameof(OVRSceneManager),
+            "Scene Capture does not work over Link.\n"
+            + "Please capture a scene with the HMD in standalone mode, then access the scene model over Link.");
+        UnexpectedErrorWithSceneCapture?.Invoke();
+        return false;
+#endif
     }
 
     /// <summary>
@@ -1130,25 +1135,6 @@ public class OVRSceneManager : MonoBehaviour
         }
 
         return roomLayout;
-    }
-
-    private bool RequestSceneCapture(string requestString)
-    {
-#if !UNITY_EDITOR
-        bool result = OVRPlugin.RequestSceneCapture(requestString, out _sceneCaptureRequestId);
-        if (!result)
-        {
-            UnexpectedErrorWithSceneCapture?.Invoke();
-        }
-        // When a scene capture has been successfuly requested, silent fall through as it does not imply a successful scene capture
-        return result;
-#else
-        Development.LogWarning(nameof(OVRSceneManager),
-            "Scene Capture does not work over Link.\n"
-            + "Please capture a scene with the HMD in standalone mode, then access the scene model over Link.");
-        UnexpectedErrorWithSceneCapture?.Invoke();
-        return false;
-#endif
     }
 
     private void OnEnable()

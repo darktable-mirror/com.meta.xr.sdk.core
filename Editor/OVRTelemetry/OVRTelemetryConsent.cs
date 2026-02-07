@@ -19,47 +19,21 @@
  */
 
 using System;
-using UnityEditor;
-using UnityEngine;
 using static OVRPlugin;
 
 internal static class OVRTelemetryConsent
 {
     public static Action<bool> OnTelemetrySet;
-    private const string HasSentConsentEventKey = "OVRTelemetry.HasSentConsentEvent";
-
-    private static bool HasSentConsentEvent
-    {
-        get => EditorPrefs.GetBool(HasSentConsentEventKey, false);
-        set => EditorPrefs.SetBool(HasSentConsentEventKey, value);
-    }
-
-    private static bool? _shareAdditionalData;
     public static bool ShareAdditionalData
     {
-        get
-        {
-            if (_shareAdditionalData.HasValue)
-            {
-                return _shareAdditionalData.Value;
-            }
-
-            var consent = UnifiedConsent.GetUnifiedConsent();
-            _shareAdditionalData = consent is true;
-            return _shareAdditionalData.Value;
-        }
-        private set
-        {
-            _shareAdditionalData = value;
-            UnifiedConsent.SaveUnifiedConsent(value);
-        }
+        get => UnifiedConsent.GetUnifiedConsent() is true;
+        private set => UnifiedConsent.SaveUnifiedConsent(value);
     }
 
-    public static void SetTelemetryEnabled(bool enabled, OVRTelemetryConstants.OVRManager.ConsentOrigins origin)
+    public static void SetTelemetryEnabled(bool enabled)
     {
         SetLibrariesConsent(enabled);
         ShareAdditionalData = enabled;
-        SendConsentEvent(origin);
         OnTelemetrySet?.Invoke(enabled);
     }
 
@@ -67,22 +41,5 @@ internal static class OVRTelemetryConsent
     {
         SetDeveloperTelemetryConsent(enabled ? Bool.True : Bool.False);
         Qpl.SetConsent(enabled ? Bool.True : Bool.False);
-    }
-
-    public static void SendConsentEvent(OVRTelemetryConstants.OVRManager.ConsentOrigins origin)
-    {
-        if (HasSentConsentEvent && origin != OVRTelemetryConstants.OVRManager.ConsentOrigins.Settings)
-        {
-            return;
-        }
-
-
-        OVRTelemetry.Start(OVRTelemetryConstants.OVRManager.MarkerId.Consent)
-            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, origin.ToString())
-            .SetResult(ShareAdditionalData ? Qpl.ResultType.Success : Qpl.ResultType.Fail)
-            .Send();
-        SendEvent("editor_consent", ShareAdditionalData ? "granted" : "withheld");
-
-        HasSentConsentEvent = true;
     }
 }

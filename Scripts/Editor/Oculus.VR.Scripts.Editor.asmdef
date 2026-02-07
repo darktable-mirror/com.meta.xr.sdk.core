@@ -8,7 +8,8 @@
         "Unity.XR.OpenXR",
         "Unity.XR.OpenXR.Editor",
         "Unity.XR.Management",
-        "Unity.XR.Management.Editor"
+        "Unity.XR.Management.Editor",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
@@ -64,6 +65,11 @@
             "name": "com.meta.xr.simulator",
             "expression": "",
             "define": "USING_META_XR_SIMULATOR"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "",
+            "define": "UNITY_TEXTMESHPRO"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

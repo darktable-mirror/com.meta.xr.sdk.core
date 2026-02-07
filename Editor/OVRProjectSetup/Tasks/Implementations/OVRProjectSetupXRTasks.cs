@@ -47,7 +47,11 @@ internal static class OVRProjectSetupXRTasks
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
             isDone: _ => PackageList.IsPackageInstalled(UnityXRPackage),
+#if UNITY_6000_0_OR_NEWER
             message: $"It is recommended to use the OpenXR Plugin ({UnityXRPackage}) package installed through the {UPMTitle}."
+#else
+            message: $"It is recommended to use the OpenXR Plugin ({UnityXRPackage}) package installed through the {UPMTitle}. Please note that OpenXR Plugin support for Depth API is only available from Unity 6 and onwards."
+#endif
         );
 #else
         OVRProjectSetup.AddTask(
@@ -55,10 +59,15 @@ internal static class OVRProjectSetupXRTasks
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
             isDone: _ => PackageList.IsPackageInstalled(OculusXRPackageName) || PackageList.IsPackageInstalled(UnityXRPackage),
+#if UNITY_6000_0_OR_NEWER
             message: $"Either the Oculus XR ({OculusXRPackageName}) or OpenXR Plugin ({UnityXRPackage}) package must be installed through the {UPMTitle}. It is recommended to use the OpenXR Plugin ({UnityXRPackage}) package."
+#else
+            message: $"Either the Oculus XR ({OculusXRPackageName}) or OpenXR Plugin ({UnityXRPackage}) package must be installed through the {UPMTitle}. Please note that OpenXR Plugin support for Depth API is only available from Unity 6 and onwards."
+#endif
         );
 #endif
 
+#if UNITY_6000_0_OR_NEWER
         OVRProjectSetup.AddTask(
             conditionalValidity: _ => PackageList.PackageManagerListAvailable,
             level: OVRProjectSetup.TaskLevel.Recommended,
@@ -68,7 +77,15 @@ internal static class OVRProjectSetupXRTasks
             fixMessage: $"Open Package Manager",
             fix: _ => { UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName); }
         );
-
+#else
+        OVRProjectSetup.AddTask(
+            conditionalValidity: _ => PackageList.PackageManagerListAvailable,
+            level: OVRProjectSetup.TaskLevel.Optional,
+            group: XRTaskGroup,
+            isDone: _ => !PackageList.IsPackageInstalled(UnityXRPackage),
+            message: $"Please note that OpenXR Plugin ({UnityXRPackage}) support for Depth API is only available from Unity 6 and onwards."
+        );
+#endif
         OVRProjectSetup.AddTask(
             conditionalValidity: _ => PackageList.PackageManagerListAvailable,
             level: OVRProjectSetup.TaskLevel.Required,

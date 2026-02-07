@@ -92,8 +92,7 @@ namespace Meta.XR.Editor.TelemetryUI
                         OVRTelemetryConsent.ShareAdditionalData);
                 if (check.changed)
                 {
-                    OVRTelemetryConsent.SetTelemetryEnabled(telemetryEnabled,
-                        OVRTelemetryConstants.OVRManager.ConsentOrigins.Settings);
+                    OVRTelemetryConsent.SetTelemetryEnabled(telemetryEnabled);
                 }
             }
 

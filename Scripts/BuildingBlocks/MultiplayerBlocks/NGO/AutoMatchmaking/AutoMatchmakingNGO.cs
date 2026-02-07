@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-#if UNITY_SERVICES_RELAY_MODULE_DEFINED && UNITY_SERVICES_LOBBY_MODULE_DEFINED && UNITY_NGO_MODULE_DEFINED
+#if UNITY_MULTIPLAYER_SERVICES_MODULE_DEFINED && UNITY_NGO_MODULE_DEFINED
 #define UNITY_SERVICES_INSTALLED
 #endif
 
@@ -142,7 +142,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
 
         private static async Task<Lobby> JoinLobby()
         {
-            var lobby = await Lobbies.Instance.QuickJoinLobbyAsync();
+            var lobby = await LobbyService.Instance.QuickJoinLobbyAsync();
             var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode: lobby.Data[JoinCodeKey].Value);
 
             FindObjectOfType<UnityTransport>().SetClientRelayData(joinAllocation.RelayServer.IpV4, (ushort)joinAllocation.RelayServer.Port,
@@ -157,7 +157,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
             var allocation = await RelayService.Instance.CreateAllocationAsync(maxPlayersPerRoom);
             var joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
-            var lobby = await Lobbies.Instance.CreateLobbyAsync(lobbyName, maxPlayersPerRoom, new CreateLobbyOptions
+            var lobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayersPerRoom, new CreateLobbyOptions
             {
                 Data = new Dictionary<string, DataObject> { { JoinCodeKey, new DataObject(DataObject.VisibilityOptions.Public, joinCode) } },
                 IsPrivate = false
@@ -171,7 +171,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         private IEnumerator HeartbeatLobbyCoroutine(string lobbyId, float waitTimeSeconds) {
             var delay = new WaitForSecondsRealtime(waitTimeSeconds);
             while (_connectedLobby != null) {
-                Lobbies.Instance.SendHeartbeatPingAsync(lobbyId);
+                LobbyService.Instance.SendHeartbeatPingAsync(lobbyId);
                 yield return delay;
             }
         }
@@ -194,11 +194,11 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         {
             if (IsLobbyHost(_connectedLobby))
             {
-                Lobbies.Instance.DeleteLobbyAsync(_connectedLobby.Id);
+                LobbyService.Instance.DeleteLobbyAsync(_connectedLobby.Id);
             }
             else
             {
-                Lobbies.Instance.RemovePlayerAsync(_connectedLobby.Id, AuthenticationService.Instance.PlayerId);
+                LobbyService.Instance.RemovePlayerAsync(_connectedLobby.Id, AuthenticationService.Instance.PlayerId);
             }
 
             _connectedLobby = null;

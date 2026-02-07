@@ -23,8 +23,26 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks
 {
+    /// <summary>
+    /// Projects passthrough over a surface when using the Surface Projected Passthrough Building Block.
+    /// </summary>
+    /// <remarks>
+    /// The surface geometries provided by the app should match real-world surfaces as closely as possible.
+    /// If they differ significantly, users will receive conflicting depth cues and objects may appear too small or large.
+    ///
+    /// The Passthrough API enables you to show the user's real environment in your mixed reality experiences.
+    /// It offers several options to customize the appearance of passthrough, such as adjusting opacity, highlight salient edges in the image, or control the color reproduction.
+    /// For passthrough to be visible, it must be enabled in <see cref="OVRManager"/>
+    /// via the <see cref="OVRManager.isInsightPassthroughEnabled"/> field.
+    ///
+    /// Find out more about [passthrough and its features](https://developer.oculus.com/documentation/unity/unity-passthrough/)
+    /// or follow along with these [tutorials](https://developer.oculus.com/documentation/unity/unity-passthrough-tutorial).
+    /// </remarks>
     public class PassthroughProjectionSurfaceBuildingBlock : MonoBehaviour
     {
+        /// <summary>
+        /// A required MeshFilter field that will be used to project Passthrough onto.
+        /// </summary>
         public MeshFilter projectionObject;
 
         // Start is called before the first frame update

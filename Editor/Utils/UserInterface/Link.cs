@@ -82,7 +82,7 @@ namespace Meta.XR.Editor.UserInterface
 
         protected virtual bool DrawInternal(params GUILayoutOption[] options)
         {
-            using var allColor = new Utils.ColorScope(Utils.ColorScope.Scope.All, BackgroundColor);
+            using var allColor = new Utils.ColorScope(Utils.ColorScope.Scope.Background, BackgroundColor);
             using var contentColor = new Utils.ColorScope(Utils.ColorScope.Scope.Content, Color);
 
             var position = GUILayoutUtility.GetRect(Content, Style, options);

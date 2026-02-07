@@ -91,7 +91,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             controller.name = $"{Utils.BlockPublicTag} {BlockName} {handednessName}";
             AssignControllerType(controller, controllerType);
             Undo.RegisterCreatedObjectUndo(controller, $"Create {BlockName} {handednessName}");
-            Undo.SetTransformParent(controller.transform, idealParent, true, "Parent to camera rig");
+            Undo.SetTransformParent(controller.transform, idealParent, false, "Parent to camera rig");
 
             EditorApplication.delayCall += () =>
             {

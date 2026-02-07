@@ -51,7 +51,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             leftHand.SetActive(true);
             leftHand.name = $"{Utils.BlockPublicTag} {BlockName} left";
             Undo.RegisterCreatedObjectUndo(leftHand, "Create left hand.");
-            Undo.SetTransformParent(leftHand.transform, cameraRigBB.leftHandAnchor, true, "Parent to camera rig.");
+            Undo.SetTransformParent(leftHand.transform, cameraRigBB.leftHandAnchor, false, "Parent to camera rig.");
 
             leftHand.GetComponent<OVRHand>().HandType = OVRHand.Hand.HandLeft;
             leftHand.GetComponent<OVRSkeleton>().SetSkeletonType(OVRSkeleton.SkeletonType.HandLeft);
@@ -61,7 +61,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             rightHand.SetActive(true);
             rightHand.name = $"{Utils.BlockPublicTag} {BlockName} right";
             Undo.RegisterCreatedObjectUndo(rightHand, "Create right hand.");
-            Undo.SetTransformParent(rightHand.transform, cameraRigBB.rightHandAnchor, true, "Parent to camera rig.");
+            Undo.SetTransformParent(rightHand.transform, cameraRigBB.rightHandAnchor, false, "Parent to camera rig.");
 
             rightHand.GetComponent<OVRHand>().HandType = OVRHand.Hand.HandRight;
             rightHand.GetComponent<OVRSkeleton>().SetSkeletonType(OVRSkeleton.SkeletonType.HandRight);

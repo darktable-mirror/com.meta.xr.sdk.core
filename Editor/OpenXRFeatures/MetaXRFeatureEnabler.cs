@@ -63,18 +63,23 @@ namespace Meta.XR
             if (featureSetAndroid != null && !featureSetAndroid.isEnabled)
                 needEnable = true;
 
+            bool promptDeclined = EditorPrefs.GetBool("meta_xr_feature_declined", false);
+            if (promptDeclined)
+                return;
+
             if (needEnable && !unityRunningInBatchmode)
             {
                 bool result =
                     EditorUtility.DisplayDialog("Enable Meta XR Feature Set",
-                        "Meta XR Feature Set must be enabled in OpenXR Feature Groups to support Oculus Utilities. Do you want to enable it now?",
-                        "Enable", "Cancel");
+                        "Meta XR Feature Set must be enabled in OpenXR Feature Groups to support Meta Quest Features. Do you want to enable it now?",
+                        "Yes", "Not Now");
                 if (!result)
                 {
                     needEnable = false;
                     EditorUtility.DisplayDialog("Meta XR Feature not enabled",
-                        "You can enable Meta XR Feature Set in XR Plugin-in Management / OpenXR for using Oculus Utilities functionalities. Please enable it in both Standalone and Android settings.",
+                        "You can enable Meta XR Feature Set in XR Plugin-in Management / OpenXR for using Meta Quest Features. Please enable it in both Standalone and Android settings.",
                         "Ok");
+                    EditorPrefs.SetBool("meta_xr_feature_declined", true);
                 }
             }
 

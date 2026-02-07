@@ -83,6 +83,8 @@ namespace Meta.XR.Editor.Notifications
         public bool ShowCloseButton { get; set; }
         public float Duration { get; set; } = -1;
         public event System.Action OnShow;
+        public Color GradientColor { get; set; } = UserInterface.Styles.Colors.Meta;
+        public float ExpectedWidth { get; set; } = Styles.Constants.Width;
 
         private double _timestamp;
         private NotificationWindow _window;

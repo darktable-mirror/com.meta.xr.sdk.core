@@ -38,6 +38,10 @@ internal class OVRConfigurationTask : IIdentified
     internal static readonly string ConsoleLinkHref = "OpenProjectSetupTool";
     private static readonly GUIContent FixButtonContent = new GUIContent("Fix", "Fix with recommended settings");
     private static readonly GUIContent ApplyButtonContent = new GUIContent("Apply", "Apply the recommended settings");
+    private static readonly GUIContent MarkAsFixedButtonContent =
+        new GUIContent("Mark as Fixed", "Mark this as fixed. It will no longer be reported as a problem.");
+    private static readonly GUIContent UnmarkAsFixedButtonContent =
+        new GUIContent("Unmark as Fixed", "Unmark this as fixed. It will go back under open items.");
 
     public Hash128 Uid { get; }
     public string Id => Uid.ToString();
@@ -67,6 +71,9 @@ internal class OVRConfigurationTask : IIdentified
     public bool FixAutomatic { get; }
 
     private readonly Dictionary<BuildTargetGroup, Setting<bool>> _ignoreSettings =
+        new Dictionary<BuildTargetGroup, Setting<bool>>();
+
+    private readonly Dictionary<BuildTargetGroup, Setting<bool>> _markedAsFixedSettings =
         new Dictionary<BuildTargetGroup, Setting<bool>>();
 
     private readonly Dictionary<BuildTargetGroup, bool> _isDoneCache = new Dictionary<BuildTargetGroup, bool>();
@@ -136,11 +143,24 @@ internal class OVRConfigurationTask : IIdentified
                 $"[{nameof(OVRConfigurationTask)}] {nameof(OVRProjectSetup.TaskGroup.All)} is not meant to be used as a {nameof(OVRProjectSetup.TaskGroup)} type");
         }
 
-        if (_isDone == null)
+        if (!Tags.HasFlag(OVRProjectSetup.TaskTags.ManuallyFixable))
         {
-            throw new ArgumentNullException(nameof(_isDone));
+            if (_isDone == null)
+            {
+                throw new ArgumentNullException(nameof(_isDone), "isDone should not be null");
+            }
         }
-
+        else
+        {
+            if (FixAction != null)
+            {
+                throw new ArgumentException(nameof(FixAction), "Fix action should be null");
+            }
+            if (_isDone != null)
+            {
+                throw new ArgumentException(nameof(_isDone), "isDone should be null");
+            }
+        }
 
         if (Level == null)
         {
@@ -171,6 +191,16 @@ internal class OVRConfigurationTask : IIdentified
     public void SetIgnored(BuildTargetGroup buildTargetGroup, bool ignored)
     {
         GetIgnoreSetting(buildTargetGroup).SetValue(ignored);
+    }
+
+    public bool IsMarkedAsFixed(BuildTargetGroup buildTargetGroup)
+    {
+        return GetMarkedAsFixedSetting(buildTargetGroup).Value;
+    }
+
+    public void SetMarkedAsFixed(BuildTargetGroup buildTargetGroup, bool markedAsFixed)
+    {
+        GetMarkedAsFixedSetting(buildTargetGroup).SetValue(markedAsFixed);
     }
 
     public bool Fix(BuildTargetGroup buildTargetGroup)
@@ -242,6 +272,24 @@ internal class OVRConfigurationTask : IIdentified
         return item;
     }
 
+    private Setting<bool> GetMarkedAsFixedSetting(BuildTargetGroup buildTargetGroup)
+    {
+        if (!_markedAsFixedSettings.TryGetValue(buildTargetGroup, out var item))
+        {
+            item = new OVRProjectSetupSettings.SettingBool()
+            {
+                Owner = this,
+                Uid = $"MarkedAsFixed.{buildTargetGroup.ToString()}",
+                Default = false,
+                Label = "Marked as Fixed"
+            };
+
+            _markedAsFixedSettings.Add(buildTargetGroup, item);
+        }
+
+        return item;
+    }
+
     internal void LogMessage(BuildTargetGroup buildTargetGroup)
     {
         var logMessage = GetFullLogMessage(buildTargetGroup);
@@ -282,6 +330,10 @@ internal class OVRConfigurationTask : IIdentified
 
     private bool GetDoneState(BuildTargetGroup buildTargetGroup)
     {
+        if (Tags.HasFlag(OVRProjectSetup.TaskTags.ManuallyFixable))
+        {
+            return IsMarkedAsFixed(buildTargetGroup);
+        }
         if (_isDoneCache.TryGetValue(buildTargetGroup, out var cachedState))
         {
             return cachedState;
@@ -332,6 +384,19 @@ internal class OVRConfigurationTask : IIdentified
             }
 
             EditorGUI.EndDisabledGroup();
+        }
+        else if (Tags.HasFlag(OVRProjectSetup.TaskTags.ManuallyFixable))
+        {
+            if (!IsMarkedAsFixed(buildTargetGroup) && GUILayout.Button(MarkAsFixedButtonContent, GUIStyles.MarkAsFixedButton))
+            {
+                SetMarkedAsFixed(buildTargetGroup, true);
+                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.MarkedAsFixed);
+            }
+            if (IsMarkedAsFixed(buildTargetGroup) && GUILayout.Button(UnmarkAsFixedButtonContent, GUIStyles.UnmarkAsFixedButton))
+            {
+                SetMarkedAsFixed(buildTargetGroup, false);
+                OVRProjectSetupSettingsProvider.SetNewInteraction(OVRProjectSetupSettingsProvider.Interaction.UnmarkedAsFixed);
+            }
         }
 
         var current = Event.current;

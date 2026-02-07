@@ -18,7 +18,9 @@
         "Meta.XR.Editor.Reflection",
         "Meta.XR.Editor.ToolingSupport",
         "Meta.XR.Editor.Settings",
-        "Meta.XR.Editor.Id"
+        "Meta.XR.Editor.Id",
+        "Unity.TextMeshPro.Editor",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
@@ -139,6 +141,11 @@
             "name": "Unity",
             "expression": "2022.3.35f1",
             "define": "UNITY_GRAPHICS_JOB_FIX"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "",
+            "define": "UNITY_TEXTMESHPRO"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

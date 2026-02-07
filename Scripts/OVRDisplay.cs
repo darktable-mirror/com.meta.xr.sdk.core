@@ -323,22 +323,6 @@ public class OVRDisplay
     }
 
     /// <summary>
-    /// Gets the recommended MSAA level for optimal quality/performance the current device.
-    /// </summary>
-    public int recommendedMSAALevel
-    {
-        get
-        {
-            int result = OVRPlugin.recommendedMSAALevel;
-
-            if (result == 1)
-                result = 0;
-
-            return result;
-        }
-    }
-
-    /// <summary>
     /// Gets the list of available display frequencies supported by this hardware.
     /// </summary>
     public float[] displayFrequenciesAvailable

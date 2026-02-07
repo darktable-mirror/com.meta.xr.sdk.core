@@ -130,7 +130,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 CanFilterBy = CollectionTagBehavior.DefaultSettings.CanFilterBy,
                 ShowOverlay = CollectionTagBehavior.DefaultSettings.ShowOverlay,
                 Description = description,
-                Thumbnail = thumbnail
+                Thumbnail = thumbnail,
+                Automated = true
             };
         }
     }

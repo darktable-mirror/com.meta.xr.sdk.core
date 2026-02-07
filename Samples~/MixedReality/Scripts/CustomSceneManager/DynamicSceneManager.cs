@@ -49,6 +49,7 @@ public class DynamicSceneManager : MonoBehaviour
 {
     public float UpdateFrequencySeconds = 5;
     [SerializeField] private Transform _trackingSpace;
+    [SerializeField] private Material _material;
 
     SceneSnapshot _snapshot = new SceneSnapshot();
     Dictionary<OVRAnchor, GameObject> _sceneGameObjects = new Dictionary<OVRAnchor, GameObject>();
@@ -139,7 +140,7 @@ public class DynamicSceneManager : MonoBehaviour
         foreach (var anchor in changesNew)
         {
             _sceneGameObjects.TryGetValue(GetParentAnchor(anchor, newSnapshot), out var parent);
-            _sceneGameObjects.Add(anchor, await updater.CreateUnityObject(anchor, parent, _trackingSpace));
+            _sceneGameObjects.Add(anchor, await updater.CreateUnityObject(anchor, parent, _trackingSpace, _material));
         }
 
         // destroy game objects for all missing anchors
@@ -159,7 +160,7 @@ public class DynamicSceneManager : MonoBehaviour
 
         // geometry bounds means just updating an existing game object
         foreach (var currentAnchor in changesBounds)
-            updater.UpdateUnityObject(currentAnchor, _sceneGameObjects[currentAnchor], _trackingSpace);
+            updater.UpdateUnityObject(currentAnchor, _sceneGameObjects[currentAnchor], _trackingSpace, _material);
     }
 
     List<OVRAnchor> FilterChanges(List<(OVRAnchor, SnapshotComparer.ChangeType)> changes,

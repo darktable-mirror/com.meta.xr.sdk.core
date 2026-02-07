@@ -33,5 +33,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.Editor.TelemetryUI")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.About")]
+[assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer.Editor")]
 
 
+[assembly: InternalsVisibleTo("Meta.XR.Editor.UPST.Notifications")]

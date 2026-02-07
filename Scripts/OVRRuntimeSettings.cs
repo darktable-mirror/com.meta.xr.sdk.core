@@ -142,6 +142,16 @@ public class OVRRuntimeSettings : OVRRuntimeAssetsBase
         set => bodyTrackingJointSet = value;
     }
 
+    [SerializeField] private bool allowVisibilityMesh = false;
+
+    public bool VisibilityMesh
+    {
+        get => allowVisibilityMesh;
+        set => allowVisibilityMesh = value;
+    }
+
+    public bool QuestVisibilityMeshOverriden = false;
+
 
 #if UNITY_EDITOR
     /// <summary>

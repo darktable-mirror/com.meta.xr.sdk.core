@@ -716,7 +716,7 @@ public class OVRLint : EditorWindow
                 "For GPU performance, please use 4 or fewer VR layers.",
                 delegate(UnityEngine.Object obj, bool last, int selected)
                 {
-                    for (int i = 4; i < OVROverlay.instances.Length; ++i)
+                    for (int i = 4; i < OVROverlay.instances.Count; ++i)
                     {
                         OVROverlay.instances[i].enabled = false;
                     }
@@ -776,20 +776,6 @@ public class OVRLint : EditorWindow
                 "Enabling the occlusion mesh saves substantial GPU resources, generally with no visual impact. Enable unless you have an exceptional use case.",
                 delegate(UnityEngine.Object obj, bool last, int selected) { OVRPlugin.occlusionMesh = true; }, null,
                 false, "Set OVRPlugin.occlusionMesh = true");
-        }
-
-        if (OVRManager.instance != null && !OVRManager.instance.useRecommendedMSAALevel)
-        {
-            AddFix(eRecordType.RuntimeCommon, "Optimize MSAA",
-                "OVRManager can select the optimal antialiasing for the installed hardware at runtime. Recommend enabling this.",
-                delegate(UnityEngine.Object obj, bool last, int selected)
-                {
-                    var ovrManagers = GameObject.FindObjectsByType<OVRManager>(FindObjectsSortMode.None);
-                    foreach (var ovrManager in ovrManagers)
-                    {
-                        ovrManager.useRecommendedMSAALevel = true;
-                    }
-                }, null, true, "Stop Play and Fix");
         }
 
         if (UnityEngine.XR.XRSettings.eyeTextureResolutionScale > 1.5)

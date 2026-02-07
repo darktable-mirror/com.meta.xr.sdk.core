@@ -33,7 +33,9 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
         WentToDocumentation,
         WentToSource,
         Fixed,
-        Ignored
+        Ignored,
+        MarkedAsFixed,
+        UnmarkedAsFixed,
     }
 
     public const string SettingsName = OVREditorUtils.MetaXRPublicName;

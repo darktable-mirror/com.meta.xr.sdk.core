@@ -515,5 +515,43 @@ internal static class OVRProjectSetupRenderingTasks
             url: urpFixLink
         );
 #endif
+        // [Recommended] Use recommended MSAA level from OVRPlugin
+        OVRProjectSetup.AddTask(
+           level: OVRProjectSetup.TaskLevel.Recommended,
+           platform: BuildTargetGroup.Android,
+           group: targetGroup,
+           isDone: buildTargetGroup =>
+           {
+#if USING_URP
+               var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+               QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
+               foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+               {
+                   if (urpAsset.msaaSampleCount != OVRPlugin.recommendedMSAALevel)
+                   {
+                       return false;
+                   }
+               }
+               return true;
+#else
+               return QualitySettings.antiAliasing == OVRPlugin.recommendedMSAALevel;
+#endif
+           },
+           message: "Use recommaned MSAA level for Android",
+           fix: buildTargetGroup =>
+           {
+#if USING_URP
+               var pipelineAssets = new System.Collections.Generic.List<RenderPipelineAsset>();
+               QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
+               foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
+               {
+                   urpAsset.msaaSampleCount = OVRPlugin.recommendedMSAALevel;
+               }
+#else
+               QualitySettings.antiAliasing = OVRPlugin.recommendedMSAALevel;
+#endif
+           },
+           fixMessage: "Set MSAA for all URP Asset to " + OVRPlugin.recommendedMSAALevel.ToString()
+        );
     }
 }

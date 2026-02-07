@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-#if UNITY_SERVICES_RELAY_MODULE_DEFINED && UNITY_SERVICES_LOBBY_MODULE_DEFINED && UNITY_NGO_MODULE_DEFINED
+#if UNITY_MULTIPLAYER_SERVICES_MODULE_DEFINED && UNITY_NGO_MODULE_DEFINED
 #define UNITY_SERVICES_INSTALLED
 #endif
 
@@ -70,7 +70,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
             var delay = new WaitForSecondsRealtime(waitTimeSeconds);
             while (ConnectedLobby != null)
             {
-                Lobbies.Instance.SendHeartbeatPingAsync(lobbyId);
+                LobbyService.Instance.SendHeartbeatPingAsync(lobbyId);
                 yield return delay;
             }
         }
@@ -209,7 +209,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
                     ? null
                     : new JoinLobbyByCodeOptions { Password = roomPassword };
 
-                var lobby = await Lobbies.Instance.JoinLobbyByCodeAsync(roomToken, options);
+                var lobby = await LobbyService.Instance.JoinLobbyByCodeAsync(roomToken, options);
                 return await JoinLobby(lobby, roomPassword);
             }
             catch (Exception e)
@@ -237,7 +237,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
 #if UNITY_SERVICES_INSTALLED
             try
             {
-                var lobby = await Lobbies.Instance.QuickJoinLobbyAsync(new QuickJoinLobbyOptions
+                var lobby = await LobbyService.Instance.QuickJoinLobbyAsync(new QuickJoinLobbyOptions
                 {
                     Filter = new List<QueryFilter>
                     {
@@ -340,11 +340,11 @@ namespace Meta.XR.MultiplayerBlocks.NGO
 
             if (IsLobbyHost(ConnectedLobby))
             {
-                Lobbies.Instance?.DeleteLobbyAsync(ConnectedLobby.Id);
+                LobbyService.Instance?.DeleteLobbyAsync(ConnectedLobby.Id);
             }
             else
             {
-                Lobbies.Instance?.RemovePlayerAsync(ConnectedLobby.Id, AuthenticationService.Instance.PlayerId);
+                LobbyService.Instance?.RemovePlayerAsync(ConnectedLobby.Id, AuthenticationService.Instance.PlayerId);
             }
 
             ConnectedLobby = null;

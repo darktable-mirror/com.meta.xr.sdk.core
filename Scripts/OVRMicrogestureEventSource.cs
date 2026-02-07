@@ -21,7 +21,6 @@
 using System;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Serialization;
 
 /// <summary>
 /// This class emits events based on recognized microgestures for a specific OVRHand.
@@ -33,9 +32,14 @@ public class OVRMicrogestureEventSource : MonoBehaviour
     private OVRHand _hand;
 
     /// <summary>
-    /// Event triggered when a microgesture is recognized by the system. This event provides the specific type of microgesture detected.
+    /// UnityEvent triggered when a microgesture is recognized by the system. This event provides the specific type of microgesture detected.
     /// </summary>
     public UnityEvent<OVRHand.MicrogestureType> GestureRecognizedEvent;
+
+    /// <summary>
+    /// Event triggered when a microgesture is recognized by the system. This event provides the specific type of microgesture detected.
+    /// </summary>
+    public Action<OVRHand.MicrogestureType> WhenGestureRecognized = delegate { };
 
     /// <summary>
     /// Gets or sets the OVRHand associated with this event source, which is used to detect gestures.
@@ -51,12 +55,13 @@ public class OVRMicrogestureEventSource : MonoBehaviour
         OVRHand.MicrogestureType mgType = _hand.GetMicrogestureType();
         if (mgType != OVRHand.MicrogestureType.Invalid && mgType != OVRHand.MicrogestureType.NoGesture)
         {
-            CheckForNewGesture(mgType);
+            RaiseGestureRecognized(mgType);
         }
     }
 
-    private void CheckForNewGesture(OVRHand.MicrogestureType gesture)
+    private void RaiseGestureRecognized(OVRHand.MicrogestureType gesture)
     {
         GestureRecognizedEvent?.Invoke(gesture);
+        WhenGestureRecognized?.Invoke(gesture);
     }
 }

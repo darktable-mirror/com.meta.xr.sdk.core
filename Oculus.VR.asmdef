@@ -9,7 +9,8 @@
         "Meta.XR.Editor.Callbacks",
         "Unity.InputSystem",
         "Unity.XR.OpenXR.Features.MetaQuestSupport",
-        "Unity.XR.Oculus"
+        "Unity.XR.Oculus",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -103,6 +104,11 @@
             "name": "com.unity.xr.openxr",
             "expression": "1.11.0",
             "define": "UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "",
+            "define": "UNITY_TEXTMESHPRO"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

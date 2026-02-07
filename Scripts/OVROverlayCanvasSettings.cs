@@ -32,7 +32,9 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
 {
     private const string kAssetName = "OVROverlayCanvasSettings";
 
+#if !UNITY_2020_1_OR_NEWER
     private const string kOverrideUiShaderName = "UI/Default Correct";
+#endif
 
     private const string kBuiltInOpaqueShaderName = "UI/Prerendered Opaque";
     private const string kUrpOpaqueShaderName = "URP/UI/Prerendered Opaque";
@@ -54,8 +56,10 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
         }
     }
 
+#if !UNITY_2020_1_OR_NEWER
     [SerializeField]
     private Shader _overrideCanvasShader = null;
+#endif
 
     [SerializeField]
     private Shader _transparentImposterShader = null;
@@ -63,9 +67,14 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
     [SerializeField]
     private Shader _opaqueImposterShader = null;
 
+#if !UNITY_2020_1_OR_NEWER
     [SerializeField]
     private bool _overrideDefaultCanvasMaterial = false;
+#endif
 
+    public int MaxSimultaneousCanvases = 1;
+    public int CanvasRenderLayer = 31;
+    public int CanvasLayer = -1;
 
 #if UNITY_EDITOR
     public static string GetOculusOverlayCanvasSettingsAssetPath()
@@ -107,10 +116,12 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
 
     public void ApplyGlobalSettings()
     {
+#if !UNITY_2020_1_OR_NEWER
         if (_overrideDefaultCanvasMaterial)
         {
             Canvas.GetDefaultCanvasMaterial().shader = _overrideCanvasShader;
         }
+#endif
     }
 
     public Shader GetShader(OVROverlayCanvas.DrawMode drawMode)
@@ -121,8 +132,7 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
             case OVROverlayCanvas.DrawMode.OpaqueWithClip:
             case OVROverlayCanvas.DrawMode.AlphaToMask:
                 return _opaqueImposterShader;
-            case OVROverlayCanvas.DrawMode.TransparentCorrectAlpha:
-            case OVROverlayCanvas.DrawMode.TransparentDefaultAlpha:
+            case OVROverlayCanvas.DrawMode.Transparent:
             default:
                 return _transparentImposterShader;
         }
@@ -150,7 +160,9 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
 
     private void EnsureInitialized()
     {
+#if !UNITY_2020_1_OR_NEWER
         EnsureShaderInitialized(ref _overrideCanvasShader, kOverrideUiShaderName, string.Empty);
+#endif
 
         bool useBuiltInShaders = UsingBuiltInRenderPipeline();
         EnsureShaderInitialized(

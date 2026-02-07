@@ -261,6 +261,17 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             SendTelemetry = false,
         };
 
+        private static readonly Setting UseOverlay = new CustomBool()
+        {
+            Uid = nameof(UseOverlay),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.UseOverlay,
+            Set = (val) => RuntimeSettings.Instance.UseOverlay = val,
+            Label = "Use Overlay",
+            Tooltip = "OVROverlay helps improves the overall visual quality of the User Interface by using a higher resolution render texture and projecting it onto a curved plane.",
+            SendTelemetry = true,
+        };
+
         private static readonly Setting PanelLayer = new CustomLayer()
         {
             Uid = nameof(PanelLayer),
@@ -408,6 +419,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                     EditorGUILayout.LabelField(LayersDescription, GUIStyles.DialogTextStyle);
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
+                    UseOverlay.Draw(origin);
                     PanelLayer.Draw(origin);
                     MeshRendererLayer.Draw(origin);
                     AutomaticLayerCullingUpdate.Draw(origin);

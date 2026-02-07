@@ -38,14 +38,16 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         protected override void Setup(Controller owner)
         {
             base.Setup(owner);
-#if !UNITY_EDITOR
+
+            // If we are not using overlay, there is no need to create the OverlayCanvas
+            if (!RuntimeSettings.Instance.ShouldUseOverlay) return;
+
             _canvas.sortingOrder = -100;
             _canvas.additionalShaderChannels = AdditionalCanvasShaderChannels.Normal |
                                                AdditionalCanvasShaderChannels.TexCoord1 |
                                                AdditionalCanvasShaderChannels.Tangent;
             _overlayCanvas = GameObject.AddComponent<OverlayCanvas>();
             _overlayCanvas.Panel = this;
-#endif
         }
     }
 }

@@ -271,8 +271,7 @@ public class OVROverlay : MonoBehaviour
 
     protected bool isOverridePending;
 
-    internal const int maxInstances = 15;
-    public static OVROverlay[] instances = new OVROverlay[maxInstances];
+    public static List<OVROverlay> instances = new();
 
     public int layerId { get; private set; } = 0; // The layer's internal handle in the compositor.
 
@@ -306,7 +305,7 @@ public class OVROverlay : MonoBehaviour
     protected OVRPlugin.LayerDesc layerDesc;
     protected int stageCount = -1;
 
-    protected int layerIndex = -1; // Controls the composition order based on wake-up time.
+    public int layerIndex { get; protected set; } = -1; // Controls the composition order based on wake-up time.
     protected GCHandle layerIdHandle;
     protected IntPtr layerIdPtr = IntPtr.Zero;
 
@@ -343,13 +342,19 @@ public class OVROverlay : MonoBehaviour
 
         if (layerIndex == -1)
         {
-            for (int i = 0; i < maxInstances; ++i)
+            layerIndex = instances.IndexOf(this);
+            if (layerIndex == -1)
             {
-                if (instances[i] == null || instances[i] == this)
+                // Try to reuse the empty spot from destroyed Overlay
+                layerIndex = instances.IndexOf(null);
+                if (layerIndex == -1)
                 {
-                    layerIndex = i;
-                    instances[i] = this;
-                    break;
+                    layerIndex = instances.Count;
+                    instances.Add(this);
+                }
+                else
+                {
+                    instances[layerIndex] = this;
                 }
             }
         }
@@ -372,7 +377,8 @@ public class OVROverlay : MonoBehaviour
             OVRPlugin.CalculateLayerDesc(shape, layout, size, mipLevels, sampleCount, etFormat, flags);
 
 
-        OVRPlugin.EnqueueSetupLayer(desc, compositionDepth, layerIdPtr);
+        var setupSuccess = OVRPlugin.EnqueueSetupLayer(desc, compositionDepth, layerIdPtr);
+        Debug.Assert(setupSuccess, "OVRPlugin.EnqueueSetupLayer failed");
 
         layerId = (int)layerIdHandle.Target;
         if (layerId > 0)
@@ -449,7 +455,7 @@ public class OVROverlay : MonoBehaviour
                 var txFormat = (isHdr) ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
 
                 if (currentOverlayShape != OverlayShape.Cubemap && currentOverlayShape != OverlayShape.OffcenterCubemap)
-                    sc = Texture2D.CreateExternalTexture(size.w, size.h, txFormat, useMipmaps, true, scPtr);
+                    sc = Texture2D.CreateExternalTexture(size.w, size.h, txFormat, useMipmaps, false, scPtr);
                 else
                     sc = Cubemap.CreateExternalTexture(size.w, txFormat, useMipmaps, scPtr);
 
@@ -475,7 +481,7 @@ public class OVROverlay : MonoBehaviour
             if (layerTextures[eyeId].swapChain != null)
             {
                 for (int stage = 0; stage < stageCount; ++stage)
-                    DestroyImmediate(layerTextures[eyeId].swapChain[stage]);
+                    Destroy(layerTextures[eyeId].swapChain[stage]);
             }
         }
 
@@ -770,6 +776,7 @@ public class OVROverlay : MonoBehaviour
             _commandBuffer = new CommandBuffer();
         }
         _commandBuffer.Clear();
+        _commandBuffer.name = ToString();
 
         for (int eyeId = 0; eyeId < texturesPerStage; ++eyeId)
         {
@@ -784,7 +791,6 @@ public class OVROverlay : MonoBehaviour
 
             // Mobile requires unpremultiplied alpha, so if it is premultiplied, divide it out if possible.
             bool unmultiplyAlpha = isAlphaPremultiplied && !OVRPlugin.premultipliedAlphaLayersSupported;
-
 
             // OpenGL does not support copy texture between different format
 #pragma warning disable CS0618 // Type or member is obsolete

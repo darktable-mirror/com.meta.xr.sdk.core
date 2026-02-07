@@ -35,11 +35,11 @@ namespace Meta.XR.Editor.UserInterface
         {
             _action = action;
             _options = options;
-            _action.Style = GUI.skin.button;
         }
 
         public void Draw()
         {
+            _action.Style = GUI.skin.button;
             _action.Draw(_options);
         }
     }

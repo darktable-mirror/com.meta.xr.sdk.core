@@ -96,6 +96,8 @@ internal static class OVRProjectSetupDeviceTasks
             "The app uses anchors but the Link installed on the machine does not have spatial data enabled. Enable it in Settings > Beta > Spatial Data over Meta Quest Link."
         );
 #endif
+#if UNITY_EDITOR_WIN
+#endif //UNITY_EDITOR_WIN
     }
 
 

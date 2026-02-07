@@ -92,9 +92,11 @@ namespace Meta.XR.EnvironmentDepth.Editor
                 },
                 fixMessage: "Set Vulkan as Default Graphics API"
             );
-#if !XR_OCULUS_4_2_0_OR_NEWER && !OPEN_XR_META_2_1_OR_NEWER // We've got neither package
+#if !XR_OCULUS_4_2_0_OR_NEWER && !OPEN_XR_META_2_1_OR_NEWER // We've got neither package. Instruct user to get OpenXR or OculusXR if in Unity6. If in older version, instruct to get OculusXR only.
             const string xrOculusRequiredVersion = "com.unity.xr.oculus@4.2.0";
-            const string openXrMetaRequiredVersion = "com.unity.xr.meta-openxr@2.1.0-pre1";
+#if UNITY_6000_0_OR_NEWER
+            const string openXrMetaRequiredVersion = "com.unity.xr.meta-openxr@2.1.0";
+#endif
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
@@ -103,7 +105,11 @@ namespace Meta.XR.EnvironmentDepth.Editor
                     if (!_isCurrentSceneUsingDepth) return true;
                     return false;
                 },
+#if UNITY_6000_0_OR_NEWER
                 message: $"DepthAPI requires either XR Oculus {xrOculusRequiredVersion} or OpenXR {openXrMetaRequiredVersion}. Please upgrade in the package manager."
+#else
+                message: $"DepthAPI requires XR Oculus {xrOculusRequiredVersion}. Please upgrade in the package manager."
+#endif
             );
 #endif
 #if USING_XR_SDK_OCULUS && !OPEN_XR_META_2_1_OR_NEWER // We've got oculus package only

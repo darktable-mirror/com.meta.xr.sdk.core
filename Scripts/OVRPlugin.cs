@@ -59,7 +59,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_106_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_108_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -314,7 +314,6 @@ public static partial class OVRPlugin
         Right = 1,
         Count = 2
     }
-
 
     public enum Tracker
     {
@@ -2620,59 +2619,6 @@ public static partial class OVRPlugin
         public BodyTrackingFidelity2 Fidelity;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    public struct KeyboardState
-    {
-        public Bool IsActive;
-        public Bool OrientationValid;
-        public Bool PositionValid;
-        public Bool OrientationTracked;
-        public Bool PositionTracked;
-        public PoseStatef PoseState;
-        public Vector4f ContrastParameters;
-    }
-
-    public enum KeyboardDescriptionConstants
-    {
-        NameMaxLength = 128,
-    }
-
-    // Enum defining the type of the keyboard model, effect render parameters and passthrough configuration.
-    public enum TrackedKeyboardPresentationStyles
-    {
-        Unknown = 0,
-        Opaque = 1,
-        MR = 2,
-    }
-
-    // Enum defining the type of the keyboard returned
-    public enum TrackedKeyboardFlags
-    {
-        Exists = 1,
-        Local = 2,
-        Remote = 4,
-        Connected = 8,
-    }
-
-    // Enum defining the type of the keyboard requested
-    public enum TrackedKeyboardQueryFlags
-    {
-        Local = 2,
-        Remote = 4,
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct KeyboardDescription
-    {
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = (int)KeyboardDescriptionConstants.NameMaxLength)]
-        public byte[] Name;
-
-        public UInt64 TrackedKeyboardId;
-        public Vector3f Dimensions;
-        public TrackedKeyboardFlags KeyboardFlags;
-        public TrackedKeyboardPresentationStyles SupportedPresentationStyles;
-    }
-
 
     public struct FaceExpressionStatus
     {
@@ -3607,6 +3553,8 @@ public static partial class OVRPlugin
     }
 
 
+
+
     //-----------------------------------------------------------------
     // Methods
     //-----------------------------------------------------------------
@@ -3854,7 +3802,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
             return 2;
 #else
-            if (initialized && version >= OVRP_1_6_0.version)
+            if (version >= OVRP_1_6_0.version)
                 return OVRP_1_6_0.ovrp_GetSystemRecommendedMSAALevel();
             else
                 return 2;
@@ -5813,7 +5761,7 @@ public static partial class OVRPlugin
         if (version >= OVRP_1_93_0.version)
         {
             Bool enabled = OVRPlugin.Bool.False;
-            Result result = OVRP_1_93_0.ovrp_IsSetWideMotionModeHandPosesEnabled(ref enabled);
+            Result result = OVRP_1_93_0.ovrp_IsWideMotionModeHandPosesEnabled(ref enabled);
             if (result == Result.Success)
             {
                 return enabled == OVRPlugin.Bool.True;
@@ -9588,83 +9536,6 @@ public static partial class OVRPlugin
     }
 
 
-    public static bool StartKeyboardTracking(UInt64 trackedKeyboardId)
-    {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        return false;
-#else
-        if (version >= OVRP_1_68_0.version)
-        {
-            Result result;
-            result = OVRP_1_68_0.ovrp_StartKeyboardTracking(trackedKeyboardId);
-            return result == Result.Success;
-        }
-        else
-        {
-            return false;
-        }
-#endif
-    }
-
-    public static bool StopKeyboardTracking()
-    {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        return false;
-#else
-        if (version >= OVRP_1_68_0.version)
-        {
-            Result result;
-            result = OVRP_1_68_0.ovrp_StopKeyboardTracking();
-            return result == Result.Success;
-        }
-        else
-        {
-            return false;
-        }
-#endif
-    }
-
-    public static bool GetKeyboardState(Step stepId, out KeyboardState keyboardState)
-    {
-        keyboardState = default(KeyboardState);
-
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        return false;
-#else
-        if (version >= OVRP_1_68_0.version)
-        {
-            Result result;
-            result = OVRP_1_68_0.ovrp_GetKeyboardState(stepId, -1, out keyboardState);
-            return result == Result.Success;
-        }
-        else
-        {
-            return false;
-        }
-#endif
-    }
-
-    public static bool GetSystemKeyboardDescription(TrackedKeyboardQueryFlags keyboardQueryFlags,
-        out KeyboardDescription keyboardDescription)
-    {
-        keyboardDescription = default(KeyboardDescription);
-
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-        return false;
-#else
-        if (version >= OVRP_1_68_0.version)
-        {
-            Result result;
-            result = OVRP_1_68_0.ovrp_GetSystemKeyboardDescription(keyboardQueryFlags, out keyboardDescription);
-            return result == Result.Success;
-        }
-        else
-        {
-            return false;
-        }
-#endif
-    }
-
 
     // Virtual keyboard calls
 
@@ -10642,6 +10513,93 @@ public static partial class OVRPlugin
 #endif
     }
 
+    internal static double GetPredictedDisplayTime()
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return 0;
+#else
+        if (version < OVRP_1_44_0.version)
+        {
+            return 0;
+        }
+
+        double predictedDisplayTime = 0;
+        if (OVRP_1_44_0.ovrp_GetPredictedDisplayTime(-1 /*OVRP_CURRENT_FRAMEINDEX*/, ref predictedDisplayTime) == Result.Success)
+        {
+            return predictedDisplayTime;
+        }
+
+        return 0;
+#endif
+    }
+
+    internal static IntPtr GetOpenXRInstanceProcAddrFunc()
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return IntPtr.Zero;
+#else
+        if (version < OVRP_1_104_0.version)
+        {
+            return IntPtr.Zero;
+        }
+
+        IntPtr func = IntPtr.Zero;
+        if (OVRP_1_104_0.ovrp_GetOpenXRInstanceProcAddrFunc(ref func) == Result.Success)
+        {
+            return func;
+        }
+
+        return IntPtr.Zero;
+#endif
+    }
+
+    public delegate void OpenXREventDelegateType(IntPtr data, IntPtr context);
+
+    internal static Result RegisterOpenXREventHandler(OpenXREventDelegateType eventHandler)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_104_0.version)
+        {
+            return Result.Failure_Unsupported;
+        }
+        return OVRP_1_104_0.ovrp_RegisterOpenXREventHandler(eventHandler, IntPtr.Zero);
+#endif
+    }
+
+    internal static Result UnregisterOpenXREventHandler(OpenXREventDelegateType eventHandler)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_104_0.version)
+        {
+            return Result.Failure_Unsupported;
+        }
+        return OVRP_1_104_0.ovrp_UnregisterOpenXREventHandler(eventHandler);
+#endif
+    }
+
+    internal static UInt64 GetAppSpace()
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return 0;
+#else
+        if (version < OVRP_1_107_0.version)
+        {
+            return 0;
+        }
+
+        UInt64 appSpace = 0;
+        if (OVRP_1_107_0.ovrp_GetAppSpace(ref appSpace) == Result.Success)
+        {
+            return appSpace;
+        };
+        return 0;
+#endif
+    }
+
     public static bool SetKeyboardOverlayUV(Vector2f uv)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -11431,7 +11389,7 @@ public static partial class OVRPlugin
 #endif
     }
 
-    public static bool RequestSceneCapture(string requestString, out UInt64 requestId)
+    public static bool RequestSceneCapture(out UInt64 requestId)
     {
         requestId = 0;
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -11441,8 +11399,7 @@ public static partial class OVRPlugin
         {
             var sceneCaptureRequest = new SceneCaptureRequestInternal
             {
-                requestByteCount = requestString == null ? 0 : System.Text.Encoding.ASCII.GetByteCount(requestString),
-                request = requestString,
+                requestByteCount = 0
             };
             Result result = OVRP_1_72_0.ovrp_RequestSceneCapture(ref sceneCaptureRequest, out requestId);
             return (result == Result.Success);
@@ -12235,9 +12192,20 @@ public static partial class OVRPlugin
         {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
 #else
-            if (version >= OVRP_1_106_0.version)
+            if (version >= OVRP_1_108_0.version)
             {
-                OVRP_1_106_0.ovrp_UnityOpenXR_OnAppSpaceChange2(xrSpace, spaceFlags);
+                OVRP_1_108_0.ovrp_UnityOpenXR_OnAppSpaceChange2(xrSpace, spaceFlags);
+            }
+#endif
+        }
+
+        public static void AllowVisibilityMesh(bool enabled)
+        {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+#else
+            if (version >= OVRP_1_108_0.version)
+            {
+                OVRP_1_108_0.ovrp_AllowVisibilityMask(enabled ? Bool.True : Bool.False);
             }
 #endif
         }
@@ -12916,6 +12884,7 @@ public static partial class OVRPlugin
 #endif
         }
     }
+
 
     private const string pluginName = "OVRPlugin";
     private static System.Version _versionZero = new System.Version(0, 0, 0);
@@ -13768,6 +13737,9 @@ public static partial class OVRPlugin
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetLocalTrackingSpaceRecenterCount(ref int recenterCount);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetPredictedDisplayTime(int frameIndex, ref double predictedDisplayTime);
     }
 
     private static class OVRP_1_45_0
@@ -14089,19 +14061,6 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_SetInsightPassthroughKeyboardHandsIntensity(int layerId,
             InsightPassthroughKeyboardHandsIntensity intensity);
-
-        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern Result ovrp_StartKeyboardTracking(UInt64 trackedKeyboardId);
-
-        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern Result ovrp_StopKeyboardTracking();
-
-        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern Result ovrp_GetSystemKeyboardDescription(TrackedKeyboardQueryFlags keyboardQueryFlags,
-            out KeyboardDescription keyboardDescription);
-
-        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern Result ovrp_GetKeyboardState(Step stepId, int frameIndex, out KeyboardState keyboardState);
     }
 
     private static class OVRP_1_69_0
@@ -14652,7 +14611,7 @@ public static partial class OVRPlugin
         public static extern Result ovrp_SetWideMotionModeHandPoses(Bool wideMotionModeHandPoses);
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern Result ovrp_IsSetWideMotionModeHandPosesEnabled(ref Bool enabled);
+        public static extern Result ovrp_IsWideMotionModeHandPosesEnabled(ref Bool enabled);
 
 
     }
@@ -14808,6 +14767,15 @@ public static partial class OVRPlugin
         public static readonly System.Version version = new System.Version(1, 104, 0);
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetOpenXRInstanceProcAddrFunc(ref IntPtr func);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_RegisterOpenXREventHandler(OpenXREventDelegateType eventHandler, IntPtr context);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_UnregisterOpenXREventHandler(OpenXREventDelegateType eventHandler);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetFaceVisemesState(Step stepId, int frameIndex, out FaceVisemesStateInternal faceVisemesState);
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetFaceTrackingVisemesSupported(out Bool faceTrackingVisemesSupported);
@@ -14897,20 +14865,27 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetConsentSettingsChangeText(IntPtr consentSettingsChangeText);
 
-        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void ovrp_UnityOpenXR_OnAppSpaceChange2(UInt64 xrSpace, int spaceFlags);
-
 
     }
 
     private static class OVRP_1_107_0
     {
         public static readonly System.Version version = new System.Version(1, 107, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetAppSpace(ref UInt64 appSpace);
+
     }
 
     private static class OVRP_1_108_0
     {
         public static readonly System.Version version = new System.Version(1, 108, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void ovrp_UnityOpenXR_OnAppSpaceChange2(UInt64 xrSpace, int spaceFlags);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void ovrp_AllowVisibilityMask(Bool enabled);
     }
 
     private static class OVRP_1_109_0

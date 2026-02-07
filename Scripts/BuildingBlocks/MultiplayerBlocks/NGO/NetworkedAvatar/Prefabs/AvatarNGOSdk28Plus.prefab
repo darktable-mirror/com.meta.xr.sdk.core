@@ -184,6 +184,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _customRigPrefab: {fileID: 5385166689473671844, guid: cbc02a91841771b4ab9f12678612c4b1, type: 3}
   _customAnimationOnly: 0
+  _enableStaticAnimationOptimization: 0
   _inputBlended: 1
   _leftArmBlendFactor: 1
   _rightArmBlendFactor: 1
@@ -193,3 +194,7 @@ MonoBehaviour:
   _enableIndependentUpperBodyHorizontalRotation: 1
   _maxUpperBodyAngleDeviation: 45
   _lowerBodyRotationDegreesPerSecond: 90
+  _enableRemoteScaling: 0
+  _remoteScaleFactor: 1
+  _mixedRealityAnimationOptions:
+    anchoringState: 1

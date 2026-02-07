@@ -26,6 +26,7 @@ using System;
 using Oculus.VR.Editor;
 using UnityEngine.Serialization;
 
+
 [System.Serializable]
 #if UNITY_EDITOR
 [UnityEditor.InitializeOnLoad]
@@ -186,6 +187,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     [SerializeField]
     internal SystemLoadingScreenBackground _systemLoadingScreenBackground = SystemLoadingScreenBackground.Black;
 
+
     //public const string OculusProjectConfigAssetPath = "Assets/Oculus/OculusProjectConfig.asset";
 
     private static OVRProjectConfig _cachedProjectConfig;
@@ -270,45 +272,53 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         // Initialize the asset only if a build is not currently running.
         if (projectConfig == null && !BuildPipeline.isBuildingPlayer)
         {
-            Debug.LogFormat("Creating ProjectConfig at path {0}", oculusProjectConfigAssetPath);
-            projectConfig = ScriptableObject.CreateInstance<OVRProjectConfig>();
-            projectConfig.targetDeviceTypes = new List<DeviceType>();
-            projectConfig.targetDeviceTypes.Add(DeviceType.Quest);
-            projectConfig.targetDeviceTypes.Add(DeviceType.Quest2);
-            projectConfig.targetDeviceTypes.Add(DeviceType.QuestPro);
-            projectConfig.targetDeviceTypes.Add(DeviceType.Quest3);
-            projectConfig.targetDeviceTypes.Add(DeviceType.Quest3S);
-            projectConfig.allowOptional3DofHeadTracking = false;
-            projectConfig.handTrackingSupport = HandTrackingSupport.ControllersOnly;
-            projectConfig.handTrackingFrequency = HandTrackingFrequency.LOW;
-            projectConfig.handTrackingVersion = HandTrackingVersion.Default;
-            projectConfig.anchorSupport = AnchorSupport.Disabled;
-            projectConfig.sharedAnchorSupport = FeatureSupport.None;
-            projectConfig.trackedKeyboardSupport = TrackedKeyboardSupport.None;
-            projectConfig.renderModelSupport = RenderModelSupport.Disabled;
-            projectConfig.bodyTrackingSupport = FeatureSupport.None;
-            projectConfig.faceTrackingSupport = FeatureSupport.None;
-            projectConfig.eyeTrackingSupport = FeatureSupport.None;
-            projectConfig.virtualKeyboardSupport = FeatureSupport.None;
-            projectConfig.colocationSessionSupport = FeatureSupport.None;
-            projectConfig.sceneSupport = FeatureSupport.None;
-            projectConfig.boundaryVisibilitySupport = FeatureSupport.None;
-            projectConfig.disableBackups = true;
-            projectConfig.enableNSCConfig = true;
-            projectConfig.skipUnneededShaders = false;
-            projectConfig.requiresSystemKeyboard = false;
-            projectConfig.experimentalFeaturesEnabled = false;
-            projectConfig.insightPassthroughSupport = FeatureSupport.None;
-            projectConfig.horizonOsSdkEnabled = false;
-            projectConfig.minHorizonOsSdkVersion = horizonOsSdkVersions[0];
-            projectConfig.targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
-            AssetDatabase.CreateAsset(projectConfig, oculusProjectConfigAssetPath);
+            if (File.Exists(Path.GetFullPath(oculusProjectConfigAssetPath)))
+            {
+                Debug.LogError("OVRProjectConfig exists but could not be loaded. Config values may not be available until restart.");
+            }
+            else
+            {
+                Debug.LogFormat("Creating ProjectConfig at path {0}", oculusProjectConfigAssetPath);
+                projectConfig = ScriptableObject.CreateInstance<OVRProjectConfig>();
+                projectConfig.targetDeviceTypes = new List<DeviceType>();
+                projectConfig.targetDeviceTypes.Add(DeviceType.Quest);
+                projectConfig.targetDeviceTypes.Add(DeviceType.Quest2);
+                projectConfig.targetDeviceTypes.Add(DeviceType.QuestPro);
+                projectConfig.targetDeviceTypes.Add(DeviceType.Quest3);
+                projectConfig.targetDeviceTypes.Add(DeviceType.Quest3S);
+                projectConfig.allowOptional3DofHeadTracking = false;
+                projectConfig.handTrackingSupport = HandTrackingSupport.ControllersOnly;
+                projectConfig.handTrackingFrequency = HandTrackingFrequency.LOW;
+                projectConfig.handTrackingVersion = HandTrackingVersion.Default;
+                projectConfig.anchorSupport = AnchorSupport.Disabled;
+                projectConfig.sharedAnchorSupport = FeatureSupport.None;
+                projectConfig.trackedKeyboardSupport = TrackedKeyboardSupport.None;
+                projectConfig.renderModelSupport = RenderModelSupport.Disabled;
+                projectConfig.bodyTrackingSupport = FeatureSupport.None;
+                projectConfig.faceTrackingSupport = FeatureSupport.None;
+                projectConfig.eyeTrackingSupport = FeatureSupport.None;
+                projectConfig.virtualKeyboardSupport = FeatureSupport.None;
+                projectConfig.colocationSessionSupport = FeatureSupport.None;
+                projectConfig.sceneSupport = FeatureSupport.None;
+                projectConfig.boundaryVisibilitySupport = FeatureSupport.None;
+                projectConfig.disableBackups = true;
+                projectConfig.enableNSCConfig = true;
+                projectConfig.skipUnneededShaders = false;
+                projectConfig.requiresSystemKeyboard = false;
+                projectConfig.experimentalFeaturesEnabled = false;
+                projectConfig.insightPassthroughSupport = FeatureSupport.None;
+                projectConfig.horizonOsSdkEnabled = false;
+                projectConfig.minHorizonOsSdkVersion = horizonOsSdkVersions[0];
+                projectConfig.targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
+                AssetDatabase.CreateAsset(projectConfig, oculusProjectConfigAssetPath);
+            }
         }
 
         if (projectConfig == null)
         {
             return null;
         }
+
 
         // Force migration to Quest device if still on legacy GearVR/Go device type
         if (projectConfig.targetDeviceTypes.Contains((DeviceType)0)) // deprecated GearVR/Go device

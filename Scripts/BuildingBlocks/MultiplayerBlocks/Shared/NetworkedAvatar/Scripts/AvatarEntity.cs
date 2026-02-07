@@ -148,7 +148,8 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             if (isLocal)
             {
 #if META_AVATAR_SDK_28_OR_NEWER
-                _creationInfo.features |= CAPI.ovrAvatar2EntityFeatures.Animation;
+                // based on Preset_Default we remove hand scaling for local
+                _creationInfo.features &= ~CAPI.ovrAvatar2EntityFeatures.HandScaling;
 
                 var body = FindAvatarInputManagerBehavior();
                 BodyTracking = body;
@@ -170,7 +171,8 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             else
             {
 #if META_AVATAR_SDK_28_OR_NEWER
-                _creationInfo.features &= ~CAPI.ovrAvatar2EntityFeatures.Animation;
+                _creationInfo.features = CAPI.ovrAvatar2EntityFeatures.Preset_Remote;
+                _creationInfo.features &= ~CAPI.ovrAvatar2EntityFeatures.UseDefaultAnimHierarchy;
 
                 SetInputManager(null);
                 SetFacePoseProvider(null);

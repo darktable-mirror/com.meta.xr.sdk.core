@@ -230,6 +230,23 @@ namespace Meta.XR.ImmersiveDebugger
             set => overlayDepth = value;
         }
 
+        [SerializeField] private bool useOverlay = true;
+        internal bool UseOverlay
+        {
+            get => useOverlay;
+            set => useOverlay = value;
+        }
+
+        /// <summary>
+        /// Proxy for <see cref="UseOverlay"/> that additionally returns false if in editor
+        /// </summary>
+        internal bool ShouldUseOverlay =>
+#if UNITY_EDITOR
+            false;
+#else
+            UseOverlay;
+#endif
+
         [SerializeField] private List<bool> inspectedDataEnabled = new();
         internal List<bool> InspectedDataEnabled
         {

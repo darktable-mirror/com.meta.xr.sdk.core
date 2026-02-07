@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2992996506348691908}
   - component: {fileID: 6577054015298164902}
   - component: {fileID: 6457651039121300881}
-  - component: {fileID: 464367487577954757}
+  - component: {fileID: 6751647992239308649}
   m_Layer: 0
   m_Name: AvatarSDK
   m_TagString: Untagged
@@ -174,7 +174,7 @@ MonoBehaviour:
   _CombineMorphTargetsShader: {fileID: 4800000, guid: bef2973cf0137a04fbdd59ed0bab09bc, type: 3}
   _SkinToTextureShader: {fileID: 4800000, guid: ee1f1406edf162945868fafc408691aa, type: 3}
   _morphAndSkinningComputeShader: {fileID: 7200000, guid: 6593496738c8e8045badc49f0ef2917a, type: 3}
---- !u!114 &464367487577954757
+--- !u!114 &6751647992239308649
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -183,12 +183,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 3281891097054611108}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6100bee7f075cef46ae7e15038f84a6d, type: 3}
+  m_Script: {fileID: 11500000, guid: 6937544d08e2ba34da6ff4ab90cbfd84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _bodyTrackingMode: 1
+  _bodyTrackingMode: 0
   _useAsyncBodySolver: 0
   _enableHipLock: 0
+  _ovrCameraRig: {fileID: 0}
+  _debugDrawTrackingLocations: 0
+  HeadsetInputSimulator: {fileID: 0}
+  disableSampleSceneLocomotion: 0
 --- !u!1 &3825629536355929624
 GameObject:
   m_ObjectHideFlags: 0
@@ -282,7 +286,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 442500231
+  GlobalObjectIdHash: 3033352061
   InScenePlacedSourceGlobalObjectIdHash: 0
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 0

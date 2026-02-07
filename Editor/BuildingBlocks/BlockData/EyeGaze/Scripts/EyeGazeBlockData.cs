@@ -55,7 +55,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             gameObject.SetActive(true);
             gameObject.name = $"{Utils.BlockPublicTag} {BlockName} {eye.ToString()}";
             Undo.RegisterCreatedObjectUndo(gameObject, $"Create {eye.ToString()} eye.");
-            Undo.SetTransformParent(gameObject.transform, parent, true, $"{eye.ToString()} eye parent");
+            Undo.SetTransformParent(gameObject.transform, parent, false, $"{eye.ToString()} eye parent");
 
             var eyeGaze = gameObject.GetComponentInChildren<OVREyeGaze>();
             if (eyeGaze == null)

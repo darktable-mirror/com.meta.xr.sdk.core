@@ -93,7 +93,7 @@ namespace Meta.XR.Editor.TelemetryUI
 
         private void RecordConsent(bool consent)
         {
-            OVRTelemetryConsent.SetTelemetryEnabled(consent, OVRTelemetryConstants.OVRManager.ConsentOrigins.Popup);
+            OVRTelemetryConsent.SetTelemetryEnabled(consent);
             Close();
         }
 

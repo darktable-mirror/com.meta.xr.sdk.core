@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using Meta.XR.MultiplayerBlocks.Shared;
 using UnityEngine;
 using Meta.XR.BuildingBlocks;
+using UnityEngine.SceneManagement;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion
 {
@@ -106,6 +107,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
             var result = await runner.StartGame(new StartGameArgs
             {
                 GameMode = gameMode,
+                Scene = GetSceneInfo(),
                 CustomLobbyName = options.LobbyName,
                 SessionName = sessionName,
                 PlayerCount = options.MaxPlayersPerRoom,
@@ -136,6 +138,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
             var result = await runner.StartGame(new StartGameArgs
             {
                 GameMode = gameMode,
+                Scene = GetSceneInfo(),
                 SessionName = roomToken
             });
 
@@ -202,6 +205,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
             var startGameResult = await runner.StartGame(new StartGameArgs
             {
                 GameMode = gameMode,
+                Scene = GetSceneInfo(),
                 SessionName = session.Name
             });
 
@@ -264,6 +268,31 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
             }
 
             return null;
+        }
+
+        private static NetworkSceneInfo GetSceneInfo()
+        {
+            SceneRef sceneRef = default;
+            if (TryGetActiveSceneRef(out var activeSceneRef))
+            {
+                sceneRef = activeSceneRef;
+            }
+            var sceneInfo = new NetworkSceneInfo();
+            if (sceneRef.IsValid) {
+                sceneInfo.AddSceneRef(sceneRef, LoadSceneMode.Additive);
+            }
+            return sceneInfo;
+        }
+
+        private static bool TryGetActiveSceneRef(out SceneRef sceneRef)
+        {
+            var activeScene = SceneManager.GetActiveScene();
+            if (activeScene.buildIndex < 0 || activeScene.buildIndex >= SceneManager.sceneCountInBuildSettings) {
+                sceneRef = default;
+                return false;
+            }
+            sceneRef = SceneRef.FromIndex(activeScene.buildIndex);
+            return true;
         }
 
 #endregion // ICustomMatchmakingBehaviour

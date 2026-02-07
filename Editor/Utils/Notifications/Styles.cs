@@ -108,7 +108,7 @@ namespace Meta.XR.Editor.Notifications
 
         public static class Constants
         {
-            public const int Width = 800;
+            public const int Width = 512;
             public const float BorderRadius = 4.0f;
             public static Vector4 RoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
         }

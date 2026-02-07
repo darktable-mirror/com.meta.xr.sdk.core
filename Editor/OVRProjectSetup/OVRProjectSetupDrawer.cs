@@ -38,6 +38,8 @@ internal class OVRProjectSetupDrawer
         {
             public const float FixButtonWidth = 64.0f;
             public const float FixAllButtonWidth = 80.0f;
+            public const float MarkAsFixedButtonWidth = 100.0f;
+            public const float UnmarkAsFixedButtonWidth = 110.0f;
             public const float GroupSelectionWidth = 244.0f;
             public const float LabelWidth = 96f;
             public const float TitleLabelWidth = 196f;
@@ -102,6 +104,20 @@ internal class OVRProjectSetupDrawer
                 margin = new RectOffset(0, 10, 2, 2),
                 stretchWidth = false,
                 fixedWidth = Constants.FixAllButtonWidth,
+            };
+
+            internal readonly GUIStyle MarkAsFixedButton = new GUIStyle(EditorStyles.miniButton)
+            {
+                margin = new RectOffset(0, 10, 2, 2),
+                stretchWidth = false,
+                fixedWidth = Constants.MarkAsFixedButtonWidth,
+            };
+
+            internal readonly GUIStyle UnmarkAsFixedButton = new GUIStyle(EditorStyles.miniButton)
+            {
+                margin = new RectOffset(0, 10, 2, 2),
+                stretchWidth = false,
+                fixedWidth = Constants.UnmarkAsFixedButtonWidth
             };
 
             internal readonly GUIStyle InlinedIconStyle = new GUIStyle(EditorStyles.label)
@@ -200,6 +216,15 @@ internal class OVRProjectSetupDrawer
             SendTelemetry = false
         };
 
+    private readonly CustomBool _showManuallyFixedItems =
+        new UserBool()
+        {
+            Owner = OVRProjectSetup.ToolDescriptor,
+            Uid = "ShowManuallyFixedItems",
+            Default = false,
+            SendTelemetry = false
+        };
+
     private static readonly GUIContent Title = new GUIContent(OVRProjectSetupUtils.ProjectSetupToolPublicName);
 
     private static readonly GUIContent Description =
@@ -228,6 +253,7 @@ internal class OVRProjectSetupDrawer
     private const string OutstandingItems = "Outstanding Issues";
     private const string RecommendedItems = "Recommended Items";
     private const string VerifiedItems = "Verified Items";
+    private const string ManuallyFixedItems = "Manually Fixed Items";
     private const string IgnoredItems = "Ignored Items";
     private const string OutFolderTitle = "Select output folder";
     private const string ErrorTitle = "Error";
@@ -347,6 +373,7 @@ internal class OVRProjectSetupDrawer
         var originData = OVRProjectSetup.ToolDescriptor;
         OVRProjectSetup.Enabled.DrawForMenu(menu, origin, originData);
         OVRProjectSetupUpdater.Enabled.DrawForMenu(menu, origin, originData);
+        OVRProjectSetup.EnableNotifications.DrawForMenu(menu, origin, originData);
         OVRProjectSetup.RequiredThrowErrors.DrawForMenu(menu, origin, originData);
         OVRProjectSetup.AllowLogs.DrawForMenu(menu, origin, originData);
         OVRProjectSetup.ProduceReportOnBuild.DrawForMenu(menu, origin, originData);
@@ -456,6 +483,14 @@ internal class OVRProjectSetupDrawer
                     .ThenBy(task => task.Level.GetValue(buildTargetGroup))
                     .ToList(),
                 buildTargetGroup, VerifiedItems, false);
+
+            DrawCategory(_showManuallyFixedItems, tasks => tasks
+                    .Where(task =>
+                        (_selectedTaskGroup == OVRProjectSetup.TaskGroup.All || task.Group == _selectedTaskGroup)
+                        && task.IsMarkedAsFixed(buildTargetGroup))
+                    .OrderByDescending(task => task.Level.GetValue(buildTargetGroup))
+                    .ToList(),
+                buildTargetGroup, ManuallyFixedItems, false);
 
             DrawCategory(_showIgnoredItems, tasks => tasks
                     .Where(task =>

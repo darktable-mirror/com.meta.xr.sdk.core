@@ -436,6 +436,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     private static bool _wasHmdPresent = false;
 
 
+
     /// <summary>
     /// If true, a head-mounted display is connected and present.
     /// </summary>
@@ -535,12 +536,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 
     [Header("Performance/Quality")]
-    /// <summary>
-    /// If true, Unity will use the optimal antialiasing level for quality/performance on the current hardware.
-    /// </summary>
-    [Tooltip("If true, Unity will use the optimal antialiasing level for quality/performance on the current hardware.")]
-    public bool useRecommendedMSAALevel = true;
-
     /// <summary>
     /// If true, both eyes will see the same image, rendered from the center eye pose, saving performance.
     /// </summary>
@@ -1901,7 +1896,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     else
                     {
                         _trackingOriginType = value;
-#if UNITY_OPENXR_1_9_0
+#if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
                         OpenXRSettings.RefreshRecenterSpace();
 #endif
                     }
@@ -2461,7 +2456,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 #endif
 
-
         OVRManagerinitialized = true;
     }
 
@@ -2742,37 +2736,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         OVRPlugin.useIPDInPositionTracking = useIPDInPositionTracking;
 
         // Dispatch HMD events.
-        int currentMsaaLevel = 0;
-#if USING_URP
-        var renderPipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
-        if (renderPipeline != null)
-        {
-            currentMsaaLevel = renderPipeline.msaaSampleCount;
-        }
-        else
-#endif
-        {
-            currentMsaaLevel = QualitySettings.antiAliasing;
-        }
-
-        if (useRecommendedMSAALevel && currentMsaaLevel != display.recommendedMSAALevel)
-        {
-            Debug.Log("The current MSAA level is " + QualitySettings.antiAliasing +
-                      ", but the recommended MSAA level is " + display.recommendedMSAALevel +
-                      ". Switching to the recommended level.");
-
-#if USING_URP
-            if (renderPipeline != null)
-            {
-                renderPipeline.msaaSampleCount = display.recommendedMSAALevel;
-            }
-            else
-#endif
-            {
-                QualitySettings.antiAliasing = display.recommendedMSAALevel;
-            }
-        }
-
         if (monoscopic != _monoscopic)
         {
             monoscopic = _monoscopic;

@@ -82,13 +82,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             if (!runtimeSettings.AutomaticLayerCullingUpdate) return;
 
             var currentCullingMask = Camera.cullingMask;
+
+            // If we are using overlay, then we don't want the main camera to render either layer
             var expectedCullingMask = SetBits(currentCullingMask, runtimeSettings.PanelLayer,
-                runtimeSettings.MeshRendererLayer,
-#if !UNITY_EDITOR
-                false
-#else
-                true
-#endif
+                runtimeSettings.MeshRendererLayer, !RuntimeSettings.Instance.ShouldUseOverlay
             );
 
             if (expectedCullingMask != currentCullingMask)

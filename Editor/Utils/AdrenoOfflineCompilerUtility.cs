@@ -28,6 +28,8 @@ using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
+using System.Security.Policy;
+using System.Text;
 
 public class AdrenoOfflineCompilerUtility : EditorWindow
 {
@@ -59,7 +61,7 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         Count
     }
 
-    private struct ShaderStatConfig
+    public struct ShaderStatConfig
     {
         public readonly string inputKey;
         public readonly int vertexGreen;
@@ -115,7 +117,7 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
     }
 
 
-    private static readonly ShaderStatConfig[] kShaderStatConfigs = new ShaderStatConfig[(int)ShaderStat.Count]
+    public static readonly ShaderStatConfig[] kShaderStatConfigs = new ShaderStatConfig[(int)ShaderStat.Count]
     {
         new ShaderStatConfig("Total instruction count", 200, 400, 200, 400, 100, 200),
         new ShaderStatConfig("ALU instruction count - 32 bit", 200, 400, 100, 200, 100, 200),
@@ -280,6 +282,67 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         }
     }
 
+    public static void ShowAOCPathUI(bool disabled)
+    {
+        EditorGUILayout.LabelField("Path To Adreno Offline Compiler Executable");
+        EditorGUI.BeginDisabledGroup(disabled);
+        // Prompt for input
+        _adrenoOfflineCompilerPath =
+            EditorGUILayout.TextField(_adrenoOfflineCompilerPath);
+        EditorGUI.EndDisabledGroup();
+
+        if (string.IsNullOrEmpty(_adrenoOfflineCompilerPath) || !File.Exists(_adrenoOfflineCompilerPath) || !_adrenoOfflineCompilerPath.EndsWith(".exe"))
+        {
+            // Do not have AOC installed.
+            if (EditorGUILayout.LinkButton("Adreno Offline Compiler Can be Downloaded from Qualcomm Here"))
+            {
+                Application.OpenURL("https://qpm.qualcomm.com/#/main/tools/details/Adreno_GPU_Offline_Compiler");
+            }
+        }
+    }
+
+    public static bool InitAOCPath(out bool disabled)
+    {
+        {
+            disabled = false;
+            if (File.Exists(kDefaultAdrenoOfflineCompilerPath))
+            {
+                _adrenoOfflineCompilerPath = kDefaultAdrenoOfflineCompilerPath;
+                disabled = true;
+            }
+
+            if (_editorPrefsAdrenoOfflineCompilerPath == null)
+            {
+                if (EditorPrefs.HasKey("ADRENO_OFFLINE_COMPILER_PATH"))
+                {
+                    _editorPrefsAdrenoOfflineCompilerPath = EditorPrefs.GetString("ADRENO_OFFLINE_COMPILER_PATH");
+                }
+                else
+                {
+                    _editorPrefsAdrenoOfflineCompilerPath = string.Empty;
+                }
+            }
+
+            if (string.IsNullOrEmpty(_adrenoOfflineCompilerPath))
+            {
+                _adrenoOfflineCompilerPath = _editorPrefsAdrenoOfflineCompilerPath;
+            }
+        }
+
+        if (string.IsNullOrEmpty(_adrenoOfflineCompilerPath) || !File.Exists(_adrenoOfflineCompilerPath) || !_adrenoOfflineCompilerPath.EndsWith(".exe"))
+        {
+            return false;
+        }
+
+        if (_adrenoOfflineCompilerPath != _editorPrefsAdrenoOfflineCompilerPath)
+        {
+            EditorPrefs.SetString("ADRENO_OFFLINE_COMPILER_PATH", _adrenoOfflineCompilerPath);
+            _editorPrefsAdrenoOfflineCompilerPath = _adrenoOfflineCompilerPath;
+        }
+
+        return true;
+    }
+
     void OnGUI()
     {
         EditorGUILayout.BeginHorizontal();
@@ -310,54 +373,9 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         }
         EditorGUILayout.EndHorizontal();
 
-        {
-            bool disabled = false;
-            if (File.Exists(kDefaultAdrenoOfflineCompilerPath))
-            {
-                _adrenoOfflineCompilerPath = kDefaultAdrenoOfflineCompilerPath;
-                disabled = true;
-            }
-            EditorGUILayout.LabelField("Path To Adreno Offline Compiler Executable");
-
-            if (_editorPrefsAdrenoOfflineCompilerPath == null)
-            {
-                if (EditorPrefs.HasKey("ADRENO_OFFLINE_COMPILER_PATH"))
-                {
-                    _editorPrefsAdrenoOfflineCompilerPath = EditorPrefs.GetString("ADRENO_OFFLINE_COMPILER_PATH");
-                }
-                else
-                {
-                    _editorPrefsAdrenoOfflineCompilerPath = string.Empty;
-                }
-            }
-
-            if (string.IsNullOrEmpty(_adrenoOfflineCompilerPath))
-            {
-                _adrenoOfflineCompilerPath = _editorPrefsAdrenoOfflineCompilerPath;
-            }
-
-            EditorGUI.BeginDisabledGroup(disabled);
-            // Prompt for input
-            _adrenoOfflineCompilerPath =
-                EditorGUILayout.TextField(_adrenoOfflineCompilerPath);
-            EditorGUI.EndDisabledGroup();
-        }
-
-        if (string.IsNullOrEmpty(_adrenoOfflineCompilerPath) || !File.Exists(_adrenoOfflineCompilerPath) || !_adrenoOfflineCompilerPath.EndsWith(".exe"))
-        {
-            // Do not have AOC installed.
-            if (EditorGUILayout.LinkButton("Adreno Offline Compiler Can be Downloaded from Qualcomm Here"))
-            {
-                Application.OpenURL("https://qpm.qualcomm.com/#/main/tools/details/Adreno_GPU_Offline_Compiler");
-            }
-            return;
-        }
-
-        if (_adrenoOfflineCompilerPath != _editorPrefsAdrenoOfflineCompilerPath)
-        {
-            EditorPrefs.SetString("ADRENO_OFFLINE_COMPILER_PATH", _adrenoOfflineCompilerPath);
-            _editorPrefsAdrenoOfflineCompilerPath = _adrenoOfflineCompilerPath;
-        }
+        bool disabled = false;
+        InitAOCPath(out disabled);
+        ShowAOCPathUI(disabled);
 
         EditorGUILayout.BeginHorizontal();
 
@@ -523,19 +541,54 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
 
     public static List<ShaderStatInfo> GetShaderStats(Shader s, string[] keywords, ShaderCompilerPlatform shaderPlatform, string arch = "")
     {
+        return GetShaderStats2(s, s.name, -1, -1, keywords, shaderPlatform, arch);
+    }
+
+    public static List<ShaderStatInfo> GetShaderStats2(Shader s, string name, int maxSubShader, int maxPass, string[] keywords, ShaderCompilerPlatform shaderPlatform, string arch, Dictionary<string, ShaderStatInfo> statsCache = null)
+    {
         List<ShaderStatInfo> statsList = new List<ShaderStatInfo>();
 
         var shaderData = ShaderUtil.GetShaderData(s);
-        string shaderDir = "Temp/AOC/" + s.name;
+        string shaderDir = "Temp/AOC/" + name;
         Directory.CreateDirectory(shaderDir);
 
-        for (int i = 0; i < shaderData.SubshaderCount; i++)
+        int subShaderCount = maxSubShader < 0 ? shaderData.SubshaderCount : maxSubShader;
+
+        var md5 = System.Security.Cryptography.MD5.Create();
+        for (int i = 0; i < subShaderCount; i++)
         {
             var ss = shaderData.GetSubshader(i);
+            int passCount = maxPass < 0 ? ss.PassCount : maxPass;
 
-            for (int j = 0; j < ss.PassCount; j++)
+            for (int j = 0; j < passCount; j++)
             {
+
+                var timeStart = DateTime.Now;
                 var p = ss.GetPass(j);
+
+                string shaderHash = "";
+                if (statsCache != null)
+                {
+                    string vertexStr = p.PreprocessVariant(ShaderType.Vertex, keywords, shaderPlatform,
+                        BuildTarget.Android, GraphicsTier.Tier2, true).PreprocessedCode;
+                    string fragmentStr = p.PreprocessVariant(ShaderType.Fragment, keywords, shaderPlatform,
+                        BuildTarget.Android, GraphicsTier.Tier2, true).PreprocessedCode;
+
+                    string combinedStr = vertexStr + fragmentStr;
+                    byte[] combinedData = Encoding.ASCII.GetBytes(combinedStr);
+
+                    var shaderMd5 = md5.ComputeHash(combinedData);
+                    shaderHash = BitConverter.ToString(shaderMd5).Replace("-", "").ToLowerInvariant();
+
+                    ShaderStatInfo value;
+                    if (statsCache.TryGetValue(shaderHash, out value))
+                    {
+                        double timeSinceProcessed = (DateTime.Now - timeStart).TotalSeconds;
+                        // UnityEngine.Debug.LogError("@@@@@@@@@@@@@@@@@@@@@ Cache Hit " + timeSinceProcessed);
+                        statsList.Add(value);
+                        continue;
+                    }
+                }
 
                 var vertex = p.CompileVariant(ShaderType.Vertex, keywords, shaderPlatform,
                         BuildTarget.Android, GraphicsTier.Tier2, true);
@@ -641,7 +694,7 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
                     }
                 }
 
-                statsList.Add(new ShaderStatInfo
+                var shaderStat = new ShaderStatInfo
                 {
                     subShader = i,
                     pass = j,
@@ -658,14 +711,22 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
                     fragmentMainStats = stats[1],
                     vertexStats = stats[2],
                     binningVertexStats = stats[3]
-                });
+                };
+
+                if (statsCache != null && shaderHash != "")
+                {
+                    statsCache[shaderHash] = shaderStat;
+                    double timeSinceProcessed = (DateTime.Now - timeStart).TotalSeconds;
+                    // UnityEngine.Debug.LogError("@@@@@@@@@@@@@@@@@@@@@ Cache Miss " + timeSinceProcessed);
+                }
+                statsList.Add(shaderStat);
             }
         }
 
         return statsList;
     }
 
-    private static Color GetStatColor(int stat, int red, int green)
+    public static Color GetStatColor(int stat, int red, int green)
     {
         float t = Mathf.InverseLerp(red, green, stat);
 

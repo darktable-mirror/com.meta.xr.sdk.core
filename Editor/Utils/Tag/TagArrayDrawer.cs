@@ -18,8 +18,8 @@
  * limitations under the License.
  */
 
-using System;
 using System.Linq;
+using Meta.XR.Editor.UserInterface;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,101 +28,57 @@ namespace Meta.XR.Editor.Tags
     [CustomPropertyDrawer(typeof(TagArray), true)]
     internal class TagArrayDrawer : PropertyDrawer
     {
-        internal const string AddNewTag = "Add New Tag";
-        internal const string NewTagTextField = "NewTagTextField";
-
-        private static bool _addingNewTag;
-        private static string _newTag;
-
-        public static string[] GetTagOptions()
-        {
-            var tags = Tag.Registry.SortedTags.Where(tag => !tag.Behavior.Automated).ToList();
-            var options = new string[tags.Count + 1];
-            var index = 0;
-            foreach (var tag in tags)
-            {
-                options[index++] = tag;
-            }
-
-            options[index++] = AddNewTag;
-
-            return options;
-        }
+        private static readonly Color GreyedOutColor = new Color(1, 1, 1, 0.2f);
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
 
-            if (_addingNewTag && !GUI.GetNameOfFocusedControl().Equals(NewTagTextField) && !string.IsNullOrEmpty(_newTag))
-            {
-                _addingNewTag = false;
-                var tag = new Tag(_newTag);
-                _newTag = null;
-                AddTag(property, tag);
-            }
+            EditorGUI.LabelField(position, label);
 
-            var tagOptions = GetTagOptions();
-            var currentMask = GetCurrentMask(property, tagOptions);
+            var availableWidth = EditorGUIUtility.currentViewWidth - (EditorGUI.indentLevel + 1) * 32;
 
-            if (_addingNewTag)
+            var style = new GUIStyle(Styles.GUIStyles.FilterByTagGroup)
             {
-                var rect = EditorGUI.PrefixLabel(position, new GUIContent(label));
-                GUI.SetNextControlName(NewTagTextField);
-                _newTag = EditorGUI.TextField(rect, _newTag);
-            }
-            else
+                fixedWidth = availableWidth
+            };
+
+            EditorGUILayout.BeginHorizontal(style);
+
+            var currentWidth = 0.0f;
+            var tags = Tag.Registry.SortedTags.Where(tag => !tag.Behavior.Automated).ToList();
+            foreach (var tag in tags)
             {
-                EditorGUI.BeginChangeCheck();
-                var newMask = EditorGUI.MaskField(position, label, currentMask, tagOptions);
-                if (EditorGUI.EndChangeCheck())
+                var addedWidth = tag.Behavior.StyleWidth + Meta.XR.Editor.UserInterface.Styles.Constants.MiniPadding;
+                currentWidth += addedWidth;
+
+                if (currentWidth > availableWidth)
                 {
-                    UpdateTagList(property, newMask, tagOptions);
+                    // Wrap to new line
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.BeginHorizontal(style);
+                    currentWidth = addedWidth;
+                }
+
+                var hasTag = HasTag(property, tag);
+                using var scope = new Utils.ColorScope(Utils.ColorScope.Scope.All, hasTag ? Color.white : GreyedOutColor);
+                tag.Behavior.Draw(property.name + "_list", Tag.TagListType.Description, false, out _, out var clicked);
+                if (clicked)
+                {
+                    if (hasTag)
+                    {
+                        RemoveTag(property, tag);
+                    }
+                    else
+                    {
+                        AddTag(property, tag);
+                    }
                 }
             }
+
+            EditorGUILayout.EndHorizontal();
 
             EditorGUI.EndProperty();
-        }
-
-        internal static int GetCurrentMask(SerializedProperty property, string[] tagOptions)
-        {
-            var arrayProperty = property.FindPropertyRelative("array");
-            var mask = 0;
-            for (var i = 0; i < arrayProperty.arraySize; i++)
-            {
-                var tagProperty = arrayProperty.GetArrayElementAtIndex(i);
-                var tag = new Tag(tagProperty.FindPropertyRelative("name").stringValue);
-
-                var index = Array.IndexOf(tagOptions, tag.Name);
-                if (index >= 0)
-                {
-                    mask |= 1 << index;
-                }
-            }
-
-            return mask;
-        }
-
-        internal static void UpdateTagList(SerializedProperty property, int mask, string[] tagOptions)
-        {
-            var arrayProperty = property.FindPropertyRelative("array");
-            arrayProperty.ClearArray();
-            for (var i = 0; i < tagOptions.Length; i++)
-            {
-                if ((mask & (1 << i)) == 0) continue;
-
-                var label = tagOptions[i];
-
-                if (label == AddNewTag)
-                {
-                    _addingNewTag = true;
-                    _newTag = null;
-                }
-                else
-                {
-                    AddTag(property, new Tag(label), false);
-                }
-            }
-            arrayProperty.serializedObject.ApplyModifiedProperties();
         }
 
         internal static void AddTag(SerializedProperty property, Tag tag, bool apply = true)
@@ -142,7 +98,16 @@ namespace Meta.XR.Editor.Tags
             }
         }
 
-        internal static bool HasTag(SerializedProperty property, Tag tag)
+        internal static void RemoveTag(SerializedProperty property, Tag tag, bool apply = true)
+        {
+            var index = FindTagIndex(property, tag);
+            if (index == -1) return;
+
+            var arrayProperty = property.FindPropertyRelative("array");
+            arrayProperty.DeleteArrayElementAtIndex(index);
+        }
+
+        internal static int FindTagIndex(SerializedProperty property, Tag tag)
         {
             var arrayProperty = property.FindPropertyRelative("array");
             for (var i = 0; i < arrayProperty.arraySize; i++)
@@ -151,11 +116,13 @@ namespace Meta.XR.Editor.Tags
                 var tagName = tagProperty.FindPropertyRelative("name").stringValue;
                 if (tag == tagName)
                 {
-                    return true;
+                    return i;
                 }
             }
 
-            return false;
+            return -1;
         }
+
+        internal static bool HasTag(SerializedProperty property, Tag tag) => FindTagIndex(property, tag) != -1;
     }
 }

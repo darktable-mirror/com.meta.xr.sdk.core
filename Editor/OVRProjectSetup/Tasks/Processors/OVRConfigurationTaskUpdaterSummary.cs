@@ -34,6 +34,9 @@ internal class OVRConfigurationTaskUpdaterSummary
     public bool HasAvailableFixes => _outstandingTasks.Count > 0;
     public bool HasFixes(OVRProjectSetup.TaskLevel taskLevel) => _outstandingTasksPerLevel[taskLevel].Count > 0;
     public int GetNumberOfFixes(OVRProjectSetup.TaskLevel taskLevel) => _outstandingTasksPerLevel[taskLevel].Count;
+
+    public List<OVRConfigurationTask> GetFixableTasksOfLevel(OVRProjectSetup.TaskLevel taskLevel) =>
+        _outstandingTasksPerLevel.GetValueOrDefault(taskLevel, new List<OVRConfigurationTask>());
     public int GetTotalNumberOfFixes() => _outstandingTasks.Count;
     private readonly BuildTargetGroup _buildTargetGroup;
 

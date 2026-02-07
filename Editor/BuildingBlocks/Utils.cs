@@ -134,62 +134,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         };
 
-        internal static Tag AnchorTag = new("Anchor")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
-        internal static Tag AvatarsTag = new("Avatars")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
-        internal static Tag InteractionTag = new("Interaction")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
-        internal static Tag MultiplayerTag = new("Multiplayer")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
-        internal static Tag PassthroughTag = new("Passthrough")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
-        internal static Tag SceneTag = new("Scene")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
-        internal static Tag VoiceTag = new("Voice")
-        {
-            Behavior =
-            {
-                CanFilterBy = false
-            }
-        };
-
         private const string HiddenTagName = "Hidden";
 
         internal static Tag HiddenTag = new(HiddenTagName)

@@ -17,12 +17,15 @@ MonoBehaviour:
   blockName: Spatial Audio
   description: Add spatialization to your sound effects
   tags:
-    array: []
+    array:
+    - name: Audio
   thumbnail: {fileID: 2800000, guid: ece7f22ca0181924187420a1fcc92263, type: 3}
   order: 0
   prefab: {fileID: 0}
+  selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies: []
+  guidedSetupName: 
   packageDependencies:
   - com.meta.xr.sdk.audio
   isSingleton: 0

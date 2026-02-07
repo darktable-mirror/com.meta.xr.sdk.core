@@ -63,8 +63,8 @@ public class OVROverlayEditor : Editor
 
     private bool _DidLookupSrcRectShader;
     private bool _DidLookupDestRectShader;
-    private Shader _SrcRectShader;
-    private Shader _DestRectShader;
+    [SerializeField] private Shader _SrcRectShader;
+    [SerializeField] private Shader _DestRectShader;
 
     private Material _SrcRectMaterialLeft;
     private Material _SrcRectMaterialRight;
@@ -114,7 +114,6 @@ public class OVROverlayEditor : Editor
     private SerializedProperty _propPreviewInEditor;
     private SerializedProperty _propUseAutoFiltering;
 
-
     private void Awake()
     {
         List<GUIContent> selectableShapeNameList = new List<GUIContent>();
@@ -154,7 +153,6 @@ public class OVROverlayEditor : Editor
         _propColorOffset = serializedObject.FindProperty(nameof(OVROverlay.colorOffset));
         _propPreviewInEditor = serializedObject.FindProperty(nameof(OVROverlay._previewInEditor));
         _propUseAutoFiltering = serializedObject.FindProperty(nameof(OVROverlay.useAutomaticFiltering));
-
     }
 
     public override void OnInspectorGUI()
@@ -915,6 +913,11 @@ public class OVROverlayEditor : Editor
     private bool TryGetSrcRectShader(out Shader srcRectShader)
     {
         srcRectShader = _SrcRectShader;
+        if (srcRectShader != null)
+        {
+            return true;
+        }
+
         if (_DidLookupSrcRectShader)
         {
             return srcRectShader != null;
@@ -941,6 +944,11 @@ public class OVROverlayEditor : Editor
     private bool TryGetDestRectShader(out Shader destRectShader)
     {
         destRectShader = _DestRectShader;
+        if (destRectShader != null)
+        {
+            return true;
+        }
+
         if (_DidLookupDestRectShader)
         {
             return destRectShader != null;

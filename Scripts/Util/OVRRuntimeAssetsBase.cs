@@ -21,10 +21,11 @@
 using UnityEngine;
 using System.IO;
 using System;
+
 #if UNITY_EDITOR
 using UnityEditor;
 using System.Linq;
-#endif
+#endif // UNITY_EDITOR
 
 /// <summary>
 /// Base class for runtime assets with common functions.
@@ -76,7 +77,6 @@ public class OVRRuntimeAssetsBase : ScriptableObject
 #endif
 
 
-
     internal static void LoadAsset<T>(out T assetInstance, string assetName, Action<T> onCreateAsset = null) where T : OVRRuntimeAssetsBase
     {
         assetInstance = null;
@@ -102,6 +102,7 @@ public class OVRRuntimeAssetsBase : ScriptableObject
         }
 #else
         assetInstance = Resources.Load<T>(assetName);
-#endif
+#endif // UNITY_EDITOR
+
     }
 }

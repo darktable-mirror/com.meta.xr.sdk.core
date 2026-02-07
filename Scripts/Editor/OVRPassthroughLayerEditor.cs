@@ -132,7 +132,6 @@ public class OVRPassthroughLayerEditor : Editor
         _propColorMapEditorGradient = serializedObject.FindProperty(nameof(OVRPassthroughLayer.colorMapEditorGradient));
         _propPassthroughLayerResumed = serializedObject.FindProperty(nameof(OVRPassthroughLayer.passthroughLayerResumed));
 
-
         _propColorLutSourceTexture = serializedObject.FindProperty(nameof(OVRPassthroughLayer._colorLutSourceTexture));
         _propColorLutTargetTexture = serializedObject.FindProperty(nameof(OVRPassthroughLayer._colorLutTargetTexture));
         _propLutWeight = serializedObject.FindProperty(nameof(OVRPassthroughLayer._lutWeight));
@@ -160,7 +159,6 @@ public class OVRPassthroughLayerEditor : Editor
         EditorGUILayout.PropertyField(_propCompositionDepth,
             new GUIContent("Composition Depth",
                 "Depth value used to sort layers in the scene, smaller value appears in front"));
-
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Style", EditorStyles.boldLabel);

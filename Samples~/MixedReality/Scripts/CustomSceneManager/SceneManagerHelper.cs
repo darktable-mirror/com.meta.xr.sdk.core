@@ -30,11 +30,20 @@ public class SceneManagerHelper
 {
     public GameObject AnchorGameObject { get; }
     private readonly Transform _trackingSpace;
+    private Material _material;
+
+    public SceneManagerHelper(GameObject gameObject, Transform trackingSpace, Material material)
+    {
+        AnchorGameObject = gameObject;
+        _trackingSpace = trackingSpace;
+        _material = material;
+    }
 
     public SceneManagerHelper(GameObject gameObject, Transform trackingSpace)
     {
         AnchorGameObject = gameObject;
         _trackingSpace = trackingSpace;
+        _material = new Material(Shader.Find("Standard"));
     }
 
     public void SetLocation(OVRLocatable locatable)
@@ -60,8 +69,9 @@ public class SceneManagerHelper
             bounds.BoundingBox.size.x,
             bounds.BoundingBox.size.y,
             0.01f);
+        planeGO.GetComponent<MeshRenderer>().material = new Material(_material);
         planeGO.GetComponent<MeshRenderer>().material.SetColor(
-            "_Color", UnityEngine.Random.ColorHSV());
+            "_BaseColor", UnityEngine.Random.ColorHSV());
     }
 
     public void UpdatePlane(OVRBounded2D bounds)
@@ -86,8 +96,9 @@ public class SceneManagerHelper
         volumeGO.transform.SetParent(AnchorGameObject.transform, false);
         volumeGO.transform.localPosition = bounds.BoundingBox.center;
         volumeGO.transform.localScale = bounds.BoundingBox.size;
+        volumeGO.GetComponent<MeshRenderer>().material = new Material(_material);
         volumeGO.GetComponent<MeshRenderer>().material.SetColor(
-            "_Color", UnityEngine.Random.ColorHSV());
+            "_BaseColor", UnityEngine.Random.ColorHSV());
     }
 
     public void UpdateVolume(OVRBounded3D bounds)
@@ -119,8 +130,9 @@ public class SceneManagerHelper
         meshGO.transform.SetParent(AnchorGameObject.transform, false);
         meshGO.GetComponent<MeshFilter>().sharedMesh = trimesh;
         meshGO.GetComponent<MeshCollider>().sharedMesh = trimesh;
+        meshGO.GetComponent<MeshRenderer>().material = new Material(_material);
         meshGO.GetComponent<MeshRenderer>().material.SetColor(
-            "_Color", UnityEngine.Random.ColorHSV());
+            "_BaseColor", UnityEngine.Random.ColorHSV());
     }
 
     public void UpdateMesh(OVRTriangleMesh mesh)
@@ -129,5 +141,6 @@ public class SceneManagerHelper
         if (meshGO != null) UnityEngine.Object.Destroy(meshGO);
         CreateMesh(mesh);
     }
+
 
 }

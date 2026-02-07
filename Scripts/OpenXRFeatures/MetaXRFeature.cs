@@ -175,6 +175,11 @@ namespace Meta.XR
             Debug.Log($"[MetaXRFeature] SetClientVersion");
             OVRPlugin.UnityOpenXR.SetClientVersion();
 
+#if UNITY_ANDROID && !UNITY_EDITOR
+            OVRRuntimeSettings runtimeSettings = OVRRuntimeSettings.GetRuntimeSettings();
+            OVRPlugin.UnityOpenXR.AllowVisibilityMesh(runtimeSettings.VisibilityMesh);
+#endif
+
             return OVRPlugin.UnityOpenXR.HookGetInstanceProcAddr(func);
         }
 

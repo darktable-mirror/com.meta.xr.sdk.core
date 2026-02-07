@@ -26,6 +26,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.XR;
 using Node = UnityEngine.XR.XRNode;
 
@@ -606,24 +607,30 @@ public class OVRCameraRig : MonoBehaviour
                 _rightEyeCamera.tag = "MainCamera";
             }
 
-            _centerEyeCamera.stereoTargetEye = StereoTargetEyeMask.Both;
-            _leftEyeCamera.stereoTargetEye = StereoTargetEyeMask.Left;
-            _rightEyeCamera.stereoTargetEye = StereoTargetEyeMask.Right;
-        }
-
-        if (monoscopic && !OVRPlugin.EyeTextureArrayEnabled)
-        {
-            // Output to left eye only when in monoscopic mode
-            if (_centerEyeCamera.stereoTargetEye != StereoTargetEyeMask.Left)
-            {
-                _centerEyeCamera.stereoTargetEye = StereoTargetEyeMask.Left;
-            }
-        }
-        else
-        {
-            if (_centerEyeCamera.stereoTargetEye != StereoTargetEyeMask.Both)
+            if (GraphicsSettings.currentRenderPipeline == null)
             {
                 _centerEyeCamera.stereoTargetEye = StereoTargetEyeMask.Both;
+                _leftEyeCamera.stereoTargetEye = StereoTargetEyeMask.Left;
+                _rightEyeCamera.stereoTargetEye = StereoTargetEyeMask.Right;
+            }
+        }
+
+        if (GraphicsSettings.currentRenderPipeline == null)
+        {
+            if (monoscopic && !OVRPlugin.EyeTextureArrayEnabled)
+            {
+                // Output to left eye only when in monoscopic mode
+                if (_centerEyeCamera.stereoTargetEye != StereoTargetEyeMask.Left)
+                {
+                    _centerEyeCamera.stereoTargetEye = StereoTargetEyeMask.Left;
+                }
+            }
+            else
+            {
+                if (_centerEyeCamera.stereoTargetEye != StereoTargetEyeMask.Both)
+                {
+                    _centerEyeCamera.stereoTargetEye = StereoTargetEyeMask.Both;
+                }
             }
         }
 

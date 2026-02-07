@@ -155,7 +155,7 @@ namespace DynamicSceneManagerHelper
     /// </summary>
     class UnityObjectUpdater
     {
-        public async Task<GameObject> CreateUnityObject(OVRAnchor anchor, GameObject parent, Transform trackingSpace)
+        public async Task<GameObject> CreateUnityObject(OVRAnchor anchor, GameObject parent, Transform trackingSpace, Material material)
         {
             // if this is a room, we only need to make a GameObject
             if (anchor.TryGetComponent(out OVRRoomLayout _))
@@ -180,7 +180,7 @@ namespace DynamicSceneManagerHelper
                 gameObject.transform.SetParent(parent.transform);
 
             // set location and create objects for 2D, 3D, triangle mesh
-            var helper = new SceneManagerHelper(gameObject, trackingSpace);
+            var helper = new SceneManagerHelper(gameObject, trackingSpace, material);
             helper.SetLocation(locatable);
 
             if (anchor.TryGetComponent(out OVRBounded2D b2d) && b2d.IsEnabled)
@@ -192,9 +192,9 @@ namespace DynamicSceneManagerHelper
             return gameObject;
         }
 
-        public void UpdateUnityObject(OVRAnchor anchor, GameObject gameObject, Transform trackingSpace)
+        public void UpdateUnityObject(OVRAnchor anchor, GameObject gameObject, Transform trackingSpace, Material material)
         {
-            var helper = new SceneManagerHelper(gameObject, trackingSpace);
+            var helper = new SceneManagerHelper(gameObject, trackingSpace, material);
             if (anchor.TryGetComponent(out OVRLocatable locatable))
                 helper.SetLocation(locatable);
             if (anchor.TryGetComponent(out OVRBounded2D b2d) && b2d.IsEnabled)
