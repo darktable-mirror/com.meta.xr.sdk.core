@@ -191,7 +191,7 @@ public class OVRSceneVolume : MonoBehaviour, IOVRSceneComponent
 
             OVRSceneManager.Development.Log(nameof(OVRSceneVolume),
                 $"[{_sceneAnchor.Uuid}] Volume has dimensions {Dimensions} " +
-                $"and offset {Offset}.");
+                $"and offset {Offset}.", gameObject);
 
             if (ScaleChildren)
                 SetChildScale();
@@ -201,7 +201,8 @@ public class OVRSceneVolume : MonoBehaviour, IOVRSceneComponent
         else
         {
             OVRSceneManager.Development.LogError(nameof(OVRSceneVolume),
-                $"[{_sceneAnchor.Space}] Failed to retrieve volume's information.");
+                $"[{_sceneAnchor.Space}] Failed to retrieve volume's information.",
+                gameObject);
         }
     }
 }

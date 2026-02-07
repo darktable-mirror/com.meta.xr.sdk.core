@@ -86,6 +86,7 @@ internal struct OVRTelemetryMarker : IDisposable
 
     public OVRTelemetryMarker Send()
     {
+
         State = new OVRTelemetryMarkerState(true, Result);
         _client.MarkerEnd(MarkerId, Result, InstanceKey);
         return this;

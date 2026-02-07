@@ -200,13 +200,13 @@ internal class OVRConfigurationTaskUpdaterSummary
             {
                 Debug.Log(message);
             }
-                break;
+            break;
 
             case OVRProjectSetup.TaskLevel.Recommended:
             {
                 Debug.LogWarning(message);
             }
-                break;
+            break;
 
             case OVRProjectSetup.TaskLevel.Required:
             {
@@ -219,7 +219,7 @@ internal class OVRConfigurationTaskUpdaterSummary
                     Debug.LogWarning(message);
                 }
             }
-                break;
+            break;
         }
     }
 
