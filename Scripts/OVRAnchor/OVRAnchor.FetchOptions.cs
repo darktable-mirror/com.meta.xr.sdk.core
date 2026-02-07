@@ -124,30 +124,16 @@ public partial struct OVRAnchor
         /// </remarks>
         public IEnumerable<Type> ComponentTypes;
 
-        // DiscoverSpaces has an upper limit, requiring batching if exceeded
-        private const int MaximumUuidCount = 50;
-
-        /// <summary>
-        /// Creates a batch of DiscoverSpaces calls.
-        ///
-        /// Batches are currently needed when we have too many UUIDS (<see cref="MaximumUuidCount"/>).
-        /// </summary>
-        internal unsafe void DiscoverSpaces(List<(Result, ulong)> batches)
+        internal unsafe Result DiscoverSpaces(out ulong requestId)
         {
-            batches.Clear();
-
             var telemetryMarker = OVRTelemetry.Start((int)Telemetry.MarkerId.DiscoverSpaces);
 
             // Stores the filters
             using var filterStorage = new OVRNativeList<FilterUnion>(Allocator.Temp);
 
-            // Stores only the uuid filters (possibly batched)
-            using var uuidFilterStorage = new OVRNativeList<FilterUnion>(Allocator.Temp);
-
             // Pointers to the filters in filterStorage
             using var filters = new OVRNativeList<IntPtr>(Allocator.Temp);
 
-            // first we aggregate the non-uuid filters (will be reused)
             using var spaceComponentTypes = OVRNativeList.WithSuggestedCapacityFrom(ComponentTypes).AllocateEmpty<long>(Allocator.Temp);
             if (SingleComponentType != null)
             {
@@ -181,72 +167,40 @@ public partial struct OVRAnchor
             telemetryMarker.AddAnnotation(Telemetry.Annotation.ComponentTypes, spaceComponentTypes.Data,
                 spaceComponentTypes.Count);
 
-            using var uuidsList = Uuids.ToNativeList(Allocator.Temp);
+            using var uuids = Uuids.ToNativeList(Allocator.Temp);
             if (SingleUuid.HasValue)
             {
-                uuidsList.Add(SingleUuid.Value);
+                uuids.Add(SingleUuid.Value);
             }
-            var uuids = uuidsList.AsNativeArray();
 
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.UuidCount, uuids.Length);
-
-            var totalFilterCount = filterStorage.Count;
-            if (uuids.Length != 0)
+            if (SingleUuid != null || Uuids != null)
             {
-                totalFilterCount++;
-            }
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.TotalFilterCount, totalFilterCount);
-
-            var iterations = 1;
-            if (uuids.Length > MaximumUuidCount)
-                iterations = Mathf.CeilToInt(uuids.Length / (float)MaximumUuidCount);
-
-            // now create uuid-specific filters and create batches of requests
-            for (var i = 0; i < iterations; i++)
-            {
-                uuidFilterStorage.Clear();
-                if (SingleUuid != null || Uuids != null)
+                filterStorage.Add(new FilterUnion
                 {
-                    // get a subset of the filters for this query
-                    var startingIndex = i * MaximumUuidCount;
-                    var length = MaximumUuidCount;
-                    if (startingIndex + length > uuids.Length)
-                        length = uuids.Length - startingIndex;
-
-                    var uuidBatch = uuids.GetSubArray(startingIndex, length);
-
-                    uuidFilterStorage.Add(new FilterUnion
+                    IdFilter = new SpaceDiscoveryFilterInfoIds
                     {
-                        IdFilter = new SpaceDiscoveryFilterInfoIds
-                        {
-                            Type = SpaceDiscoveryFilterType.Ids,
-                            Ids = length == 0 ? null : (Guid*)uuidBatch.GetUnsafePtr(),
-                            NumIds = length
-                        }
-                    });
-                }
-
-                // Gather pointers to each filter + uuidfilter
-                filters.Clear();
-                for (var j = 0; j < filterStorage.Count; j++)
-                {
-                    filters.Add(new IntPtr(filterStorage.PtrToElementAt(j)));
-                }
-                for (var j = 0; j < uuidFilterStorage.Count; j++)
-                {
-                    filters.Add(new IntPtr(uuidFilterStorage.PtrToElementAt(j)));
-                }
-
-                var result = OVRPlugin.DiscoverSpaces(new SpaceDiscoveryInfo
-                {
-                    NumFilters = (uint)filters.Count,
-                    Filters = (SpaceDiscoveryFilterInfoHeader**)filters.Data,
-                }, out var requestId);
-
-                Telemetry.SetSyncResult(telemetryMarker, requestId, result);
-
-                batches.Add((result, requestId));
+                        Type = SpaceDiscoveryFilterType.Ids,
+                        Ids = uuids.Data,
+                        NumIds = uuids.Count,
+                    }
+                });
             }
+            telemetryMarker.AddAnnotation(Telemetry.Annotation.UuidCount, uuids.Count);
+
+            for (var i = 0; i < filterStorage.Count; i++)
+            {
+                filters.Add(new IntPtr(filterStorage.PtrToElementAt(i)));
+            }
+            telemetryMarker.AddAnnotation(Telemetry.Annotation.TotalFilterCount, filters.Count);
+
+            var result = OVRPlugin.DiscoverSpaces(new SpaceDiscoveryInfo
+            {
+                NumFilters = (uint)filters.Count,
+                Filters = (SpaceDiscoveryFilterInfoHeader**)filters.Data,
+            }, out requestId);
+
+            Telemetry.SetSyncResult(telemetryMarker, requestId, result);
+            return result;
         }
 
         private static SpaceComponentType GetSpaceComponentType(Type type)

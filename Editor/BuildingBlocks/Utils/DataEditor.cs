@@ -177,49 +177,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
-        protected void ShowBlock(BlockData data)
-        {
-            if (data == null) return;
-
-            var previousIndent = EditorGUI.indentLevel;
-            EditorGUI.indentLevel = 0;
-
-            // Thumbnail
-            var gridStyle = new GUIStyle(Styles.GUIStyles.GridItemStyle)
-            {
-                margin = new RectOffset(0, 0, 0, 0)
-            };
-            EditorGUILayout.BeginHorizontal(gridStyle);
-            EditorGUILayout.BeginHorizontal(Styles.GUIStyles.DescriptionAreaStyle);
-
-            var expectedSize = ItemHeight;
-            var rect = GUILayoutUtility.GetRect(0, expectedSize);
-            rect.y -= Padding;
-            rect.x -= Padding;
-            rect.width = ItemHeight;
-            GUI.DrawTexture(rect, data.Thumbnail, ScaleMode.ScaleAndCrop);
-
-            EditorGUILayout.Space(ItemHeight);
-
-            // Label
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.BeginHorizontal();
-            var labelStyle = Styles.GUIStyles.LabelStyle;
-            EditorGUILayout.LabelField(data.BlockName, labelStyle);
-            labelStyle = Styles.GUIStyles.SubtitleStyle;
-            EditorGUILayout.EndHorizontal();
-            var blocksCount = data.GetBlocks().Count;
-            EditorGUILayout.LabelField(data.Description, Styles.GUIStyles.InfoStyle);
-            EditorGUILayout.EndVertical();
-
-            GUILayout.FlexibleSpace();
-
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUI.indentLevel = previousIndent;
-        }
-
         internal static void DrawVariants(string label, IEnumerable<VariantHandle> variants, SerializedObject serializedObject)
         {
             EditorGUILayout.LabelField(label, EditorStyles.miniLabel);

@@ -42,7 +42,7 @@ public class MetaXRSimulatorEnabler : MonoBehaviour
     [MenuItem(kUseSimulator, false, 10000)]
     private static void UseMetaXRSimulator()
     {
-        if (EditorUtility.DisplayDialog("Meta XR Simulator", "Meta XR Simulator is a lightweight OpenXR runtime that allows you to iterate your OpenXR project on Mac without a headset.\n\nIt can be installed through Homnebrew and is compatible with Unity OpenXR Plugin.\n\nClick 'More Info' button to find more information.", "More Info", "Cancel"))
+        if (EditorUtility.DisplayDialog("Meta XR Simulator", "Meta XR Simulator is a lightweight OpenXR runtime that allows you to iterate your OpenXR project on Mac without a headset.\n\nIt can be installed through Homebrew and is compatible with Unity OpenXR Plugin.\n\nClick 'More Info' button to find more information.", "More Info", "Cancel"))
         {
             string moreInfoUrl = "https://github.com/Oculus-VR/homebrew-repo/blob/main/meta-xr-simulator.md";
             UnityEngine.Debug.LogFormat("Open Meta XR Simulator URL: {0}", moreInfoUrl);

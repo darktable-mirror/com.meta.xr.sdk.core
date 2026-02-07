@@ -31,6 +31,7 @@ MonoBehaviour:
   packageDependencies:
   - com.meta.xr.sdk.avatars
   - com.meta.xr.sdk.avatars.sample.assets
+  - com.meta.xr.sdk.avatars:Sample Scenes
   isSingleton: 1
   usageInstructions: "To show default avatars for anonymous users or whoever failed
     entitlement check, download Meta XR Avatar SDK Sample Assets package (com.meta.xr.sdk.avatars.sample.assets).\nWithout
@@ -40,5 +41,5 @@ MonoBehaviour:
     Scenes\" from the UPM package.\n\nWhen testing user's own Avatars during development,
     AppId needs to be filled in. \nSee guidance from menu of Oculus > Tools > Meta
     Account Setup Guide.\nDoc: https://developer.oculus.com/documentation/unity/meta-avatars-app-config/"
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  featureDocumentationName: Networked Avatar
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/meta-avatars-networking

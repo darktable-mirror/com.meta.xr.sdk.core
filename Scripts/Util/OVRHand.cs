@@ -103,6 +103,7 @@ public class OVRHand : MonoBehaviour,
 
 
 
+
     private static OVRHandSkeletonVersion GlobalHandSkeletonVersion =>
         OVRRuntimeSettings.Instance.HandSkeletonVersion;
 
@@ -411,6 +412,7 @@ public class OVRHand : MonoBehaviour,
 
         return data;
     }
+
 
 
 

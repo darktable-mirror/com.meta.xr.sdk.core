@@ -36,6 +36,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         private Vector3 _endPoint;
         private Vector3 _normal;
         private bool _hit;
+        private Canvas _canvas;
 
         internal GameObject GameObject { get; private set; }
         private Transform Transform { get; set; }
@@ -45,6 +46,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             GameObject = gameObject;
 
             GameObject.layer = RuntimeSettings.Instance.PanelLayer;
+            _canvas = GameObject.AddComponent<Canvas>();
+            _canvas.overrideSorting = true;
+            _canvas.sortingOrder = Utils.CursorSortOrder;
             var canvasGroup = GameObject.AddComponent<CanvasGroup>();
             canvasGroup.blocksRaycasts = false;
             canvasGroup.interactable = false;
@@ -105,6 +109,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
             GameObject.SetActive(true);
             Transform.SetParent(panel.Transform, false);
+            _canvas.overrideSorting = true;
+            _canvas.sortingOrder = Utils.CursorSortOrder;
         }
     }
 }

@@ -43,7 +43,16 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static class Constants
         {
+            public const float BorderRadius = 4.0f;
+
+            public static Vector4 RoundedBorderVectors =
+                new Vector4(BorderRadius, BorderRadius, BorderRadius, BorderRadius);
+
+            public static Vector4 UpperRoundedBorderVectors = new Vector4(BorderRadius, BorderRadius, 0, 0);
+            public static Vector4 LowerRoundedBorderVectors = new Vector4(0, 0, BorderRadius, BorderRadius);
+
             public const float ThumbnailRatio = 1.8f;
+            public const float ThumbnailSourceRatio = 2.0f;
             public const int IdealThumbnailWidth = 280;
             public const float DisabledTint = 0.6f;
 
@@ -94,6 +103,12 @@ namespace Meta.XR.BuildingBlocks.Editor
                 TextureContent.CreateContent("ovr_bb_icon_back.png", Utils.BuildingBlocksIcons);
 
             public static readonly TextureContent BorderedBackground = TextureContent.CreateContent("ovr_bb_sqr_back.png", Utils.BuildingBlocksIcons);
+
+            public static readonly TextureContent BreakBuildingBlockConnectionIcon =
+                TextureContent.CreateContent("ovr_icon_break_bb_connection.png", Utils.BuildingBlocksIcons);
+
+            public static readonly TextureContent UtilitiesIcon =
+                TextureContent.CreateContent("ovr_icon_utilities.png", Utils.BuildingBlocksIcons);
         }
 
         public class GUIStylesContainer
@@ -101,6 +116,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             public readonly GUIStyle NoMargin = new GUIStyle()
             {
                 margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0)
+            };
+
+            public readonly GUIStyle SetupSection = new GUIStyle()
+            {
+                margin = new RectOffset(0, 0, 0, DoubleMargin),
                 padding = new RectOffset(0, 0, 0, 0)
             };
 
@@ -130,27 +151,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 margin = new RectOffset(Margin, Margin, 0, Margin),
                 padding = new RectOffset(Border, Border, Border, Border),
                 stretchWidth = false,
-                stretchHeight = false,
-                normal =
-                {
-                    background = CharcoalGray.ToTexture()
-                },
-                hover =
-                {
-                    background = Colors.AccentColor.ToTexture()
-                }
-            };
-
-            public readonly GUIStyle GridItemDisabledStyle = new GUIStyle()
-            {
-                margin = new RectOffset(Margin, Margin, 0, Margin),
-                padding = new RectOffset(Border, Border, Border, Border),
-                stretchWidth = false,
-                stretchHeight = false,
-                normal =
-                {
-                    background = CharcoalGray.ToTexture()
-                }
+                stretchHeight = false
             };
 
             public readonly GUIStyle ThumbnailAreaStyle = new GUIStyle()
@@ -171,34 +172,17 @@ namespace Meta.XR.BuildingBlocks.Editor
             public readonly GUIStyle DescriptionAreaStyle = new GUIStyle()
             {
                 stretchHeight = false,
-                padding = new RectOffset(Padding, Padding, Padding, Padding),
-                margin = new RectOffset(0, 0, 0, Border),
                 fixedHeight = ItemHeight,
-                normal =
-                {
-                    background = DarkGray.ToTexture()
-                }
+                padding = new RectOffset(Padding, Padding, Padding, Padding),
+                margin = new RectOffset(0, 0, 0, Border)
             };
 
-            public readonly GUIStyle DescriptionAreaHoverStyle = new GUIStyle()
+            public readonly GUIStyle DescriptionPaddingStyle = new GUIStyle()
             {
                 stretchHeight = false,
-                fixedHeight = ItemHeight,
-                padding = new RectOffset(Padding, Padding, Padding, Padding),
-                margin = new RectOffset(0, 0, 0, Border),
-
-                normal =
-                {
-                    background = DarkGrayHover.ToTexture()
-                }
-            };
-
-            public readonly GUIStyle EmptyAreaStyle = new GUIStyle()
-            {
-                stretchHeight = true,
                 fixedWidth = 0,
-                fixedHeight = ItemHeight,
-                padding = new RectOffset(0, 0, 0, 0),
+                fixedHeight = ItemHeight - 2 * Padding,
+                padding = new RectOffset(Padding, 0, MiniPadding, 0),
                 margin = new RectOffset(0, 0, 0, 0),
             };
 
@@ -210,14 +194,34 @@ namespace Meta.XR.BuildingBlocks.Editor
                 stretchWidth = false
             };
 
-            public readonly GUIStyle BlockIconStyle = new GUIStyle(EditorStyles.label)
+            public readonly GUIStyle LinkButtonContainer = new GUIStyle()
             {
-                // margin = new RectOffset(0, 0, 0, 0),
-                // padding = new RectOffset(0, 0, 0, 0),
+                fixedHeight = 16,
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            public readonly GUIStyle LargeLinkButtonContainer = new GUIStyle()
+            {
+                fixedHeight = 22,
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            public readonly GUIStyle LinkIconStyle = new GUIStyle(EditorStyles.label)
+            {
                 fixedWidth = SmallIconSize,
-                fixedHeight = SmallIconSize,
+                fixedHeight = 16,
                 stretchWidth = false,
-                stretchHeight = false
+                stretchHeight = false,
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            public readonly GUIStyle LargeLinkIconStyle = new GUIStyle(EditorStyles.label)
+            {
+                fixedWidth = SmallIconSize,
+                fixedHeight = 20,
+                stretchWidth = false,
+                stretchHeight = false,
+                alignment = TextAnchor.MiddleCenter
             };
 
             public readonly GUIStyle LargeButton = new GUIStyle(EditorStyles.miniButton)
@@ -229,11 +233,42 @@ namespace Meta.XR.BuildingBlocks.Editor
                 padding = new RectOffset(Padding, Padding, Padding, Padding)
             };
 
+            public readonly GUIStyle ThinButtonSmall = new GUIStyle(EditorStyles.miniButton)
+            {
+                clipping = TextClipping.Overflow,
+                fixedHeight = 20,
+                fixedWidth = 64,
+                margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
+                padding = new RectOffset(DoubleMargin, DoubleMargin, Padding, Padding),
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            public readonly GUIStyle ThinButtonLarge = new GUIStyle(EditorStyles.miniButton)
+            {
+                clipping = TextClipping.Overflow,
+                fixedHeight = 20,
+                fixedWidth = 152,
+                margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
+                padding = new RectOffset(DoubleMargin, DoubleMargin, Padding, Padding),
+                alignment = TextAnchor.MiddleCenter
+            };
+
             public readonly GUIStyle LabelledButton = new GUIStyle(EditorStyles.miniButton)
             {
                 clipping = TextClipping.Overflow,
                 fixedHeight = 32 - Padding * 2,
                 fixedWidth = 128 - Padding * 2,
+                margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
+                padding = new RectOffset(Margin, Margin, Padding, Padding),
+                alignment = TextAnchor.MiddleLeft
+
+            };
+
+            public readonly GUIStyle LargeLabelledButton = new GUIStyle(EditorStyles.miniButton)
+            {
+                clipping = TextClipping.Overflow,
+                fixedHeight = 32 - Padding * 2,
+                fixedWidth = 180 - Padding * 2,
                 margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
                 padding = new RectOffset(Margin, Margin, Padding, Padding),
                 alignment = TextAnchor.MiddleLeft
@@ -267,6 +302,29 @@ namespace Meta.XR.BuildingBlocks.Editor
             public readonly GUIStyle LabelHoverStyle = new GUIStyle(EditorStyles.boldLabel)
             {
                 normal = { textColor = Color.white }
+            };
+
+            public readonly GUIStyle BlockLabelGridStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                padding = new RectOffset(Padding, 0, 0, 0),
+                contentOffset = Vector2.zero,
+                stretchHeight = false,
+                stretchWidth = false,
+                wordWrap = false,
+                alignment = TextAnchor.MiddleLeft,
+                margin = new RectOffset(0, 0, 0, 0),
+            };
+
+            public readonly GUIStyle BlockLabelHoverGridStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                normal = { textColor = Color.white },
+                padding = new RectOffset(Padding, 0, 0, 0),
+                contentOffset = Vector2.zero,
+                stretchHeight = false,
+                stretchWidth = false,
+                wordWrap = false,
+                alignment = TextAnchor.MiddleLeft,
+                margin = new RectOffset(0, 0, 0, 0),
             };
 
             public readonly GUIStyle SubtitleStyle = new GUIStyle(EditorStyles.label)
@@ -328,14 +386,13 @@ namespace Meta.XR.BuildingBlocks.Editor
                 richText = true
             };
 
-            public readonly GUIStyle BlockLinkStyle = new GUIStyle(EditorStyles.linkLabel)
+            public readonly GUIStyle LinkStyle = new GUIStyle(EditorStyles.linkLabel)
             {
-                margin = new RectOffset(3, 0, 0, MiniMargin),
-                // fixedHeight = 16,
-                richText = true
+                margin = new RectOffset(MiniPadding, MiniPadding, 0, MiniMargin),
+                wordWrap = true,
+                richText = true,
+                fontStyle = FontStyle.Bold
             };
-
-
 
             public readonly GUIStyle TagIcon = new GUIStyle(EditorStyles.miniLabel)
             {
@@ -418,16 +475,284 @@ namespace Meta.XR.BuildingBlocks.Editor
                 }
             };
 
-            public readonly GUIStyle FilterByTagGroup = new GUIStyle()
+            public readonly GUIStyle LongBackButton = new()
             {
-                margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(0, 0, 0, 0),
-                stretchWidth = false,
-                stretchHeight = false
+                stretchHeight = true,
+                fixedWidth = 24,
+                alignment = TextAnchor.MiddleCenter,
+                normal =
+                {
+                    background = DarkGray.ToTexture()
+                },
+                hover =
+                {
+                    background = DarkGrayHover.ToTexture()
+                },
+                margin = new RectOffset(4, 4, 0, 0)
             };
 
+            public readonly GUIStyle BlockDetailsLeftPane = new()
+            {
+                stretchHeight = true,
+                normal =
+                {
+                    background = CharcoalGraySemiTransparent.ToTexture()
+                },
+                margin = new RectOffset(Margin, Margin, 0, Margin)
+            };
 
+            public readonly GUIStyle BlockEditorDetails = new()
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(Margin, Margin, Margin, LargeMargin)
+            };
 
+            public readonly GUIStyle BlockEditorDetailsBackground = new()
+            {
+                stretchHeight = true,
+                stretchWidth = true,
+                normal =
+                {
+                    background = Color.red.ToTexture()
+                }
+            };
+
+            public readonly GUIStyle LargeLabelStyle = new(EditorStyles.boldLabel)
+            {
+                fontSize = 16,
+                wordWrap = true,
+                normal =
+                {
+                    textColor = LightGray
+                },
+            };
+
+            public readonly GUIStyle SmallLabelStyle = new(EditorStyles.miniLabel)
+            {
+                fontSize = 12,
+                normal =
+                {
+                    textColor = LightGray
+                },
+                wordWrap = true,
+            };
+
+            public readonly GUIStyle LeftMargin = new()
+            {
+                margin = new RectOffset(Margin, 0, 0, 0)
+            };
+
+            public readonly GUIStyle SmallLeftMargin = new()
+            {
+                margin = new RectOffset(MiniMargin, 0, 0, 0)
+            };
+
+            public readonly GUIStyle UniformMargin = new()
+            {
+                margin = new RectOffset(Margin, Margin, Margin, Margin)
+            };
+
+            public readonly GUIStyle OffWhiteLargeLabel = new()
+            {
+                normal =
+                {
+                    textColor = OffWhite
+                },
+                fontSize = 14
+            };
+
+            public readonly GUIStyle DefaultLabelStyleWrapped = new(EditorStyles.label)
+            {
+                wordWrap = true,
+                richText = true
+            };
+
+            public readonly GUIStyle CollectionTagStyle = new(EditorStyles.miniLabel)
+            {
+                margin = new RectOffset(MiniPadding, MiniPadding, 0, MiniPadding),
+                wordWrap = false,
+                stretchWidth = false,
+                fixedHeight = 20,
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = CollectionTagsColor,
+                    background = Utils.CollectionTagBackgroundTexture.GUIContent.image as Texture2D
+                },
+                hover =
+                {
+                    textColor = Color.white,
+                    background = Utils.CollectionTagBackgroundTexture.GUIContent.image as Texture2D
+                },
+                border = new RectOffset(6, 6, 6, 6),
+                padding = new RectOffset(10, Padding + 18, MiniPadding, MiniPadding),
+            };
+
+            public readonly GUIStyle CollectionTagStyleWithIcon = new(EditorStyles.miniLabel)
+            {
+                margin = new RectOffset(MiniPadding, MiniPadding, 0, MiniPadding),
+                wordWrap = false,
+                stretchWidth = false,
+                fixedHeight = 20,
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = CollectionTagsColor,
+                    background = Utils.CollectionTagBackgroundTexture.GUIContent.image as Texture2D
+                },
+                hover =
+                {
+                    textColor = Color.white,
+                    background = Utils.CollectionTagBackgroundTexture.GUIContent.image as Texture2D
+                },
+                border = new RectOffset(6, 6, 6, 6),
+                padding = new RectOffset(Padding + 18, Padding + 18, MiniPadding, MiniPadding)
+            };
+
+            public readonly ColorStates TagBackgroundCollectionColors = new()
+            {
+                Normal = UnselectedWhite,
+                Hover = Color.white,
+                Active = Color.white
+            };
+
+            public readonly GUIStyle FeatureTagStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
+                padding = new RectOffset(Margin, Margin, MiniPadding, MiniPadding),
+
+                wordWrap = false,
+                stretchWidth = false,
+                fixedHeight = 18,
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = CharcoalGray,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                hover =
+                {
+                    textColor = CharcoalGray,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                border = new RectOffset(6, 6, 6, 6)
+            };
+
+            public readonly GUIStyle FeatureTagStyleWithIcon = new GUIStyle(EditorStyles.miniLabel)
+            {
+                margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
+                wordWrap = false,
+                stretchWidth = false,
+                fixedHeight = 18,
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = CharcoalGray,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                hover =
+                {
+                    textColor = CharcoalGray,
+                    background = Contents.TagBackground.GUIContent.image as Texture2D
+                },
+                border = new RectOffset(6, 6, 6, 6),
+                padding = new RectOffset(18 + Padding, Padding, MiniPadding, MiniPadding)
+
+            };
+
+            public readonly ColorStates TagBackgroundFeatureColors = new()
+            {
+                Normal = UnselectedWhite,
+                Hover = Color.white,
+                Active = Color.white
+            };
+
+            public readonly GUIStyle SetupPaneStyle = new()
+            {
+                margin = new RectOffset(Margin, Margin, 0, 0),
+            };
+
+            public readonly GUIStyle SetupPaneScrollViewStyle = new()
+            {
+                margin = new RectOffset(Margin, Margin, 0, 0),
+            };
+
+            public readonly GUIStyle InstallationStepPanelStyle = new(EditorStyles.helpBox)
+            {
+                margin = new RectOffset(0, Margin, Margin, Margin),
+                normal =
+                {
+                    textColor = OffWhite,
+                },
+                border = new RectOffset(4, 4, 4, 4)
+            };
+
+            public readonly GUIStyle InstallationStepGroupPanelStyle = new(EditorStyles.helpBox)
+            {
+                margin = new RectOffset(0, Margin, 0, Margin),
+                padding = new RectOffset(Padding, Padding, Padding, Padding),
+                normal =
+                {
+                    textColor = OffWhite,
+                }
+            };
+
+            public readonly GUIStyle InstallationStepStyle = new(EditorStyles.label)
+            {
+                normal =
+                {
+                    background = InstallationStepBackground.ToTexture()
+                }
+            };
+
+            public readonly GUIStyle InstallationStepLabelStyle = new(EditorStyles.label)
+            {
+                padding = new RectOffset(Padding, 0, MiniPadding, MiniPadding),
+                normal =
+                {
+                    textColor = OffWhite
+                },
+                richText = true,
+                wordWrap = true,
+                stretchWidth = true
+            };
+
+            public readonly GUIStyle InstallationStepFoldoutStyle = new(EditorStyles.foldout)
+            {
+                richText = true
+            };
+
+            public readonly GUIStyle RichLabelStyleWrapped = new(EditorStyles.label)
+            {
+                wordWrap = true,
+                richText = true,
+                stretchWidth = true
+            };
+
+            public readonly GUIStyle LargeLabelStyleWhite = new(EditorStyles.boldLabel)
+            {
+                fontSize = 16,
+                wordWrap = true,
+                normal =
+                {
+                    textColor = CollectionTagsColor
+                },
+            };
+
+            public readonly GUIStyle FoldoutSubtitleStyle = new(EditorStyles.foldout)
+            {
+                margin = new RectOffset(MiniMargin, Margin, 0, MiniMargin),
+                padding = new RectOffset(18, Padding, Padding, Padding),
+                normal =
+                {
+                    textColor = OffWhite
+                },
+                fontSize = 14
+            };
         }
 
         private static GUIStylesContainer _guiStyles;

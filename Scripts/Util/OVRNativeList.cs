@@ -186,7 +186,7 @@ struct OVRNativeList<T> : IDisposable, IReadOnlyList<T> where T : unmanaged
     }
 }
 
-static class OVRNativeList
+internal static class OVRNativeList
 {
     // See WithSuggestedCapacityFrom below
     public readonly struct CapacityHelper
@@ -204,9 +204,32 @@ static class OVRNativeList
     // The resulting list will be empty, but will have reserved capacity if possible to do so without enumerating
     // the collection.
     // Ex:
-    //   using var list = OVRNativeList.WithSuggestedCapacityFrom(collection).AllocateEmpty<ulong>(Allocator.Temp);
+    //   using var list = OVRNativeList
+    //                      .WithSuggestedCapacityFrom(collection)
+    //                      .AllocateEmpty<ulong>(Allocator.Temp);
+    //
+    //   foreach (var item in collection.ToNonAlloc()) {
+    //     list.Add(item.Value);
+    //  }
     public static CapacityHelper WithSuggestedCapacityFrom<T>([NoEnumeration] IEnumerable<T> collection)
         => new(collection.ToNonAlloc().Count);
+
+    // Similar to WithSuggestedCapacityFrom above, but provides the non-allocating enumerable as an out parameter, which
+    // can simplify the callsite to this:
+    //
+    //  using var list = OVRNativeList
+    //                     .WithSuggestedCapacityFrom(collection, out var enumerable)
+    //                     .AllocateEmpty<ulong>(Allocator.Temp);
+    //
+    // foreach (var item in enumerable) {
+    //   list.Add(item.Value);
+    // }
+    public static CapacityHelper WithSuggestedCapacityFrom<T>([NoEnumeration] IEnumerable<T> collection,
+        out OVREnumerable<T> nonAllocatingEnumerable)
+    {
+        nonAllocatingEnumerable = collection.ToNonAlloc();
+        return new CapacityHelper(nonAllocatingEnumerable.Count);
+    }
 
     // Creates a new OVRNativeList and copies the elements from collection into it.
     // The caller owns the memory and must dispose it.

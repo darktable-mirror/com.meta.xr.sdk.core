@@ -29,3 +29,5 @@ MonoBehaviour:
   usageInstructions: Please note that the Audio SDK supports using the FMOD and Wwise
     audio engines which are currently not supported by this Building Block. Full
     instructions in https://developer.oculus.com/documentation/unity/meta-xr-audio-sdk-unity-spatialize/.
+  featureDocumentationName: Meta XR Audio SDK
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/meta-xr-audio-sdk-unity

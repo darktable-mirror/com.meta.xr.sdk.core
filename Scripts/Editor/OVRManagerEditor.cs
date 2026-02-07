@@ -333,11 +333,18 @@ public class OVRManagerEditor : Editor
             EditorGUI.indentLevel--;
         }
 
+        bool enableFaceTrackingVisemesOutput = runtimeSettings.EnableFaceTrackingVisemesOutput;
+        OVREditorUtil.SetupBoolField(
+            target,
+            new GUIContent("Enable visemes", "Enabling visemes allows you to get face expressions in the form of Visemes in addition to blendshape weights. If it's not enabled, visemes will not be available."),
+            ref enableFaceTrackingVisemesOutput,
+            ref modified);
 
         if (modified)
         {
             runtimeSettings.RequestsVisualFaceTracking = visualFaceTracking;
             runtimeSettings.RequestsAudioFaceTracking = audioFaceTracking;
+            runtimeSettings.EnableFaceTrackingVisemesOutput = enableFaceTrackingVisemesOutput;
             OVRRuntimeSettings.CommitRuntimeSettings(runtimeSettings);
         }
         EditorGUI.EndDisabledGroup();
@@ -349,7 +356,9 @@ public class OVRManagerEditor : Editor
         #region DynamicResolution
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Dynamic Resolution", EditorStyles.boldLabel);
-        OVREditorUtil.SetupBoolField(target, "Enable Dynamic Resolution", ref manager.enableDynamicResolution, ref modified);
+        bool enableDynamicResolution = manager.enableDynamicResolution;
+        OVREditorUtil.SetupBoolField(target, "Enable Dynamic Resolution", ref enableDynamicResolution, ref modified);
+        manager.enableDynamicResolution = enableDynamicResolution;
         OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 2/Pro Range", "Quest2/Pro resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest2MinDynamicResolutionScale, ref manager.quest2MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
         OVREditorUtil.SetupRangeSlider(target, new GUIContent("Quest 3/3S Range", "Quest3/3S Resolution scaling factor range when dynamic resolution is enabled."), ref manager.quest3MinDynamicResolutionScale, ref manager.quest3MaxDynamicResolutionScale, 0.7f, 2.0f, ref modified);
         #endregion
@@ -412,7 +421,7 @@ public class OVRManagerEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_ANDROID
-#if !OCULUS_XR_3_3_0_OR_NEWER || UNITY_2020
+#if (!OCULUS_XR_3_3_0_OR_NEWER || UNITY_2020) && !UNITY_6000_0_OR_NEWER
         if (manager.enableDynamicResolution && !PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android))
         {
             UnityEngine.Rendering.GraphicsDeviceType[] apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.Android);

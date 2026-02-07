@@ -67,8 +67,15 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var tweak = memberController.GetTweak();
                 if (!tweak?.Matches(member, instance) ?? true)
                 {
-                    TweakUtils.ProcessMinMaxRange(member, attribute, instance);
-                    memberController.RegisterTweak(TweakUtils.Create(member, attribute, instance));
+                    if (member.IsBaseTypeEqual(typeof(Enum)))
+                    {
+                        memberController.RegisterEnum(TweakUtils.Create(member, attribute, instance, member.GetDataType()));
+                    }
+                    else
+                    {
+                        TweakUtils.ProcessMinMaxRange(member, attribute, instance);
+                        memberController.RegisterTweak(TweakUtils.Create(member, attribute, instance));
+                    }
                 }
             });
         }

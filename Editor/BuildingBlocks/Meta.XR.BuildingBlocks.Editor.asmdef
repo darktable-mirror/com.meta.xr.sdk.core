@@ -22,7 +22,9 @@
         "Meta.WitAi.Editor",
         "Meta.WitAi.TTS",
         "Meta.WitAi.TTS.Editor",
-        "Oculus.Haptics"
+        "Oculus.Haptics",
+        "Meta.XR.Editor.Settings",
+        "Meta.XR.Editor.Id"
     ],
     "includePlatforms": [
         "Editor"
@@ -51,7 +53,7 @@
         },
         {
             "name": "com.meta.xr.sdk.haptics",
-            "expression": "72.0.0",
+            "expression": "71.99.99",
             "define": "USING_META_XR_HAPTICS_SDK"
         },
         {

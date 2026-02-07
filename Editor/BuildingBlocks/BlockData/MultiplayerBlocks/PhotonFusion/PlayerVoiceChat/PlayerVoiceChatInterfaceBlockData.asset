@@ -18,9 +18,8 @@ MonoBehaviour:
   description: Enable Photon Voice2 audio support for your multiplayer experience
   tags:
     array:
-    - name: Avatars
-    - name: Multiplayer
     - name: Voice
+    - name: Multiplayer
   thumbnail: {fileID: 2800000, guid: d8946f5c2e9b1430e902d6a90753f7d1, type: 3}
   order: 0
   prefab: {fileID: 0}
@@ -33,3 +32,5 @@ MonoBehaviour:
   isSingleton: 1
   usageInstructions: Supported by Photon Fusion only. Be sure to create your own
     Voice app id and fill into the Photon Realtime settings.
+  featureDocumentationName: Multiplayer Building Blocks Setup Guide
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/bb-multiplayer-blocks

@@ -32,7 +32,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public bool Refresh()
         {
-            if (Camera) return true;
+            if (Camera != null && Camera.isActiveAndEnabled) return true;
 
             SearchForCamera();
 

@@ -552,7 +552,9 @@ public class OVRPlayerController : MonoBehaviour
 
         if (EnableRotation)
         {
+#pragma warning disable CS0612 // Type of member is obsolete
             Vector3 euler = RotateAroundGuardianCenter ? transform.rotation.eulerAngles : Vector3.zero;
+#pragma warning restore CS0612
             float rotateInfluence = SimulationRate * Time.deltaTime * RotationAmount * RotationScaleMultiplier;
 
             bool curHatLeft = OVRInput.Get(OVRInput.Button.PrimaryShoulder);
@@ -618,7 +620,9 @@ public class OVRPlayerController : MonoBehaviour
                 euler.y += secondaryAxis.x * rotateInfluence;
             }
 
+#pragma warning disable CS0612 // Type of member is obsolete
             if (RotateAroundGuardianCenter)
+#pragma warning restore CS0612
             {
                 transform.rotation = Quaternion.Euler(euler);
             }

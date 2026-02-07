@@ -39,3 +39,5 @@ MonoBehaviour:
     Maximum number of players are limited by specific networking solution''s
     service, please check the selected Network Implementation''s official website
     for more information.'
+  featureDocumentationName: Multiplayer Building Blocks Setup Guide
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/bb-multiplayer-blocks

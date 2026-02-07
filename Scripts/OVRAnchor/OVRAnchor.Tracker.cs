@@ -31,8 +31,10 @@ partial struct OVRAnchor
     /// Represents a configuration for a <see cref="Tracker"/>.
     /// </summary>
     /// <remarks>
-    /// Use this struct to configure a <see cref="Tracker"/> by calling <see cref="Tracker.ConfigureAsync"/>, or to
-    /// get a tracker's current configuration using <see cref="Tracker.Configuration"/>.
+    /// A configuration is used to indicate what types of trackables you'd like the <see cref="Tracker"/> to track.
+    ///
+    /// Configure a <see cref="Tracker"/> by calling <see cref="Tracker.ConfigureAsync"/>, or o get a tracker's current
+    /// configuration using <see cref="Tracker.Configuration"/>.
     /// </remarks>
     [Serializable]
     public struct TrackerConfiguration : IEquatable<TrackerConfiguration>
@@ -41,7 +43,10 @@ partial struct OVRAnchor
         /// The <see cref="Tracker"/> should track keyboards.
         /// </summary>
         /// <remarks>
-        /// You can test for keyboard tracking support with <see cref="KeyboardTrackingSupported"/>.
+        /// When `true`, a <see cref="Tracker"/> should attempt to track physical keyboards in the real environment.
+        ///
+        /// Not all devices support keyboard tracking. You can test for keyboard tracking support with
+        /// <see cref="KeyboardTrackingSupported"/>.
         /// </remarks>
         [field: SerializeField, Tooltip("When enabled, attempts to track physical keyboards in the environment.")]
         public bool KeyboardTrackingEnabled { get; set; }
@@ -53,7 +58,9 @@ partial struct OVRAnchor
         /// Use this to test for keyboard tracking support before calling <see cref="Tracker.ConfigureAsync"/> with
         /// <see cref="KeyboardTrackingEnabled"/> set to `true`.
         /// </remarks>
-        public static bool KeyboardTrackingSupported => GetDynamicObjectTrackerSupported(out var value).IsSuccess() && value;
+        public static bool KeyboardTrackingSupported =>
+            GetDynamicObjectTrackerSupported(out var value).IsSuccess() && value &&
+            GetDynamicObjectKeyboardSupported(out value).IsSuccess() && value;
 
         internal bool RequiresDynamicObjectTracker => KeyboardTrackingEnabled;
 
@@ -81,16 +88,12 @@ partial struct OVRAnchor
         /// </summary>
         /// <remarks>
         /// This method provides the types of trackables that this configuration would enable. Use this in conjunction
-        /// with the static method <see cref="OVRAnchor.FetchTrackablesAsync"/> to fetch all anchors relevant to a
-        /// particular <see cref="TrackerConfiguration"/>.
-        ///
-        /// Note: The member method <see cref="OVRAnchor.Tracker.FetchTrackablesAsync"/> performs a similar operation as
-        /// <see cref="GetTrackableTypes"/> followed by <see cref="OVRAnchor.FetchTrackablesAsync"/>.
+        /// with <see cref="FetchOptions.TrackableTypes"/> and
+        /// <see cref="OVRAnchor.FetchAnchorsAsync(System.Collections.Generic.List{OVRAnchor},OVRAnchor.FetchOptions,System.Action{System.Collections.Generic.List{OVRAnchor},int})"/>
         /// </remarks>
         /// <param name="trackableTypes">The list of <see cref="TrackableType"/> to populate. The list is cleared
         /// before adding any elements.</param>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="trackableTypes"/> is `null`.</exception>
-        /// <seealso cref="OVRAnchor.FetchTrackablesAsync"/>
         public void GetTrackableTypes(List<TrackableType> trackableTypes)
         {
             if (trackableTypes == null)
@@ -108,6 +111,13 @@ partial struct OVRAnchor
         /// <summary>
         /// Generates a string representation of this <see cref="TrackerConfiguration"/>.
         /// </summary>
+        /// <remarks>
+        /// The returned string is intended for debugging purposes. It indicates which of the requested features are
+        /// enabled and takes the form
+        /// <code><![CDATA[
+        /// TrackerConfiguration<Option1=Value1, Option2=Value2, ...>
+        /// ]]></code>
+        /// </remarks>
         /// <returns>Returns a string representation of this <see cref="TrackerConfiguration"/>.</returns>
         public override string ToString()
         {
@@ -140,6 +150,10 @@ partial struct OVRAnchor
         /// <summary>
         /// Gets a hashcode for this <see cref="TrackerConfiguration"/>.
         /// </summary>
+        /// <remarks>
+        /// This method allows the <see cref="TrackerConfiguration"/> to be used as a key in a <see cref="HashSet{T}"/>
+        /// or <see cref="Dictionary{TKey,TValue}"/>.
+        /// </remarks>
         /// <returns>Returns a hash code for this <see cref="TrackerConfiguration"/>.</returns>
         public override int GetHashCode()
         {
@@ -176,6 +190,15 @@ partial struct OVRAnchor
     /// <summary>
     /// The result of <see cref="Tracker.ConfigureAsync"/>.
     /// </summary>
+    /// <remarks>
+    /// Configuring an anchor tracker using <see cref="Tracker.ConfigureAsync"/> is an asynchronous operation that can
+    /// fail for a number of reasons, enumerated here.
+    ///
+    /// If any part of the requested <see cref="TrackerConfiguration"/> cannot be satisfied, then
+    /// <see cref="Tracker.ConfigureAsync"/> will return something other than <see cref="Success"/>, even though some
+    /// aspects may have succeeded.
+    /// </remarks>
+    /// <seealso cref="Tracker.ConfigureAsync"/>
     [OVRResultStatus]
     public enum ConfigureTrackerResult
     {
@@ -416,6 +439,13 @@ partial struct OVRAnchor
         }
         /// \endcond
 
+        /// <summary>
+        /// Disposes of the <see cref="Tracker"/>.
+        /// </summary>
+        /// <remarks>
+        /// When you <see cref="Dispose"/> a <see cref="Tracker"/>, it stops tracking all trackables indicated by its
+        /// <see cref="Tracker.Configuration"/> and destroys any internal resources associated with the tracker.
+        /// </remarks>
         public async void Dispose()
         {
             using (await AsyncLock.AcquireAsync(this))

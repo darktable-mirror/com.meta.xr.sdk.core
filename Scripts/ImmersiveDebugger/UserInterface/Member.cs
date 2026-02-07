@@ -21,7 +21,6 @@
 
 using Meta.XR.ImmersiveDebugger.Manager;
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
-using System;
 using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
@@ -29,8 +28,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
     internal class Member : Controller, IMember
     {
         private Label _title;
+        private TextArea _description;
+
         private Flex _flex;
         private Flex _valueFlex;
+        private Flex _verticalFlex;
 
         private Values _values;
         private ButtonForAction _action;
@@ -47,6 +49,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             get => _title.Content;
             set => _title.Content = value.ToDisplayText();
+        }
+
+        public string Description
+        {
+            get => _description.Content;
+            set => _description.Content = value;
         }
 
         public Color PillColor
@@ -90,9 +98,25 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _title.LayoutStyle = Style.Load<LayoutStyle>("MemberTitle");
             _title.TextStyle = Style.Load<TextStyle>("MemberTitle");
 
-            // Flex
-            _valueFlex = Append<Flex>("values");
-            _valueFlex.LayoutStyle = Style.Load<LayoutStyle>("MemberValueFlex");
+            // Vertical flex
+            _verticalFlex = Append<Flex>("vertical");
+            _verticalFlex.LayoutStyle = Style.Load<LayoutStyle>("VerticalValueFlex");
+
+            // Value Flex
+            _valueFlex = _verticalFlex.Append<Flex>("values");
+            _valueFlex.LayoutStyle = Style.Instantiate<LayoutStyle>("MemberValueFlex");
+        }
+
+        public void RegisterDescriptor()
+        {
+            _description = _verticalFlex.Append<TextArea>("description");
+            _description.Label.LayoutStyle.margin = new Vector2(4, 4);
+            _description.Background.LayoutStyle.margin = new Vector2(0, 0);
+
+            _description.LayoutStyle = Style.Instantiate<LayoutStyle>("MemberDescriptor");
+            _description.TextStyle = Style.Load<TextStyle>("MemberDescriptorValue");
+            _description.BackgroundStyle = Style.Load<ImageStyle>("MemberDescriptionBackground");
+            RefreshLayout();
         }
 
         protected override void OnTransparencyChanged()
@@ -119,6 +143,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 _flex.Hide();
             }
 
+            if (_description != null)
+            {
+                _description.LayoutStyle.size.x = _action.LayoutStyle.size.x - _description.LayoutStyle.margin.x;
+                _description.LayoutStyle.margin.x = _verticalFlex.LayoutStyle.size.x - _action.LayoutStyle.size.x + _description.LayoutStyle.margin.x;
+                _description.UpdateLayoutSize();
+            }
             _action.Action = action;
         }
 
@@ -133,7 +163,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             {
                 _gizmo = _valueFlex.Append<ToggleForGizmo>("gizmo");
                 _gizmo.LayoutStyle = Style.Load<LayoutStyle>("MemberButton");
-                _gizmo.Icon = Resources.Load<Texture2D>("Textures/eye_icon");
+                _gizmo.Icon = Resources.Load<UnityEngine.Texture2D>("Textures/eye_icon");
                 _gizmo.IconStyle = Style.Load<ImageStyle>("MiniButtonIcon");
             }
 
@@ -153,6 +183,21 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
 
             _values.Setup(watch);
+        }
+
+        public void RegisterEnum(TweakEnum tweak)
+        {
+            var dropdown = _valueFlex.Append<Dropdown>("dropdown");
+            dropdown.LayoutStyle = Style.Instantiate<LayoutStyle>("MemberValueDynamic");
+            dropdown.SetupMenu(tweak);
+        }
+
+        public void RegisterTexture(WatchTexture watchTexture)
+        {
+            var texture = _valueFlex.Append<Image>("texture");
+            texture.LayoutStyle = Style.Instantiate<LayoutStyle>("TextureValue");
+            texture.Setup(watchTexture);
+            RefreshLayout();
         }
 
         public Tweak GetTweak()
@@ -180,7 +225,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             {
                 _switch = _valueFlex.Prepend<Switch>("switch");
                 _switch.LayoutStyle = Style.Load<LayoutStyle>("MemberButtonToggle");
-                _switch.SetToggleIcons(Resources.Load<Texture2D>("Textures/toggle_on"), Resources.Load<Texture2D>("Textures/toggle_off"));
+                _switch.SetToggleIcons(Resources.Load<UnityEngine.Texture2D>("Textures/toggle_on"), Resources.Load<UnityEngine.Texture2D>("Textures/toggle_off"));
                 _switch.IconStyle = Style.Load<ImageStyle>("ToggleButtonIcon");
                 _switch.Callback = () => _switch.State = !_switch.State;
             }

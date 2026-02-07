@@ -22,4 +22,6 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Meta.XR.Editor.PlayCompanion")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.StatusMenu")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Tags")]
+[assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.Editor")]
 [assembly: InternalsVisibleTo("EditModeTests")]

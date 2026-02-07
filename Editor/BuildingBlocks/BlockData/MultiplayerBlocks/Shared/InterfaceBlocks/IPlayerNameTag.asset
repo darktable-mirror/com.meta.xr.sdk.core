@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: IPlayerNameTag
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: 97a7e1ae-ac65-4ee6-9167-10b3b94782f6
   version: 1
   blockName: Player Name Tag
@@ -38,3 +38,5 @@ MonoBehaviour:
     To show valid Oculus
     name for the player, this app must setup valid app id in the project. See more
     guidance in menu of Oculus > Tools > Meta Account Guided Setup.'
+  featureDocumentationName: Multiplayer Building Blocks Setup Guide
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/bb-multiplayer-blocks

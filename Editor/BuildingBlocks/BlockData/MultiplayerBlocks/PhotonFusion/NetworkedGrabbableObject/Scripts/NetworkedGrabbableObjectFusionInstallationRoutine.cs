@@ -154,5 +154,19 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 
         }
 #endif // FUSION_WEAVER && FUSION2 && PHOTON_FUSION_PHYSICS_ADDON_DEFINED
+
+        internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
+        {
+            var installationSteps = new List<InstallationStepInfo>();
+            installationSteps.AddRange(base.GetInstallationSteps(selection));
+            installationSteps.Add(new InstallationStepInfo(null, $"Add <b>NetworkObject</b> component to the object"));
+            installationSteps.Add(new InstallationStepInfo(null, $"Add <b>TransferOwnershipFusion</b> component to the object"));
+#if PHOTON_FUSION_PHYSICS_ADDON_DEFINED
+            installationSteps.Add(new InstallationStepInfo(null, $"Install <b>NetworkRigidbody3D</b> component to the object with mesh components extracted as a child game object"));
+#else
+            installationSteps.Add(new InstallationStepInfo(null, $"Install <b>NetworkTransform</b> component to the object"));
+#endif // PHOTON_FUSION_PHYSICS_ADDON_DEFINED
+            return installationSteps;
+        }
     }
 }

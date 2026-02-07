@@ -52,7 +52,7 @@ float CalculateEnvironmentDepthSoftOcclusion(float2 uvCoords, float linearSceneD
 
   float cubeDepthRangeLow  = (biasedDepthSpace + 1.0f) * 0.5f;
 
-  const float kRange = 1.0f / 1.07f - 1.0f;
+  const float kRange = 1.0f / 1.04f - 1.0f;
   float cubeDepthRangeInv = 1.0f / (cubeDepthRangeLow * kRange - kRange);
 
   float4 texSample = SamplePreprocessedDepth(uvCoords, unity_StereoEyeIndex);
@@ -64,9 +64,9 @@ float CalculateEnvironmentDepthSoftOcclusion(float2 uvCoords, float linearSceneD
     // Mix the minima and maxima according to the given interpolation factor.
     // Adjust the smoothstep coefficients to shrink or enlarge the transition radius.
     // Between 0.0f (transition deepest in the foreground) and 0.5f (don't transition in the foreground)
-    const float kForegroundLevel = 0.1f;
+    const float kForegroundLevel = 0.2f;
     // Between 0.5f (don't transition in the background) and 1.0f (transition deepest in the background)
-    const float kBackgroundLevel = 0.9f;
+    const float kBackgroundLevel = 0.8f;
     float interp = texSample.z / texSample.w;
     alpha = lerp(alphas.x, alphas.y, smoothstep(kForegroundLevel, kBackgroundLevel, interp));
   }

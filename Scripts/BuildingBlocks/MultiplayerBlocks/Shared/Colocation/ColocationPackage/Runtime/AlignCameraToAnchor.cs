@@ -32,15 +32,15 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
 
         private void Update()
         {
-            Align(CameraAlignmentAnchor);
+            RealignToAnchor();
         }
 
         public void RealignToAnchor()
         {
-            Align(CameraAlignmentAnchor);
+            Align(CameraAlignmentAnchor.transform);
         }
 
-        private void Align(OVRSpatialAnchor anchor)
+        private void Align(Transform anchorTransform)
         {
             // Align the scene by transforming the camera.
             // The inverse anchor pose is used to move the camera so that the scene appears as if it was parented to the anchor.
@@ -48,9 +48,10 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
             // Get the anchor's raw tracking space pose to align the camera.
             // Note that the anchor's world space pose is dependent on the camera position, in order to maintain consistent world-locked rendering.
 
-            // Position the anchor in tracking space
+            var previousAnchorScale = anchorTransform.localScale;
+            anchorTransform.localScale = Vector3.one;
 
-            Transform anchorTransform = anchor.transform;
+            // Position the anchor in tracking space
             var trackingSpacePose = anchorTransform.ToTrackingSpacePose(Camera.main);
             anchorTransform.SetPositionAndRotation(trackingSpacePose.position, trackingSpacePose.orientation);
 
@@ -59,8 +60,10 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
             transform.eulerAngles = new Vector3(0, -anchorTransform.eulerAngles.y, 0);
 
             // Update the world space position of the anchor so it renders in a consistent world-locked position.
-            OVRPose worldSpacePose = trackingSpacePose.ToWorldSpacePose(Camera.main);
+            var worldSpacePose = trackingSpacePose.ToWorldSpacePose(Camera.main);
             anchorTransform.SetPositionAndRotation(worldSpacePose.position, worldSpacePose.orientation);
+
+            anchorTransform.localScale = previousAnchorScale;
         }
     }
 }

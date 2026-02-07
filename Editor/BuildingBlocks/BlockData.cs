@@ -42,6 +42,19 @@ namespace Meta.XR.BuildingBlocks.Editor
         [SerializeField] internal List<string> externalBlockDependencies;
         [SerializeField] internal List<string> dependencies;
 
+        internal virtual IReadOnlyCollection<InstallationStepInfo> InstallationSteps
+        {
+            get
+            {
+                if (!UsesPrefab) return Array.Empty<InstallationStepInfo>();
+
+                return new List<InstallationStepInfo>
+                {
+                    new(Prefab, "Instantiates a {0} prefab."),
+                    new(null, $"Renames the instantiated prefab to <b>{Utils.BlockPublicTag} {BlockName}</b>.")
+                };
+            }
+        }
 
 
         public IEnumerable<BlockData> Dependencies =>

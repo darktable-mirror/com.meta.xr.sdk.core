@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 940cc35ab3492024a89571d632a07b0a, type: 3}
+  m_Script: {fileID: 11500000, guid: c9c88ed7d275b0148be25eb7978bf57b, type: 3}
   m_Name: NetworkedAvatarNGOInstallationRoutine
   m_EditorClassIdentifier: 
   id: e7255571-f7d7-46a3-a005-558934863c26
@@ -19,3 +19,4 @@ MonoBehaviour:
   - com.unity.netcode.gameobjects@^1.7.1
   implementation: 0
   installMatchmaking: 0
+  prefabV28Plus: {fileID: 6779533855362422273, guid: 9ee82ee076bee074a99ed742b4747914, type: 3}

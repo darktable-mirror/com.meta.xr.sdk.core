@@ -28,6 +28,17 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class VirtualKeyboardBlockData : BlockData
     {
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps => new List<InstallationStepInfo>
+        {
+            new(Prefab, "Instantiates a {0} prefab."), new(null, $"Names the instantiated prefab to <b>{Utils.BlockPublicTag} {BlockName}</b>."),
+            new(Utils.GetBlockData(BlockDataIds.ControllerTracking), "Collects the references of <b>left controller</b> and <b>right controller</b> from {0} block."),
+            new(null, "Creates the keyboard interactor for <b>left hand</b> and makes it child of <b>left controller</b>'s transform."),
+            new(null, "Creates the keyboard interactor for <b>right hand</b> and makes it child of <b>right controller</b>'s transform."),
+            new(Utils.GetBlockData(BlockDataIds.CameraRig), "Collects the reference of {0}."),
+            new(null, $"Configures the <b>{nameof(OVRControllerHelper)}</b> component's public properties."),
+            new(Utils.GetBlockData(BlockDataIds.HandTracking), "Collects the left and right {0} blocks and references them to virtual keyboard's component.")
+        };
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
             var virtualKeyboardGo = Instantiate(Prefab, Vector3.zero, Quaternion.identity);

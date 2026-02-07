@@ -40,6 +40,7 @@ namespace Meta.XR.BuildingBlocks
     /// In Editor, you can delete this component by right-clicking the object
     /// and using Building Blocks > Break Block Connection, which will erase the Metadata and stop treating the
     /// <see cref="GameObject"/> as a block.
+    /// Alternatively, you can also delete the component in the Inspector by clicking the Break Block Connection button.
     /// </remarks>
     /// <remarks>
     /// The <see cref="BuildingBlock"/> <see cref="MonoBehaviour"/> is not meant to be added dynamically to an existing

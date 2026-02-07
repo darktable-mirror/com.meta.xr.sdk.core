@@ -82,7 +82,8 @@ namespace Meta.XR.ImmersiveDebugger
             {
                 if (!memberAttribute.Tweakable ||
                     !(TweakUtils.IsTypeSupported((memberInfo as FieldInfo)?.FieldType) ||
-                     TweakUtils.IsTypeSupported((memberInfo as PropertyInfo)?.PropertyType)))
+                     TweakUtils.IsTypeSupported((memberInfo as PropertyInfo)?.PropertyType) ||
+                     memberInfo.IsBaseTypeEqual(typeof(Enum))))
                 {
                     return false;
                 }
@@ -90,8 +91,15 @@ namespace Meta.XR.ImmersiveDebugger
                 var tweak = member.GetTweak();
                 if (!tweak?.Matches(memberInfo, handle.Instance) ?? true)
                 {
-                    TweakUtils.ProcessMinMaxRange(memberInfo, memberAttribute, handle.Instance);
-                    member.RegisterTweak(TweakUtils.Create(memberInfo, memberAttribute, handle.Instance));
+                    if (memberInfo.IsBaseTypeEqual(typeof(Enum)))
+                    {
+                        member.RegisterEnum(TweakUtils.Create(memberInfo, memberAttribute, handle.Instance, memberInfo.GetDataType()));
+                    }
+                    else
+                    {
+                        TweakUtils.ProcessMinMaxRange(memberInfo, memberAttribute, handle.Instance);
+                        member.RegisterTweak(TweakUtils.Create(memberInfo, memberAttribute, handle.Instance));
+                    }
                 }
                 return true;
             }
@@ -132,7 +140,7 @@ namespace Meta.XR.ImmersiveDebugger
             protected override bool RegisterSpecialisedWidget(IMember member, MemberInfo memberInfo,
                 DebugMember memberAttribute, InstanceHandle handle)
             {
-                if (!(memberInfo.MemberType == MemberTypes.Property | memberInfo.MemberType == MemberTypes.Field))
+                if (!WatchManager.IsWatchTypeSupported(memberInfo))
                 {
                     return false;
                 }
@@ -140,7 +148,14 @@ namespace Meta.XR.ImmersiveDebugger
                 var watch = member.GetWatch();
                 if (!watch?.Matches(memberInfo, handle.Instance) ?? true)
                 {
-                    member.RegisterWatch(WatchUtils.Create(memberInfo, handle.Instance, memberAttribute));
+                    if (memberInfo.IsTypeEqual(typeof(Texture2D)))
+                    {
+                        member.RegisterTexture(WatchUtils.Create(memberInfo, handle.Instance, memberAttribute) as WatchTexture);
+                    }
+                    else
+                    {
+                        member.RegisterWatch(WatchUtils.Create(memberInfo, handle.Instance, memberAttribute));
+                    }
                 }
                 return true;
             }

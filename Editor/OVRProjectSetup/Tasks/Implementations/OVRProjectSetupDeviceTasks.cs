@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using UnityEditor;
 
 using System.IO;
+using Meta.XR.Editor.Callbacks;
 #if UNITY_EDITOR_WIN
 using Microsoft.Win32;
 using Object = System.Object;
@@ -46,8 +47,7 @@ internal static class OVRProjectSetupDeviceTasks
         }
     }
 
-
-    static OVRProjectSetupDeviceTasks()
+    static void CreateTasks()
     {
 #if UNITY_EDITOR_WIN // Link is not supported outside of windows
         OVRProjectSetup.AddTask(
@@ -86,7 +86,22 @@ internal static class OVRProjectSetupDeviceTasks
             message:
             "Link installed on the machine does not have face tracking enabled. Enable it in Settings > Beta > Natural Facial Expressions over Meta Quest Link."
         );
+        OVRProjectSetup.AddTask(
+            level: OVRProjectSetup.TaskLevel.Recommended,
+            group: Group,
+            conditionalValidity: _ => IsLinkInstalled() && GetAnchorFeatureSupport() != OVRProjectConfig.AnchorSupport.Disabled,
+            isDone: _ => IsSpatialDataEnabledOnLink(),
+            tags: OVRProjectSetup.TaskTags.HeavyProcessing,
+            message:
+            "The app uses anchors but the Link installed on the machine does not have spatial data enabled. Enable it in Settings > Beta > Spatial Data over Meta Quest Link."
+        );
 #endif
+    }
+
+
+    static OVRProjectSetupDeviceTasks()
+    {
+        InitializeOnLoad.Register(CreateTasks);
     }
 
     private static bool AllDevicesAuthorized()
@@ -126,6 +141,11 @@ internal static class OVRProjectSetupDeviceTasks
         return GetLinkWindowsRegistryValue("FaceTrackingOverLink");
     }
 
+    private static bool IsSpatialDataEnabledOnLink()
+    {
+        return GetLinkWindowsRegistryValue("SpatialDataOverLink");
+    }
+
     private static bool IsLinkInstalled()
     {
         return File.Exists("C:\\Program Files\\Oculus\\Support\\oculus-runtime\\OVRServer_x64.exe");
@@ -137,6 +157,14 @@ internal static class OVRProjectSetupDeviceTasks
         if (!config) return OVRProjectConfig.FeatureSupport.None;
 
         return config.faceTrackingSupport;
+    }
+
+    private static OVRProjectConfig.AnchorSupport GetAnchorFeatureSupport()
+    {
+        var config = OVRProjectConfig.CachedProjectConfig;
+        if (!config) return OVRProjectConfig.AnchorSupport.Disabled;
+
+        return config.anchorSupport;
     }
 
     private static OVRProjectConfig.FeatureSupport GetEyeTrackingProjectFeatureSupport()

@@ -69,7 +69,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
             if (param.colocationController != null && param.colocationController.DebuggingOptions.visualizeAlignmentAnchor)
             {
-                param.sharedAnchorManager.AnchorPrefab = anchorPrefab;
+                param.sharedAnchorManager.AnchorPrefab = anchorPrefab ?? new GameObject();
             }
 
             NetworkAdapter.SetConfig(networkData, networkMessenger);

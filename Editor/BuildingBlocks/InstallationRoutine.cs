@@ -25,12 +25,24 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using System.Linq;
+using Meta.XR.Editor.Id;
 using static Meta.XR.BuildingBlocks.Editor.VariantAttribute;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
     public class InstallationRoutine : ScriptableObject, IIdentified
     {
+        internal virtual IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
+        {
+            if (!UsesPrefab) return Array.Empty<InstallationStepInfo>();
+
+            return new List<InstallationStepInfo>
+            {
+                new(Prefab, "Instantiates a {0} prefab."),
+                new(null, $"Renames the instantiated prefab to <b>{Utils.BlockPublicTag} {TargetBlockData.BlockName}</b>.")
+            };
+        }
+
         internal static readonly CachedIdDictionary<InstallationRoutine> Registry = new();
 
         [SerializeField, OVRReadOnly] internal string id = Guid.NewGuid().ToString();

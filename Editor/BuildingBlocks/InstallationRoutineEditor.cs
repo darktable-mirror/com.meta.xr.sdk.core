@@ -28,15 +28,17 @@ namespace Meta.XR.BuildingBlocks.Editor
     [CustomEditor(typeof(InstallationRoutine), true)]
     public class InstallationRoutineEditor : DataEditor<InstallationRoutine>
     {
-        private readonly string _routineInstructions = $"<b>InstallationRoutines</b> provides more control on how the <b>{nameof(BuildingBlock)}</b> is being installed." +
-                                                      $"\n• Set a name and description to this <b>{nameof(InstallationRoutine)}</b>." +
-                                                      $"\n• Link the <b>{nameof(InstallationRoutine)}</b> to a specific block with the <i>{nameof(InstallationRoutine.TargetBlockDataId)}</i>." +
-                                                      $"\n• Inherit from <b>{nameof(InstallationRoutine)}</b> if you want to offer customisation on installation.";
+        private readonly string _routineInstructions =
+            $"<b>InstallationRoutines</b> provides more control on how the <b>{nameof(BuildingBlock)}</b> is being installed." +
+            $"\n• Set a name and description to this <b>{nameof(InstallationRoutine)}</b>." +
+            $"\n• Link the <b>{nameof(InstallationRoutine)}</b> to a specific block with the <i>{nameof(InstallationRoutine.TargetBlockDataId)}</i>." +
+            $"\n• Inherit from <b>{nameof(InstallationRoutine)}</b> if you want to offer customisation on installation.";
+
         private readonly string _variantInstructions = $"<b>Variants</b> let you customize your Installation Routine." +
-                                                        $"\n• Add <b>[{nameof(VariantAttribute)}]</b> to any field in your <b>{nameof(InstallationRoutine)}</b> class." +
-                                                        $"\n• <i>Definition</i> variants are used to select the appropriate Installation Routine." +
-                                                        $"\n• <i>Parameter</i> variants are used to pass additional information to the Installation Routine." +
-                                                        $"\n\nThis Installation Routine's variants are listed below.";
+                                                       $"\n• Add <b>[{nameof(VariantAttribute)}]</b> to any field in your <b>{nameof(InstallationRoutine)}</b> class." +
+                                                       $"\n• <i>Definition</i> variants are used to select the appropriate Installation Routine." +
+                                                       $"\n• <i>Parameter</i> variants are used to pass additional information to the Installation Routine." +
+                                                       $"\n\nThis Installation Routine's variants are listed below.";
 
         protected override BlockData BlockData => Data.TargetBlockData;
         protected override string Instructions => _routineInstructions;
@@ -48,7 +50,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             DrawHeader("Information");
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(InstallationRoutine.id)));
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(InstallationRoutine.targetBlockDataId)));
-            ShowBlock(BlockData);
+            UIHelpers.DrawBlockRow(BlockData, null, OVRTelemetryConstants.BB.Origins.BlockInspector, BlockData, false);
 
             DrawHeader("Setup");
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.packageDependencies)));
@@ -57,6 +59,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(InstallationRoutine.prefab)));
             }
 
+            DrawCustomSection();
+
             {
                 DrawHeader("Variants");
                 DrawInstructions(_variantInstructions);
@@ -64,6 +68,10 @@ namespace Meta.XR.BuildingBlocks.Editor
                 DrawVariants("Parameter Variants", Data.ParameterVariants, serializedObject);
                 DrawVariants("Constants", Data.Constants, serializedObject);
             }
+        }
+
+        protected virtual void DrawCustomSection()
+        {
         }
     }
 }

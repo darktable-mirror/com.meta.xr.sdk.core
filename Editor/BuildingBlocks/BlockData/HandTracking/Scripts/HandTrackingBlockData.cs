@@ -27,7 +27,21 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class HandTrackingBlockData : BlockData
     {
-
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps
+        {
+            get
+            {
+                var cameraBlockData = Utils.GetBlockData(BlockDataIds.CameraRig);
+                return new List<InstallationStepInfo>
+                {
+                    new(cameraBlockData, "Collects the reference of {0}."),
+                    new(Prefab, "Instantiates {0} prefab for left hand."),
+                    new(null, $"Sets left hand's configuration to <b>{nameof(OVRHand)}</b>, <b>{nameof(OVRSkeleton)}</b>, and <b>{nameof(OVRMesh)}</b> components."),
+                    new(Prefab, "Instantiates {0} prefab for right hand."),
+                    new(null, $"Sets right hand's configuration to <b>{nameof(OVRHand)}</b>, <b>{nameof(OVRSkeleton)}</b>, and <b>{nameof(OVRMesh)}</b> components.")
+                };
+            }
+        }
 
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {

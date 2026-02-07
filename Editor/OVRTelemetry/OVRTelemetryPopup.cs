@@ -24,6 +24,10 @@ using UnityEngine;
 [InitializeOnLoad]
 internal static class OVRTelemetryPopup
 {
+
+    private static readonly OVRProjectSetupSettingBool InitSession =
+        new OVRProjectSetupOnlyOncePerSessionSettingBool("InitPopupSession");
+
     static OVRTelemetryPopup()
     {
         EditorApplication.update += Update;
@@ -32,7 +36,7 @@ internal static class OVRTelemetryPopup
     private static void Update()
     {
         EditorApplication.update -= Update;
-        if (ShouldShowPopup())
+        if (InitSession.Value && ShouldShowPopup())
         {
             ShowPopup();
         }

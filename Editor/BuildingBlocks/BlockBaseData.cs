@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Tags;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -49,6 +50,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         [SerializeField] internal string blockName;
         public Overridable<string> BlockName { get; private set; } = new("");
 
+        [TextArea(5, 40)]
         [SerializeField] internal string description;
         public Overridable<string> Description { get; private set; } = new("");
 

@@ -220,7 +220,7 @@ namespace Meta.XR.Editor.UserInterface
 
             public readonly GUIStyle ContentBox = new GUIStyle(EditorStyles.helpBox)
             {
-                margin = new RectOffset(Constants.Margin, Constants.Margin, Constants.Margin, Constants.Margin),
+                margin = new RectOffset(0, Constants.Margin, Constants.Margin, Constants.Margin),
                 padding = new RectOffset(Constants.Margin, Constants.Margin, Constants.Margin, Constants.Margin),
                 stretchHeight = false
 

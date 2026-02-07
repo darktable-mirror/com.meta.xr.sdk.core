@@ -17,10 +17,11 @@ MonoBehaviour:
   anchor: 5
   pivot: 5
   size: {x: 220, y: 24}
-  margin: {x: 5, y: 0}
+  margin: {x: 0, y: 0}
   useBottomRightMargin: 0
   bottomRightMargin: {x: 0, y: 0}
   spacing: 0
   masks: 0
   adaptHeight: 0
   autoFitChildren: 0
+  isOverlayCanvas: 0

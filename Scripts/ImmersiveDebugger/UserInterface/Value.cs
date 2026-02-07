@@ -18,11 +18,7 @@
  * limitations under the License.
  */
 
-
-
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
-using Meta.XR.ImmersiveDebugger.Manager;
-using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
@@ -31,6 +27,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         protected Label _label;
         protected Background _background;
         internal Background Background => _background;
+        internal Label Label => _label;
 
         protected ImageStyle _backgroundStyle;
         internal ImageStyle BackgroundStyle
@@ -46,6 +43,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         internal TextStyle TextStyle
         {
+            get => _label.TextStyle;
             set => _label.TextStyle = value;
         }
 
@@ -54,10 +52,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             base.Setup(owner);
 
             _background = Append<Background>("background");
-            _background.LayoutStyle = Style.Load<LayoutStyle>("Fill");
+            _background.LayoutStyle = Style.Instantiate<LayoutStyle>("Fill");
 
             _label = Append<Label>("label");
-            _label.LayoutStyle = Style.Load<LayoutStyle>("Fill");
+            _label.LayoutStyle = Style.Instantiate<LayoutStyle>("Fill");
         }
 
         protected void RefreshStyle()
@@ -84,11 +82,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             RefreshStyle();
         }
 
-        internal string Content
+        internal virtual string Content
         {
             get => _label.Content;
             set => _label.Content = value;
         }
-
     }
 }

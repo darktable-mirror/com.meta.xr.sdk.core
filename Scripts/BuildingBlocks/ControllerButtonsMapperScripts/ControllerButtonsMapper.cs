@@ -23,6 +23,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
+#if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
+using UnityEngine.InputSystem;
+#endif
+
+// ReSharper disable HeuristicUnreachableCode
+#pragma warning disable CS0162 // Unreachable code detected
+
 namespace Meta.XR.BuildingBlocks
 {
     /// <summary>
@@ -90,14 +97,17 @@ namespace Meta.XR.BuildingBlocks
             /// </summary>
             public ButtonClickMode ButtonMode;
 
+#if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
+            public InputActionReference InputActionReference;
+#endif
+
             /// <summary>
             /// Dispatches when <see cref="Button"/> matches the chosen <see cref="ButtonMode"/>.
             /// </summary>
             public UnityEvent Callback;
         }
 
-        [SerializeField]
-        private List<ButtonClickAction> _buttonClickActions;
+        [SerializeField] private List<ButtonClickAction> _buttonClickActions;
 
         /// <summary>
         /// A list of <see cref="ButtonClickAction"/> to trigger.
@@ -108,20 +118,83 @@ namespace Meta.XR.BuildingBlocks
             set => _buttonClickActions = value;
         }
 
+#if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
+        internal const bool UseNewInputSystem = true;
+
+        private void OnEnable()
+        {
+            foreach (var buttonClickAction in ButtonClickActions)
+            {
+                buttonClickAction.InputActionReference?.action.Enable();
+            }
+        }
+
+        private void OnDisable()
+        {
+            foreach (var buttonClickAction in ButtonClickActions)
+            {
+                buttonClickAction.InputActionReference?.action.Disable();
+            }
+        }
+#else
+        internal const bool UseNewInputSystem = false;
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER || !UNITY_NEW_INPUT_SYSTEM_INSTALLED
+        internal const bool UseLegacyInputSystem = true;
+#else
+        internal const bool UseLegacyInputSystem = false;
+#endif
+
         private void Update()
         {
             foreach (var buttonClickAction in ButtonClickActions)
             {
-                ButtonClickAction.ButtonClickMode buttonMode = buttonClickAction.ButtonMode;
-                OVRInput.Button button = buttonClickAction.Button;
-
-                if ((buttonMode == ButtonClickAction.ButtonClickMode.OnButtonUp && OVRInput.GetUp(button)) ||
-                    (buttonMode == ButtonClickAction.ButtonClickMode.OnButtonDown && OVRInput.GetDown(button)) ||
-                    (buttonMode == ButtonClickAction.ButtonClickMode.OnButton && OVRInput.Get(button)))
+                if (IsActionTriggered(buttonClickAction))
                 {
                     buttonClickAction.Callback?.Invoke();
                 }
             }
+        }
+
+        private static bool IsActionTriggered(ButtonClickAction buttonClickAction) =>
+            IsLegacyInputActionTriggered(buttonClickAction.ButtonMode, buttonClickAction.Button) ||
+            IsNewInputSystemActionTriggered(buttonClickAction);
+
+        private static bool IsLegacyInputActionTriggered(ButtonClickAction.ButtonClickMode buttonMode,
+            OVRInput.Button button)
+        {
+            if (!UseLegacyInputSystem)
+            {
+                return false;
+            }
+
+            if (button == OVRInput.Button.None)
+            {
+                return false;
+            }
+
+            return buttonMode switch
+            {
+                ButtonClickAction.ButtonClickMode.OnButtonUp => OVRInput.GetUp(button),
+                ButtonClickAction.ButtonClickMode.OnButtonDown => OVRInput.GetDown(button),
+                ButtonClickAction.ButtonClickMode.OnButton => OVRInput.Get(button),
+                _ => false
+            };
+        }
+
+        private static bool IsNewInputSystemActionTriggered(ButtonClickAction buttonClickAction)
+        {
+#if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
+            if (!UseNewInputSystem)
+            {
+                return false;
+            }
+
+            return buttonClickAction.InputActionReference != null &&
+                   buttonClickAction.InputActionReference.action.triggered;
+#endif
+            return false;
         }
     }
 }

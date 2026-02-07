@@ -87,8 +87,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (!_registry.TryGetValue(memberInfo, out var member))
             {
                 member = _flex.Append<Member>(memberInfo.Name);
-                member.LayoutStyle = Style.Load<LayoutStyle>("Member");
+                member.LayoutStyle = Style.Instantiate<LayoutStyle>("Member");
                 member.Title = string.IsNullOrEmpty(attribute.DisplayName) ? $"{memberInfo.Name}" : attribute.DisplayName;
+
+                if (!string.IsNullOrEmpty(attribute.Description))
+                {
+                    member.RegisterDescriptor();
+                    member.Description = attribute.Description;
+                }
+
                 member.PillColor = attribute.Color;
                 _registry.Add(memberInfo, member);
             }

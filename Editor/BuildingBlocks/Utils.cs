@@ -57,6 +57,10 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static readonly TextureContent AddIcon = TextureContent.CreateContent("ovr_icon_addblock.png",
             Utils.BuildingBlocksIcons, "Add Block to current scene");
 
+        public static readonly TextureContent CollectionTagBackgroundTexture = TextureContent.CreateContent("ovr_bg_border_radius8.png",
+            BuildingBlocksIcons);
+        public static readonly TextureContent CollectionTagCloseIcon = TextureContent.CreateContent("bb_icon_close.png",
+            BuildingBlocksIcons, "Close");
 
         private const string ExperimentalTagName = "Experimental";
 
@@ -71,7 +75,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Color = ExperimentalColor,
                 Icon = ExperimentalIcon,
                 Order = 100,
-                ShowOverlay = true,
                 ToggleableVisibility = true,
                 CanFilterBy = false,
             }
@@ -91,7 +94,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Color = ExperimentalColor,
                 Icon = PrototypingIcon,
                 Order = 101,
-                ShowOverlay = true,
                 ToggleableVisibility = true,
                 Show = true,
                 CanFilterBy = false,
@@ -110,7 +112,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Color = DebugColor,
                 Icon = DebugIcon,
                 Order = 90,
-                ShowOverlay = true,
                 ToggleableVisibility = true,
                 CanFilterBy = false,
             }
@@ -180,22 +181,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         };
 
-        internal static Tag TrackingTag = new("Tracking")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
-        internal static Tag UITag = new("UI")
-        {
-            Behavior =
-            {
-                CanFilterBy = true
-            }
-        };
-
         internal static Tag VoiceTag = new("Voice")
         {
             Behavior =
@@ -228,7 +213,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Icon = TextureContent.CreateContent("ovr_icon_deprecated.png", Utils.BuildingBlocksIcons,
                     HiddenTagName),
                 Show = true,
-                ShowOverlay = true,
                 ToggleableVisibility = true,
                 DefaultVisibility = false,
                 CanFilterBy = false,
@@ -319,7 +303,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private static void OnStatusMenuClick(Item.Origins origin)
         {
-            BuildingBlocksWindow.ShowWindow(origin);
+            BuildingBlocksWindow.ShowWindow(origin.ToString(), null);
         }
 
         public static BlockData GetBlockData(this BuildingBlock block) => GetBlockData(block.blockId);
@@ -446,6 +430,36 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None)
                 .Count(x => x.BlockId == blockData.Id);
+        }
+
+        public static void BreakBlockConnection(this BuildingBlock buildingBlock)
+        {
+            if (buildingBlock == null)
+            {
+                return;
+            }
+            if (EditorUtility.DisplayDialog(
+                    "Confirm Operation",
+                    "Are you sure you want to break Block connection? \n\nThis action cannot be undone.",
+                    "Yes",
+                    "No"))
+            {
+                var dependents =
+                    buildingBlock
+                        .GetBlockData()
+                        .GetUsingBlockDatasInScene()
+                        .SelectMany(x => x.GetBlocks());
+
+                foreach (var dep in dependents)
+                {
+                    BreakBlockConnection(dep);
+                }
+
+                var go = buildingBlock.gameObject;
+                go.name = go.name.Replace(Utils.BlockPublicTag, string.Empty).TrimStart();
+
+                Object.DestroyImmediate(buildingBlock);
+            }
         }
 
         public static T FindComponentInScene<T>() where T : Component

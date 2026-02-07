@@ -51,9 +51,8 @@ internal static class OVRTelemetryConsent
 
     public static bool SetTelemetryEnabled(bool enabled, OVRTelemetryConstants.OVRManager.ConsentOrigins origin)
     {
-        Result result = OVRPlugin.SetDeveloperTelemetryConsent(enabled ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+        Result result = SetDeveloperTelemetryConsent(enabled ? Bool.True : Bool.False);
         TelemetryEnabled = enabled;
-        OVRPlugin.Qpl.SetConsent(enabled ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
         SendConsentEvent(origin);
         OnTelemetrySet?.Invoke(enabled);
         return result == Result.Success;
@@ -74,7 +73,7 @@ internal static class OVRTelemetryConsent
 
         OVRTelemetry.Start(OVRTelemetryConstants.OVRManager.MarkerId.Consent)
             .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, origin.ToString())
-            .SetResult(TelemetryEnabled ? OVRPlugin.Qpl.ResultType.Success : OVRPlugin.Qpl.ResultType.Fail)
+            .SetResult(TelemetryEnabled ? Qpl.ResultType.Success : Qpl.ResultType.Fail)
             .Send();
 
         HasSentConsentEvent = true;

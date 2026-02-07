@@ -18,11 +18,6 @@
  * limitations under the License.
  */
 
-//#pragma multi_compile would normally need to be set in the shader file, but this hlsl is needed in shadergraph
-//so we do not have that option. Disabling the warning.
-#pragma warning (disable : 3568)
-#pragma multi_compile _ HARD_OCCLUSION SOFT_OCCLUSION
-
 #ifndef SHADERGRAPH_PREVIEW
 #include "../EnvironmentOcclusionURP.hlsl"
 #endif

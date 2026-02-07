@@ -36,8 +36,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// <summary>
         /// The texture used by the image of the icon
         /// </summary>
-        public Texture2D Texture
+        public virtual Texture2D Texture
         {
+            internal get => (UnityEngine.Texture2D)_image.texture;
             set => _image.texture = value;
         }
 

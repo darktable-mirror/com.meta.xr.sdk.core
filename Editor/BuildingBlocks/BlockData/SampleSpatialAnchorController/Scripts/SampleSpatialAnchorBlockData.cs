@@ -30,6 +30,12 @@ namespace Meta.XR.BuildingBlocks
 {
     public class SampleSpatialAnchorBlockData : BlockData
     {
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps => new List<InstallationStepInfo>
+        {
+            new(Prefab, "Instantiates a {0} prefab."),
+            new(null, $"Names the instantiated prefab to <b>{Utils.BlockPublicTag} {BlockName}</b>."),
+            new(Utils.GetBlockData(BlockDataIds.ControllerButtonsMapper), "Finds the reference of {0} block and binds button configurations for spawning, loading, and erasing a spatial anchor.")
+        };
 
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {

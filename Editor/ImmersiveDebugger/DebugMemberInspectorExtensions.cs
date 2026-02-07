@@ -41,6 +41,9 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         // Draw tweak
         public static void DrawTweak(this InspectedMember member)
         {
+            if (member.MemberInfo.IsBaseTypeEqual(typeof(Enum)))
+                return;
+
             var attribute = member.attribute;
             if (TweakUtils.IsMemberTypeValidForTweak(member.MemberInfo))
             {

@@ -43,26 +43,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private static void BreakBlockConnection(BuildingBlock buildingBlock)
         {
-            if (buildingBlock == null)
-            {
-                return;
-            }
-
-            var dependents =
-                buildingBlock
-                    .GetBlockData()
-                    .GetUsingBlockDatasInScene()
-                    .SelectMany(x => x.GetBlocks());
-
-            foreach (var dep in dependents)
-            {
-                BreakBlockConnection(dep);
-            }
-
-            var go = buildingBlock.gameObject;
-            go.name = go.name.Replace(Utils.BlockPublicTag, string.Empty).TrimStart();
-
-            DestroyImmediate(buildingBlock);
+            Utils.BreakBlockConnection(buildingBlock);
         }
 
         private static BuildingBlock GetSelectedBuildingBlock()

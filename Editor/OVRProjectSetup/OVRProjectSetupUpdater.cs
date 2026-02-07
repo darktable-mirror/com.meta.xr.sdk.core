@@ -30,7 +30,7 @@ internal static class OVRProjectSetupUpdater
     internal static OVRProjectSetupSettingBool Enabled;
 
     public static readonly OVRProjectSetupSettingBool ShowLogsOnlyOnce =
-        new OVRProjectSetupOnlyOnceSettingBool("ShowLogsOnlyOnce");
+        new OVRProjectSetupOnlyOncePerSessionSettingBool("ShowLogsOnlyOnce");
 
     private static readonly double StatusUpdateWatchdogTimer = 5.0;
     private static double _lastStatusUpdate;

@@ -85,11 +85,11 @@ internal abstract class OVRProjectSetupSettingFloat : OVRProjectSetupSettingItem
     }
 }
 
-internal class OVRProjectSetupOnlyOnceSettingBool : OVRProjectSetupSettingBool
+internal class OVRProjectSetupOnlyOncePerSessionSettingBool : OVRProjectSetupSettingBool
 {
     private static readonly HashSet<string> OnlyOnceSettings = new HashSet<string>();
 
-    public OVRProjectSetupOnlyOnceSettingBool(string uid) : base(uid, true)
+    public OVRProjectSetupOnlyOncePerSessionSettingBool(string uid) : base(uid, true)
     {
         Init();
     }

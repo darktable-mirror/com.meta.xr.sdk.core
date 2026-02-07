@@ -446,6 +446,8 @@ partial class OVRSpatialAnchor
     {
         if (anchors == null)
             throw new ArgumentNullException(nameof(anchors));
+        if (users == null)
+            throw new ArgumentNullException(nameof(users));
 
         using var spaces = ToNativeArray(anchors);
 
@@ -555,17 +557,17 @@ partial class OVRSpatialAnchor
         public OVRSpace.StorageLocation Storage;
     }
 
-#pragma warning disable CS0618 // Type or member is obsolete
+    [Obsolete("See SaveAnchorAsync overload without SaveOptions")]
     private readonly SaveOptions _defaultSaveOptions = new()
     {
         Storage = OVRSpace.StorageLocation.Local,
     };
 
+    [Obsolete("See EraseAnchorAsync overload without EraseOptions")]
     private readonly EraseOptions _defaultEraseOptions = new()
     {
         Storage = OVRSpace.StorageLocation.Local,
     };
-#pragma warning restore
 
     /// <summary>
     /// (Obsolete) Erases the <see cref="OVRSpatialAnchor"/> from specified storage.
@@ -826,7 +828,7 @@ partial class OVRSpatialAnchor
         /// <summary>
         /// The maximum number of uuids that may be present in the <see cref="Uuids"/> collection.
         /// </summary>
-        public const int MaxSupported = OVRSpaceQuery.Options.MaxUuidCount;
+        public const int MaxSupported = OVRPlugin.SpaceFilterInfoIdsMaxSize;
 
         /// <summary>
         /// The storage location from which to query spatial anchors.
@@ -874,7 +876,7 @@ partial class OVRSpatialAnchor
             get => _uuids;
             set
             {
-                if (value?.Count > OVRSpaceQuery.Options.MaxUuidCount)
+                if (value?.Count > MaxSupported)
                     throw new ArgumentException(
                         $"There must not be more than {MaxSupported} UUIDs (new value contains {value.Count} UUIDs).",
                         nameof(value));
@@ -887,10 +889,8 @@ partial class OVRSpatialAnchor
 
         internal OVRSpaceQuery.Options ToQueryOptions() => new OVRSpaceQuery.Options
         {
-#pragma warning disable CS0618 // Type or member is obsolete
             Location = StorageLocation,
-            MaxResults = MaxAnchorCount == 0 ? Uuids?.Count ?? 0 : MaxAnchorCount,
-#pragma warning restore CS0618
+            MaxResults = MaxSupported,
             Timeout = Timeout,
             UuidFilter = Uuids,
             QueryType = OVRPlugin.SpaceQueryType.Action,
@@ -903,16 +903,15 @@ partial class OVRSpatialAnchor
         Development.LogRequestResult(requestId, queryResult,
             $"{nameof(OVRPlugin.QuerySpaces)}: Query succeeded.",
             $"{nameof(OVRPlugin.QuerySpaces)}: Query failed.");
-        var hasPendingTask = OVRTask.GetExisting<UnboundAnchor[]>(requestId).IsPending;
 
-        if (!hasPendingTask)
+        if (!OVRTask.TryGetPendingTask<UnboundAnchor[]>(requestId, out var task))
         {
             return;
         }
 
         if (!queryResult)
         {
-            OVRTask.GetExisting<UnboundAnchor[]>(requestId).SetResult(null);
+            task.SetResult(null);
             return;
         }
 
@@ -925,7 +924,7 @@ partial class OVRSpatialAnchor
         {
             Development.LogError(
                 $"{nameof(OVRPlugin.RetrieveSpaceQueryResults)}({requestId}): Failed to retrieve results.");
-            OVRTask.GetExisting<UnboundAnchor[]>(requestId).SetResult(null);
+            task.SetResult(null);
             return;
         }
 
@@ -948,7 +947,7 @@ partial class OVRSpatialAnchor
             Development.Log(
                 $"Invoking callback with {unboundAnchors.Length} unbound anchor{(unboundAnchors.Length == 1 ? "" : "s")}.");
 
-            OVRTask.GetExisting<UnboundAnchor[]>(requestId).SetResult(unboundAnchors);
+            task.SetResult(unboundAnchors);
         }
     }
 

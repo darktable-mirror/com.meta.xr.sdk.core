@@ -166,6 +166,7 @@ namespace Meta.XR.BuildingBlocks
                 var spatialAnchorGo = isPoseValid
                     ? Instantiate(prefab, pose.position, pose.rotation)
                     : Instantiate(prefab);
+
                 var anchor = spatialAnchorGo.AddComponent<OVRSpatialAnchor>();
                 unboundAnchor.BindTo(anchor);
                 loadedAnchors.Add(anchor);

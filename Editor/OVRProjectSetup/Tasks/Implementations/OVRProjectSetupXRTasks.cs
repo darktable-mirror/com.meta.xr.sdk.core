@@ -47,7 +47,7 @@ internal static class OVRProjectSetupXRTasks
             level: OVRProjectSetup.TaskLevel.Required,
             group: XRTaskGroup,
             isDone: _ => PackageList.IsPackageInstalled(UnityXRPackage),
-            message: $"OpenXR Plugin ({UnityXRPackage}) package must be installed through the {UPMTitle}. Please note that not all Meta XR SDK features are currently supported when using the OpenXR plugin."
+            message: $"It is recommended to use the OpenXR Plugin ({UnityXRPackage}) package installed through the {UPMTitle}. Please note that not all Meta XR SDK features are currently supported when using the OpenXR plugin."
         );
 #else
         OVRProjectSetup.AddTask(
@@ -64,7 +64,7 @@ internal static class OVRProjectSetupXRTasks
             level: OVRProjectSetup.TaskLevel.Optional,
             group: XRTaskGroup,
             isDone: _ => !PackageList.IsPackageInstalled(UnityXRPackage),
-            message: $"Some features in the Meta XR SDK are not yet supported when using the OpenXR plugin ({UnityXRPackage}). Switch to the Oculus XR plugin ({OculusXRPackageName}) to enable support for these features."
+            message: $"Please note that some features in the Meta XR SDK are not yet supported when using the OpenXR plugin ({UnityXRPackage})."
         );
 
         OVRProjectSetup.AddTask(

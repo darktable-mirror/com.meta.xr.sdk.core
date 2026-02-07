@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: INetworkManager
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: 1d8db162-54f6-43df-b4ef-b499df1f6769
   version: 1
   blockName: Network Manager
@@ -27,4 +27,6 @@ MonoBehaviour:
   dependencies: []
   packageDependencies: []
   isSingleton: 1
-  usageInstructions:
+  usageInstructions: 
+  featureDocumentationName: Multiplayer Building Blocks Setup and Intro
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/bb-multiplayer-blocks

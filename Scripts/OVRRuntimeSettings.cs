@@ -92,6 +92,16 @@ public class OVRRuntimeSettings : OVRRuntimeAssetsBase
         set => requestsAudioFaceTracking = value;
     }
 
+    [SerializeField] private bool enableFaceTrackingVisemesOutput = false;
+    public bool EnableFaceTrackingVisemesOutput
+    {
+        get => enableFaceTrackingVisemesOutput;
+        set
+        {
+            enableFaceTrackingVisemesOutput = value;
+            OVRPlugin.SetFaceTrackingVisemesEnabled(enableFaceTrackingVisemesOutput);
+        }
+    }
 
     [SerializeField] private string telemetryProjectGuid;
     internal string TelemetryProjectGuid

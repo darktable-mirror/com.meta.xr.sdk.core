@@ -26,6 +26,19 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class RoomMeshBlockData : BlockData
     {
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps
+        {
+            get
+            {
+                var installationSteps = new List<InstallationStepInfo>
+                {
+                    new(Utils.GetBlockData(BlockDataIds.CameraRig), "Collects the reference of <b>OVRManager</b> from {0}."),
+                    new(null, $"Enables requesting of Scene data access permission on application startup from <b>{nameof(OVRManager)}</b> component.")
+                };
+                installationSteps.AddRange(base.InstallationSteps);
+                return installationSteps;
+            }
+        }
 
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {

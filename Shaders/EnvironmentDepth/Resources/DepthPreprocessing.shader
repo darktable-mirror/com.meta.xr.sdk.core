@@ -51,13 +51,12 @@ Shader "Meta/EnvironmentDepth/Preprocessing"
             };
 
             float4 CalculateMinMaxDepth(float2 uv, float slice) {
-              const int NUM_SAMPLES = 5;
+              const int NUM_SAMPLES = 4;
               static const float2 offsets[NUM_SAMPLES] = {
-                float2(2.0f, 0.0f),
-                float2(0.0f, 2.0f),
-                float2(-2.0f, 0.0f),
-                float2(0.0f, 0.0f),
-                float2(0.0f, -2.0f)
+                float2(-1.0f, 1.0f),
+                float2(1.0f, 1.0f),
+                float2(-1.0f, -1.0f),
+                float2(1.0f, -1.0f)
               };
 
               float4 depths[NUM_SAMPLES];

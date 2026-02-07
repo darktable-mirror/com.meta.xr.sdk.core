@@ -127,8 +127,6 @@ public class OVRGradleGeneration
         bool useOpenXR = OVRPluginInfo.IsOVRPluginOpenXRActivated();
 
 #if USING_XR_SDK_OPENXR
-        UnityEngine.Debug.LogWarning("The installation of Unity OpenXR Plugin is detected, which should NOT be used in production when developing Meta Quest apps for production. Please uninstall the package, and install the Oculus XR Plugin from the Package Manager.");
-
         // OpenXR Plugin will remove all native plugins if they are not under the Feature folder. Include OVRPlugin to the build if MetaXRFeature is enabled.
         var metaXRFeature =
             FeatureHelpers.GetFeatureWithIdForBuildTarget(report.summary.platformGroup, Meta.XR.MetaXRFeature.featureId);

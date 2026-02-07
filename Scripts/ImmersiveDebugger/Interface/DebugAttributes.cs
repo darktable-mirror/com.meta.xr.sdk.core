@@ -37,7 +37,7 @@ namespace Meta.XR.ImmersiveDebugger
     /// and provide a button to call function without parameter.
     /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Enum)]
     [Serializable]
     public class DebugMember : Attribute
     {
@@ -55,7 +55,7 @@ namespace Meta.XR.ImmersiveDebugger
         /// </summary>
         public DebugGizmoType GizmoType = DebugGizmoType.None;
         /// <summary>
-        /// Whether or not the gizmo will be turned on by default at startup.
+        /// Whether the gizmo will be turned on by default at startup.
         /// You can always turn the gizmo off by clicking the "eye" button next to the row of the debug option.
         /// </summary>
         public bool ShowGizmoByDefault = false;
@@ -66,9 +66,9 @@ namespace Meta.XR.ImmersiveDebugger
         public Color Color = Color.gray;
         /// <summary>
         /// Specify whether this field/property is tweakable, will show control UI in headset panel (inspector).
-        /// For now it only supports two types: 1. boolean with checkboxes shown in headset panel, and
+        /// For now, it only supports two types: 1. boolean with checkboxes shown in headset panel, and
         /// 2. float/int which can be used together with <see cref="Min"/>, <see cref="Max"/> param with slider shown in headset panel.
-        /// By default to true and can be turned off if no need.
+        /// By default, to true and can be turned off if no need.
         /// </summary>
         public bool Tweakable = true;
         /// <summary>
@@ -84,6 +84,11 @@ namespace Meta.XR.ImmersiveDebugger
         /// Optional category for a specific tab in Inspector Panel
         /// </summary>
         public string Category;
+
+        /// <summary>
+        /// Description for the attributed field to be used in the Inspector Panel.
+        /// </summary>
+        public string Description;
 
         /// <summary>
         /// Optional name override to be used in the Inspector Panel

@@ -41,6 +41,8 @@ namespace Meta.XR.BuildingBlocks.Editor
         private readonly List<string> _missingDependencies = new();
         public IReadOnlyList<string> MissingDependencies => _missingDependencies;
         public bool HasMissingDependencies => _missingDependencies.Count > 0;
+        private readonly List<string> _dependencies = new();
+        public IReadOnlyList<string> Dependencies => _dependencies;
 
         private readonly Dictionary<BlockData, IReadOnlyList<InstallationRoutine>> _possibleRoutines = new();
         public IReadOnlyDictionary<BlockData, IReadOnlyList<InstallationRoutine>> PossibleRoutines => _possibleRoutines;
@@ -100,16 +102,30 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (BlockData is not InterfaceBlockData interfaceBlockData) return;
             UpdatePossibleRoutines();
+            UpdateDependencies();
             UpdateMissingDependencies();
+        }
+
+        private void UpdateDependencies()
+        {
+            _dependencies.Clear();
+            if (BlockData is InterfaceBlockData interfaceBlockData)
+            {
+                _dependencies.AddRange(InterfaceBlockData.ComputePackageDependencies(interfaceBlockData, this));
+            }
         }
 
         private void UpdateMissingDependencies()
         {
             _missingDependencies.Clear();
 
-            if (BlockData is InterfaceBlockData interfaceBlockData)
+            if (BlockData is InterfaceBlockData)
             {
-                _missingDependencies.AddRange(interfaceBlockData.ComputeMissingPackageDependencies(this));
+                if (Dependencies.Count == 0)
+                {
+                    UpdateDependencies();
+                }
+                _missingDependencies.AddRange(Dependencies.Where(packageId => !Utils.IsPackageInstalled(packageId)));
             }
         }
 

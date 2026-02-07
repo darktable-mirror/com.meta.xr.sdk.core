@@ -84,7 +84,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.description)));
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.thumbnail)));
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(BlockData.tags)));
-            ShowBlock(Data);
+            UIHelpers.DrawBlockRow(Data, null, OVRTelemetryConstants.BB.Origins.BlockInspector, Data, false);
 
             DrawHeader("Setup");
             _dependencyList.DoLayoutList();

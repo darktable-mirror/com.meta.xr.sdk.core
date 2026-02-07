@@ -65,14 +65,20 @@ public class OVRHeadsetEmulator : MonoBehaviour
     /// The key to activate the headset movement emulation.
     /// </summary>
     public KeyCode[] activateKeys = new KeyCode[] { KeyCode.LeftControl, KeyCode.RightControl, KeyCode.F1 };
+#if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
+    public string[] activateKeyBindings = new string[] {"<Keyboard>/leftCtrl", "<Keyboard>/rightCtrl", "<Keyboard>/f1"};
+#endif
 
     /// <summary>
     /// The key to adjust the pitch of the headset movement emulation.
     /// </summary>
     public KeyCode[] pitchKeys = new KeyCode[] { KeyCode.LeftAlt, KeyCode.RightAlt, KeyCode.F2 };
+#if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
+    public string[] pitchKeyBindings = new string[] {"<Keyboard>/leftAlt", "<Keyboard>/rightAlt", "<Keyboard>/f2"};
+#endif
 
 #if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
-    private InputAction[] activeKeyActions;
+    private InputAction[] activateKeyActions;
     private InputAction[] pitchKeyActions;
     private InputAction middleMouseButtonAction;
     private InputAction mouseScrollAction;
@@ -102,15 +108,15 @@ public class OVRHeadsetEmulator : MonoBehaviour
     void Start()
     {
 #if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
-        activeKeyActions = new InputAction[activateKeys.Length];
-        for (int i = 0; i < activateKeys.Length; i++) {
-            activeKeyActions[i] = new InputAction(binding: "<Keyboard>/" + activateKeys[i].ToString());
-            activeKeyActions[i].Enable();
+        activateKeyActions = new InputAction[activateKeyBindings.Length];
+        for (int i = 0; i < activateKeyBindings.Length; i++) {
+            activateKeyActions[i] = new InputAction(binding: activateKeyBindings[i]);
+            activateKeyActions[i].Enable();
         }
 
-        pitchKeyActions = new InputAction[pitchKeys.Length];
-        for (int i = 0; i < pitchKeys.Length; i++) {
-            pitchKeyActions[i] = new InputAction(binding: "<Keyboard>/" + pitchKeys[i].ToString());
+        pitchKeyActions = new InputAction[pitchKeyBindings.Length];
+        for (int i = 0; i < pitchKeyBindings.Length; i++) {
+            pitchKeyActions[i] = new InputAction(binding: pitchKeyBindings[i]);
             pitchKeyActions[i].Enable();
         }
 
@@ -251,7 +257,7 @@ public class OVRHeadsetEmulator : MonoBehaviour
         }
 #else
 #if UNITY_NEW_INPUT_SYSTEM_INSTALLED
-        foreach (var action in activeKeyActions)
+        foreach (var action in activateKeyActions)
         {
             if (action.phase == InputActionPhase.Started)
             {
@@ -292,9 +298,9 @@ public class OVRHeadsetEmulator : MonoBehaviour
     void OnDestroy()
     {
 #if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
-        if (activeKeyActions != null)
+        if (activateKeyActions != null)
         {
-            foreach (var action in activeKeyActions)
+            foreach (var action in activateKeyActions)
             {
                 action.Disable();
             }

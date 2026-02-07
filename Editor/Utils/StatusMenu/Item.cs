@@ -40,6 +40,7 @@ namespace Meta.XR.Editor.StatusMenu
             Console,
             Component,
             Toolbar,
+            Self
         }
 
         public struct HeaderIcon

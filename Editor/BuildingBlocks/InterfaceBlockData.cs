@@ -35,6 +35,21 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         protected override bool UsesPrefab => false;
 
+        internal new virtual IReadOnlyCollection<InstallationStepInfo> InstallationSteps(VariantsSelection selection)
+        {
+            var installationSteps = new List<InstallationStepInfo>();
+            var routines = GetAvailableInstallationRoutines().ToList();
+            foreach (var routine in routines)
+            {
+                if (routine.Fits(selection))
+                {
+                    installationSteps.AddRange(routine.GetInstallationSteps(selection));
+                    break;
+                }
+            }
+            return installationSteps;
+        }
+
         private void Awake()
         {
             _selectedRoutine = null;

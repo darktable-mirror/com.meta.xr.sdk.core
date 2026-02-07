@@ -54,6 +54,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public Watch GetWatch();
         public void RegisterWatch(Watch watch);
+        public void RegisterEnum(TweakEnum tweak);
+        public void RegisterTexture(WatchTexture watch);
     }
 
 }

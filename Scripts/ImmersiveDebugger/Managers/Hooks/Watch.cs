@@ -61,6 +61,8 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             {
                 valuesContainer[0] = (value.Length > MaxLetterCount) ? $"{value.Substring(0, MaxLetterCount)}..." : value;
             }, 1);
+
+            RegisterTexture(typeof(Texture2D));
         }
 
         public static Watch Create(MemberInfo memberInfo, object instance, DebugMember attribute)
@@ -96,6 +98,13 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         {
             var genericType = typeof(Watch<>);
             var createdType = genericType.MakeGenericType(type);
+            Types.Add(type, createdType);
+            return createdType;
+        }
+
+        private static Type RegisterTexture(Type type)
+        {
+            var createdType = typeof(WatchTexture);
             Types.Add(type, createdType);
             return createdType;
         }
@@ -174,6 +183,20 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         {
             _getter = () => (T)memberInfo.GetValue(instance);
         }
+    }
+
+    internal class WatchTexture : Watch
+    {
+        public WatchTexture(MemberInfo memberInfo, object instance, DebugMember attribute) : base(memberInfo, instance, attribute)
+        {
+            _getter = () => (Texture2D)memberInfo.GetValue(instance);
+        }
+
+        private readonly Func<Texture2D> _getter;
+        public Texture2D Texture => _getter.Invoke();
+        public override string Value => string.Empty;
+        public override string[] Values => Array.Empty<string>();
+        public override int NumberOfValues => 0;
     }
 }
 

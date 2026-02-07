@@ -64,6 +64,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// </summary>
         public string Label
         {
+            get => _label.Content;
             set => _label.Content = value;
         }
 
@@ -89,12 +90,19 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             UpdateBackground();
         }
 
+        protected override void OnTransparencyChanged()
+        {
+            base.OnTransparencyChanged();
+            _backgroundStyle.colorHover.a = Transparent ? 0.6f : 1f;
+            _background.Color = Transparent ? _backgroundStyle.colorOff : _backgroundStyle.color;
+        }
+
         protected virtual void UpdateBackground()
         {
             if (_backgroundStyle != null && _backgroundStyle.enabled)
             {
                 _background.Show();
-                _background.Color = Hover ? _backgroundStyle.colorHover : _backgroundStyle.color;
+                _background.Color = Hover ? _backgroundStyle.colorHover : (Transparent ? _backgroundStyle.colorOff : _backgroundStyle.color);
             }
             else
             {

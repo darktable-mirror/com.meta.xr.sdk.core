@@ -66,5 +66,15 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
             throw new Exception("Photon Fusion package not installed, cannot use this block");
 #endif // FUSION_WEAVER && FUSION2
         }
+
+        internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
+        {
+            var installationSteps = new List<InstallationStepInfo>();
+            installationSteps.AddRange(base.GetInstallationSteps(selection));
+            var networkManagerBlockData = Utils.GetBlockData(BlockDataIds.INetworkManager);
+            installationSteps.Add(new InstallationStepInfo(networkManagerBlockData, "Add <b>FusionVoiceClient</b> component to the {0} game object"));
+            installationSteps.Add(new InstallationStepInfo(null, $"Setup the <b>VoiceSetup.centerEyeAnchor</b> of the installed prefab to <b>OVRCameraRig.centerEyeAnchor</b>"));
+            return installationSteps;
+        }
     }
 }

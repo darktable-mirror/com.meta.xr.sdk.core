@@ -143,9 +143,8 @@ public sealed class OVRSceneAnchor : MonoBehaviour
                     $"[{uuid}] Skiping transform set, as the entity is not locatable.",
                     gameObject);
             }
-            else if (TryUpdateTransform(false))
+            else if (TryUpdateTransform(useCache: false))
             {
-                IsTracked = true;
                 OVRSceneManager.Development.Log(nameof(OVRSceneAnchor),
                     $"[{uuid}] Initial transform set.", gameObject);
             }
@@ -233,9 +232,10 @@ public sealed class OVRSceneAnchor : MonoBehaviour
 
         if (!useCache || _pose == null)
         {
-            var tryLocateSpace = OVRPlugin.TryLocateSpace(Space, OVRPlugin.GetTrackingOriginType(), out var pose,
-                out var locationFlags);
-            if (!tryLocateSpace || !locationFlags.IsOrientationValid() || !locationFlags.IsPositionValid())
+            if (!(IsTracked = OVRPlugin.TryLocateSpace(Space, OVRPlugin.GetTrackingOriginType(), out var pose,
+                                  out var locationFlags) &&
+                              locationFlags.IsOrientationValid() &&
+                              locationFlags.IsPositionValid()))
             {
                 return false;
             }

@@ -40,7 +40,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public bool Refresh()
         {
-            if (InputModule) return true;
+            if (InputModule != null && InputModule.isActiveAndEnabled) return true;
 
             SearchForEventSystem();
 

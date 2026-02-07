@@ -145,8 +145,19 @@ public static partial class OVRTask
     }
 
     /// \cond
+    [Obsolete("This method does not ensure the task exists; it just returns an OVRTask with the given id. Use TryGetPending instead.", error: true)]
     internal static OVRTask<TResult> GetExisting<TResult>(Guid id) => Get<TResult>(id);
+
+    internal static bool TryGetPendingTask<TResult>(Guid id, out OVRTask<TResult> task)
+    {
+        task = Get<TResult>(id);
+        return task.IsPending;
+    }
+
+    [Obsolete("This method does not ensure the task exists; it just returns an OVRTask with the given id. Use TryGetPending instead.", error: true)]
     internal static OVRTask<TResult> GetExisting<TResult>(ulong id) => Get<TResult>(GetId(id));
+
+    internal static bool TryGetPendingTask<TResult>(ulong id, out OVRTask<TResult> task) => TryGetPendingTask(GetId(id), out task);
     /// \endcond
 
     /// <summary>
@@ -186,7 +197,7 @@ public static partial class OVRTask
     /// result.</exception>
     public static void SetResult<TResult>(Guid id, TResult result)
     {
-        var task = GetExisting<TResult>(id);
+        var task = Get<TResult>(id);
         if (task.HasResult)
             throw new InvalidOperationException($"Task {id} already has a result.");
 
@@ -195,7 +206,7 @@ public static partial class OVRTask
 
     /// \cond
     internal static void SetResult<TResult>(ulong id, TResult result) =>
-        GetExisting<TResult>(id).SetResult(result);
+        Get<TResult>(GetId(id)).SetResult(result);
 
     private static OVRTask<TResult> Get<TResult>(Guid id)
     {

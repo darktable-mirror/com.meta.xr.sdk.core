@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -27,7 +28,7 @@ namespace Meta.XR.Editor.UserInterface
 {
     internal static class Utils
     {
-        private static readonly HashSet<object> Foldouts = new HashSet<object>();
+        private static readonly Dictionary<object, bool> Foldouts = new Dictionary<object, bool>();
 
         public static bool ShouldRenderEditorUI()
             => !Application.isBatchMode && IsMainEditorProcess();
@@ -163,28 +164,24 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
-        public static bool Foldout(object handle, string label, float offset = 0.0f, GUIStyle style = null)
+        public static bool Foldout(object handle, string label, float offset = 0.0f, GUIStyle style = null, bool openByDefault = false)
         {
             var rect = GUILayoutUtility.GetRect(256, EditorGUIUtility.singleLineHeight + 4);
 
             rect.x += offset;
 
-            var foldout = Foldouts.Contains(handle);
-            var newFoldout = EditorGUI.Foldout(rect, foldout, label, true, style ?? Styles.GUIStyles.FoldoutLeft);
-            if (foldout != newFoldout)
+            var isNew = !Foldouts.ContainsKey(handle);
+            var oldFoldoutState = false;
+            var newFoldoutState = false;
+            var contains = Foldouts.TryGetValue(handle, out oldFoldoutState);
+            newFoldoutState = EditorGUI.Foldout(rect, contains ? oldFoldoutState : openByDefault, label, true, style ?? Styles.GUIStyles.FoldoutLeft);
+
+            if (!contains || newFoldoutState != oldFoldoutState)
             {
-                foldout = newFoldout;
-                if (newFoldout)
-                {
-                    Foldouts.Add(handle);
-                }
-                else
-                {
-                    Foldouts.Remove(handle);
-                }
+                Foldouts[handle] = newFoldoutState;
             }
 
-            return newFoldout;
+            return newFoldoutState;
         }
     }
 }

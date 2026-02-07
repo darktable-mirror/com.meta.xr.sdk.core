@@ -107,6 +107,14 @@ namespace Meta.XR.Editor.Tags
                 Hover = DarkGraySemiTransparent,
                 Active = CharcoalGraySemiTransparent
             };
+
+            public readonly GUIStyle FilterByTagGroup = new GUIStyle()
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                stretchWidth = false,
+                stretchHeight = false
+            };
         }
 
         private static GUIStylesContainer _guiStyles;

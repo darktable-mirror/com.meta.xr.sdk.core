@@ -26,6 +26,18 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class PassthroughWindowBlockData : BlockData
     {
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps
+        {
+            get
+            {
+                var installationSteps = new List<InstallationStepInfo>
+                {
+                    new(null, $"Detects whether any Underlay Passthrough component is present in the scene. If not, creates a GameObject and add a <b>{nameof(OVRPassthroughLayer)}</b> component to it.")
+                };
+                installationSteps.AddRange(base.InstallationSteps);
+                return installationSteps;
+            }
+        }
 
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {

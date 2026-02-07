@@ -21,6 +21,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Oculus.VR.Editor.OVRProjectSetup;
 using UnityEditor;
 using UnityEngine;
 
@@ -121,7 +122,7 @@ internal class OVRConfigurationTaskRegistry
     {
         return Tasks.Where
         (
-            task => (task.Platform == BuildTargetGroup.Unknown || task.Platform == buildTargetGroup)
+            task => (task.Platform == BuildTargetGroup.Unknown || task.Platform == buildTargetGroup) && !UPSTContentManager.IsTaskDisabled(task)
         );
     }
 }

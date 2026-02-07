@@ -74,5 +74,5 @@ MonoBehaviour:
     components inspector UI for easy development/debugging.
 
 '
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  featureDocumentationName: Multiplayer Building Blocks Setup Guide
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/bb-multiplayer-blocks

@@ -7,7 +7,14 @@
             "m_Id": "2c289e4984d940769d606e0128dc05ef"
         }
     ],
-    "m_Keywords": [],
+    "m_Keywords": [
+        {
+            "m_Id": "6853d30632014a958e468876c86d87fd"
+        },
+        {
+            "m_Id": "00c3c49399f94d398474a6571d999442"
+        }
+    ],
     "m_Dropdowns": [],
     "m_CategoryData": [
         {
@@ -103,6 +110,31 @@
     },
     "m_SubDatas": [],
     "m_ActiveTargets": []
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.ShaderKeyword",
+    "m_ObjectId": "00c3c49399f94d398474a6571d999442",
+    "m_Guid": {
+        "m_GuidSerialized": "1fca094a-33d4-4356-abc5-e238fc2f8839"
+    },
+    "m_Name": "HARD_OCCLUSION",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "HARD_OCCLUSION",
+    "m_DefaultReferenceName": "_HARD_OCCLUSION",
+    "m_OverrideReferenceName": "HARD_OCCLUSION",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_KeywordType": 0,
+    "m_KeywordDefinition": 1,
+    "m_KeywordScope": 1,
+    "m_KeywordStages": 63,
+    "m_Entries": [],
+    "m_Value": 0,
+    "m_IsEditable": true
 }
 
 {
@@ -237,6 +269,31 @@
 }
 
 {
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.ShaderKeyword",
+    "m_ObjectId": "6853d30632014a958e468876c86d87fd",
+    "m_Guid": {
+        "m_GuidSerialized": "a2fe3586-0178-4a1b-861e-30601912cc51"
+    },
+    "m_Name": "SOFT_OCCLUSION",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "SOFT_OCCLUSION",
+    "m_DefaultReferenceName": "_SOFT_OCCLUSION",
+    "m_OverrideReferenceName": "SOFT_OCCLUSION",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_KeywordType": 0,
+    "m_KeywordDefinition": 1,
+    "m_KeywordScope": 1,
+    "m_KeywordStages": 63,
+    "m_Entries": [],
+    "m_Value": 0,
+    "m_IsEditable": true
+}
+
+{
     "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.CategoryData",
     "m_ObjectId": "749a27164edd49eabb7158960837f554",
@@ -244,6 +301,12 @@
     "m_ChildObjectList": [
         {
             "m_Id": "2c289e4984d940769d606e0128dc05ef"
+        },
+        {
+            "m_Id": "6853d30632014a958e468876c86d87fd"
+        },
+        {
+            "m_Id": "00c3c49399f94d398474a6571d999442"
         }
     ]
 }

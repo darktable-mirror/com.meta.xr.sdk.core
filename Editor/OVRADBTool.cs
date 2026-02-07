@@ -157,7 +157,7 @@ public class OVRADBTool
     private StringBuilder errorStringBuilder = null;
 
     public int RunCommand(string[] arguments, WaitingProcessToExitCallback waitingProcessToExitCallback,
-        out string outputString, out string errorString)
+        out string outputString, out string errorString, string stdIn = null)
     {
         int exitCode = -1;
 
@@ -175,6 +175,10 @@ public class OVRADBTool
         startInfo.WorkingDirectory = androidSdkRoot;
         startInfo.CreateNoWindow = true;
         startInfo.UseShellExecute = false;
+        if (stdIn != null)
+        {
+            startInfo.RedirectStandardInput = true;
+        }
         startInfo.WindowStyle = ProcessWindowStyle.Hidden;
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
@@ -188,6 +192,13 @@ public class OVRADBTool
 
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
+
+        if (stdIn != null)
+        {
+            StreamWriter StreamIn = process.StandardInput;
+            StreamIn.WriteLine(stdIn);
+            StreamIn.Close();
+        }
 
         try
         {

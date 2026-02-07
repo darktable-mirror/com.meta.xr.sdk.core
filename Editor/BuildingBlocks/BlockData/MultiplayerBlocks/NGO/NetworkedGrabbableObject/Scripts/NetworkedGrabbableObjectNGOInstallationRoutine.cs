@@ -64,5 +64,18 @@ namespace Meta.XR.MultiplayerBlocks.NGO.Editor
             throw new InvalidOperationException("It's required to install the Unity Netcode package to use this component");
 #endif // UNITY_NGO_MODULE_DEFINED
         }
+        internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
+        {
+            var installationSteps = new List<InstallationStepInfo>();
+            installationSteps.AddRange(base.GetInstallationSteps(selection));
+            installationSteps.Add(new InstallationStepInfo(null, $"Add <b>NetworkObject</b> component to the object"));
+            installationSteps.Add(new InstallationStepInfo(null, $"Add <b>ClientNetworkTransform</b> component to the object"));
+            installationSteps.Add(new InstallationStepInfo(null, $"Add <b>TransferOwnershipNGO</b> component to the object"));
+            if (_useGravity)
+            {
+                installationSteps.Add(new InstallationStepInfo(null, $"Add <b>NetworkRigidbody</b> component to the object"));
+            }
+            return installationSteps;
+        }
     }
 }

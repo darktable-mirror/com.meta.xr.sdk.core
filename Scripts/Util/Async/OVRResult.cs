@@ -190,6 +190,27 @@ public struct OVRResult<TStatus> : IEquatable<OVRResult<TStatus>>
     /// </remarks>
     /// <returns>Returns a string representation of this <see cref="OVRResult"/>&lt;TStatus&gt;</returns>
     public override string ToString() => _initialized ? _status.ToString() : "(invalid result)";
+
+    /// <summary>
+    /// Implicitly casts an <see cref="OVRResult"/> to a `bool`.
+    /// </summary>
+    /// <remarks>
+    /// If the <see cref="OVRResult"/> represents success, then it will convert to `true`. Otherwise, it will convert to `false`.
+    /// <example>
+    /// For example, this allows you to write code like:
+    /// <code><![CDATA[
+    /// var result = DoOperation();
+    /// if (result) {
+    ///   Debug.Log("Operation succeeded.");
+    /// } else {
+    ///   Debug.LogError($"Operation failed with error {result.Status}.");
+    /// }
+    /// ]]></code>
+    /// </example>
+    /// </remarks>
+    /// <param name="value">The <see cref="OVRResult"/> to cast.</param>
+    /// <returns>Returns the value of <see cref="Success"/>.</returns>
+    public static implicit operator bool(OVRResult<TStatus> value) => value.Success;
 }
 
 /// <summary>
@@ -431,4 +452,25 @@ public struct OVRResult<TValue, TStatus> : IEquatable<OVRResult<TValue, TStatus>
             ? $"(Value={_value}, Status={_status})"
             : _status.ToString()
         : "(invalid result)";
+
+    /// <summary>
+    /// Implicitly casts an <see cref="OVRResult"/> to a `bool`.
+    /// </summary>
+    /// <remarks>
+    /// If the <see cref="OVRResult"/> represents success, then it will convert to `true`. Otherwise, it will convert to `false`.
+    /// <example>
+    /// For example, this allows you to write code like:
+    /// <code><![CDATA[
+    /// var result = DoOperation();
+    /// if (result) {
+    ///   Debug.Log("Operation succeeded.");
+    /// } else {
+    ///   Debug.LogError($"Operation failed with error {result.Status}.");
+    /// }
+    /// ]]></code>
+    /// </example>
+    /// </remarks>
+    /// <param name="value">The <see cref="OVRResult"/> to cast.</param>
+    /// <returns>Returns the value of <see cref="Success"/>.</returns>
+    public static implicit operator bool(OVRResult<TValue, TStatus> value) => value.Success;
 }

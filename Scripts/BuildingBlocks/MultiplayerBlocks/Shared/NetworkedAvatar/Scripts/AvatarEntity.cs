@@ -31,64 +31,6 @@ using CAPI = Oculus.Avatar2.CAPI;
 
 namespace Meta.XR.MultiplayerBlocks.Shared
 {
-    /// <summary>
-    /// Interface for serializing the Avatar state.
-    /// </summary>
-    /// <remarks>Currently there are implementations for Photon Fusion and Unity Netcode for Gameobjects
-    /// for networking the Avatar state, but more may be added using this interface.</remarks>
-    public interface IAvatarBehaviour
-    {
-        /// <summary>
-        /// Represents the id of the Oculus account logged in the current headset. Defaults to 0 if it could not be fetched.
-        /// </summary>
-        public ulong OculusId { get; }
-
-        /// <summary>
-        /// Index of the Avatar type used when the user defined one could not be loaded.
-        /// </summary>
-        /// <remarks>Usually this is chosen randomly between 0 and the number of Sample Assets available for Avatars.</remarks>
-        public int LocalAvatarIndex { get; }
-
-        /// <summary>
-        /// Boolean indicating whether the user has input authority over this Avatar.
-        /// </summary>
-        public bool HasInputAuthority { get; }
-
-        /// <summary>
-        /// Method to load a serialized avatar state and update it in the local client.
-        /// </summary>
-        /// <param name="bytes">Byte stream containing the serialized avatar state.</param>
-        public void ReceiveStreamData(byte[] bytes);
-    }
-
-    /// <summary>
-    /// Enum indicating the level of detail (quality) used when serializing the Avatar state.
-    /// </summary>
-    public enum AvatarStreamLOD
-    {
-        Low,
-        Medium,
-        High
-    }
-
-    /// <summary>
-    /// Interface used for adjusting the parameters for serializing the Avatar state.
-    /// </summary>
-    public interface IAvatarStreamConfig
-    {
-        /// <summary>
-        /// Sets the quality level to be used when serializing the Avatar state.
-        /// </summary>
-        /// <param name="lod">Indicates the new <see cref="AvatarStreamLOD"/> to be used.</param>
-        public void SetAvatarStreamLOD(AvatarStreamLOD lod);
-
-        /// <summary>
-        /// Sets the interval at which the Avatar state is synchronized.
-        /// </summary>
-        /// <param name="interval">Interval value to be used (in seconds).</param>
-        public void SetAvatarUpdateIntervalInS(float interval);
-    }
-
 #if META_AVATAR_SDK_DEFINED
     /// <summary>
     /// The Avatar Entity implementation for Networked Avatar, which loads a remote/local avatar according to <see cref="IAvatarBehaviour"/>.
@@ -158,10 +100,14 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             ConfigureAvatar();
             base.Awake(); // creating avatar entity here
 
+#if META_AVATAR_SDK_28_OR_NEWER
+            SetActiveView(_avatarBehaviour.HasInputAuthority ? CAPI.ovrAvatar2EntityViewFlags.FirstPerson : CAPI.ovrAvatar2EntityViewFlags.ThirdPerson);
+#else
             if (!_avatarBehaviour.HasInputAuthority)
             {
                 SetActiveView(CAPI.ovrAvatar2EntityViewFlags.ThirdPerson);
             }
+#endif
 
             LoadAvatar();
             _initialAvatarLoaded = true;
@@ -231,6 +177,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 SetEyePoseProvider(null);
                 SetLipSync(null);
 
+                // ReSharper disable once Unity.PreferGenericMethodOverload
                 var animationBehavior = GetComponent("OvrAvatarAnimationBehavior");
                 if (animationBehavior != null)
                 {

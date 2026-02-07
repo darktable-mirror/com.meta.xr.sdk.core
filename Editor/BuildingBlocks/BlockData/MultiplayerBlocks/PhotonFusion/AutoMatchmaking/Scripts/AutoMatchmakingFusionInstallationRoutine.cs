@@ -32,6 +32,15 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
     public class AutoMatchmakingFusionInstallationRoutine : NetworkInstallationRoutine
     {
+        internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
+        {
+            var installationSteps = new List<InstallationStepInfo>();
+            installationSteps.AddRange(base.GetInstallationSteps(selection));
+            installationSteps.Add(new(Utils.GetBlockData(BlockDataIds.INetworkManager), "Finds the {0} block in active scene."));
+            installationSteps.Add(new(null, "Sets the reference of network runner component to <b>FusionBootstrap</b>."));
+            return installationSteps;
+        }
+
 #pragma warning disable CS1998
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
 #pragma warning restore CS1998

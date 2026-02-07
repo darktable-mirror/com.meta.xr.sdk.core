@@ -64,7 +64,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         }
 
         [SettingsProvider]
-        public static SettingsProvider CreateProjectValidationSettingsProvider()
+        public static SettingsProvider Create()
         {
             return new Settings(SettingsPath, SettingsScope.Project);
         }

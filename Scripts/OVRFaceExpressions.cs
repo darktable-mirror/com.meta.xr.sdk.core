@@ -101,6 +101,18 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
 
     private OVRPlugin.FaceState _currentFaceState;
 
+    /// <summary>
+    /// True if the visemes are valid, otherwise false.
+    /// </summary>
+    /// <remarks>
+    /// This value gets updated in every frame. You should check this
+    /// value before querying for visemes.
+    /// If you query visemes when it's false,
+    /// InvalidOperationException will be thrown.
+    /// </remarks>
+    public bool AreVisemesValid { get; private set; }
+
+    private OVRPlugin.FaceVisemesState _currentFaceVisemesState;
 
     private const OVRPermissionsRequester.Permission FaceTrackingPermission =
         OVRPermissionsRequester.Permission.FaceTracking;
@@ -172,6 +184,7 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
             return false;
         }
 
+        OVRPlugin.SetFaceTrackingVisemesEnabled(OVRRuntimeSettings.GetRuntimeSettings().EnableFaceTrackingVisemesOutput);
 
         return true;
     }
@@ -197,6 +210,9 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
 
         EyeFollowingBlendshapesValid = ValidExpressions && _currentFaceState.Status.IsEyeFollowingBlendshapesValid;
 
+        AreVisemesValid =
+            OVRPlugin.GetFaceVisemesState(OVRPlugin.Step.Render, ref _currentFaceVisemesState) == OVRPlugin.Result.Success
+            && _currentFaceVisemesState.IsValid;
     }
 
 
@@ -256,6 +272,92 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
         return true;
     }
 
+    /// <summary>
+    /// This will return the weight of the given viseme.
+    /// </summary>
+    /// <returns>Returns weight of viseme ranged between 0.0 to 1.0.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="OVRFaceExpressions.AreVisemesValid"/> is false.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="viseme"/> value is not in range.
+    /// </exception>
+    public float GetViseme(FaceViseme viseme)
+    {
+        CheckVisemesValidity();
+
+        if (viseme < 0 || viseme >= FaceViseme.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(viseme),
+                viseme,
+                $"Value must be between 0 to {(int)FaceViseme.Count}");
+        }
+
+        return _currentFaceVisemesState.Visemes[(int)viseme];
+    }
+
+    /// <summary>
+    /// This method tries to gets the weight of the given viseme if it's available.
+    /// </summary>
+    /// <param name="viseme" cref="FaceViseme">The viseme to get the weight of.</param>
+    /// <param name="weight">The output argument that will contain the viseme weight or 0.0 if it's not available.</param>
+    /// <returns>Returns true if the viseme weight is valid, false otherwise.</returns>
+    public bool TryGetFaceViseme(FaceViseme viseme, out float weight)
+    {
+        if (!AreVisemesValid || viseme < 0 || viseme >= FaceViseme.Count)
+        {
+            weight = 0;
+            return false;
+        }
+
+        weight = _currentFaceVisemesState.Visemes[(int)viseme];
+        return true;
+    }
+
+    /// <summary>
+    /// Copies visemes to a pre-allocated array.
+    /// </summary>
+    /// <param name="array">Pre-allocated destination array for visemes</param>
+    /// <param name="startIndex">Starting index in the destination array</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="array"/> is null.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when there is not enough capacity to copy weights to <paramref name="array"/> at <paramref name="startIndex"/> index.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="startIndex"/> value is out of <paramref name="array"/> bounds.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="OVRFaceExpressions.AreVisemesValid"/> is false.
+    /// </exception>
+    public void CopyVisemesTo(float[] array, int startIndex = 0)
+    {
+        if (array == null)
+        {
+            throw new ArgumentNullException(nameof(array));
+        }
+
+        if (startIndex < 0 || startIndex >= array.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(startIndex),
+                startIndex,
+                $"Value must be between 0 to {array.Length - 1}");
+        }
+
+        if (array.Length - startIndex < (int)FaceViseme.Count)
+        {
+            throw new ArgumentException(
+                $"Capacity is too small - required {(int)FaceViseme.Count}, available {array.Length - startIndex}.",
+                nameof(array));
+        }
+
+        CheckVisemesValidity();
+        for (int i = 0; i < (int)FaceViseme.Count; i++)
+        {
+            array[i + startIndex] = _currentFaceVisemesState.Visemes[i];
+        }
+    }
 
     /// <summary>
     /// The face part type used for getting the face tracking confidence weight in <see cref="TryGetWeightConfidence"/>.
@@ -343,6 +445,14 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
         }
     }
 
+    internal void CheckVisemesValidity()
+    {
+        if (!AreVisemesValid)
+        {
+            throw new InvalidOperationException(
+                $"Face visemes are not valid at this time. Use {nameof(AreVisemesValid)} to check for validity.");
+        }
+    }
 
     /// <summary>
     /// Copies expression weights to a pre-allocated array.
@@ -545,4 +655,60 @@ public class OVRFaceExpressions : MonoBehaviour, IReadOnlyCollection<float>, OVR
 
     #endregion
 
+    /// <summary>
+    /// List of face visemes.
+    /// </summary>
+    public enum FaceViseme
+    {
+        [InspectorName("None")]
+        Invalid = OVRPlugin.FaceViseme.Invalid,
+
+        /// <summary>The viseme representing silence.</summary>
+        SIL = OVRPlugin.FaceViseme.SIL,
+
+        /// <summary>The viseme representing p, b, and m.</summary>
+        PP = OVRPlugin.FaceViseme.PP,
+
+        /// <summary>The viseme representing f and v.</summary>
+        FF = OVRPlugin.FaceViseme.FF,
+
+        /// <summary>The viseme representing th.</summary>
+        TH = OVRPlugin.FaceViseme.TH,
+
+        /// <summary>The viseme representing t and d.</summary>
+        DD = OVRPlugin.FaceViseme.DD,
+
+        /// <summary>The viseme representing k and g.</summary>
+        KK = OVRPlugin.FaceViseme.KK,
+
+        /// <summary>The viseme representing tS, dZ, and S.</summary>
+        CH = OVRPlugin.FaceViseme.CH,
+
+        /// <summary>The viseme representing s and z.</summary>
+        SS = OVRPlugin.FaceViseme.SS,
+
+        /// <summary>The viseme representing n and l.</summary>
+        NN = OVRPlugin.FaceViseme.NN,
+
+        /// <summary>The viseme representing r.</summary>
+        RR = OVRPlugin.FaceViseme.RR,
+
+        /// <summary>The viseme representing a:.</summary>
+        AA = OVRPlugin.FaceViseme.AA,
+
+        /// <summary>The viseme representing e.</summary>
+        E = OVRPlugin.FaceViseme.E,
+
+        /// <summary>The viseme representing ih.</summary>
+        IH = OVRPlugin.FaceViseme.IH,
+
+        /// <summary>The viseme representing oh.</summary>
+        OH = OVRPlugin.FaceViseme.OH,
+
+        /// <summary>The viseme representing ou.</summary>
+        OU = OVRPlugin.FaceViseme.OU,
+
+        [InspectorName(null)]
+        Count = OVRPlugin.FaceViseme.Count,
+    }
 }

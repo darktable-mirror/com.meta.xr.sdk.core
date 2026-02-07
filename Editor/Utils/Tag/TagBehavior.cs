@@ -54,9 +54,9 @@ namespace Meta.XR.Editor.Tags
         public bool ToggleableVisibility { get; set; }
         public bool DefaultVisibility { get; set; } = true;
         public bool Visibility => VisibilitySetting.Value;
-        private OVRProjectSetupSettingBool _visibilitySetting;
-        public OVRProjectSetupSettingBool VisibilitySetting
-            => _visibilitySetting ??= new OVRProjectSetupUserSettingBool($"Tag_{_tag.Name}_Visibility", DefaultVisibility, $"Show {_tag.Name} blocks");
+        private Settings.UserBool _visibilitySetting;
+        public Settings.UserBool VisibilitySetting
+            => _visibilitySetting ??= new Settings.UserBool($"Tag_{_tag.Name}_Visibility", DefaultVisibility, $"Show {_tag.Name} blocks");
 
         private GUIStyle _style;
         private GUIContent _content;
@@ -96,7 +96,7 @@ namespace Meta.XR.Editor.Tags
 
         protected virtual bool DrawButton(string id, Rect rect, out bool hover)
         {
-            return OVREditorUtils.HoverHelper.Button(id, rect, Content, Style, out hover);
+            return HoverHelper.Button(id, rect, Content, Style, out hover);
         }
 
         public bool ShouldDraw(Tag.TagListType listType)
@@ -130,7 +130,7 @@ namespace Meta.XR.Editor.Tags
             if (!ShouldDraw(_listType)) return false;
 
             var id = controlId + _tag.Name;
-            var color = BackgroundColorState.GetColor(active, OVREditorUtils.HoverHelper.IsHover(id));
+            var color = BackgroundColorState.GetColor(active, HoverHelper.IsHover(id));
             var rect = GUILayoutUtility.GetRect(Content, Style, GUILayout.Width(StyleWidth));
             using var backgroundColorScope = new ColorScope(ColorScope.Scope.Background, color);
             using var contentColorScope = new ColorScope(ColorScope.Scope.Content, Color);

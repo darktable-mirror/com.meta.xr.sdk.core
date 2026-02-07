@@ -24,7 +24,7 @@ using UnityEditor;
 internal class OVREditorStart
 {
     private static readonly OVRProjectSetupSettingBool InitSession =
-        new OVRProjectSetupOnlyOnceSettingBool("InitSession");
+        new OVRProjectSetupOnlyOncePerSessionSettingBool("InitSession");
 
     static OVREditorStart()
     {

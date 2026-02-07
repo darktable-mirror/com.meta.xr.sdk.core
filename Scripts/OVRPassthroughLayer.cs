@@ -324,7 +324,7 @@ public class OVRPassthroughLayer : MonoBehaviour
     /// inspector.
     /// </summary>
     /// <param name="contrast">The contrast value. Ranges from -1 (minimum) to 1 (maximum). </param>
-    /// <param name="brightness">The brightness value. Ranges from 0 (minimum) to 1 (maximum). </param>
+    /// <param name="brightness">The brightness value. Ranges from -1 (minimum) to 1 (maximum). </param>
     /// <param name="posterize">The posterize value. Ranges from 0 to 1, where 0 = no posterization (no effect), 1 = reduce to two colors. </param>
     /// <param name="gradient">The gradient will be evaluated from 0 (no intensity) to 1 (maximum intensity).
     /// This parameter only has an effect if `colorMapType` is `GrayscaleToColor`.</param>

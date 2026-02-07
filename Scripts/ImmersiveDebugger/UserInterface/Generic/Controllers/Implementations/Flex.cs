@@ -41,7 +41,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private void UpdateAnchoredPosition(Controller controller, ref Vector2 offset, Vector2 direction)
         {
-            var anchoredPosition = controller.RectTransform.anchoredPosition;
+            var margin = controller.LayoutStyle.margin;
+            var anchoredPosition = new Vector2(margin.x, -margin.y);
             var size = controller.RectTransform.sizeDelta;
             controller.RectTransform.anchoredPosition = anchoredPosition + offset;
 

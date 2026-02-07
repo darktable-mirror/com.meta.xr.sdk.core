@@ -20,7 +20,6 @@
 
 
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
@@ -32,7 +31,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     /// </summary>
     public class Background : Controller
     {
-        private Image _image;
+        private UnityEngine.UI.Image _image;
 
         /// <summary>
         /// The sprite texture used for the <see cref="Image"/> of the background.
@@ -64,8 +63,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         protected override void Setup(Controller owner)
         {
             base.Setup(owner);
-            _image = GameObject.AddComponent<Image>();
-            _image.type = Image.Type.Sliced;
+            _image = GameObject.AddComponent<UnityEngine.UI.Image>();
+            _image.type = UnityEngine.UI.Image.Type.Sliced;
         }
     }
 }

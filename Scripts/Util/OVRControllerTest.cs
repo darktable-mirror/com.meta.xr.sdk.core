@@ -202,8 +202,11 @@ public class OVRControllerTest : MonoBehaviour
         OVRInput.Controller activeController = OVRInput.GetActiveController();
 
         data.Length = 0;
+
+#pragma warning disable CS0618 // Type or member is obsolete
         byte battery = OVRInput.GetControllerBatteryPercentRemaining();
         data.AppendFormat("Battery: {0}\n", battery);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         float framerate = OVRPlugin.GetAppFramerate();
         data.AppendFormat("Framerate: {0:F2}\n", framerate);

@@ -51,7 +51,12 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         // developer might want to delete some avatars from the sample asset zip
         // e.g. the game has a maximum player count, they won't need more unique sample avatars
         [SerializeField]
-        private int preloadedSampleAvatarSize = 32;
+        private int preloadedSampleAvatarSize =
+#if META_AVATAR_SDK_28_OR_NEWER
+            6;
+#else
+            32;
+#endif
 
         [Tooltip("Adjust the level of detail used when streaming the avatars.")]
         [SerializeField]

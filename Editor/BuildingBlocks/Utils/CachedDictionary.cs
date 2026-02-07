@@ -20,16 +20,12 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.XR.Editor.Id;
 using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
-    public interface IIdentified
-    {
-        public string Id { get; }
-    }
-
     public class CachedIdDictionary<T>
         where T : ScriptableObject, IIdentified
     {

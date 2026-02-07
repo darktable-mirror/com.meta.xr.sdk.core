@@ -19,16 +19,15 @@
  */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Assets.Oculus.VR.Editor;
+using Meta.XR.Editor;
 using Meta.XR.Editor.Tags;
+using Oculus.VR.Editor.Utils;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -37,45 +36,44 @@ namespace Meta.XR.BuildingBlocks.Editor
     {
         private const double CacheDurationInHours = 6;
         private const string CommonTag = "Common";
-
-        private static string CacheDirectory => Path.Combine(Path.GetTempPath(), "Meta", "Unity", "Editor");
-        private static string CacheFilePath => Path.Combine(CacheDirectory, "bb_content.json");
-
-        private static string LastDownloadTimestampKey =>
-            $"BlocksContentManager.LastDownloadTimestamp.{SdkVersion.GetValueOrDefault(0)}";
+        private const string DownloadPath = "https://www.facebook.com/building-blocks-content";
+        private static readonly RemoteContentDownloader Downloader;
 
         private static BlockData[] _contentFilter;
         private static Dictionary<Tag, BlockUrl[]> _documentationsData;
 
-        private static OVRPlatformTool.EditorCoroutine _editorCoroutine;
-        private static readonly Version VersionZero = new(0, 0, 0);
-
-        private static int? SdkVersion
+        static BlocksContentManager()
         {
-            get
-            {
-                if (OVRPlugin.version == null || OVRPlugin.version == VersionZero)
-                {
-                    return null;
-                }
+            Downloader = new RemoteContentDownloader(CacheDurationInHours, "bb_content.json", DownloadPath);
+#pragma warning disable CS4014
+            InitializeAsync();
+#pragma warning restore CS4014
+        }
 
-                return OVRPlugin.version.Minor - 32;
+        public static async Task InitializeAsync()
+        {
+            var successfulLoad = await Reload(false);
+            if (!successfulLoad)
+            {
+                await Reload(true);
             }
         }
 
-        static BlocksContentManager()
+        public static async Task<bool> Reload(bool forceRedownload)
         {
-            if (HasValidCache())
+            if (forceRedownload)
             {
-                if (LoadCache())
-                {
-                    return;
-                }
-
-                ClearCache();
+                Downloader.ClearCache();
             }
-
-            StartDownload(onComplete: RecordCache);
+            var result = await Downloader.RefreshAndLoad();
+            if (result.Item1)
+            {
+                return LoadContentJsonData(result.Item2);
+            }
+            else
+            {
+                return false;
+            }
         }
 
         internal static BlockUrl[] GetBlockUrls(Tag tag)
@@ -89,43 +87,6 @@ namespace Meta.XR.BuildingBlocks.Editor
         // For common / generic docs related to building blocks.
         internal static BlockUrl[] GetCommonDocs() => GetBlockUrls(CommonTag);
 
-        #region Data Caching
-
-        private static bool HasValidCache()
-        {
-            var lastDownloadTimestamp = SessionState.GetString(LastDownloadTimestampKey, null);
-            if (!File.Exists(CacheFilePath) || string.IsNullOrEmpty(lastDownloadTimestamp))
-            {
-                return false;
-            }
-
-            var lastDownloadTime = DateTime.Parse(lastDownloadTimestamp, CultureInfo.InvariantCulture);
-            return DateTime.Now - lastDownloadTime <= TimeSpan.FromHours(CacheDurationInHours);
-        }
-
-        private static bool LoadCache()
-        {
-            return SetContentJsonData(File.ReadAllText(CacheFilePath));
-        }
-
-        private static void RecordCache(string jsonData)
-        {
-            Directory.CreateDirectory(CacheDirectory);
-            File.WriteAllText(CacheFilePath, jsonData);
-            SessionState.SetString(LastDownloadTimestampKey, DateTime.Now.ToString(CultureInfo.InvariantCulture));
-        }
-
-        private static void ClearCache()
-        {
-            if (File.Exists(CacheFilePath))
-            {
-                File.Delete(CacheFilePath);
-            }
-
-            SessionState.EraseString(LastDownloadTimestampKey);
-        }
-
-        #endregion
 
         #region Data Parsing
 
@@ -183,7 +144,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         #region Blocks TextureContent
 
-        internal static bool SetContentJsonData(string jsonData)
+        internal static bool LoadContentJsonData(string jsonData)
         {
             var response = ParseJsonData(jsonData);
 
@@ -197,12 +158,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             return _contentFilter is { Length: > 0 };
         }
 
-        internal static void ClearContent()
-        {
-            _contentFilter = null;
-            _documentationsData = null;
-            ClearCache();
-        }
 
         public static IReadOnlyList<BlockBaseData> FilterBlockWindowContent(IReadOnlyList<BlockBaseData> content)
         {
@@ -241,7 +196,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 blockBaseData.BlockName.SetOverride(contentFilterDictionary[blockBaseData.Id].value.blockName);
                 blockBaseData.Description.SetOverride(contentFilterDictionary[blockBaseData.Id].value.description);
-                blockBaseData.OverridableTags.SetOverride(GenerateTagArrayFromTags(contentFilterDictionary[blockBaseData.Id].value.tags));
+                blockBaseData.OverridableTags.SetOverride(
+                    GenerateTagArrayFromTags(contentFilterDictionary[blockBaseData.Id].value.tags));
             }
 
             return filteredContent;
@@ -257,51 +213,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             var tagArray = new TagArray();
             tagArray.Add(tags.Select(tag => new Tag(tag)));
             return tagArray;
-        }
-
-        #endregion
-
-        #region Data Download
-
-        private static IEnumerator DownloadContent(Action<string> onComplete)
-        {
-            using var marker = new OVRTelemetryMarker(OVRTelemetryConstants.BB.MarkerId.DownloadContent);
-
-            var path = "https://www.facebook.com/building-blocks-content";
-
-            if (SdkVersion.HasValue)
-            {
-                path += $"?sdk_version={SdkVersion.Value}";
-            }
-
-            using var request = UnityWebRequest.Get(path);
-
-            yield return request.SendWebRequest();
-
-            while (request.result == UnityWebRequest.Result.InProgress)
-            {
-                yield return null;
-            }
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
-                yield break;
-            }
-
-            var jsonData = request.downloadHandler.text;
-            SetContentJsonData(jsonData);
-            onComplete?.Invoke(jsonData);
-        }
-
-        internal static void StartDownload(Action<string> onComplete = null)
-        {
-            if (_editorCoroutine != null && !_editorCoroutine.GetCompleted())
-            {
-                _editorCoroutine.Stop();
-            }
-
-            _editorCoroutine = OVRPlatformTool.EditorCoroutine.Start(DownloadContent(onComplete));
         }
 
         #endregion

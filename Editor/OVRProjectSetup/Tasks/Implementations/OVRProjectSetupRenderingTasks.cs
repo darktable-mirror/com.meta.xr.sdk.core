@@ -20,6 +20,7 @@
 
 using System;
 using System.Linq;
+using Meta.XR.Editor.Callbacks;
 using Meta.XR.Editor.Utils;
 using UnityEditor;
 using UnityEditor.Rendering;
@@ -94,6 +95,11 @@ internal static class OVRProjectSetupRenderingTasks
     }
 
     static OVRProjectSetupRenderingTasks()
+    {
+        InitializeOnLoad.Register(AddTasks);
+    }
+
+    static void AddTasks()
     {
         const OVRProjectSetup.TaskGroup targetGroup = OVRProjectSetup.TaskGroup.Rendering;
 

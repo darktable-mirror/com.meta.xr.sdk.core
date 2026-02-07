@@ -33,6 +33,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     {
         internal Text Text { get; private set; }
 
+        private TextStyle _textStyle;
+
         /// <summary>
         /// String that is being used for displaying text content of the label.
         /// Might be truncated if too long (with overflow)
@@ -58,8 +60,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// </summary>
         public TextStyle TextStyle
         {
+            get => _textStyle;
             set
             {
+                _textStyle = value;
                 Text.font = value.font;
                 Text.fontSize = value.fontSize;
                 Text.alignment = value.textAlignement;

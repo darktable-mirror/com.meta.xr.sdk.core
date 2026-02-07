@@ -54,7 +54,7 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
     public static OVRTelemetryMarker? InteractionFlowEvent { get; set; }
 
     [SettingsProvider]
-    public static SettingsProvider CreateProjectValidationSettingsProvider()
+    public static SettingsProvider Create()
     {
         return new OVRProjectSetupSettingsProvider(SettingsPath, SettingsScope.Project);
     }

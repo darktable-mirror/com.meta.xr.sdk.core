@@ -24,6 +24,7 @@ using Meta.XR.ImmersiveDebugger.Utils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -50,7 +51,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var watchAttribute = member.GetCustomAttribute<DebugMember>();
                 if (watchAttribute != null)
                 {
-                    if (member.MemberType == MemberTypes.Property | member.MemberType == MemberTypes.Field)
+                    if (IsWatchTypeSupported(member))
                     {
                         membersList.Add((member, watchAttribute));
                     }
@@ -58,7 +59,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             }
 
             membersList.AddRange(InspectedDataRegistry.GetMembersForType<MemberInfo>(type,
-                (info, _) => info.MemberType is MemberTypes.Property or MemberTypes.Field));
+                (info, _) => IsWatchTypeSupported(info)));
 
             WatchesDict[type] = membersList;
             ManagerUtils.RebuildInspectorForType(_uiPanel, _instanceCache, type, membersList, (memberController, member, attribute, instance) =>
@@ -66,9 +67,25 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var watch = memberController.GetWatch();
                 if (!watch?.Matches(member, instance) ?? true)
                 {
-                    memberController.RegisterWatch(WatchUtils.Create(member, instance, attribute));
+                    if (member.IsTypeEqual(typeof(Texture2D)))
+                    {
+                        memberController.RegisterTexture(WatchUtils.Create(member, instance, attribute) as WatchTexture);
+                    }
+                    else
+                    {
+                        memberController.RegisterWatch(WatchUtils.Create(member, instance, attribute));
+                    }
                 }
             });
+        }
+
+
+        internal static bool IsWatchTypeSupported(MemberInfo member)
+        {
+            var supported = member.MemberType is MemberTypes.Property or MemberTypes.Field;
+            supported &= !member.IsBaseTypeEqual(typeof(Enum));
+            supported |= member.IsTypeEqual(typeof(Texture2D));
+            return supported;
         }
 
         public void ProcessTypeFromInspector(Type type, InstanceHandle handle, MemberInfo memberInfo, DebugMember memberAttribute)
@@ -84,4 +101,3 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
     }
 }
-

@@ -18,7 +18,8 @@ MonoBehaviour:
   description: Create, save, load, and erase spatial anchor with controller
   tags:
     array:
-    - name: Anchor
+    - name: Colocation
+    - name: Spatial Anchor
     - name: Experimental
     - name: Prototyping
   thumbnail: {fileID: 2800000, guid: 5a9d3959d5cc6c346bf7998612a568a6, type: 3}
@@ -44,3 +45,5 @@ MonoBehaviour:
     storage
 
     - Thumbstick UP: Erase all visible anchors'
+  featureDocumentationName: 
+  featureDocumentationUrl: 

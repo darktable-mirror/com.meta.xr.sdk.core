@@ -50,6 +50,9 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 (start, end, tween) => Mathf.RoundToInt(Mathf.Lerp((float)start, (float)end, tween)),
                 f => (int)f);
             Register<bool>((_, _, value) => value ? 1.0f : 0.0f, (_, _, tween) => (tween > 0.0f), f => f > 0.0f);
+
+            _supportsValueRange?.Add(typeof(Enum));
+            _types?.Add(typeof(Enum), typeof(TweakEnum));
         }
 
         public static bool IsTypeSupported(Type t)
@@ -70,6 +73,17 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             return Activator.CreateInstance(createdType, memberInfo, instance, attribute) as Tweak;
         }
 
+        public static TweakEnum Create(MemberInfo memberInfo, DebugMember attribute, object instance, Type enumType)
+        {
+            var type = memberInfo.GetDataType().BaseType;
+            if (type == null) return null;
+            if (!_types.TryGetValue(type, out var createdType))
+            {
+                return null;
+            }
+            return Activator.CreateInstance(createdType, memberInfo, instance, attribute, enumType) as TweakEnum;
+        }
+
         private static void Register<T>(Func<T, T, T, float> inverseLerp, Func<T, T, float, T> lerp, Func<float, T> fromFloat)
         {
             _types.Add(typeof(T), typeof(Tweak<T>));
@@ -79,8 +93,9 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
 
         public static bool IsMemberTypeValidForTweak(MemberInfo member) =>
-            member.MemberType == MemberTypes.Field && IsTypeSupported((member as FieldInfo)?.FieldType) ||
-            member.MemberType == MemberTypes.Property && IsTypeSupported((member as PropertyInfo)?.PropertyType);
+            (member.MemberType == MemberTypes.Field && IsTypeSupported((member as FieldInfo)?.FieldType)) ||
+            (member.MemberType == MemberTypes.Property && IsTypeSupported((member as PropertyInfo)?.PropertyType)) ||
+            member.IsBaseTypeEqual(typeof(Enum));
 
         public static void ProcessMinMaxRange(MemberInfo member, DebugMember attribute, Object instance)
         {
@@ -165,6 +180,30 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             _getter = () => (T)memberInfo.GetValue(instance);
             _setter = (value => memberInfo.SetValue(instance, value));
         }
+    }
+
+    internal class TweakEnum : Tweak
+    {
+        private readonly Type _enumType;
+
+        public MemberInfo Member => _memberInfo;
+
+        public string Value
+        {
+            get => _memberInfo.GetValue(_instance).ToString();
+            set
+            {
+                var enumValue = Enum.Parse(_enumType, value);
+                _memberInfo.SetValue(_instance, enumValue);
+            }
+        }
+
+        public TweakEnum(MemberInfo memberInfo, object instance, DebugMember attribute, Type enumType) : base(memberInfo, instance, attribute)
+        {
+            _enumType = enumType;
+        }
+
+        public override float Tween { get; set; }
     }
 }
 

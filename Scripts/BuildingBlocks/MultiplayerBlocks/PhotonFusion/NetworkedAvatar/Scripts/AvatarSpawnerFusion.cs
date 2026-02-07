@@ -48,7 +48,13 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
                  "for optimizing app size. Change this to the size of available avatars count in the preset zip file.")]
         // developer might want to delete some avatars from the sample asset zip
         // e.g. the game has a maximum player count, they won't need more unique sample avatars
-        [SerializeField] private int preloadedSampleAvatarSize = 32;
+        [SerializeField]
+        private int preloadedSampleAvatarSize =
+#if META_AVATAR_SDK_28_OR_NEWER
+            6;
+#else
+            32;
+#endif
 
         [Tooltip("Adjust the level of detail used when streaming the avatars.")]
         [SerializeField] private AvatarStreamLOD avatarStreamLOD = AvatarStreamLOD.Medium;

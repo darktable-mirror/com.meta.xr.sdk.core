@@ -43,6 +43,10 @@
 #warning Either "Oculus XR Plugin" or "OpenXR Plugin" must be installed for the project to run properly on Oculus/Meta XR Devices. Please install one of them through "XR Plug-in Management" settings, or Package Manager.
 #endif
 
+#if UNITY_Y_FLIP_FIX_2021 || UNITY_Y_FLIP_FIX_2022 || UNITY_Y_FLIP_FIX_6
+#define UNITY_Y_FLIP_FIX
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -413,6 +417,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     public static event Action<OVRPlugin.BoundaryVisibility> BoundaryVisibilityChanged;
 
 
+
     /// <summary>
     /// Occurs when Health & Safety Warning is dismissed.
     /// </summary>
@@ -604,7 +609,19 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     [HideInInspector]
     [Tooltip("Enable Dynamic Resolution. This will allocate render buffers to maxDynamicResolutionScale size and " +
              "will change the viewport to adapt performance. Mobile only.")]
-    public bool enableDynamicResolution = false;
+    private bool _enableDynamicResolution = false;
+    public bool enableDynamicResolution
+    {
+        get { return _enableDynamicResolution; }
+        set
+        {
+            _enableDynamicResolution = value;
+
+#if USING_XR_SDK_OPENXR && UNITY_ANDROID
+            OVRPlugin.SetExternalLayerDynresEnabled(value ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+#endif
+        }
+    }
 
     [HideInInspector]
     public float minDynamicResolutionScale = 1.0f;
@@ -2367,14 +2384,21 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 
 #if USING_XR_SDK && UNITY_ANDROID
+// Dynamic resolution in the Unity OpenXR plugin is only supported on package versions 3.4.1 on Unity 2021 and 4.3.1 on Unity 2022 and up.
+#if (USING_XR_SDK_OCULUS || (USING_XR_SDK_OPENXR && UNITY_Y_FLIP_FIX))
         if (enableDynamicResolution)
         {
+#if USING_XR_SDK_OPENXR
+            OVRPlugin.SetExternalLayerDynresEnabled(enableDynamicResolution ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+#endif
+
             XRSettings.eyeTextureResolutionScale = maxDynamicResolutionScale;
 #if USING_URP
             if (GraphicsSettings.currentRenderPipeline is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urpPipelineAsset)
                 urpPipelineAsset.renderScale = maxDynamicResolutionScale;
 #endif
         }
+#endif
 #endif
 
         InitializeBoundary();
@@ -2540,14 +2564,28 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 #endif
 
-#if !OCULUS_XR_3_3_0_OR_NEWER || UNITY_2020
+#if !USING_XR_SDK_OPENXR && (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_OR_NEWER)
         if (enableDynamicResolution && SystemInfo.graphicsDeviceType == GraphicsDeviceType.Vulkan)
         {
-            Debug.LogError("Vulkan Dynamic Resolution is not supported on your current build version. Ensure you are on Unity 2021+ with Oculus XR plugin v3.3.0+");
+            Debug.LogError("Vulkan Dynamic Resolution is not supported on your current build version. Ensure you are on Unity 2021+ with the Oculus XR plugin v3.3.0+ or the Unity OpenXR plugin v1.12.1+");
             enableDynamicResolution = false;
         }
 #endif
 
+#if USING_XR_SDK_OPENXR && !UNITY_Y_FLIP_FIX
+        if (enableDynamicResolution)
+        {
+#if UNITY_2021
+            Debug.LogError("Dynamic Resolution is not supported on your current build version. Ensure you are using Unity 2021.3.45f1 or greater.");
+#elif UNITY_2022
+            Debug.LogError("Dynamic Resolution is not supported on your current build version. Ensure you are using Unity 2022.3.49f1 or greater.");
+#elif UNITY_6000_0_OR_NEWER
+            Debug.LogError("Dynamic Resolution is not supported on your current build version. Ensure you are using Unity 6000.0.25f1 or greater.");
+#endif
+
+            enableDynamicResolution = false;
+        }
+#endif
 
 #if UNITY_EDITOR
         if (_scriptsReloaded)
@@ -2986,7 +3024,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     SpaceSetComponentStatusComplete?.Invoke(data.RequestId, data.Result >= 0, data.Space, data.Uuid,
                         data.ComponentType, data.Enabled != 0);
 
-                    OVRTask.GetExisting<bool>(data.RequestId).SetResult(data.Result >= 0);
+                    OVRTask.SetResult(data.RequestId, data.Result >= 0);
                     OVRAnchor.OnSpaceSetComponentStatusComplete(data);
                     break;
                 }
@@ -3026,7 +3064,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
                     var result = data.Result >= 0;
                     OVRAnchor.OnSpaceEraseComplete(data);
                     SpaceEraseComplete?.Invoke(data.RequestId, result, data.Uuid, data.Location);
-                    OVRTask.GetExisting<bool>(data.RequestId).SetResult(result);
+                    OVRTask.SetResult(data.RequestId, result);
                     break;
                 }
                 case OVRPlugin.EventType.SpaceShareResult:
@@ -3207,7 +3245,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     public void UpdateDynamicResolutionVersion()
     {
-        if (dynamicResolutionVersion == 0 && enableDynamicResolution)
+        if (dynamicResolutionVersion == 0)
         {
             quest2MinDynamicResolutionScale = minDynamicResolutionScale;
             quest2MaxDynamicResolutionScale = maxDynamicResolutionScale;

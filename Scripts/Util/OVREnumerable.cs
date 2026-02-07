@@ -18,10 +18,13 @@
  * limitations under the License.
  */
 
+using JetBrains.Annotations;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+
 using Unity.Collections;
 
 /// <summary>
@@ -266,7 +269,7 @@ static partial class OVRExtensions
     /// <param name="enumerable">The collection you wish to enumerate.</param>
     /// <typeparam name="T">The type of item in the collection.</typeparam>
     /// <returns>Returns a non-allocating enumerable.</returns>
-    internal static OVREnumerable<T> ToNonAlloc<T>(this IEnumerable<T> enumerable) => new(enumerable);
+    internal static OVREnumerable<T> ToNonAlloc<T>([NoEnumeration] this IEnumerable<T> enumerable) => new(enumerable);
 
     /// <summary>
     /// Copies a collection to a `NativeArray`.

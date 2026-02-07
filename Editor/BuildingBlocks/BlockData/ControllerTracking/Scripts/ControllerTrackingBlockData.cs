@@ -40,6 +40,11 @@ namespace Meta.XR.BuildingBlocks.Editor
                    && blocksInScene.Any(controller => controller.m_controller == OVRInput.Controller.RTouch);
         }
 
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps => new List<InstallationStepInfo>
+        {
+            new(Prefab, "Detects whether an <b>OVRControllerHelper</b> component is present for the left hand. Otherwise, instantiates and sets up a {0} GameObject for the left hand."),
+            new(Prefab, "Detects whether an <b>OVRControllerHelper</b> component is present for the right hand. Otherwise, instantiates and sets up a {0} GameObject for the right hand.")
+        };
 
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {

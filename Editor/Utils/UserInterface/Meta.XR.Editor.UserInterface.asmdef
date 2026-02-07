@@ -1,7 +1,10 @@
 {
     "name": "Meta.XR.Editor.UserInterface",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "Oculus.VR",
+        "Meta.XR.Editor.Id"
+    ],
     "includePlatforms": [
         "Editor"
     ],

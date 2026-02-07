@@ -25,6 +25,7 @@ using System.Threading;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
+using UnityEditor.PackageManager.UI;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Meta.XR.Editor.Utils
@@ -39,7 +40,7 @@ namespace Meta.XR.Editor.Utils
             RefreshPackageList(false);
         }
 
-        public static bool PackageManagerListAvailable => _packageManagerListRequest.Status == StatusCode.Success;
+        public static bool PackageManagerListAvailable => _packageManagerListRequest is { Status: StatusCode.Success };
 
         public static PackageInfo GetPackage(string packageId)
         {
@@ -48,23 +49,66 @@ namespace Meta.XR.Editor.Utils
                 return null;
             }
 
-            var (name, _) = ParsePackageId(packageId);
+            var (name, _, _) = ParsePackageId(packageId);
             return _packageManagerListRequest.Result.FirstOrDefault(p => p.name == name);
         }
 
-        private static (string name, string version) ParsePackageId(string packageId)
+        internal static (string name, string version, string sampleName) ParsePackageId(string packageId)
         {
-            var packageNameParts = packageId.Split("@");
-            var packageName = packageNameParts[0];
-            var packageVersion = packageNameParts.Length > 1 ? packageNameParts[1] : null;
-            return (packageName, packageVersion);
+            if (string.IsNullOrEmpty(packageId))
+            {
+                throw new ArgumentNullException();
+            }
+
+            var containsSampleName = packageId.Contains(":");
+            var containsVersion = packageId.Contains("@");
+
+            return (containsSampleName, containsVersion) switch
+            {
+                (true, true) => throw new ArgumentException("Setting both sample name and version in the packageId is not supported."),
+                (true, false) => ParseWithSampleName(packageId),
+                (false, true) => ParseWithVersion(packageId),
+                (false, false) => (packageId, null, null)
+            };
+
+            (string, string, string) ParseWithSampleName(string s)
+            {
+                var (packageName, sampleName) = SplitStringBySeparator(s, ":");
+
+                if (string.IsNullOrEmpty(sampleName))
+                {
+                    throw new ArgumentException($"{nameof(sampleName)} cannot be null or empty");
+                }
+
+                return (packageName, null, sampleName);
+            }
+
+            (string, string, string) ParseWithVersion(string s)
+            {
+                var (packageName, packageVersion) = SplitStringBySeparator(s, "@");
+
+                if (string.IsNullOrEmpty(packageVersion))
+                {
+                    throw new ArgumentException($"{nameof(packageVersion)} cannot be null or empty");
+                }
+
+                return (packageName, packageVersion, null);
+            }
+
+            (string, string) SplitStringBySeparator(string s, string separator)
+            {
+                var parts = s.Split(separator);
+                var p1 = parts[0];
+                var p2 = parts.Length > 1 && !string.IsNullOrEmpty(parts[1]) ? parts[1] : null;
+                return (p1, p2);
+            }
         }
 
         public static bool IsPackageInstalled(string packageId) => GetPackage(packageId) != null;
 
         public static bool IsPackageInstalledWithValidVersion(string packageId)
         {
-            var (_, expectedPackageVersion) = ParsePackageId(packageId);
+            var (_, expectedPackageVersion, sampleName) = ParsePackageId(packageId);
             var installedPacked = GetPackage(packageId);
 
             if (installedPacked == null)
@@ -72,12 +116,23 @@ namespace Meta.XR.Editor.Utils
                 return false;
             }
 
-            if (string.IsNullOrEmpty(expectedPackageVersion))
+            return ValidatePackageVersion() && ValidateSample();
+
+            bool ValidatePackageVersion()
             {
-                return true;
+                return string.IsNullOrEmpty(expectedPackageVersion) || IsVersionValid(expectedPackageVersion, installedPacked.version);
             }
 
-            return IsVersionValid(expectedPackageVersion, installedPacked.version);
+            bool ValidateSample()
+            {
+                if (string.IsNullOrEmpty(sampleName))
+                {
+                    return true;
+                }
+
+                return Sample.FindByPackage(installedPacked.name, installedPacked.version)
+                    .Any(sample => sample.displayName == sampleName && sample.isImported);
+            }
         }
 
         internal static bool IsValidPackageName(string packageName)
@@ -89,32 +144,37 @@ namespace Meta.XR.Editor.Utils
 
         internal static bool IsValidPackageId(string packageId)
         {
-            var (packageName, packageVersion) = ParsePackageId(packageId);
-            if (!IsValidPackageName(packageName))
+            try
+            {
+                var (packageName, packageVersion, sampleName) = ParsePackageId(packageId);
+
+                if (!IsValidPackageName(packageName))
+                {
+                    return false;
+                }
+
+                if (packageVersion != null)
+                {
+                    return IsValidSemanticVersion(packageVersion);
+                }
+
+                return sampleName == null || sampleName.Length > 0;
+            }
+            catch (Exception)
             {
                 return false;
             }
-
-            return !packageId.Contains("@") || IsValidSemanticVersion(packageVersion);
         }
 
         internal static bool IsValidSemanticVersion(string version)
         {
-            if (string.IsNullOrEmpty(version))
-            {
-                return false;
-            }
-
-            // Regular expression for semantic versioning with support for ~ and ^ notations
-            const string regex = @"^[\^~]?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)" +
-                              @"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?" +
-                              @"(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$";
-
-            return Regex.IsMatch(version, regex);
+            return !string.IsNullOrEmpty(version) && Version.TryParse(NormalizeVersion(version), out _);
         }
 
         internal static bool IsVersionValid(string expectedVersion, string actualVersion)
         {
+            actualVersion = NormalizeInternalPackageVersion(actualVersion);
+
             if (!IsValidSemanticVersion(expectedVersion) || !IsValidSemanticVersion(actualVersion))
                 return false;
 
@@ -139,12 +199,27 @@ namespace Meta.XR.Editor.Utils
                        (expected.Minor != actual.Minor || actual.Build >= expected.Build);
             }
 
-            return expected.Equals(actual);
-
-            string NormalizeVersion(string version)
+            if (expectedVersion.StartsWith(">="))
             {
-                return version.Replace("^", "").Replace("~", "");
+                return actual >= expected;
             }
+
+            return expected.Equals(actual);
+        }
+
+        private static string NormalizeVersion(string version)
+        {
+            var prefixes = new[] { "^", "~", ">=" };
+
+            foreach (var prefix in prefixes)
+            {
+                if (version.StartsWith(prefix))
+                {
+                    return version[prefix.Length..];
+                }
+            }
+
+            return version;
         }
 
         private static void RefreshPackageList(bool blocking)
@@ -162,16 +237,15 @@ namespace Meta.XR.Editor.Utils
             }
         }
 
-        public static void UninstallPackage(string packageName)
+        private static string NormalizeInternalPackageVersion(string version)
         {
-            var request = Client.Remove(packageName);
-
-            while (!request.IsCompleted)
+            if (version == null)
             {
-                Thread.Sleep(1);
+                return null;
             }
 
-            RefreshPackageList(false);
+            var dashIndex = version.IndexOf('-');
+            return dashIndex >= 0 ? version[..dashIndex] : version;
         }
     }
 }

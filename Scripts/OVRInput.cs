@@ -2130,10 +2130,11 @@ public static class OVRInput
     }
 
     /// <summary>
-    /// Returns the battery percentage remaining for the specified controller. Values range from 0 to 100.
+    /// \deprecated Returns the battery percentage remaining for the specified controller. Values range from 0 to 100.
     /// Only applicable to controllers that report battery level.
     /// Returns 0 for controllers that do not report battery level.
     /// </summary>
+    [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
     public static byte GetControllerBatteryPercentRemaining(Controller controllerMask = Controller.Active)
     {
         if ((controllerMask & Controller.Active) != 0)
@@ -3367,9 +3368,10 @@ public static class OVRInput
         }
 
         /// <summary>
-        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// \deprecated Retrieves the current estimated battery power remaining for the current control scheme.
         /// </summary>
         /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public virtual byte GetBatteryPercentRemaining()
         {
             return 0;
@@ -3648,9 +3650,10 @@ public static class OVRInput
         }
 
         /// <summary>
-        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// \deprecated Retrieves the current estimated battery power remaining for the current control scheme.
         /// </summary>
         /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public override byte GetBatteryPercentRemaining()
         {
             byte leftBattery = currentState.LBatteryPercentRemaining;
@@ -3818,9 +3821,10 @@ public static class OVRInput
         }
 
         /// <summary>
-        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// \deprecated Retrieves the current estimated battery power remaining for the current control scheme.
         /// </summary>
         /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.LBatteryPercentRemaining;
@@ -3984,9 +3988,10 @@ public static class OVRInput
         }
 
         /// <summary>
-        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// \deprecated Retrieves the current estimated battery power remaining for the current control scheme.
         /// </summary>
         /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.RBatteryPercentRemaining;
@@ -4150,9 +4155,10 @@ public static class OVRInput
         }
 
         /// <summary>
-        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// \deprecated Retrieves the current estimated battery power remaining for the current control scheme.
         /// </summary>
         /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public override byte GetBatteryPercentRemaining()
         {
             byte leftBattery = currentState.LBatteryPercentRemaining;
@@ -4320,9 +4326,10 @@ public static class OVRInput
         }
 
         /// <summary>
-        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// \deprecated Retrieves the current estimated battery power remaining for the current control scheme.
         /// </summary>
         /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.LBatteryPercentRemaining;
@@ -4486,9 +4493,10 @@ public static class OVRInput
         }
 
         /// <summary>
-        /// Retrieves the current estimated battery power remaining for the current control scheme.
+        /// \deprecated Retrieves the current estimated battery power remaining for the current control scheme.
         /// </summary>
         /// <returns>The estimated battery power remaining as a percentage of the maximum</returns>
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public override byte GetBatteryPercentRemaining()
         {
             return currentState.RBatteryPercentRemaining;

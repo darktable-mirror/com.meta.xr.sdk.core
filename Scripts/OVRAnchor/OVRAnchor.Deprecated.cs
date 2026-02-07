@@ -88,96 +88,19 @@ partial struct OVRAnchor
             throw new ArgumentNullException(nameof(anchors));
         }
 
-        async OVRTask<bool> Execute(IEnumerable<Guid> uuids, IList<OVRAnchor> anchors,
-            OVRSpace.StorageLocation location, double timeout)
-            => (await FetchAnchors(anchors, GetQueryInfo(uuids, location, timeout))).IsSuccess();
-
-        return Execute(uuids, anchors, location, timeout);
-    }
-
-    internal static OVRTask<Result> FetchAnchors(IList<OVRAnchor> anchors, OVRPlugin.SpaceQueryInfo queryInfo)
-    {
-        if (anchors == null)
+        return execute();
+        async OVRTask<bool> execute()
         {
-            throw new ArgumentNullException(nameof(anchors));
+            var query = OVRSpaceQuery.ForAnchorsUnchecked(uuids.ToNonAlloc());
+            query.Location = location.ToSpaceStorageLocation();
+            query.Timeout = timeout;
+            return (await FetchAnchors(anchors, query)).IsSuccess();
         }
-
-        anchors.Clear();
-
-        var telemetryMarker = OVRTelemetry
-            .Start((int)Telemetry.MarkerId.QuerySpaces)
-            .AddAnnotation(Telemetry.Annotation.Timeout, (double)queryInfo.Timeout)
-            .AddAnnotation(Telemetry.Annotation.MaxResults, (long)queryInfo.MaxQuerySpaces)
-            .AddAnnotation(Telemetry.Annotation.StorageLocation, (long)queryInfo.Location);
-
-        if (queryInfo is { FilterType: SpaceQueryFilterType.Components, ComponentsInfo: { Components: { Length: > 0 } } })
-        {
-            unsafe
-            {
-                var componentTypes = stackalloc long[queryInfo.ComponentsInfo.NumComponents];
-                for (var i = 0; i < queryInfo.ComponentsInfo.NumComponents; i++)
-                {
-                    componentTypes[i] = (long)queryInfo.ComponentsInfo.Components[i];
-                }
-                telemetryMarker.AddAnnotation(Telemetry.Annotation.ComponentTypes, componentTypes,
-                    queryInfo.ComponentsInfo.NumComponents);
-            }
-        }
-        else if (queryInfo is { FilterType: SpaceQueryFilterType.Ids })
-        {
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.UuidCount, (long)queryInfo.IdInfo.NumIds);
-        }
-
-        var result = QuerySpacesWithResult(queryInfo, out var requestId);
-        Telemetry.SetSyncResult(telemetryMarker, requestId, result);
-
-        if (!result.IsSuccess())
-        {
-            return OVRTask.FromResult(result);
-        }
-
-        var task = OVRTask.FromRequest<Result>(requestId);
-        task.SetInternalData(anchors);
-        return task;
-    }
-
-    internal static OVRTask<Result> FetchAnchorsByGroup(IList<OVRAnchor> anchors, OVRPlugin.SpaceQueryInfo2 queryInfo)
-    {
-        if (anchors == null)
-        {
-            throw new ArgumentNullException(nameof(anchors));
-        }
-
-        anchors.Clear();
-
-        var telemetryMarker = OVRTelemetry
-            .Start((int)Telemetry.MarkerId.QuerySpaces)
-            .AddAnnotation(Telemetry.Annotation.Timeout, (double)queryInfo.Timeout)
-            .AddAnnotation(Telemetry.Annotation.MaxResults, (long)queryInfo.MaxQuerySpaces)
-            .AddAnnotation(Telemetry.Annotation.StorageLocation, (long)queryInfo.Location);
-
-        if (queryInfo is { FilterType: SpaceQueryFilterType.Group })
-        {
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.GroupCount, 1);
-        }
-
-        var result = QuerySpaces2(queryInfo, out var requestId);
-        Telemetry.SetSyncResult(telemetryMarker, requestId, result);
-
-        if (!result.IsSuccess())
-        {
-            return OVRTask.FromResult(result);
-        }
-
-        var task = OVRTask.FromRequest<Result>(requestId);
-        task.SetInternalData(anchors);
-        return task;
     }
 
     internal static void OnSpaceQueryComplete(OVRDeserialize.SpaceQueryCompleteData data)
     {
         OVRTelemetryMarker? telemetryMarker = null;
-        var task = OVRTask.GetExisting<Result>(data.RequestId);
         Result? taskResult = null;
         try
         {
@@ -185,7 +108,7 @@ partial struct OVRAnchor
                 Telemetry.SetAsyncResult(Telemetry.MarkerId.QuerySpaces, data.RequestId, (long)data.Result);
 
             var requestId = data.RequestId;
-            if (!task.IsPending)
+            if (!OVRTask.TryGetPendingTask<Result>(data.RequestId, out var task))
             {
                 return;
             }
@@ -226,7 +149,7 @@ partial struct OVRAnchor
             telemetryMarker?.Send();
             if (taskResult.HasValue)
             {
-                task.SetResult(taskResult.Value);
+                OVRTask.SetResult(data.RequestId, taskResult.Value);
             }
         }
     }
@@ -235,31 +158,13 @@ partial struct OVRAnchor
     internal static async OVRTask<bool> FetchAnchorsAsync(SpaceComponentType type, IList<OVRAnchor> anchors,
         OVRSpace.StorageLocation location = OVRSpace.StorageLocation.Local,
         int maxResults = OVRSpaceQuery.Options.MaxUuidCount, double timeout = 0.0)
-        => (await FetchAnchors(anchors, GetQueryInfo(type, location, maxResults, timeout))).IsSuccess();
-
-    [Obsolete]
-    internal static SpaceQueryInfo GetQueryInfo(SpaceComponentType type,
-        OVRSpace.StorageLocation location, int maxResults, double timeout) => new OVRSpaceQuery.Options
-        {
-            QueryType = SpaceQueryType.Action,
-            ActionType = SpaceQueryActionType.Load,
-            ComponentFilter = type,
-            Location = location,
-            Timeout = timeout,
-            MaxResults = maxResults,
-        }.ToQueryInfo();
-
-    [Obsolete]
-    internal static SpaceQueryInfo GetQueryInfo(IEnumerable<Guid> uuids,
-        OVRSpace.StorageLocation location, double timeout) => new OVRSpaceQuery.Options
-        {
-            QueryType = SpaceQueryType.Action,
-            ActionType = SpaceQueryActionType.Load,
-            UuidFilter = uuids,
-            Location = location,
-            Timeout = timeout,
-            MaxResults = OVRSpaceQuery.Options.MaxUuidCount,
-        }.ToQueryInfo();
+    {
+        var query = OVRSpaceQuery.ForComponentUnchecked(type);
+        query.Location = location.ToSpaceStorageLocation();
+        query.MaxQuerySpaces = maxResults;
+        query.Timeout = timeout;
+        return (await FetchAnchors(anchors, query)).IsSuccess();
+    }
 
     [Obsolete]
     internal static unsafe Result SaveSpaceList(ulong* spaces, uint numSpaces, SpaceStorageLocation location,

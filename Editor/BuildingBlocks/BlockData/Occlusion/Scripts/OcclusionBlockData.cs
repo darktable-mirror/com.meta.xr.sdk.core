@@ -32,6 +32,18 @@ namespace Meta.XR.BuildingBlocks.Editor
     public class OcclusionBlockData : BlockData
     {
 
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps
+        {
+            get
+            {
+                var matRef = Prefab.GetComponentsInChildren<MeshRenderer>(true).First().sharedMaterial;
+                return new List<InstallationStepInfo>
+                {
+                    new(Utils.GetBlockData(BlockDataIds.Cube), "Collects the reference of selected GameObject, otherwise, adds {0} block to the scene."),
+                    new(matRef, "Applies the {0} to the selected GameObject or instantiated Cube.")
+                };
+            }
+        }
 
         protected override async Task<List<GameObject>> InstallRoutineAsync(GameObject selectedGameObject)
         {

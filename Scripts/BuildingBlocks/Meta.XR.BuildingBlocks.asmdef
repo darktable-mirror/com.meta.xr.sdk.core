@@ -2,7 +2,9 @@
     "name": "Meta.XR.BuildingBlocks",
     "rootNamespace": "",
     "references": [
-        "Oculus.VR"
+        "Oculus.VR",
+        "Unity.InputSystem",
+        "Meta.XR.ImmersiveDebugger.Interface"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -12,6 +14,11 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "UNITY_NEW_INPUT_SYSTEM_INSTALLED"
+        },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",
             "name": "com.meta.xr.sdk.core",

@@ -170,7 +170,7 @@ namespace Meta.XR.BuildingBlocks.Shared.Editor
             }
 
             _customMatchmaking.LeaveRoom();
-            ResetRoomCredentials();
+            RefreshInspectorUI();
         }
 
         #endregion

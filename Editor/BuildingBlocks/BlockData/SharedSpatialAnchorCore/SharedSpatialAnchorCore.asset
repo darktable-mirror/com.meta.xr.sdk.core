@@ -19,10 +19,9 @@ MonoBehaviour:
     shared spatial anchor.
   tags:
     array:
-    - name: Advanced
-    - name: Anchor
-    - name: Core
     - name: Multiplayer
+    - name: Spatial Anchor
+    - name: Advanced
   thumbnail: {fileID: 2800000, guid: 2a52470dda46ac64788ce268d26170e2, type: 3}
   order: 11
   prefab: {fileID: 4898121156137818306, guid: 7bc8dfffd9922b94ba33926c8a808719, type: 3}
@@ -43,3 +42,5 @@ MonoBehaviour:
     OnAnchorsLoadCompleted(List<OVRSpatialAnchor>)\r\n- OnAnchorsEraseAllCompleted(OVRSpatialAnchor.OperationResult)\r\n-
     OnAnchorEraseCompleted(OVRSpatialAnchor, OVRSpatialAnchor.OperationResult)\r\n-
     OnSpatialAnchorsShareCompleted(List<OVRSpatialAnchor>, OVRSpatialAnchor.OperationResult)"
+  featureDocumentationName: 
+  featureDocumentationUrl: 

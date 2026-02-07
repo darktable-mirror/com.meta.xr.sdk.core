@@ -54,6 +54,9 @@ namespace Meta.XR.BuildingBlocks.Editor
         // Audio SDK
         public const string SpatialAudio = "6737262b-4fab-4779-a38b-fe74012fa505";
 
+        public const string SpeechToTextBlock = "af49bc82-4174-46e0-b1e4-40f1c05b4908";
+        public const string TextToSpeech = "ab791591-5ee2-431a-93e7-1749d1b5ad8f";
+        public const string Haptics = "ad78e7c1-6a4d-422e-99f0-5b1a1ae07f6f";
 
 
         // Multiplayer Blocks
@@ -90,4 +93,3 @@ namespace Meta.XR.BuildingBlocks.Editor
         public const string NetworkedGrabbableObjectFusionInstallationRoutine = "54548176-30f4-4a4a-8057-340a383c6102";
     }
 }
-

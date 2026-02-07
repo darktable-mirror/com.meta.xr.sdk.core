@@ -122,7 +122,6 @@ public class SceneModelLoader : MonoBehaviour
                     using var vertices = new NativeArray<Vector3>(vertexCount, Allocator.Temp);
                     using var triangles = new NativeArray<int>(triangleCount * 3, Allocator.Temp);
 
-
                     if (trimesh.TryGetMesh(vertices, triangles))
                     {
                         var mesh = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };

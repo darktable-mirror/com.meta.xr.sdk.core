@@ -410,10 +410,6 @@ public class OVRLint : EditorWindow
                 false);
         }
 
-#if USING_XR_SDK_OPENXR
-        AddFix(eRecordType.StaticCommon, -9999, "Unity OpenXR Plugin Detected", "Unity OpenXR Plugin should NOT be used in production when developing Oculus apps. Please uninstall the package, and install the Oculus XR Plugin from the Package Manager.\nWhen using the Oculus XR Plugin, you can enable OpenXR backend for Oculus Plugin through the 'Oculus -> Tools -> OVR Utilities Plugin' menu.", null, null, false);
-#endif
-
         if (!OVRPluginInfo.IsOVRPluginOpenXRActivated() || OVRPluginInfo.IsOVRPluginUnityProvidedActivated())
         {
             AddFix(eRecordType.StaticCommon, -9999, "Set OVRPlugin to Oculus Utilities-provided (OpenXR backend)",

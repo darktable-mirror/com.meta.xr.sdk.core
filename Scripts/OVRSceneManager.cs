@@ -1091,7 +1091,7 @@ public class OVRSceneManager : MonoBehaviour
     {
         foreach (var sceneAnchor in OVRSceneAnchor.SceneAnchors.Values)
         {
-            sceneAnchor.TryUpdateTransform(true);
+            sceneAnchor.TryUpdateTransform(useCache: true);
 
             if (sceneAnchor.TryGetComponent(out OVRScenePlane plane))
             {
@@ -1112,7 +1112,7 @@ public class OVRSceneManager : MonoBehaviour
         {
             _sceneAnchorUpdateIndex %= OVRSceneAnchor.SceneAnchorsList.Count;
             var anchor = OVRSceneAnchor.SceneAnchorsList[_sceneAnchorUpdateIndex++];
-            anchor.TryUpdateTransform(false);
+            anchor.TryUpdateTransform(useCache: false);
         }
     }
 

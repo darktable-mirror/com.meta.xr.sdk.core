@@ -90,7 +90,8 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                 // not try-catch here because any compiler error would be intercepted as not surfaced well in console
                 Assembly assembly = Assembly.LoadFile(absolutePath);
                 var types = assembly.GetTypes().Where(
-                    t => t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Any(
+                    t => t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                                      BindingFlags.Instance | BindingFlags.DeclaredOnly).Any(
                         m => m.GetCustomAttribute<DebugMember>() != null));
                 RuntimeSettings.UpdateTypes(assembly.GetName().Name, types.ToList().ConvertAll(type => type.FullName));
             }

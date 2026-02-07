@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -28,12 +29,31 @@ using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Utils;
+using static Meta.XR.Editor.UserInterface.Styles;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
     [CustomEditor(typeof(BuildingBlock))]
     public class BuildingBlockEditor : UnityEditor.Editor
     {
+        private const string NextStepLabel = "Next Steps";
+        private const string NextStepHandle = "next_steps";
+
+        private const string CustomizeYourBlockTitle = "Customize your block";
+
+        private const string CustomizeYourBlockDescription =
+            "All elements inside the Building Block are modifiable, like any other GameObjects and their components.";
+
+        private const string AdvancedOptionsLabel = "Advanced Options";
+        private const string AdvancedOptionsHandle = "advanced_options";
+
+        private const string BreakOutBBConnectionsTitle = "Break out the Building Block connections.";
+
+        private const string BreakOutBBConnectionsDescription =
+            "In some cases, you may need to break out of the dependency checks of the Building Block. \nThis GameObject will not be considered as a Building Block anymore.";
+
+        private const string BreakOutBBConnectionsButtonLabel = "Break Block Connection";
+
         private BuildingBlock _block;
         private BlockData _blockData;
 
@@ -62,6 +82,36 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.Space();
             ShowInstructions();
 
+            EditorGUILayout.Space();
+            DrawSectionWithIcon(Styles.Contents.UtilitiesIcon, () =>
+            {
+                EditorGUILayout.LabelField(CustomizeYourBlockTitle, GUIStyles.DialogTextStyle);
+                EditorGUILayout.LabelField(CustomizeYourBlockDescription, Styles.GUIStyles.InfoStyle);
+            });
+
+            if (ShowFoldout(AdvancedOptionsHandle, AdvancedOptionsLabel,
+                    EditorStyles.boldLabel.normal.textColor))
+            {
+                EditorGUILayout.Space();
+                DrawSectionWithIcon(Styles.Contents.BreakBuildingBlockConnectionIcon, () =>
+                {
+                    EditorGUILayout.LabelField(BreakOutBBConnectionsTitle, GUIStyles.DialogTextStyle);
+                    EditorGUILayout.LabelField(BreakOutBBConnectionsDescription, Styles.GUIStyles.InfoStyle);
+                    EditorGUILayout.Space();
+
+                    new ActionLinkDescription()
+                    {
+                        Content = new GUIContent(BreakOutBBConnectionsButtonLabel),
+                        Style = Styles.GUIStyles.ThinButtonLarge,
+                        Action = _block.BreakBlockConnection,
+                        ActionData = _blockData,
+                        Origin = OVRTelemetryConstants.BB.Origins.BlockInspector,
+                        OriginData = _blockData
+
+                    }.Draw();
+                });
+            }
+
         }
 
         protected virtual void ShowAdditionals()
@@ -72,75 +122,60 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void DrawBlockHeader()
         {
-            EditorGUILayout.BeginHorizontal();
+            var horizontal = EditorGUILayout.BeginHorizontal(Styles.GUIStyles.BlockEditorDetails);
+            horizontal.x -= DoubleMargin + MiniPadding;
+            horizontal.y -= Padding;
+            horizontal.width += DoubleMargin + Padding + Padding;
+            EditorGUI.DrawRect(horizontal, Colors.CharcoalGraySemiTransparent);
 
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
 
             // Label
-            EditorGUILayout.LabelField(_blockData.BlockName, Styles.GUIStyles.LabelStyle);
+            UIHelpers.DrawBlockName(_blockData, OVRTelemetryConstants.BB.Origins.BlockInspector, _blockData,
+                containerStyle: Styles.GUIStyles.LargeLinkButtonContainer,
+                labelStyle: Styles.GUIStyles.LargeLabelStyleWhite,
+                iconStyle: Styles.GUIStyles.LargeLinkIconStyle);
 
             // Tags
-            ShowTagList(_blockData.Tags, Tag.TagListType.Description);
+            Meta.XR.Editor.Tags.CommonUIHelpers.DrawList(_blockData.id + "_editor", _blockData.Tags, Tag.TagListType.Description);
 
             // Description
             EditorGUILayout.LabelField(_blockData.Description, Styles.GUIStyles.InfoStyle);
 
             EditorGUILayout.EndVertical();
 
-            DrawDocumentation();
+            UIHelpers.DrawDocumentation(_blockData, OVRTelemetryConstants.BB.Origins.BlockInspector);
 
             EditorGUILayout.EndHorizontal();
 
             GUILayout.FlexibleSpace();
         }
 
-        private void DrawDocumentation()
+        private bool ShowFoldout(object handle, string label, Color color, bool openByDefault = false)
         {
-
-            EditorGUILayout.BeginVertical(Styles.GUIStyles.DocumentationBox);
-
-            // Label
-            EditorGUILayout.LabelField("Documentation", Styles.GUIStyles.DocumentationLabelStyle);
-
-            // Generic Documentation
-            var commonDocs = BlocksContentManager.GetCommonDocs();
-            foreach (var doc in commonDocs)
+            EditorGUILayout.Space();
+            var foldout = false;
+            using (new ColorScope(ColorScope.Scope.Content, color))
             {
-                DrawLink(doc.title, doc.url);
+                foldout = Foldout(handle, label, 0.0f,
+                    GUIStyles.FoldoutHeader, openByDefault);
             }
 
-            // Feature Documentation
-            DrawLink(_blockData.FeatureDocumentationName, _blockData.FeatureDocumentationUrl);
+            return foldout;
+        }
 
-            foreach (var tag in _blockData.Tags)
-            {
-                var docUrls = BlocksContentManager.GetBlockUrls(tag);
-                foreach (var docUrl in docUrls)
-                {
-                    DrawLink(docUrl.title, docUrl.url);
-                }
-            }
+        private void DrawSectionWithIcon(TextureContent icon, System.Action drawUIElements)
+        {
+            EditorGUILayout.BeginHorizontal(GUIStyles.DialogBox);
+            EditorGUILayout.LabelField(icon, GUIStyles.DialogIconStyle,
+                GUILayout.Width(GUIStyles.DialogIconStyle.fixedWidth));
+            EditorGUILayout.BeginVertical();
 
+            drawUIElements?.Invoke();
+
+            EditorGUILayout.Space();
             EditorGUILayout.EndVertical();
-        }
-
-        private static void DrawLink(string label, string url)
-        {
-            if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(label)) return;
-
-            if (LinkButton(label, Styles.GUIStyles.DocumentationLinkStyle))
-            {
-                Application.OpenURL(url);
-            }
-        }
-
-
-        private static bool LinkButton(string label, GUIStyle style)
-        {
-            var content = new GUIContent(label);
-            var position = GUILayoutUtility.GetRect(content, style);
-            EditorGUIUtility.AddCursorRect(position, MouseCursor.Link);
-            return GUI.Button(position, content, style);
+            EditorGUILayout.EndHorizontal();
         }
 
         private void ShowVersionInfo()
@@ -210,66 +245,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 ScaleMode.ScaleAndCrop);
         }
 
-        private void ShowTagList(IEnumerable<Tag> tagArray, Tag.TagListType listType)
-        {
-            EditorGUILayout.BeginHorizontal();
-            foreach (var tag in tagArray)
-            {
-                ShowTag(tag, listType);
-            }
-            EditorGUILayout.EndHorizontal();
-        }
-
-        private static void ShowTag(Tag tag, Tag.TagListType listType)
-        {
-            var tagBehavior = tag.Behavior;
-            if (!tagBehavior.Show)
-            {
-                return;
-            }
-
-            switch (listType)
-            {
-                case Tag.TagListType.Filters when !tagBehavior.CanFilterBy:
-                case Tag.TagListType.Overlays when !tagBehavior.ShowOverlay:
-                    return;
-            }
-
-            var style = tagBehavior.Icon != null ? Styles.GUIStyles.TagStyleWithIcon : Styles.GUIStyles.TagStyle;
-            var backgroundColors = listType == Tag.TagListType.Overlays ? Styles.GUIStyles.TagOverlayBackgroundColors : Styles.GUIStyles.TagBackgroundColors;
-
-            var tagContent = new GUIContent(tag.Name);
-            var tagSize = style.CalcSize(tagContent);
-            var rect = GUILayoutUtility.GetRect(tagContent, style, GUILayout.MinWidth(tagSize.x + 1));
-            var color = backgroundColors.GetColor(false, false);
-            using (new ColorScope(ColorScope.Scope.Background, color))
-            {
-                using (new ColorScope(ColorScope.Scope.Content, tagBehavior.Color))
-
-                {
-                    if (GUI.Button(rect, tagContent, style))
-                    {
-
-                    }
-
-                    if (tagBehavior.Icon != null)
-                    {
-                        GUI.Label(rect, tagBehavior.Icon, Styles.GUIStyles.TagIcon);
-                    }
-                }
-            }
-        }
-
-        private static bool ShowLargeButton(GUIContent icon)
-        {
-            var previousColor = GUI.color;
-            GUI.color = Color.white;
-            var hit = GUILayout.Button(icon, Styles.GUIStyles.LargeButton);
-            GUI.color = previousColor;
-            EditorGUIUtility.AddCursorRect(GUILayoutUtility.GetLastRect(), MouseCursor.Link);
-            return hit;
-        }
-
         private void ShowBlockDataList(string listName, string noneNotice, IReadOnlyCollection<BlockData> list)
         {
             EditorGUILayout.LabelField(listName, EditorStyles.boldLabel);
@@ -282,125 +257,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             foreach (var dependency in list)
             {
-                ShowBlock(dependency, null, true, true, false);
+                UIHelpers.DrawBlockRow(dependency, null, OVRTelemetryConstants.BB.Origins.BlockInspector, _blockData);
             }
-        }
-
-        private void ShowBlock(BlockData data, BuildingBlock block, bool asGridItem,
-            bool showAction, bool showBuildingBlock)
-        {
-            var previousIndent = EditorGUI.indentLevel;
-            EditorGUI.indentLevel = 0;
-
-            data = data ? data : block.GetBlockData();
-            block = block ? block : data.GetBlock();
-
-            // Thumbnail
-            if (asGridItem)
-            {
-                var gridStyle = new GUIStyle(Styles.GUIStyles.GridItemStyle)
-                {
-                    margin = new RectOffset(0, 0, 0, 0)
-                };
-                EditorGUILayout.BeginHorizontal(gridStyle);
-                EditorGUILayout.BeginHorizontal(Styles.GUIStyles.DescriptionAreaStyle);
-
-                var expectedSize = ItemHeight;
-                var rect = GUILayoutUtility.GetRect(0, expectedSize);
-                rect.y -= Padding;
-                rect.x -= Padding;
-                rect.width = ItemHeight;
-                GUI.DrawTexture(rect, data.Thumbnail, ScaleMode.ScaleAndCrop);
-
-                EditorGUILayout.Space(ItemHeight - Padding - SmallIconSize * 0.5f - 2);
-                EditorGUILayout.LabelField(block != null ? Styles.Contents.SuccessIcon : Styles.Contents.ErrorIcon, Styles.GUIStyles.IconStyle,
-                    GUILayout.Width(SmallIconSize), GUILayout.Height(ItemHeight - Padding * 2));
-            }
-            else
-            {
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.BeginHorizontal();
-            }
-
-            // Label
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.BeginHorizontal();
-            var labelStyle = Styles.GUIStyles.LabelStyle;
-            EditorGUILayout.LabelField(data.BlockName, labelStyle);
-            labelStyle = Styles.GUIStyles.SubtitleStyle;
-            EditorGUILayout.EndHorizontal();
-            if (asGridItem)
-            {
-                var blocksCount = data.GetBlocks().Count;
-                var label = blocksCount > 0
-                    ? $"{blocksCount} {OVREditorUtils.ChoosePlural(blocksCount, "Block", "Blocks")} installed"
-                    : "Not Installed";
-                EditorGUILayout.LabelField(label, Styles.GUIStyles.InfoStyle);
-            }
-            else
-            {
-                EditorGUILayout.LabelField(data.Description, Styles.GUIStyles.InfoStyle);
-            }
-            EditorGUILayout.EndVertical();
-
-            GUILayout.FlexibleSpace();
-
-            if (showAction)
-            {
-                if (block != null)
-                {
-                    if (ShowLargeButton(Utils.GotoIcon))
-                    {
-                        data.SelectBlocksInScene();
-                    }
-                }
-                else
-                {
-                    if (ShowLargeButton(Utils.AddIcon))
-                    {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        data.AddToProject();
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    }
-                }
-            }
-
-            if (showBuildingBlock && ShowLargeButton(Utils.StatusIcon))
-            {
-                BuildingBlocksWindow.ShowWindow(Item.Origins.Component);
-            }
-
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndHorizontal();
-
-            // Only for dependency block(s)
-            if (!showBuildingBlock)
-            {
-                AddBlockHighlightListeners(block);
-            }
-
-            EditorGUI.indentLevel = previousIndent;
-        }
-
-        internal static void AddBlockHighlightListeners(BuildingBlock buildingBlock)
-        {
-            if (buildingBlock == null) return;
-
-            var rect = GUILayoutUtility.GetLastRect();
-            EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
-
-            var currentEvent = Event.current;
-            if (currentEvent.type != EventType.MouseDown || currentEvent.button != 0 ||
-                !rect.Contains(currentEvent.mousePosition))
-            {
-                return;
-            }
-
-            buildingBlock.HighlightBlockInScene();
-            if (currentEvent.clickCount == 2)
-                buildingBlock.SelectBlockInScene();
-
-            currentEvent.Use();
         }
     }
 }

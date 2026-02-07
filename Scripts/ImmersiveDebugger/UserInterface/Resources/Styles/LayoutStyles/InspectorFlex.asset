@@ -18,6 +18,10 @@ MonoBehaviour:
   pivot: 0
   size: {x: 0, y: 0}
   margin: {x: 8, y: 8}
-  spacing: 4
+  useBottomRightMargin: 0
+  bottomRightMargin: {x: 0, y: 0}
+  spacing: 6
   masks: 0
   adaptHeight: 1
+  autoFitChildren: 0
+  isOverlayCanvas: 0

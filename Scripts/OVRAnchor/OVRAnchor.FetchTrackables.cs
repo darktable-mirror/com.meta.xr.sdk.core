@@ -157,8 +157,10 @@ partial struct OVRAnchor
         {
             using (new OVRObjectPool.ListScope<OVRAnchor>(out var anchorsWithComponent))
             {
-                s_singleComponentSpaceQueryInfo.ComponentsInfo.Components[0] = componentType;
-                var result = await FetchAnchors(anchorsWithComponent, s_singleComponentSpaceQueryInfo);
+                var query = OVRSpaceQuery.ForComponentUnchecked(componentType);
+                query.Location = SpaceStorageLocation.Local;
+
+                var result = await FetchAnchors(anchorsWithComponent, query);
                 if (!result.IsSuccess())
                 {
                     return result;
@@ -196,24 +198,4 @@ partial struct OVRAnchor
             return false;
         }
     }
-
-    // xrQuerySpacesFB params just to query a single component type
-    private static readonly SpaceQueryInfo s_singleComponentSpaceQueryInfo = new()
-    {
-        ActionType = SpaceQueryActionType.Load,
-        ComponentsInfo = new()
-        {
-            Components = new SpaceComponentType[SpaceFilterInfoComponentsMaxSize],
-            NumComponents = 1,
-        },
-        FilterType = SpaceQueryFilterType.Components,
-        IdInfo = new()
-        {
-            Ids = new Guid[SpaceFilterInfoIdsMaxSize],
-            NumIds = 0
-        },
-        Location = SpaceStorageLocation.Local,
-        MaxQuerySpaces = 1024,
-        QueryType = SpaceQueryType.Action,
-    };
 }

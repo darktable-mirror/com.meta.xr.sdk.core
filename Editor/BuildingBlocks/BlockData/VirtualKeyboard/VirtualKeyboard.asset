@@ -22,6 +22,7 @@ MonoBehaviour:
   thumbnail: {fileID: 2800000, guid: d5377891cf6386b4a9337b2fb62b1e80, type: 3}
   order: -3
   prefab: {fileID: 2844263358417267744, guid: 425a911bab27f3f4c8a25d35813093f0, type: 3}
+  externalBlockDependencies: []
   dependencies:
   - e47682b9-c270-40b1-b16d-90b627a5ce1b
   - 5817f7c0-f2a5-45f9-a5ca-64264e0166e8
@@ -29,3 +30,5 @@ MonoBehaviour:
   packageDependencies: []
   isSingleton: 1
   usageInstructions: 
+  featureDocumentationName: Virtual Keyboard
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/VK-unity-overview

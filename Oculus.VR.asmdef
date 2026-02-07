@@ -78,6 +78,21 @@
             "define": "UNITY_NEW_INPUT_SYSTEM_INSTALLED"
         },
         {
+            "name": "Unity",
+            "expression": "[2021.3.45f1,2022.0.0)",
+            "define": "UNITY_Y_FLIP_FIX_2021"
+        },
+        {
+            "name": "Unity",
+            "expression": "[2022.3.49f1,6000.0.0)",
+            "define": "UNITY_Y_FLIP_FIX_2022"
+        },
+        {
+            "name": "Unity",
+            "expression": "6000.0.25f1",
+            "define": "UNITY_Y_FLIP_FIX_6"
+        },
+        {
             "define": "OVR_UNITY_PACKAGE_MANAGER",
             "name": "com.meta.xr.sdk.core",
             "expression": ""

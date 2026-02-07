@@ -320,6 +320,40 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     }
 
     /// <summary>
+    /// Shares this anchor with the group associated with the given UUID.
+    /// </summary>
+    /// <param name="groupUuid">
+    /// A UUID of a group to share the anchors with.
+    /// Anchors shared to this <see cref="groupUuid"/> can be loaded by other clients via
+    /// <see cref="LoadUnboundSharedAnchorsAsync(Guid,List{UnboundAnchor})"/>.
+    /// <br/>
+    /// NOTE: You may arbitrarily generate your own UUIDs (e.g. with <see cref="System.Guid.NewGuid"/>), or you may use
+    /// UUIDs provided by colocation APIs such as in <see cref="OVRColocationSession"/>.
+    /// <seealso cref="OVRColocationSession.StartAdvertisementAsync"/>
+    /// <seealso cref="OVRColocationSession.Data.AdvertisementUuid"/>
+    /// </param>
+    /// <returns>
+    /// Returns an <see cref="OVRResult"/>&lt;<see cref="OVRAnchor.ShareResult"/>&gt; indicating the status of the share
+    /// operation.
+    /// </returns>
+    /// <remarks>
+    /// This method is asynchronous; use the returned <see cref="OVRTask"/> wrapper to be notified of completion.
+    /// <br/><br/>
+    /// The <paramref name="groupUuid"/> parameter can be any valid Guid, which excludes the default value Guid, AKA
+    /// <see cref="Guid.Empty"/>.
+    /// </remarks>
+    public OVRTask<OVRResult<OVRAnchor.ShareResult>> ShareAsync(Guid groupUuid)
+    {
+        ulong handle = _anchor.Handle;
+        unsafe
+        {
+            var handleSpan = new ReadOnlySpan<ulong>(&handle, 1);
+            var groupUuidSpan = new ReadOnlySpan<Guid>(&groupUuid, 1);
+            return OVRAnchor.ShareAsyncInternal(handleSpan, groupUuidSpan);
+        }
+    }
+
+    /// <summary>
     /// Shares a collection of anchors with a collection of users.
     /// </summary>
     /// <remarks>
@@ -402,7 +436,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The <paramref name="groupUuid"/> parameter can be any valid Guid, which excludes the default value Guid, AKA
     /// <see cref="Guid.Empty"/>.
     /// </remarks>
-    /// <exception cref="ArgumentNullException">if <paramref name="anchors"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> is null.</exception>
     public static OVRTask<OVRResult<OVRAnchor.ShareResult>> ShareAsync(IEnumerable<OVRSpatialAnchor> anchors, Guid groupUuid)
     {
         if (anchors is null)
@@ -452,7 +486,7 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// The <paramref name="groupUuids"/> parameter can consist of any valid Guids, which excludes the default value
     /// Guid, AKA <see cref="Guid.Empty"/>.
     /// </remarks>
-    /// <exception cref="ArgumentNullException">if <paramref name="anchors"/> or <paramref name="groupUuids"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> or <paramref name="groupUuids"/> is null.</exception>
     public static OVRTask<OVRResult<OVRAnchor.ShareResult>> ShareAsync(IEnumerable<OVRSpatialAnchor> anchors, IEnumerable<Guid> groupUuids)
     {
         if (anchors is null)
@@ -531,11 +565,10 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// This operation fully succeeds or fails; that is, either all anchors are successfully saved, or the operation
     /// fails.
     /// </remarks>
-    /// <param name="anchors">The anchors to save (up to 32).</param>
+    /// <param name="anchors">The anchors to save.</param>
     /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous save operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="anchors"/> is `null`.</exception>
     /// <seealso cref="SaveAnchorAsync"/>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="anchors"/> contains more than 32 anchors.</exception>
     public static OVRTask<OVRResult<OVRAnchor.SaveResult>> SaveAnchorsAsync(IEnumerable<OVRSpatialAnchor> anchors)
     {
         if (anchors == null)
@@ -546,9 +579,6 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         {
             spaces.Add(anchor._anchor.Handle);
         }
-
-        if (spaces.Count > OVRAnchor.MaxPersistentAnchorBatchSize)
-            throw new ArgumentException($"Cannot save more than {OVRAnchor.MaxPersistentAnchorBatchSize} anchors at once ({spaces.Count} were provided).", nameof(anchors));
 
         return OVRAnchor.SaveSpacesAsync(spaces);
     }
@@ -588,16 +618,12 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// <remarks>
     /// This operation is asynchronous. Use the returned <see cref="OVRTask"/> to track the result of the
     /// asynchronous operation.
-    ///
-    /// The total number of anchors (<paramref name="anchors"/> and <paramref name="uuids"/>) may not exceed 32.
     /// </remarks>
     /// <param name="anchors">(Optional) The anchors to erase</param>
     /// <param name="uuids">(Optional) The UUIDs to erase</param>
     /// <returns>Returns an awaitable <see cref="OVRTask"/> representing the asynchronous erase operation.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="anchors"/> and <paramref name="uuids"/> are both `null`.</exception>
     /// <seealso cref="EraseAnchorAsync"/>
-    /// <exception cref="ArgumentException">Thrown if the combined number of <paramref name="anchors"/> and
-    /// <paramref name="uuids"/> is greater than 32.</exception>
     public static OVRTask<OVRResult<OVRAnchor.EraseResult>> EraseAnchorsAsync(
         IEnumerable<OVRSpatialAnchor> anchors,
         IEnumerable<Guid> uuids)
@@ -833,10 +859,9 @@ public partial class OVRSpatialAnchor : MonoBehaviour
                                 $"[{anchor.Uuid}] {nameof(OVRPlugin)}.{nameof(OVRPlugin.SaveSpaceList)} failed with result: {result}.");
                         }
 
-                        if (AsyncRequestTaskIds.TryGetValue(anchor, out var taskId))
+                        if (AsyncRequestTaskIds.Remove(anchor, out var taskId))
                         {
-                            AsyncRequestTaskIds.Remove(anchor);
-                            OVRTask.GetExisting<bool>(taskId).SetResult(result == OperationResult.Success);
+                            OVRTask.SetResult(taskId, result == OperationResult.Success);
                         }
 
                         break;
@@ -849,10 +874,9 @@ public partial class OVRSpatialAnchor : MonoBehaviour
                                 $"[{anchor.Uuid}] {nameof(OVRPlugin)}.{nameof(OVRPlugin.ShareSpaces)} failed with result: {result}.");
                         }
 
-                        if (AsyncRequestTaskIds.TryGetValue(anchor, out var taskId))
+                        if (AsyncRequestTaskIds.Remove(anchor, out var taskId))
                         {
-                            AsyncRequestTaskIds.Remove(anchor);
-                            OVRTask.GetExisting<OperationResult>(taskId).SetResult(result);
+                            OVRTask.SetResult(taskId, result);
                         }
 
                         break;
@@ -1123,14 +1147,24 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// To load other types of anchors, use
     /// <see cref="LoadUnboundAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor},Action{List{UnboundAnchor},int})"/>.
     /// </remarks>
-    /// <param name="uuids">The set of anchor UUIDs to load</param>
-    /// <param name="unboundAnchors">A buffer to store the loaded anchors. This container is cleared before being
-    /// populated.</param>
+    /// <param name="uuids">
+    /// The set of anchor UUIDs to load. These are typically sourced from your serialization and/or networking layers.
+    /// <br/>
+    /// You should not attempt to load more than <see cref="OVRSpaceQuery.MaxResultsForAnchors"/> anchors per request.
+    /// <br/>
+    /// The elements in this set will NOT be individually validated; you should be sure that none of them are
+    /// <see cref="Guid.Empty"/> before calling this API.
+    /// </param>
+    /// <param name="unboundAnchors">
+    /// A buffer to store the loaded anchors.
+    /// This container is always cleared unless an exception is thrown.
+    /// </param>
     /// <returns>Returns an awaitable task-like object that can be used to track completion of the load operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="uuids"/> is `null`.</exception>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="unboundAnchors"/> is `null`.</exception>
+    /// <exception cref="ArgumentNullException">
+    ///     Thrown if either <paramref name="uuids"/> or <paramref name="unboundAnchors"/> is `null`.
+    /// </exception>
     /// <seealso cref="LoadUnboundAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor},Action{List{UnboundAnchor},int})"/>
-    public static OVRTask<OVRResult<List<UnboundAnchor>, OperationResult>> LoadUnboundSharedAnchorsAsync(
+    public static async OVRTask<OVRResult<List<UnboundAnchor>, OperationResult>> LoadUnboundSharedAnchorsAsync(
         IEnumerable<Guid> uuids,
         List<UnboundAnchor> unboundAnchors)
     {
@@ -1140,33 +1174,29 @@ public partial class OVRSpatialAnchor : MonoBehaviour
         if (unboundAnchors == null)
             throw new ArgumentNullException(nameof(unboundAnchors));
 
-        async OVRTask<OVRResult<List<UnboundAnchor>, OperationResult>> Execute(IEnumerable<Guid> uuids,
-            List<UnboundAnchor> unboundAnchors)
+        var query = OVRSpaceQuery.ForAnchorsThrow(uuids, nameof(uuids));
+
+        unboundAnchors.Clear();
+
+        using (new OVRObjectPool.ListScope<OVRAnchor>(out var anchorBuff))
         {
-            using (new OVRObjectPool.ListScope<OVRAnchor>(out var anchors))
+            var fetchResult = await OVRAnchor.FetchAnchors(anchorBuff, query);
+
+            if (!fetchResult.IsSuccess())
             {
-#pragma warning disable CS0618, CS0612 // Obsolete
-                var result = await OVRAnchor.FetchAnchors(anchors,
-                    OVRAnchor.GetQueryInfo(uuids, OVRSpace.StorageLocation.Cloud, 0));
-#pragma warning restore CS0618, CS0612
-
-                unboundAnchors.Clear();
-                if (result.IsSuccess())
-                {
-                    foreach (var anchor in anchors)
-                    {
-                        if (TryGetUnbound(anchor, out var unboundAnchor))
-                        {
-                            unboundAnchors.Add(unboundAnchor);
-                        }
-                    }
-                }
-
-                return OVRResult.From(unboundAnchors, (OperationResult)result);
+                return OVRResult.From(unboundAnchors, (OperationResult)fetchResult);
             }
-        }
 
-        return Execute(uuids, unboundAnchors);
+            foreach (var fetched in anchorBuff)
+            {
+                if (TryGetUnbound(fetched, out var unboundAnchor))
+                {
+                    unboundAnchors.Add(unboundAnchor);
+                }
+            }
+
+            return OVRResult.From(unboundAnchors, (OperationResult)fetchResult);
+        }
     }
 
     /// <summary>
@@ -1177,12 +1207,16 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// <seealso cref="ShareAsync(IEnumerable{OVRSpatialAnchor},Guid)"/>
     /// </param>
     /// <param name="unboundAnchors">
-    /// A non-null buffer to store the loaded anchors. This container is cleared before being populated.
+    /// A non-null buffer to store the loaded anchors.
+    /// This container is always cleared unless an exception is thrown.
     /// </param>
     /// <returns>
     /// Returns an <see cref="OVRResult"/>&lt;<see cref="List{UnboundAnchor}"/>,<see cref="OperationResult"/>&gt;,
     /// which indicates the status of the load operation, as well as returning a now-populated reference to the
     /// <paramref name="unboundAnchors"/> buffer list originally provided to this call.
+    /// <br/>
+    /// This result's Status will be <see cref="OperationResult.Failure_InvalidParameter"/> if
+    /// <paramref name="groupUuid"/> is <see cref="Guid.Empty"/>.
     /// </returns>
     /// <remarks>
     /// This method is asynchronous. The returned <see cref="OVRTask"/> wrapper completes when all results are
@@ -1200,63 +1234,124 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// Already-bound anchors will not appear in the resulting <paramref name="unboundAnchors"/> list until subsequent
     /// app launches.
     /// </remarks>
-    /// <exception cref="ArgumentNullException">if <paramref name="unboundAnchors"/> is null.</exception>
-    public static OVRTask<OVRResult<List<UnboundAnchor>, OperationResult>> LoadUnboundSharedAnchorsAsync(
+    /// <exception cref="ArgumentNullException">
+    ///     Thrown if <paramref name="unboundAnchors"/> is `null`.
+    /// </exception>
+    public static async OVRTask<OVRResult<List<UnboundAnchor>, OperationResult>> LoadUnboundSharedAnchorsAsync(
         Guid groupUuid,
         List<UnboundAnchor> unboundAnchors)
     {
-        if (unboundAnchors == null)
+        if (unboundAnchors is null)
             throw new ArgumentNullException(nameof(unboundAnchors));
 
-        var promise = new OVRObjectPool.ListScope<OVRAnchor>(out var anchors);
+        var query = OVRSpaceQuery.ForGroupThrow(groupUuid, nameof(groupUuid));
 
-        var loadTask = OVRTask.Create<OVRResult<List<UnboundAnchor>, OperationResult>>(Guid.NewGuid());
+        unboundAnchors.Clear();
 
-        void afterFetch(OVRPlugin.Result result)
+        using (new OVRObjectPool.ListScope<OVRAnchor>(out var anchorBuff))
         {
-            using var keep = promise;
+            var fetchResult = await OVRAnchor.FetchAnchors(anchorBuff, query);
 
-            if (!result.IsSuccess())
+            if (!fetchResult.IsSuccess())
             {
-                loadTask.SetResult(OVRResult.From(unboundAnchors, (OperationResult)result));
-                return;
+                return OVRResult.From(unboundAnchors, (OperationResult)fetchResult);
             }
 
-            unboundAnchors.Clear();
-
-            foreach (var anchor in anchors)
+            foreach (var fetched in anchorBuff)
             {
-                if (TryGetUnbound(anchor, out var unboundAnchor))
+                if (TryGetUnbound(fetched, out var unboundAnchor))
                 {
                     unboundAnchors.Add(unboundAnchor);
                 }
-                else
+            }
+
+            return OVRResult.From(unboundAnchors, (OperationResult)fetchResult);
+        }
+    }
+
+    /// <summary>
+    /// Loads all (unbound) spatial anchors shared with a group by its UUID.
+    /// </summary>
+    /// <param name="groupUuid">
+    /// The group UUID to load any associated shared anchors from.
+    /// <seealso cref="ShareAsync(IEnumerable{OVRSpatialAnchor},Guid)"/>
+    /// </param>
+    /// <param name="allowedAnchorUuids">
+    /// A non-null, non-empty set of known anchor UUIDs to load from the group.
+    /// They will not be loaded if:
+    /// - they never existed
+    /// - they've been erased from cloud storage
+    /// - they were never shared to the given <paramref name="groupUuid"/>
+    /// Any anchor not specified will be omitted from the results in <paramref name="unboundAnchors"/>.
+    /// <br/>
+    /// The elements in this set will NOT be individually validated; you should be sure that none of them are
+    /// <see cref="Guid.Empty"/> before calling this API.
+    /// </param>
+    /// <param name="unboundAnchors">
+    /// A non-null buffer to store the loaded anchors.
+    /// This container is always cleared unless an exception is thrown.
+    /// </param>
+    /// <returns>
+    /// Returns an <see cref="OVRResult"/>&lt;<see cref="List{UnboundAnchor}"/>,<see cref="OperationResult"/>&gt;,
+    /// which indicates the status of the load operation, as well as returning a now-populated reference to the
+    /// <paramref name="unboundAnchors"/> buffer list originally provided to this call.
+    /// <br/>
+    /// This result's Status will be <see cref="OperationResult.Failure_InvalidParameter"/> if
+    /// <paramref name="groupUuid"/> is <see cref="Guid.Empty"/>, or <paramref name="allowedAnchorUuids"/> is larger
+    /// than <see cref="OVRSpaceQuery.MaxResultsForAnchors"/>.
+    /// </returns>
+    /// <remarks>
+    /// This method is asynchronous. The returned <see cref="OVRTask"/> wrapper completes when all results are
+    /// available.
+    /// <br/><br/>
+    /// In order to be loaded, the anchor must have previously been shared with the group, e.g., with
+    /// <see cref="ShareAsync(IEnumerable{OVRSpatialAnchor}, Guid)"/>.
+    /// <see cref="ShareAsync(IEnumerable{OVRSpatialAnchor}, IEnumerable{Guid})"/>.
+    /// <br/><br/>
+    /// An <see cref="UnboundAnchor"/> is an anchor that exists, but that isn't yet managed by an
+    /// <see cref="OVRSpatialAnchor"/> instance. To bind these anchors, create new GameObjects with an
+    /// <see cref="OVRSpatialAnchor"/> component attached, and pass this component to an unbound anchor's
+    /// <see cref="UnboundAnchor.BindTo"/> method.
+    /// <br/><br/>
+    /// Already-bound anchors will not appear in the resulting <paramref name="unboundAnchors"/> list until subsequent
+    /// app launches.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    ///     Thrown if either <paramref name="allowedAnchorUuids"/> or <paramref name="unboundAnchors"/> is null.
+    /// </exception>
+    public static async OVRTask<OVRResult<List<UnboundAnchor>, OperationResult>> LoadUnboundSharedAnchorsAsync(
+        Guid groupUuid,
+        IEnumerable<Guid> allowedAnchorUuids,
+        List<UnboundAnchor> unboundAnchors)
+    {
+        if (allowedAnchorUuids is null)
+            throw new ArgumentNullException(nameof(allowedAnchorUuids));
+        if (unboundAnchors is null)
+            throw new ArgumentNullException(nameof(unboundAnchors));
+
+        unboundAnchors.Clear();
+
+        var groupQuery = OVRSpaceQuery.ForGroupThrow(groupUuid, nameof(groupUuid), allowedAnchorUuids);
+
+        using (new OVRObjectPool.ListScope<OVRAnchor>(out var anchorBuff))
+        {
+            var fetchResult = await OVRAnchor.FetchAnchors(anchorBuff, groupQuery);
+
+            if (!fetchResult.IsSuccess())
+            {
+                return OVRResult.From(unboundAnchors, (OperationResult)fetchResult);
+            }
+
+            foreach (var fetched in anchorBuff)
+            {
+                if (TryGetUnbound(fetched, out var unboundAnchor))
                 {
-                    Debug.LogError($"Unable to get unbound anchor for anchor {anchor}");
+                    unboundAnchors.Add(unboundAnchor);
                 }
             }
 
-            loadTask.SetResult(OVRResult.From(unboundAnchors, (OperationResult)result));
+            return OVRResult.From(unboundAnchors, (OperationResult)fetchResult);
         }
-
-        var info = new OVRPlugin.SpaceQueryInfo2()
-        {
-            QueryType = OVRPlugin.SpaceQueryType.Action,
-            MaxQuerySpaces = OVRPlugin.MaxQuerySpacesByGroup,
-            Timeout = 0.0,
-            Location = OVRPlugin.SpaceStorageLocation.Cloud,
-            ActionType = OVRPlugin.SpaceQueryActionType.Load,
-            FilterType = OVRPlugin.SpaceQueryFilterType.Group,
-            GroupUuidInfo = groupUuid
-        };
-
-#pragma warning disable CS0618, CS0612 // Obsolete
-        var fetchTask = OVRAnchor.FetchAnchorsByGroup(anchors, info);
-#pragma warning restore CS0618, CS0612
-
-        fetchTask.ContinueWith(afterFetch);
-
-        return loadTask;
     }
 
     private static async OVRTask<OVRResult<List<UnboundAnchor>, OVRAnchor.FetchResult>> LoadUnboundAnchorsAsync(
@@ -1327,6 +1422,9 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// <param name="unboundAnchor">The created unboundAnchor.</param>
     /// <returns>True if <paramref name="anchor"/> is localizable and is not already bound to an
     /// <see cref="OVRSpatialAnchor"/>, otherwise false.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if <paramref name="anchor"/> is equal to <see cref="OVRAnchor.Null"/> (is default-constructed).
+    /// </exception>
     public static bool FromOVRAnchor(OVRAnchor anchor, out UnboundAnchor unboundAnchor)
     {
         if (anchor == OVRAnchor.Null) throw new ArgumentNullException(nameof(anchor));
@@ -1336,10 +1434,13 @@ public partial class OVRSpatialAnchor : MonoBehaviour
 
     private static bool TryGetUnbound(OVRAnchor anchor, out UnboundAnchor unboundAnchor)
     {
-        unboundAnchor = default;
-        if (SpatialAnchors.ContainsKey(anchor.Uuid))
+        unboundAnchor = new UnboundAnchor(anchor.Handle, anchor.Uuid);
+
+        if (SpatialAnchors.TryGetValue(unboundAnchor.Uuid, out var alreadyBound))
         {
-            Development.Log($"[{anchor}] Anchor is already bound to an {nameof(OVRSpatialAnchor)}. Ignoring.");
+            Development.LogWarning(
+                $"[{nameof(TryGetUnbound)}] SKIPPED: {anchor.Uuid:B} is already bound to {nameof(OVRSpatialAnchor)} \"{alreadyBound.name}\" in scene \"{alreadyBound.gameObject.scene.name}\""
+            );
             return false;
         }
 
@@ -1363,11 +1464,10 @@ public partial class OVRSpatialAnchor : MonoBehaviour
 
         if (!supportsLocatable)
         {
-            Debug.LogError($"Ignoring {anchor} because it does not support localization.");
+            Development.LogError($"[{nameof(TryGetUnbound)}] ERROR: {anchor.Uuid:B} does not support {nameof(OVRLocatable)}, and cannot be used as a spatial anchor.");
             return false;
         }
 
-        unboundAnchor = new UnboundAnchor(anchor.Handle, anchor.Uuid);
         return true;
     }
 
@@ -1459,6 +1559,10 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// <summary>
     /// Possible results of various anchor operations.
     /// </summary>
+    /// <remarks>
+    /// For Failure results, additional details about what went wrong may be available in the runtime logs if you are
+    /// running from the Unity Editor or a Development Build.
+    /// </remarks>
     /// <seealso cref="OnLocalize"/>
     /// <seealso cref="ShareAsync(OVRSpaceUser)"/>
     /// <seealso cref="ShareAsync(OVRSpaceUser,OVRSpaceUser)"/>
@@ -1469,6 +1573,8 @@ public partial class OVRSpatialAnchor : MonoBehaviour
     /// <seealso cref="ShareAsync(IEnumerable{OVRSpatialAnchor}, Guid)"/>
     /// <seealso cref="ShareAsync(IEnumerable{OVRSpatialAnchor}, IEnumerable{Guid})"/>
     /// <seealso cref="LoadUnboundAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor},Action{List{UnboundAnchor},int})"/>
+    /// <ssealso cref="LoadUnboundSharedAnchorsAsync(Guid,List{UnboundAnchor})"/>
+    /// <ssealso cref="LoadUnboundSharedAnchorsAsync(Guid,IEnumerable{Guid},List{UnboundAnchor})"/>
     /// <ssealso cref="LoadUnboundSharedAnchorsAsync(IEnumerable{Guid},List{UnboundAnchor})"/>
     [OVRResultStatus]
     public enum OperationResult
@@ -1481,6 +1587,11 @@ public partial class OVRSpatialAnchor : MonoBehaviour
 
         /// <summary>The operation failed because the associated data is invalid</summary>
         Failure_DataIsInvalid = OVRPlugin.Result.Failure_DataIsInvalid,
+
+        /// <summary>
+        /// An invalid parameter was supplied to the operation, implicating early termination.
+        /// </summary>
+        Failure_InvalidParameter = OVRPlugin.Result.Failure_InvalidParameter,
 
         /// <summary>The operation failed because saving anchors to cloud storage is not permitted by the user.</summary>
         Failure_SpaceCloudStorageDisabled = OVRPlugin.Result.Failure_SpaceCloudStorageDisabled,

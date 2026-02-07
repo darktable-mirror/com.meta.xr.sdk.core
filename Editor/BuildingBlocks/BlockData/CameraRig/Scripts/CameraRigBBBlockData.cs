@@ -27,6 +27,19 @@ namespace Meta.XR.BuildingBlocks.Editor
     public class CameraRigBBBlockData : BlockData
     {
 
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps
+        {
+            get
+            {
+                var installationSteps = new List<InstallationStepInfo>
+                {
+                    new(null, "Looks for an existing <b>VR CameraRig</b>."),
+                    new(null, "If no CameraRig is found, do the following:")
+                };
+                installationSteps.AddRange(base.InstallationSteps);
+                return installationSteps;
+            }
+        }
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
             var existingCameraRig = FindObjectOfType<OVRCameraRig>();

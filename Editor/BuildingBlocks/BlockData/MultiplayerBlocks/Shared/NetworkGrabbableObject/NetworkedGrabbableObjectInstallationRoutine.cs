@@ -73,5 +73,24 @@ namespace Meta.XR.BuildingBlocks.Shared.Editor
             throw new InvalidOperationException("It's required to install Meta Interaction SDK package to use this component");
 #endif // META_INTERACTION_SDK_DEFINED
         }
+
+#if META_INTERACTION_SDK_DEFINED
+        internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
+        {
+            var installationSteps = new List<InstallationStepInfo>();
+            installationSteps.AddRange(base.GetInstallationSteps(selection));
+            if (!_useGravity)
+            {
+                var handGrabBlockData = Utils.GetBlockData(HandGrabBlockId);
+                installationSteps.Add(new InstallationStepInfo(handGrabBlockData, "Installs {0}"));
+            }
+            else
+            {
+                var touchHandGrabBlockData = Utils.GetBlockData(TouchHandGrabBlockId);
+                installationSteps.Add(new InstallationStepInfo(touchHandGrabBlockData, "Installs {0}"));
+            }
+            return installationSteps;
+        }
+#endif // META_INTERACTION_SDK_DEFINED
     }
 }

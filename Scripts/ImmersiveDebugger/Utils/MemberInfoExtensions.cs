@@ -196,6 +196,9 @@ namespace Meta.XR.ImmersiveDebugger.Utils
         public static bool IsTypeEqual(this MemberInfo member, Type type) => (member as FieldInfo)?.FieldType == type ||
                                                                   (member as PropertyInfo)?.PropertyType == type;
 
+        public static bool IsBaseTypeEqual(this MemberInfo member, Type type) => (member as FieldInfo)?.FieldType.BaseType == type ||
+                                                                             (member as PropertyInfo)?.PropertyType.BaseType == type;
+
         public static bool CanBeChanged(this MemberInfo memberInfo) => (memberInfo.MemberType & (MemberTypes.Property | MemberTypes.Field)) != 0;
     }
 }

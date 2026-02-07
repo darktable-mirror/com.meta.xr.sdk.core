@@ -122,6 +122,7 @@ MonoBehaviour:
       quality: 0
       loadRigZipFromGlb: 0
       reserved: 0000000000000000000000000000000000000000000000000000000000000000
+  _validateCache: 1
   _activeView: 2
   _activeManifestation: 1
   _activeSubMeshes: -1
@@ -181,7 +182,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81521d61d0efc3a4b87b3783aee9f4a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _customRigPrefab: {fileID: 0}
+  _customRigPrefab: {fileID: 5385166689473671844, guid: cbc02a91841771b4ab9f12678612c4b1, type: 3}
   _customAnimationOnly: 0
   _inputBlended: 1
   _leftArmBlendFactor: 1

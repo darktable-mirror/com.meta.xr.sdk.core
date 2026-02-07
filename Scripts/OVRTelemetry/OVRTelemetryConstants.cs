@@ -38,6 +38,7 @@ internal static class OVRTelemetryConstants
             public const string ProjectGuid = "ProjectGuid";
             public const string Origin = "Origin";
             public const string BatchMode = "BatchMode";
+            public const string ProcessorType = "ProcessorType";
         }
 
         public enum ConsentOrigins
@@ -91,7 +92,6 @@ internal static class OVRTelemetryConstants
             public const int RemoveSDK = 163067560;
             public const int InstallBlockData = 163065449;
             public const int OpenSceneWithBlock = 163063649;
-            public const int DownloadContent = 163067281;
             public const int VariantsWindowFlow = 163065580;
             public const int VariantsWindowOpen = 163068476;
         }
@@ -107,6 +107,14 @@ internal static class OVRTelemetryConstants
             public const string SceneSizeInB = "SceneSizeInB";
             public const string InstallationRoutineId = "InstallationRoutineId";
             public const string InstallationRoutineData = "InstallationRoutineData";
+            public const string BlocksCount = "BlocksCount";
+        }
+
+        public static class Origins
+        {
+            public const string BlockGrid = "BlockGrid";
+            public const string BlockDetails = "BlockDetails";
+            public const string BlockInspector = "BlockInspector";
         }
     }
 
@@ -169,6 +177,22 @@ internal static class OVRTelemetryConstants
             public const string RuntimePlatform = "RuntimePlatform";
             public const string Features = "Features";
             public const string EnabledSettings = "FeaturesSupportInSettings";
+        }
+    }
+
+    public static class Utils
+    {
+        [Markers]
+        public static class MarkerId
+        {
+            public const int DownloadContent = 163067281;
+        }
+
+        public static class AnnotationType
+        {
+            public const string ErrorMessage = "error_message";
+            public const string StatusCode = "status_code";
+            public const string ContentType = "content_type";
         }
     }
 

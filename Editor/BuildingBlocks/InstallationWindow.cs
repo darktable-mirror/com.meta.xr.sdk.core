@@ -211,7 +211,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             var previousColor = GUI.color;
             GUI.color = Color.white;
             var id = label + icon.Name;
-            var hit = OVREditorUtils.HoverHelper.Button(id, new GUIContent(label), icon, Styles.GUIStyles.LabelledButton, Styles.GUIStyles.LabelledButtonIcon, out var hover);
+            var hit = HoverHelper.Button(id, new GUIContent(label), icon, Styles.GUIStyles.LabelledButton, Styles.GUIStyles.LabelledButtonIcon, out var hover);
             GUI.color = previousColor;
             if (enabled)
             {

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c37920b2384c61442b4f9520188e5594, type: 3}
   m_Name: CameraRigBB
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: e47682b9-c270-40b1-b16d-90b627a5ce1b
   version: 1
   blockName: Camera Rig
@@ -27,4 +27,6 @@ MonoBehaviour:
   dependencies: []
   packageDependencies: []
   isSingleton: 1
-  usageInstructions:
+  usageInstructions: 
+  featureDocumentationName: Meta XR Camera
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/unity-ovrcamerarig/

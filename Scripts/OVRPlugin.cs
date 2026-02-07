@@ -59,7 +59,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_103_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_104_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -236,6 +236,7 @@ public static partial class OVRPlugin
 
         // XR_META_boundary_visibility
         Warning_BoundaryVisibilitySuppressionNotAllowed = 9030,
+
 
         // XR_EXT_future
         Failure_FuturePending = -10000,
@@ -853,7 +854,9 @@ public static partial class OVRPlugin
         public Vector2f RThumbstick;
         public Vector2f LTouchpad;
         public Vector2f RTouchpad;
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public byte LBatteryPercentRemaining;
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public byte RBatteryPercentRemaining;
         public byte LRecenterCount;
         public byte RRecenterCount;
@@ -882,8 +885,10 @@ public static partial class OVRPlugin
             RThumbstick = cs.RThumbstick;
             LTouchpad = cs.LTouchpad;
             RTouchpad = cs.RTouchpad;
+#pragma warning disable CS0618 // disable the deprecation warning message
             LBatteryPercentRemaining = cs.LBatteryPercentRemaining;
             RBatteryPercentRemaining = cs.RBatteryPercentRemaining;
+#pragma warning restore CS0618
             LRecenterCount = cs.LRecenterCount;
             RRecenterCount = cs.RRecenterCount;
             LThumbRestForce = cs.LThumbRestForce;
@@ -914,7 +919,9 @@ public static partial class OVRPlugin
         public Vector2f RThumbstick;
         public Vector2f LTouchpad;
         public Vector2f RTouchpad;
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public byte LBatteryPercentRemaining;
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public byte RBatteryPercentRemaining;
         public byte LRecenterCount;
         public byte RRecenterCount;
@@ -941,8 +948,10 @@ public static partial class OVRPlugin
             RThumbstick = cs.RThumbstick;
             LTouchpad = cs.LTouchpad;
             RTouchpad = cs.RTouchpad;
+#pragma warning disable CS0618 // disable the deprecation warning message            
             LBatteryPercentRemaining = cs.LBatteryPercentRemaining;
             RBatteryPercentRemaining = cs.RBatteryPercentRemaining;
+#pragma warning restore CS0618
             LRecenterCount = cs.LRecenterCount;
             RRecenterCount = cs.RRecenterCount;
             LThumbRestForce = 0.0f;
@@ -971,7 +980,9 @@ public static partial class OVRPlugin
         public Vector2f RThumbstick;
         public Vector2f LTouchpad;
         public Vector2f RTouchpad;
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public byte LBatteryPercentRemaining;
+        [System.Obsolete("Deprecated. The controller battery percentage data is no longer supported in OpenXR", false)]
         public byte RBatteryPercentRemaining;
         public byte LRecenterCount;
         public byte RRecenterCount;
@@ -1018,8 +1029,10 @@ public static partial class OVRPlugin
             RThumbstick = cs.RThumbstick;
             LTouchpad = cs.LTouchpad;
             RTouchpad = cs.RTouchpad;
+#pragma warning disable CS0618 // disable the deprecation warning message            
             LBatteryPercentRemaining = 0;
             RBatteryPercentRemaining = 0;
+#pragma warning restore CS0618            
             LRecenterCount = 0;
             RRecenterCount = 0;
             Reserved_27 = 0;
@@ -1792,6 +1805,7 @@ public static partial class OVRPlugin
         Pinky = 4,
         Max = 5,
     }
+
 
 
     [Flags]
@@ -2629,6 +2643,12 @@ public static partial class OVRPlugin
         public bool IsEyeFollowingBlendshapesValid;
     }
 
+    public struct FaceVisemesState
+    {
+        public bool IsValid;
+        public float[] Visemes;
+        public double Time;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct FaceState
@@ -2805,6 +2825,27 @@ public static partial class OVRPlugin
         public double Time;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FaceVisemesStateInternal
+    {
+        public Bool IsValid;
+        public float Visemes_0;
+        public float Visemes_1;
+        public float Visemes_2;
+        public float Visemes_3;
+        public float Visemes_4;
+        public float Visemes_5;
+        public float Visemes_6;
+        public float Visemes_7;
+        public float Visemes_8;
+        public float Visemes_9;
+        public float Visemes_10;
+        public float Visemes_11;
+        public float Visemes_12;
+        public float Visemes_13;
+        public float Visemes_14;
+        public double Time;
+    }
 
     public enum FaceRegionConfidence
     {
@@ -2965,12 +3006,33 @@ public static partial class OVRPlugin
         Count = 2,
     }
 
+    public enum FaceViseme
+    {
+        Invalid = -1,
+        SIL = 0,
+        PP = 1,
+        FF = 2,
+        TH = 3,
+        DD = 4,
+        KK = 5,
+        CH = 6,
+        SS = 7,
+        NN = 8,
+        RR = 9,
+        AA = 10,
+        E = 11,
+        IH = 12,
+        OH = 13,
+        OU = 14,
+        Count = 15,
+    }
 
     public enum FaceConstants
     {
         MaxFaceExpressions = FaceExpression.Max,
         MaxFaceRegionConfidences = FaceRegionConfidence.Max,
         MaxFaceExpressions2 = FaceExpression2.Max,
+        FaceVisemesCount = FaceViseme.Count,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -3340,7 +3402,7 @@ public static partial class OVRPlugin
         SpaceContainer = 7,
         TriangleMesh = 1000269000,
         // XR_META_dynamic_object_tracker
-        DynamicObject = 1000288006,
+        DynamicObject = 1000288007,
     }
 
     public enum SpaceStorageLocation
@@ -10035,6 +10097,67 @@ public static partial class OVRPlugin
 #endif
     }
 
+    private static FaceVisemesStateInternal cachedFaceVisemesState = new FaceVisemesStateInternal();
+
+    public static OVRPlugin.Result GetFaceVisemesState(Step stepId, ref FaceVisemesState faceVisemesState)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return OVRPlugin.Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_104_0.version)
+        {
+            Result res = OVRP_1_104_0.ovrp_GetFaceVisemesState(stepId, -1 /*OVRP_CURRENT_FRAMEINDEX*/, out cachedFaceVisemesState);
+            if (res != Result.Success)
+            {
+                return res;
+            }
+
+            // attempt to avoid allocations if client provides appropriately pre-initialized HandState
+            if (faceVisemesState.Visemes == null ||
+                faceVisemesState.Visemes.Length != (int)FaceViseme.Count)
+            {
+                faceVisemesState.Visemes = new float[(int)FaceViseme.Count];
+            }
+
+            // unrolling the arrays is necessary to avoid per-frame allocations during marshaling
+            faceVisemesState.Visemes[0] = cachedFaceVisemesState.Visemes_0;
+            faceVisemesState.Visemes[1] = cachedFaceVisemesState.Visemes_1;
+            faceVisemesState.Visemes[2] = cachedFaceVisemesState.Visemes_2;
+            faceVisemesState.Visemes[3] = cachedFaceVisemesState.Visemes_3;
+            faceVisemesState.Visemes[4] = cachedFaceVisemesState.Visemes_4;
+            faceVisemesState.Visemes[5] = cachedFaceVisemesState.Visemes_5;
+            faceVisemesState.Visemes[6] = cachedFaceVisemesState.Visemes_6;
+            faceVisemesState.Visemes[7] = cachedFaceVisemesState.Visemes_7;
+            faceVisemesState.Visemes[8] = cachedFaceVisemesState.Visemes_8;
+            faceVisemesState.Visemes[9] = cachedFaceVisemesState.Visemes_9;
+            faceVisemesState.Visemes[10] = cachedFaceVisemesState.Visemes_10;
+            faceVisemesState.Visemes[11] = cachedFaceVisemesState.Visemes_11;
+            faceVisemesState.Visemes[12] = cachedFaceVisemesState.Visemes_12;
+            faceVisemesState.Visemes[13] = cachedFaceVisemesState.Visemes_13;
+            faceVisemesState.Visemes[14] = cachedFaceVisemesState.Visemes_14;
+            faceVisemesState.IsValid = cachedFaceVisemesState.IsValid == Bool.True;
+            faceVisemesState.Time = cachedFaceVisemesState.Time;
+
+            return OVRPlugin.Result.Success;
+        }
+
+        return OVRPlugin.Result.Failure_Unsupported;
+#endif
+    }
+
+    public static OVRPlugin.Result SetFaceTrackingVisemesEnabled(bool enabled)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return OVRPlugin.Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_104_0.version)
+        {
+            return OVRP_1_104_0.ovrp_SetFaceTrackingVisemesEnabled(enabled ? Bool.True : Bool.False);
+        }
+
+        return OVRPlugin.Result.Failure_Unsupported;
+#endif
+    }
 
 
     /// <summary>
@@ -10155,6 +10278,14 @@ public static partial class OVRPlugin
         value == Bool.True;
 #endif //OVRPLUGIN_UNSUPPORTED_PLATFORM
 
+    public static bool faceTrackingVisemesSupported =>
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        false;
+#else
+        version >= OVRP_1_104_0.version &&
+        OVRP_1_104_0.ovrp_GetFaceTrackingVisemesSupported(out var value) == Result.Success &&
+        value == Bool.True;
+#endif //OVRPLUGIN_UNSUPPORTED_PLATFORM
 
     public static bool StartFaceTracking2(FaceTrackingDataSource[] requestedFaceTrackingDataSources) =>
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -11807,7 +11938,8 @@ public static partial class OVRPlugin
 
     public enum DynamicObjectClass
     {
-        Keyboard = 0,
+        None = 0,
+        Keyboard = 1000587000,
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -11829,14 +11961,9 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version >= OVRP_1_103_0.version)
-        {
-            return OVRP_1_103_0.ovrp_CreateDynamicObjectTracker(out tracker);
-        }
-        else
-        {
-            return Result.Failure_Unsupported;
-        }
+        return version >= OVRP_1_104_0.version
+            ? OVRP_1_104_0.ovrp_CreateDynamicObjectTracker(out tracker)
+            : Result.Failure_Unsupported;
 #endif
     }
 
@@ -11854,14 +11981,9 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version >= OVRP_1_103_0.version)
-        {
-            return OVRP_1_103_0.ovrp_DestroyDynamicObjectTracker(tracker);
-        }
-        else
-        {
-            return Result.Failure_Unsupported;
-        }
+        return version >= OVRP_1_104_0.version
+            ? OVRP_1_104_0.ovrp_DestroyDynamicObjectTracker(tracker)
+            : Result.Failure_Unsupported;
 #endif
     }
 
@@ -11870,20 +11992,15 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version >= OVRP_1_103_0.version)
+        if (version < OVRP_1_104_0.version) return Result.Failure_Unsupported;
+
+        fixed (DynamicObjectClass* ptr = classes)
         {
-            fixed (DynamicObjectClass* ptr = classes)
+            return OVRP_1_104_0.ovrp_SetDynamicObjectTrackedClasses(tracker, new()
             {
-                return OVRP_1_103_0.ovrp_SetDynamicObjectTrackedClasses(tracker, new()
-                {
-                    Classes = ptr,
-                    ClassCount = (uint)classes.Length,
-                });
-            }
-        }
-        else
-        {
-            return Result.Failure_Unsupported;
+                Classes = ptr,
+                ClassCount = (uint)classes.Length,
+            });
         }
 #endif
     }
@@ -11904,14 +12021,9 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version >= OVRP_1_103_0.version)
-        {
-            return OVRP_1_103_0.ovrp_GetSpaceDynamicObjectData(ref space, out data);
-        }
-        else
-        {
-            return Result.Failure_Unsupported;
-        }
+        return version >= OVRP_1_104_0.version
+            ? OVRP_1_104_0.ovrp_GetSpaceDynamicObjectData(ref space, out data)
+            : Result.Failure_Unsupported;
 #endif
     }
 
@@ -11921,16 +12033,25 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version >= OVRP_1_103_0.version)
-        {
-            var result = OVRP_1_103_0.ovrp_GetDynamicObjectTrackerSupported(out var supported);
-            value = (supported == Bool.True);
-            return result;
-        }
-        else
-        {
-            return Result.Failure_Unsupported;
-        }
+        if (version < OVRP_1_104_0.version) return Result.Failure_Unsupported;
+
+        var result = OVRP_1_104_0.ovrp_GetDynamicObjectTrackerSupported(out var supported);
+        value = supported == Bool.True;
+        return result;
+#endif
+    }
+
+    public static Result GetDynamicObjectKeyboardSupported(out bool value)
+    {
+        value = default;
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_104_0.version) return Result.Failure_Unsupported;
+
+        var result = OVRP_1_104_0.ovrp_GetDynamicObjectKeyboardSupported(out var supported);
+        value = supported == Bool.True;
+        return result;
 #endif
     }
 
@@ -12121,6 +12242,7 @@ public static partial class OVRPlugin
 
 
 
+
     public enum FutureState
     {
         Pending = 1,
@@ -12150,6 +12272,17 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public static Result SetExternalLayerDynresEnabled(Bool enabled)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_104_0.version) return Result.Failure_NotYetImplemented;
+
+        return OVRP_1_104_0.ovrp_SetExternalLayerDynresEnabled(enabled);
+#endif
+    }
+
     public static Result SetDeveloperTelemetryConsent(Bool consent)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -12162,6 +12295,7 @@ public static partial class OVRPlugin
         return OVRP_1_95_0.ovrp_SetDeveloperTelemetryConsent(consent);
 #endif
     }
+
 
 
     public static class Qpl
@@ -14266,7 +14400,6 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe Result ovrp_EraseSpaces(UInt32 spaceCount, UInt64* spaces, UInt32 uuidCount,
             Guid* uuids, out UInt64 requestId);
-
     }
 
     private static class OVRP_1_98_0
@@ -14295,7 +14428,6 @@ public static partial class OVRPlugin
     private static class OVRP_1_100_0
     {
         public static readonly System.Version version = new System.Version(1, 100, 0);
-
 
 
 
@@ -14339,7 +14471,6 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_CancelFuture(ulong future);
 
-
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_StartColocationAdvertisement(
             in ColocationSessionStartAdvertisementInfo info, out UInt64 requestId);
@@ -14360,6 +14491,21 @@ public static partial class OVRPlugin
         public static extern Result ovrp_QuerySpaces2(ref SpaceQueryInfo2 queryInfo, out UInt64 requestId);
 
 
+    }
+
+    private static class OVRP_1_104_0
+    {
+        public static readonly System.Version version = new System.Version(1, 104, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetFaceVisemesState(Step stepId, int frameIndex, out FaceVisemesStateInternal faceVisemesState);
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetFaceTrackingVisemesSupported(out Bool faceTrackingVisemesSupported);
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SetFaceTrackingVisemesEnabled(Bool enabled);
+
+
+
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_CreateDynamicObjectTracker(out ulong tracker);
 
@@ -14375,11 +14521,12 @@ public static partial class OVRPlugin
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetDynamicObjectTrackerSupported(out Bool value);
 
-    }
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetDynamicObjectKeyboardSupported(out Bool value);
 
-    private static class OVRP_1_104_0
-    {
-        public static readonly System.Version version = new System.Version(1, 104, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SetExternalLayerDynresEnabled(Bool enabled);
     }
 
     private static class OVRP_1_105_0

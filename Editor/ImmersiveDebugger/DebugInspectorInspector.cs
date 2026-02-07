@@ -168,6 +168,10 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                                 new GUIContent("Display Name", DebugMember.DisplayNameTooltip),
                                 attribute.DisplayName);
 
+                            attribute.Description = EditorGUILayout.TextField(
+                                new GUIContent("Description", "Optional description to be shown in the Inspector Panel."),
+                                attribute.Description);
+
                             _hasChanged |= changedCheckScope.changed;
                         }
                     }

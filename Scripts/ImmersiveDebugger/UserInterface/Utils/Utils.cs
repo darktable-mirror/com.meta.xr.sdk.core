@@ -28,6 +28,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
     internal static class Utils
     {
         private const int MaxLetterCountForTitle = 22;
+        public const int DropDownMenuSortOrder = 5;
+        public const int CursorSortOrder = 31000;
 
         internal static string ToDisplayText(this string input)
         {

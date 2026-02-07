@@ -29,6 +29,15 @@ namespace Meta.XR.BuildingBlocks.Editor
     {
         protected override bool UsesPrefab => false;
 
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps =>
+            new List<InstallationStepInfo>
+            {
+                new(null, "Spawn a new GameObject unless installed upon an existing one."),
+                new(null, "Add an <b>AudioSource</b> component if not present."),
+                new(null, "Add a <b>MetaXRAudioSource</b> component if not present."),
+                new(null, "Add a <b>MetaXRAudioSourceExperimentalFeatures</b> component if not present.")
+            };
+
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
 #if USING_META_XR_AUDIO_SDK

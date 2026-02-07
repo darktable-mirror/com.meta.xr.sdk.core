@@ -53,6 +53,7 @@ public class SceneManagerHelper
         var planeGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
         planeGO.name = "Plane";
         planeGO.transform.SetParent(AnchorGameObject.transform, false);
+        planeGO.transform.localPosition = bounds.BoundingBox.center;
         planeGO.transform.localScale = new Vector3(
             bounds.BoundingBox.size.x,
             bounds.BoundingBox.size.y,
@@ -68,6 +69,7 @@ public class SceneManagerHelper
             CreatePlane(bounds);
         else
         {
+            planeGO.transform.localPosition = bounds.BoundingBox.center;
             planeGO.transform.localScale = new Vector3(
                 bounds.BoundingBox.size.x,
                 bounds.BoundingBox.size.y,
@@ -80,8 +82,7 @@ public class SceneManagerHelper
         var volumeGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
         volumeGO.name = "Volume";
         volumeGO.transform.SetParent(AnchorGameObject.transform, false);
-        volumeGO.transform.localPosition = new Vector3(
-            0, 0, -bounds.BoundingBox.size.z / 2);
+        volumeGO.transform.localPosition = bounds.BoundingBox.center;
         volumeGO.transform.localScale = bounds.BoundingBox.size;
         volumeGO.GetComponent<MeshRenderer>().material.SetColor(
             "_Color", UnityEngine.Random.ColorHSV());
@@ -94,8 +95,7 @@ public class SceneManagerHelper
             CreateVolume(bounds);
         else
         {
-            volumeGO.transform.localPosition = new Vector3(
-                0, 0, -bounds.BoundingBox.size.z / 2);
+            volumeGO.transform.localPosition = bounds.BoundingBox.center;
             volumeGO.transform.localScale = bounds.BoundingBox.size;
         }
     }

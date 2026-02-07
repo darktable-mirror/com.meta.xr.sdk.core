@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: MemberValueFlex
   m_EditorClassIdentifier: 
   flexDirection: 0
-  layout: 3
+  layout: 0
   anchor: 2
   pivot: 2
-  size: {x: 340, y: 0}
+  size: {x: 340, y: 24}
   margin: {x: 0, y: 0}
   useBottomRightMargin: 0
   bottomRightMargin: {x: 0, y: 0}
@@ -24,3 +24,4 @@ MonoBehaviour:
   masks: 0
   adaptHeight: 0
   autoFitChildren: 1
+  isOverlayCanvas: 0

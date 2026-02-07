@@ -28,6 +28,13 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public class EyeGazeBlockData : BlockData
     {
+        internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps =>
+            new List<InstallationStepInfo>
+            {
+                new(Utils.GetBlockData(BlockDataIds.CameraRig), "Collects the reference of {0}."),
+                new(Prefab, "Instantiates left and right eyes GameObject from {0} and makes them child of CameraRig's left eye anchor and right eye anchor respectively."),
+                new(null, $"Renames the instantiated left and right eyes to <b>{Utils.BlockPublicTag} {BlockName} {OVREyeGaze.EyeId.Left.ToString()}</b> and <b>{Utils.BlockPublicTag} {BlockName} {OVREyeGaze.EyeId.Right.ToString()}</b>.")
+            };
 
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
