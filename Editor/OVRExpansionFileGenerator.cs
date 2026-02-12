@@ -21,6 +21,7 @@
 using System;
 using System.IO;
 using System.Xml;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEditor;
 
@@ -53,68 +54,12 @@ public class BuildAssetBundles : MonoBehaviour
                 File.Move(path + "Asset Bundles", path + expansionName);
                 UnityEngine.Debug.Log("OBB expansion file " + expansionName + " has been successfully created at " +
                                       path);
-
-                UpdateAndroidManifest();
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogError(e.Message);
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "obb-expansion-file-creation-failed",
+                    $"Failed to create OBB expansion file '{expansionName}' at {path}: {e.Message}");
             }
-        }
-    }
-
-    public static void UpdateAndroidManifest()
-    {
-        string manifestFolder = Application.dataPath + "/Plugins/Android";
-        try
-        {
-            // Load android manfiest file
-            XmlDocument doc = new XmlDocument();
-            doc.Load(manifestFolder + "/AndroidManifest.xml");
-
-            string androidNamepsaceURI;
-            XmlElement element = (XmlElement)doc.SelectSingleNode("/manifest");
-            if (element == null)
-            {
-                UnityEngine.Debug.LogError("Could not find manifest tag in android manifest.");
-                return;
-            }
-
-            // Get android namespace URI from the manifest
-            androidNamepsaceURI = element.GetAttribute("xmlns:android");
-            if (!string.IsNullOrEmpty(androidNamepsaceURI))
-            {
-                // Check if the android manifest already has the read external storage permission
-                XmlNodeList nodeList = doc.SelectNodes("/manifest/application/uses-permission");
-                foreach (XmlElement e in nodeList)
-                {
-                    string attr = e.GetAttribute("name", androidNamepsaceURI);
-                    if (attr == "android.permission.READ_EXTERNAL_STORAGE")
-                    {
-                        UnityEngine.Debug.Log("Android manifest already has the proper permissions.");
-                        return;
-                    }
-                }
-
-                element = (XmlElement)doc.SelectSingleNode("/manifest/application");
-                if (element != null)
-                {
-                    // Insert read external storage permission
-                    XmlElement newElement = doc.CreateElement("uses-permission");
-                    newElement.SetAttribute("name", androidNamepsaceURI, "android.permission.READ_EXTERNAL_STORAGE");
-                    element.AppendChild(newElement);
-
-                    doc.Save(manifestFolder + "/AndroidManifest.xml");
-                    UnityEngine.Debug.Log("Successfully modified android manifest with external storage permission.");
-                    return;
-                }
-            }
-
-            UnityEngine.Debug.LogError("Could not find android naemspace URI in android manifest.");
-        }
-        catch (Exception e)
-        {
-            UnityEngine.Debug.LogError(e.Message);
         }
     }
 }

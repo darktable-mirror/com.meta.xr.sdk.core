@@ -34,7 +34,8 @@ namespace Meta.XR.Simulator.Editor
         Console,
         Component,
         Toolbar,
-        Updater
+        Updater,
+        Onboarding
     }
 
     [InitializeOnLoad]

@@ -24,15 +24,27 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Interface for object detection providers supporting both cloud (JSON) and on-device (binary) execution.
+    /// </summary>
     public interface IObjectDetectionTask
     {
-        // JSON-based providers (HuggingFace)
+        /// <summary>
+        /// Performs object detection on an encoded image (JPEG/PNG).
+        /// Used by cloud providers (e.g., HuggingFace) that accept binary image uploads.
+        /// </summary>
+        /// <param name="imageJpgOrPng">Encoded image bytes in JPEG or PNG format.</param>
+        /// <param name="ct">Cancellation token for aborting the operation.</param>
+        /// <returns>JSON string containing detection results with boxes, scores, and labels.</returns>
         Task<string> DetectAsync(byte[] imageJpgOrPng, CancellationToken ct = default);
 
-        // Optional binary path for byte[] (not used by HF, can throw)
-        Task<byte[]> DetectBinaryAsync(byte[] imageJpgOrPng, CancellationToken ct = default);
-
-        // Fastest path (UnityInferenceEngine)
+        /// <summary>
+        /// Performs object detection directly on a GPU texture (fastest path).
+        /// Used by on-device providers (e.g., UnityInferenceEngine) to avoid CPU-GPU transfers.
+        /// </summary>
+        /// <param name="src">Source RenderTexture containing the image to analyze.</param>
+        /// <param name="ct">Cancellation token for aborting the operation.</param>
+        /// <returns>Binary-encoded detection results for efficient downstream processing.</returns>
         Task<byte[]> DetectAsync(RenderTexture src, CancellationToken ct = default);
     }
 }

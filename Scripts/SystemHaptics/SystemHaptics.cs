@@ -127,8 +127,7 @@ public static class SystemHaptics
                 productType = "core_sdk",
                 project_name = "systemhaptics"
             };
-
-            OVRPlugin.SendUnifiedEvent(eventData);
+            eventData.Send();
         }
         else
         {

@@ -295,6 +295,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             return new Vector2((index % 3) * 0.5f, 1.0f - (int)(index / 3) * 0.5f);
         }
 
+        /// <summary>
+        /// Updates the layout if a refresh has been requested or forced.
+        /// Processes layout refresh for this controller and recursively updates all children.
+        /// </summary>
+        /// <param name="force">If true, forces layout refresh even if not requested.</param>
         protected void UpdateRefreshLayout(bool force)
         {
             if (!force && !_refreshLayoutRequested) return;
@@ -407,16 +412,42 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             }
         }
 
+        /// <summary>
+        /// Sets the height of this controller and triggers a layout refresh.
+        /// </summary>
+        /// <param name="height">The new height value.</param>
         internal void SetHeight(float height)
         {
             if (!_layoutStyle.SetHeight(height)) return;
             RefreshLayout();
         }
 
+        /// <summary>
+        /// Sets the width of this controller and triggers a layout refresh.
+        /// </summary>
+        /// <param name="width">The new width value.</param>
         internal void SetWidth(float width)
         {
             if (!_layoutStyle.SetWidth(width)) return;
             RefreshLayout();
+        }
+
+        /// <summary>
+        /// Triggers a rebuild of a specific child controller by its ID.
+        /// Used to cascade UI updates from parent to child when state changes require child UI refresh.
+        /// </summary>
+        /// <param name="id">The identifier of the child controller to rebuild.</param>
+        internal void RebuildChild(string id)
+        {
+            if (_children == null) return;
+            foreach (var child in _children)
+            {
+                if (child.GameObject.name == id)
+                {
+                    child.RefreshLayout();
+                    return;
+                }
+            }
         }
     }
 }

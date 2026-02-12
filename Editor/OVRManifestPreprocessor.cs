@@ -19,10 +19,13 @@
  */
 
 
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Xml;
+using Meta.XR.Telemetry;
 using Oculus.VR.Editor;
 
 #if USING_XR_SDK_OPENXR
@@ -31,7 +34,7 @@ using Meta.XR;
 using UnityEditor.XR.Management;
 #endif
 
-public class OVRManifestPreprocessor
+public class OVRManifestPreprocessor : EditorWindow
 {
     private static readonly string ManifestFileName = "AndroidManifest.xml";
     private static readonly string ManifestFolderName = "Plugins/Android";
@@ -48,7 +51,105 @@ public class OVRManifestPreprocessor
     private static readonly string BuildManifestFilePathRelative =
         Path.Combine(BuildManifestFolderPathRelative, ManifestFileName);
 
-    [MenuItem("Meta/Tools/Create store-compatible AndroidManifest.xml", false, 100000)]
+    private static string StoreCompatibleSrcFilePathAbsolute
+    {
+        get
+        {
+
+            var so = ScriptableObject.CreateInstance(typeof(OVRPluginInfo));
+            var script = MonoScript.FromScriptableObject(so);
+            string assetPath = AssetDatabase.GetAssetPath(script);
+            string editorDir = Directory.GetParent(assetPath).FullName;
+            return editorDir + "/AndroidManifest.OVRSubmission.xml";
+        }
+    }
+
+    [MenuItem("Meta/Tools/Android Manifest Tool", false, 100000)]
+    public static void OpenAndroidManifestToolWindow()
+    {
+        GetWindow(typeof(OVRManifestPreprocessor));
+        OVRPlugin.SendEvent("manifest_processor", "activated");
+    }
+
+    private void OnGUI()
+    {
+        this.titleContent.text = "Android Manifest Tool";
+        GUILayout.Label("Android Manifest Tool adds relevant Quest-only tags to AndroidManifest.xml "
+            + "to ensure compatibility with the Meta Horizon Store. For details, see:"
+            , EditorStyles.wordWrappedLabel);
+        if (EditorGUILayout.LinkButton("Meta documentation"))
+        {
+            Application.OpenURL("https://developers.meta.com/horizon/resources/publish-mobile-manifest");
+        }
+        GUILayout.Space(15f);
+
+        bool hasManifest = DoesAndroidManifestExist();
+
+
+        if (hasManifest)
+        {
+            List<string> differenceFromShip = new List<string>();
+            GetManifestDiff(StoreCompatibleSrcFilePathAbsolute, BuildManifestFilePathAbsolute, differenceFromShip);
+
+            if (differenceFromShip.Count > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "Resetting AndroidManifest.xml will override any custom settings.\n" + string.Join("\n", differenceFromShip),
+                    MessageType.Info, true);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "Manifest has no changes from the default Store-Compatible manifest.",
+                    MessageType.Info, true);
+            }
+            EditorGUI.BeginDisabledGroup(differenceFromShip.Count == 0);
+            if (GUILayout.Button("Reset AndroidManifest.xml to default Store-Compatible version"))
+            {
+                GenerateManifestForSubmission();
+            }
+            EditorGUI.EndDisabledGroup();
+        }
+        else
+        {
+            if (GUILayout.Button("Generate New Store-Compatible AndroidManifest.xml"))
+            {
+                GenerateManifestForSubmission();
+            }
+        }
+
+        if (hasManifest)
+        {
+            List<string> differenceFromCurrent = new List<string>();
+            GetManifestDiff(BuildManifestFilePathAbsolute, BuildManifestFilePathAbsolute, differenceFromCurrent);
+
+            if (differenceFromCurrent.Count > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "Update will cause the following changes:\n" + string.Join("\n", differenceFromCurrent),
+                    MessageType.Info, true);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "All settings changes for Store compatibility are already applied to AndroidManifest",
+                    MessageType.Info, true);
+            }
+            EditorGUI.BeginDisabledGroup(differenceFromCurrent.Count == 0);
+            if (GUILayout.Button("Update AndroidManifest.xml for Store Compatibility"))
+            {
+                UpdateAndroidManifest();
+            }
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space();
+            if (GUILayout.Button("Remove Custom AndroidManifest.xml"))
+            {
+                RemoveAndroidManifest();
+            }
+        }
+    }
+
     public static void GenerateManifestForSubmission()
     {
         GenerateManifestForSubmissionInternal(silentMode: false);
@@ -56,18 +157,14 @@ public class OVRManifestPreprocessor
 
     private static void GenerateManifestForSubmissionInternal(bool silentMode)
     {
-        var so = ScriptableObject.CreateInstance(typeof(OVRPluginInfo));
-        var script = MonoScript.FromScriptableObject(so);
-        string assetPath = AssetDatabase.GetAssetPath(script);
-        string editorDir = Directory.GetParent(assetPath).FullName;
-        string srcFile = editorDir + "/AndroidManifest.OVRSubmission.xml";
+        var srcFile = StoreCompatibleSrcFilePathAbsolute;
 
         if (!File.Exists(srcFile))
         {
             if (!silentMode)
             {
-                Debug.LogError("Cannot find Android manifest template for submission." +
-                               " Please delete the OVR folder and reimport the Oculus Utilities.");
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-template-not-found",
+                    "Cannot find Android manifest template for submission. Please delete the OVR folder and reimport the Oculus Utilities.");
             }
             return;
         }
@@ -91,8 +188,6 @@ public class OVRManifestPreprocessor
         ShowAndroidManifestInProject();
     }
 
-    [MenuItem("Meta/Tools/Update AndroidManifest.xml", isValidateFunction: true)]
-    [MenuItem("Meta/Tools/Remove AndroidManifest.xml", isValidateFunction: true)]
     public static bool DoesAndroidManifestExist()
     {
         // IO methods use absolute paths
@@ -111,7 +206,6 @@ public class OVRManifestPreprocessor
         }
     }
 
-    [MenuItem("Meta/Tools/Update AndroidManifest.xml", false, 100000)]
     public static void UpdateAndroidManifest()
     {
         UpdateAndroidManifestInternal(silentMode: false);
@@ -123,7 +217,7 @@ public class OVRManifestPreprocessor
         {
             if (!silentMode)
             {
-                Debug.LogError(
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-update-file-not-found",
                     "Unable to update manifest because it does not exist! Run \"Create store-compatible AndroidManifest.xml\" first");
             }
             return;
@@ -140,9 +234,14 @@ public class OVRManifestPreprocessor
         ShowAndroidManifestInProject();
     }
 
-    [MenuItem("Meta/Tools/Remove AndroidManifest.xml", false, 100000)]
-    public static void RemoveAndroidManifest()
+    public static void RemoveAndroidManifest(bool silentMode = false)
     {
+        if (!silentMode && !EditorUtility.DisplayDialog("Remove AndroidManifest.xml",
+                "This will permanently delete existing AndroidManifest.xml. Continue?", "Delete", "Cancel"))
+        {
+            return;
+        }
+
         // AssetDatabase functions uses relative paths
         AssetDatabase.DeleteAsset(BuildManifestFilePathRelative);
         AssetDatabase.Refresh();
@@ -229,7 +328,8 @@ public class OVRManifestPreprocessor
         XmlElement element = (XmlElement)doc.SelectSingleNode("/manifest");
         if (element == null)
         {
-            UnityEngine.Debug.LogError("Could not find manifest tag in android manifest.");
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-tag-not-found",
+                "Could not find manifest tag in android manifest.");
             return;
         }
 
@@ -258,7 +358,8 @@ public class OVRManifestPreprocessor
         XmlElement element = (XmlElement)doc.SelectSingleNode("/manifest");
         if (element == null)
         {
-            UnityEngine.Debug.LogError("Could not find manifest tag in android manifest.");
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-prefix-tag-not-found",
+                "Could not find manifest tag in android manifest.");
             return;
         }
 
@@ -279,61 +380,64 @@ public class OVRManifestPreprocessor
 
     public static XmlDocument GetAndroidManifestXmlDocument()
     {
+        if (!DoesAndroidManifestExist())
+        {
+            return null;
+        }
+
         try
         {
             var doc = new XmlDocument();
             doc.Load(BuildManifestFilePathAbsolute);
             return doc;
         }
-        catch (System.Exception)
+        catch (System.Exception e)
         {
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-load-failed-v2", e, enableDebugLog: false);
             return null;
         }
     }
 
-    public static void PatchAndroidManifest(string sourceFile, string destinationFile = null,
-        bool skipExistingAttributes = true, bool enableSecurity = false)
+    private static XmlDocument LoadDocument(string sourceFile, bool skipAllModifications, bool modifyIfFound, bool enableSecurity, out string androidNamespaceURI)
     {
-        if (destinationFile == null)
+        // Load android manifest file
+        var doc = new XmlDocument();
+        doc.Load(sourceFile);
+
+        androidNamespaceURI = null;
+        XmlElement element = (XmlElement)doc.SelectSingleNode("/manifest");
+        if (element == null)
         {
-            destinationFile = sourceFile;
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-load-tag-not-found",
+                "Could not find manifest tag in android manifest.");
+            return null;
         }
 
-        bool modifyIfFound = !skipExistingAttributes;
-
-        try
+        // Get android namespace URI from the manifest
+        androidNamespaceURI = element.GetAttribute("xmlns:android");
+        if (string.IsNullOrEmpty(androidNamespaceURI))
         {
-            // Load android manifest file
-            var doc = new XmlDocument();
-            doc.Load(sourceFile);
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-namespace-not-found",
+                "Could not find Android Namespace in manifest.");
+            return null;
+        }
 
-            string androidNamespaceURI;
-            XmlElement element = (XmlElement)doc.SelectSingleNode("/manifest");
-            if (element == null)
-            {
-                UnityEngine.Debug.LogError("Could not find manifest tag in android manifest.");
-                return;
-            }
+        if (skipAllModifications)
+        {
+            return doc;
+        }
 
-            // Get android namespace URI from the manifest
-            androidNamespaceURI = element.GetAttribute("xmlns:android");
-            if (string.IsNullOrEmpty(androidNamespaceURI))
+        // Add Horizon OS SDK namespace
+        var horizonOsSdkNamespaceURI = "http://schemas.horizonos/sdk";
+        OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
+        if (!projectConfig.horizonOsSdkDisabled)
+        {
+            var namespaceAttribute = element.GetAttribute("xmlns:horizonos");
+            if (string.IsNullOrEmpty(namespaceAttribute))
             {
-                UnityEngine.Debug.LogError("Could not find Android Namespace in manifest.");
-                return;
+                element.SetAttribute("xmlns:horizonos", horizonOsSdkNamespaceURI);
             }
-
-            // Add Horizon OS SDK namespace
-            var horizonOsSdkNamespaceURI = "http://schemas.horizonos/sdk";
-            OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
-            if (!projectConfig.horizonOsSdkDisabled)
-            {
-                var namespaceAttribute = element.GetAttribute("xmlns:horizonos");
-                if (string.IsNullOrEmpty(namespaceAttribute))
-                {
-                    element.SetAttribute("xmlns:horizonos", horizonOsSdkNamespaceURI);
-                }
-            }
+        }
 
 #if UNITY_2023_2_OR_NEWER
             // replace UnityPlayerActivity to UnityPlayerGameActivity if GameActivity is selected in setting
@@ -366,15 +470,36 @@ public class OVRManifestPreprocessor
             }
 #endif
 
-            ApplyRequiredManifestTags(doc, androidNamespaceURI, modifyIfFound, enableSecurity);
-            ApplyFeatureManifestTags(doc, androidNamespaceURI, modifyIfFound, horizonOsSdkNamespaceURI);
+        ApplyRequiredManifestTags(doc, androidNamespaceURI, modifyIfFound, enableSecurity);
+        ApplyFeatureManifestTags(doc, androidNamespaceURI, modifyIfFound, horizonOsSdkNamespaceURI);
 
-            // The following manifest entries are all handled through Oculus XR SDK Plugin
+        // The following manifest entries are all handled through Oculus XR SDK Plugin
 #if !PRIORITIZE_OCULUS_XR_SETTINGS
-            ApplyOculusXRManifestTags(doc, androidNamespaceURI, modifyIfFound);
-            ApplyTargetDevicesManifestTags(doc, androidNamespaceURI, true /*modifyIfFound*/);
+        ApplyOculusXRManifestTags(doc, androidNamespaceURI, modifyIfFound);
+        ApplyTargetDevicesManifestTags(doc, androidNamespaceURI, true /*modifyIfFound*/);
 #endif
 
+
+        return doc;
+    }
+
+    public static void PatchAndroidManifest(string sourceFile, string destinationFile = null,
+        bool skipExistingAttributes = true, bool enableSecurity = false)
+    {
+        if (destinationFile == null)
+        {
+            destinationFile = sourceFile;
+        }
+
+        bool modifyIfFound = !skipExistingAttributes;
+
+        try
+        {
+            var doc = LoadDocument(sourceFile, skipAllModifications: false, modifyIfFound, enableSecurity, out _);
+            if (doc == null)
+            {
+                return;
+            }
 
             var settings = new XmlWriterSettings
             {
@@ -409,7 +534,7 @@ public class OVRManifestPreprocessor
         }
         catch (System.Exception e)
         {
-            UnityEngine.Debug.LogException(e);
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-write-failed", e);
         }
 
         // see if the current file uses \r\n or \n by scanning the first line
@@ -495,16 +620,9 @@ public class OVRManifestPreprocessor
         // OVRProjectConfig.HandTrackingSupport.HandsOnly => manifest entry present and required=true
         OVRProjectConfig.HandTrackingSupport targetHandTrackingSupport =
             OVRProjectConfig.CachedProjectConfig.handTrackingSupport;
-        OVRProjectConfig.HandTrackingVersion targetHandTrackingVersion =
-            OVRProjectConfig.CachedProjectConfig.handTrackingVersion;
         bool handTrackingEntryNeeded = OVRDeviceSelector.isTargetDeviceQuestFamily &&
                                        (targetHandTrackingSupport !=
                                         OVRProjectConfig.HandTrackingSupport.ControllersOnly);
-        bool handTrackingVersionEntryNeeded = handTrackingEntryNeeded &&
-                                              (targetHandTrackingVersion !=
-                                               OVRProjectConfig.HandTrackingVersion.Default);
-        string handTrackingVersionValue =
-            (targetHandTrackingVersion == OVRProjectConfig.HandTrackingVersion.V2) ? "V2.0" : "V1.0";
 
         AddOrRemoveTag(doc,
             androidNamespaceURI,
@@ -533,16 +651,6 @@ public class OVRManifestPreprocessor
             modifyIfFound,
             prefix: "",
             "value", projectConfig.handTrackingFrequency.ToString());
-
-        AddOrRemoveTag(doc,
-            androidNamespaceURI,
-            "/manifest/application",
-            "meta-data",
-            "com.oculus.handtracking.version",
-            handTrackingVersionEntryNeeded,
-            modifyIfFound,
-            prefix: "",
-            "value", handTrackingVersionValue);
 
         //============================================================================
         // System Keyboard
@@ -776,13 +884,15 @@ public class OVRManifestPreprocessor
             OVRPermissionsRequester.GetPermissionId(OVRPermissionsRequester.Permission.FaceTracking),
             faceTrackingEntryNeeded,
             modifyIfFound);
+        // Do not modify existing RECORD_AUDIO permission even when face tracking is not needed
+        // (because it may be needed for other features)
         AddOrRemoveTag(doc,
             androidNamespaceURI,
             "/manifest",
             "uses-permission",
             OVRPermissionsRequester.GetPermissionId(OVRPermissionsRequester.Permission.RecordAudio),
             faceTrackingEntryNeeded, // audio recording for audio based face tracking
-            modifyIfFound);
+            modifyIfFound: false);
 
         //============================================================================
         // Eye Tracking
@@ -994,7 +1104,8 @@ public class OVRManifestPreprocessor
             }
             if (string.IsNullOrEmpty(targetDeviceValue))
             {
-                Debug.LogError("Empty target devices");
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-empty-target-devices",
+                    "Empty target devices");
             }
 
             AddOrRemoveTag(doc,
@@ -1015,6 +1126,113 @@ public class OVRManifestPreprocessor
                 "meta-data",
                 "com.oculus.supportedDevices");
 #endif
+        }
+    }
+
+    private static Dictionary<string, XmlNode> GetNamedNodes(XmlNodeList nodeList, string androidNamespaceURI)
+    {
+
+        Dictionary<string, XmlNode> namedNodes = new Dictionary<string, XmlNode>();
+        if (nodeList != null)
+        {
+            foreach (XmlNode node in nodeList)
+            {
+                var name = node.Attributes?["name", androidNamespaceURI];
+                if (name != null)
+                {
+                    namedNodes[node.Name + "[\"" + name.Value + "\"]"] = node;
+                }
+                else
+                {
+                    namedNodes[node.Name] = node;
+                }
+            }
+        }
+
+        return namedNodes;
+    }
+
+    private static void CompareNodes(string prefix, XmlNodeList srcNodes, XmlNodeList dstNodes, string androidNamespaceURI,
+        List<string> changes)
+    {
+        var namedSrcNodes = GetNamedNodes(srcNodes, androidNamespaceURI);
+        var namedDstNodes = GetNamedNodes(dstNodes, androidNamespaceURI);
+
+        foreach (var namedSrcNode in namedSrcNodes)
+        {
+            string name = namedSrcNode.Key;
+            var srcNode = namedSrcNode.Value;
+            if (namedDstNodes.TryGetValue(namedSrcNode.Key, out var dstNode))
+            {
+                if (srcNode.Attributes != null)
+                {
+                    // Compare all attributes
+                    foreach (XmlAttribute attrib in srcNode.Attributes)
+                    {
+                        var dstAttrib = dstNode.Attributes?[attrib.LocalName, attrib.NamespaceURI];
+                        if (dstAttrib == null)
+                        {
+                            changes.Add($" • {prefix}{name}: Add {attrib.Name}={attrib.Value}");
+                        }
+                        else if (dstAttrib.Value != attrib.Value)
+                        {
+                            changes.Add(
+                                $" • {prefix}{name}: Change {attrib.Name} from {dstAttrib.Value} to {attrib.Value}");
+                        }
+                    }
+                }
+
+                if (dstNode.Attributes != null)
+                {
+                    foreach (XmlAttribute attrib in dstNode.Attributes)
+                    {
+                        var srcAttrib = srcNode.Attributes?[attrib.LocalName, attrib.NamespaceURI];
+                        if (srcAttrib == null)
+                        {
+                            changes.Add($" • {prefix}{name}: Remove {attrib.Name}");
+                        }
+                    }
+                }
+
+                if (srcNode.HasChildNodes || dstNode.HasChildNodes)
+                {
+                    CompareNodes(prefix + srcNode.Name + "/", srcNode.ChildNodes, dstNode.ChildNodes, androidNamespaceURI, changes);
+                }
+            }
+            else
+            {
+                changes.Add($" • Add {prefix}{name}");
+                if (srcNode.HasChildNodes)
+                {
+                    CompareNodes(prefix + srcNode.Name + "/", srcNode.ChildNodes, null,
+                        androidNamespaceURI, changes);
+                }
+            }
+        }
+
+        foreach (var namedDstNode in namedDstNodes)
+        {
+            string name = namedDstNode.Key;
+            if (!namedSrcNodes.TryGetValue(namedDstNode.Key, out var srcNode))
+            {
+                changes.Add($" • Remove {prefix}{name}");
+            }
+        }
+    }
+
+    private static void GetManifestDiff(string sourceFile, string destinationFile, List<string> changes)
+    {
+        try
+        {
+            var srcDoc = LoadDocument(sourceFile, skipAllModifications: false, modifyIfFound: true, enableSecurity: false, out var androidNamespaceURI);
+            var dstDoc = LoadDocument(destinationFile, skipAllModifications: true, modifyIfFound: false, enableSecurity: false, out _);
+
+            CompareNodes("", srcDoc.ChildNodes, dstDoc.ChildNodes, androidNamespaceURI, changes);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("Failed to compare AndroidManifests!");
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-manifest-compare-failed", ex);
         }
     }
 

@@ -80,8 +80,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.EndVertical();
         }
 
-        internal static Rect DrawBlockName(BlockData block, Origins origin, IIdentified originData, bool addInfoIcon = true,
-            GUIStyle containerStyle = null, GUIStyle labelStyle = null, GUIStyle iconStyle = null)
+        internal static Rect DrawBlockName(BlockData block, Origins origin, IIdentified originData,
+            bool addInfoIcon = true,
+            GUIStyle containerStyle = null, GUIStyle labelStyle = null, GUIStyle iconStyle = null,
+            bool pushContentLeft = true)
         {
             if (block == null) return Rect.zero;
 
@@ -124,13 +126,18 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
 
-            GUILayout.FlexibleSpace();
+            if (pushContentLeft)
+            {
+                GUILayout.FlexibleSpace();
+            }
+
             EditorGUILayout.EndHorizontal();
 
             return rect;
         }
 
-        internal static void DrawBlockRow(BlockData data, BuildingBlock block, Origins origin, IIdentified originData, bool showAction = true)
+        internal static void DrawBlockRow(BlockData data, BuildingBlock block, Origins origin, IIdentified originData,
+            bool showAction = true)
         {
             if (data == null && block == null) return;
 
@@ -159,7 +166,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Styles.Constants.ThumbnailSourceRatio, Color.white, Vector4.zero, Vector4.one * 2f);
 
             EditorGUILayout.Space(ItemHeight - Padding - SmallIconSize * 0.5f - 4);
-            EditorGUILayout.LabelField(block != null ? Styles.Contents.SuccessIcon : Styles.Contents.ErrorIcon, Styles.GUIStyles.IconStyle,
+            EditorGUILayout.LabelField(block != null ? Styles.Contents.SuccessIcon : Styles.Contents.ErrorIcon,
+                Styles.GUIStyles.IconStyle,
                 GUILayout.Width(SmallIconSize), GUILayout.Height(ItemHeight - Padding * 2));
 
             // Labels

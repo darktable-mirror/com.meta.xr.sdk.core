@@ -18,9 +18,6 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using System.Linq;
-using Meta.XR.Editor.FalcoOVRTelemetry;
 using Meta.XR.MetaWand.Editor.API;
 using UnityEngine;
 
@@ -28,51 +25,14 @@ namespace Meta.XR.MetaWand.Editor.Telemetry
 {
     internal static class MetaWandEvent
     {
-        private static OVRFalcoEvent CreateBaseEvent(Data eventData)
+        public static bool SendMetaWandEvent(this OVRPlugin.UnifiedEventData eventData)
         {
-            var falcoEvent = new OVRFalcoEvent(eventData.Name)
-            {
-                ProductType = "meta_wand",
-                EventType = eventData.Type,
-                EventTarget = eventData.Target,
-                EntryPoint = eventData.Entrypoint,
-                ErrorMessage = eventData.ErrorMessage,
-                MachineOculusUserId = MetaWandAuth.Data.IsValid ? MetaWandAuth.Data.ProfileId : 0
-            }.AddMetadata("app_version", Application.version)
-            .AddMetadata("device_os", SystemInfo.operatingSystem)
-            .AddMetadata("developer_platform", Application.platform.ToString());
-
-            foreach (var (value, key) in eventData.Metadata ?? Enumerable.Empty<KeyValuePair<string, string>>())
-            {
-                falcoEvent.AddMetadata(value, key);
-            }
-
-            return falcoEvent;
-        }
-
-        public record Data
-        {
-            public string Name;
-            public bool IsEssential;
-            public Dictionary<string, string> Metadata;
-            public string Type;
-            public string Target;
-            public string Entrypoint;
-            public string ErrorMessage;
-        }
-
-        public static void Send(Data eventData)
-        {
-            var falcoEvent = CreateBaseEvent(eventData);
-
-            if (eventData.IsEssential)
-            {
-                falcoEvent.SendEssential();
-            }
-            else
-            {
-                falcoEvent.SendNonEssential();
-            }
+            eventData.productType = "meta_wand";
+            eventData.machine_oculus_user_id = MetaWandAuth.Data.IsValid ? MetaWandAuth.Data.ProfileId : 0;
+            eventData.SetMetadata("app_version", Application.version);
+            eventData.SetMetadata("device_os", SystemInfo.operatingSystem);
+            eventData.SetMetadata("developer_platform", Application.platform.ToString());
+            return eventData.Send();
         }
     }
 }

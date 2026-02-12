@@ -24,103 +24,51 @@ using UnityEngine;
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
     [CustomEditor(typeof(LlamaApiProvider))]
-    public class LlamaApiProviderEditor : UnityEditor.Editor
+    public class LlamaApiProviderEditor : AIProviderEditorBase
     {
         private SerializedProperty _endpointUrl;
-        private SerializedProperty _apiKey;
         private SerializedProperty _model;
         private SerializedProperty _supportsVision;
-
-        // Defaults (foldout)
         private SerializedProperty _temperature;
         private SerializedProperty _topP;
         private SerializedProperty _repetitionPenalty;
         private SerializedProperty _maxCompletionTokens;
-
-        // Images (under same foldout)
         private SerializedProperty _inlineRemoteImages;
         private SerializedProperty _resolveRemoteRedirects;
         private SerializedProperty _maxInlineBytes;
-
-        // Foldout states
         private bool _defaultsOpen;
-
-        private struct ModelOpt
-        {
-            public string Display;
-            public string ID;
-            public bool Multimodal;
-            public string Provider;
-            public string CtxWindow;
-        }
-
-        private static readonly ModelOpt[] KModels = new[]
-        {
-            new ModelOpt
-            {
-                Display = "Llama-4-Maverick-17B-128E-Instruct-FP8 (Meta, multimodal)",
-                ID = "Llama-4-Maverick-17B-128E-Instruct-FP8",
-                Multimodal = true, Provider = "Meta", CtxWindow = "128k tokens"
-            },
-            new ModelOpt
-            {
-                Display = "Llama-4-Scout-17B-16E-Instruct-FP8 (Meta, multimodal)",
-                ID = "Llama-4-Scout-17B-16E-Instruct-FP8",
-                Multimodal = true, Provider = "Meta", CtxWindow = "128k tokens"
-            },
-            new ModelOpt
-            {
-                Display = "Llama-3.3-70B-Instruct (Meta, text-only)",
-                ID = "Llama-3.3-70B-Instruct",
-                Multimodal = false, Provider = "Meta", CtxWindow = "128k tokens"
-            },
-            new ModelOpt
-            {
-                Display = "Llama-3.3-8B-Instruct (Meta, text-only)",
-                ID = "Llama-3.3-8B-Instruct",
-                Multimodal = false, Provider = "Meta", CtxWindow = "128k tokens"
-            },
-            new ModelOpt
-            {
-                Display = "Cerebras-Llama-4-Maverick-17B-128E-Instruct (Cerebras, text-only, Preview)",
-                ID = "Cerebras-Llama-4-Maverick-17B-128E-Instruct",
-                Multimodal = false, Provider = "Cerebras", CtxWindow = "32k tokens"
-            },
-            new ModelOpt
-            {
-                Display = "Cerebras-Llama-4-Scout-17B-16E-Instruct (Cerebras, text-only, Preview)",
-                ID = "Cerebras-Llama-4-Scout-17B-16E-Instruct",
-                Multimodal = false, Provider = "Cerebras", CtxWindow = "32k tokens"
-            },
-            new ModelOpt
-            {
-                Display = "Groq-Llama-4-Maverick-17B-128E-Instruct (Groq, text-only, Preview)",
-                ID = "Groq-Llama-4-Maverick-17B-128E-Instruct",
-                Multimodal = false, Provider = "Groq", CtxWindow = "128k tokens"
-            },
-        };
-
-        private const string KCustomOption = "Custom…";
-        private int _selectedIndex = -1;
 
         private void OnEnable()
         {
-            _apiKey = serializedObject.FindProperty("apiKey");
-            _endpointUrl = serializedObject.FindProperty("endpointUrl");
+            InitializeCredentialStorage(nameof(LlamaApiProvider.apiKey));
+            _endpointUrl = serializedObject.FindProperty(nameof(LlamaApiProvider.endpointUrl));
+            _model = serializedObject.FindProperty(nameof(LlamaApiProvider.model));
+            _supportsVision = serializedObject.FindProperty(nameof(LlamaApiProvider.supportsVision));
+            _temperature = serializedObject.FindProperty(nameof(LlamaApiProvider.temperature));
+            _topP = serializedObject.FindProperty(nameof(LlamaApiProvider.topP));
+            _repetitionPenalty = serializedObject.FindProperty(nameof(LlamaApiProvider.repetitionPenalty));
+            _maxCompletionTokens = serializedObject.FindProperty(nameof(LlamaApiProvider.maxCompletionTokens));
+            _inlineRemoteImages = serializedObject.FindProperty(nameof(LlamaApiProvider.inlineRemoteImages));
+            _resolveRemoteRedirects = serializedObject.FindProperty(nameof(LlamaApiProvider.resolveRemoteRedirects));
+            _maxInlineBytes = serializedObject.FindProperty(nameof(LlamaApiProvider.maxInlineBytes));
+            InitializeModelCache("LlamaAPI", FetchModelsFromAPI);
+        }
 
-            _model = serializedObject.FindProperty("model");
-            _supportsVision = serializedObject.FindProperty("supportsVision");
+        private void OnDisable()
+        {
+            CleanupValidationRequest();
+        }
 
-            _temperature = serializedObject.FindProperty("temperature");
-            _topP = serializedObject.FindProperty("topP");
-            _repetitionPenalty = serializedObject.FindProperty("repetitionPenalty");
-            _maxCompletionTokens = serializedObject.FindProperty("maxCompletionTokens");
+        protected override void OnTestConnection()
+        {
+            var provider = target as LlamaApiProvider;
+            if (provider is not IUsesCredential credentialProvider)
+            {
+                return;
+            }
 
-            _inlineRemoteImages = serializedObject.FindProperty("inlineRemoteImages");
-            _resolveRemoteRedirects = serializedObject.FindProperty("resolveRemoteRedirects");
-            _maxInlineBytes = serializedObject.FindProperty("maxInlineBytes");
-
-            _selectedIndex = ComputePopupIndexFromModel(_model?.stringValue);
+            var config = credentialProvider.GetTestConfig();
+            TestConnection(config.Endpoint, config.Model, config.ProviderId);
         }
 
         public override void OnInspectorGUI()
@@ -128,65 +76,25 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             serializedObject.Update();
             EditorGUILayout.LabelField("Llama API Provider", EditorStyles.boldLabel);
             EditorGUILayout.Space();
-            DrawApiKeyRow(_apiKey, "API Key", "https://llama.developer.meta.com/api-keys/");
+
+            var provider = target as LlamaApiProvider;
+            if (provider is IUsesCredential credProvider)
+            {
+                var config = credProvider.GetTestConfig();
+                TryLoadCachedValidation(config.Endpoint, config.Model, config.ProviderId);
+            }
+
+            DrawApiKeyField("API Key", "https://llama-api.com",
+                drawExtraTopRight: () => DrawTestConnectionButton());
+
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(_endpointUrl, new GUIContent("Endpoint URL",
+            EditorGUILayout.PropertyField(_endpointUrl, new GUIContent("Endpoint",
                 "Full chat completions endpoint, e.g. https://api.llama.com/v1/chat/completions"));
             EditorGUILayout.Space();
 
-            // Build labels
-            var popupLabels = new string[KModels.Length + 1];
-            for (var i = 0; i < KModels.Length; i++) popupLabels[i] = KModels[i].Display;
-            popupLabels[^1] = KCustomOption;
-
-            // Make sure _selectedIndex is valid (do not recompute every frame from _model, only if out of range)
-            if (_selectedIndex < 0 || _selectedIndex > KModels.Length)
-                _selectedIndex = ComputePopupIndexFromModel(_model.stringValue);
-
-            bool isCustom = (_selectedIndex == KModels.Length);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.PrefixLabel("Model Selection");
-
-                if (!isCustom)
-                {
-                    // Full-width popup when not custom
-                    var newIndex = EditorGUILayout.Popup(_selectedIndex, popupLabels, GUILayout.ExpandWidth(true));
-                    if (newIndex != _selectedIndex)
-                    {
-                        _selectedIndex = newIndex;
-                        if (_selectedIndex >= 0 && _selectedIndex < KModels.Length)
-                        {
-                            _model.stringValue = KModels[_selectedIndex].ID;
-                            _supportsVision.boolValue = KModels[_selectedIndex].Multimodal;
-                        }
-
-                        isCustom = (_selectedIndex == KModels.Length);
-                    }
-                }
-                else
-                {
-                    // When custom: narrow popup + inline custom text field
-                    var newIndex = EditorGUILayout.Popup(_selectedIndex, popupLabels, GUILayout.MaxWidth(280f));
-                    if (newIndex != _selectedIndex)
-                    {
-                        _selectedIndex = newIndex;
-                        isCustom = (_selectedIndex == KModels.Length);
-                        if (!isCustom && _selectedIndex >= 0 && _selectedIndex < KModels.Length)
-                        {
-                            _model.stringValue = KModels[_selectedIndex].ID;
-                            _supportsVision.boolValue = KModels[_selectedIndex].Multimodal;
-                        }
-                    }
-
-                    GUILayout.Space(6);
-                    _model.stringValue = EditorGUILayout.TextField(_model.stringValue ?? string.Empty,
-                        GUILayout.ExpandWidth(true));
-                }
-            }
-
-            DrawModelInfoHelpBox();
+            DrawModelPickerInline();
+            EditorGUILayout.Space();
+            DrawModelStatusBox();
             EditorGUILayout.Space();
 
             _defaultsOpen = EditorGUILayout.BeginFoldoutHeaderGroup(_defaultsOpen, "Chat / Vision Settings");
@@ -194,7 +102,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             {
                 using (new EditorGUILayout.VerticalScope("box"))
                 {
-                    // Chat settings
                     EditorGUILayout.PropertyField(_temperature, new GUIContent("Temperature"));
                     EditorGUILayout.PropertyField(_topP, new GUIContent("Top P"));
                     EditorGUILayout.PropertyField(_repetitionPenalty, new GUIContent("Repetition Penalty"));
@@ -204,7 +111,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                     EditorGUILayout.LabelField("Image Settings", EditorStyles.boldLabel);
 
                     EditorGUILayout.PropertyField(_supportsVision, new GUIContent("Supports Vision"));
-                    // Image settings
                     EditorGUILayout.PropertyField(_inlineRemoteImages, new GUIContent("Inline Remote Images",
                         "When ON, http(s) image URLs are fetched locally and sent as base64."));
                     using (new EditorGUI.DisabledScope(_inlineRemoteImages.boolValue))
@@ -223,55 +129,35 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawModelInfoHelpBox()
+        private void DrawModelPickerInline()
         {
-            if (_selectedIndex >= 0 && _selectedIndex < KModels.Length)
+            string[] fallbackModels =
             {
-                var m = KModels[_selectedIndex];
-                var modalities = m.Multimodal ? "Input: Text, Image • Output: Text" : "Input: Text • Output: Text";
-                EditorGUILayout.HelpBox(
-                    $"{m.ID}\nProvider: {m.Provider} • Context: {m.CtxWindow}\n{modalities}",
-                    MessageType.Info
-                );
-            }
-            else
-            {
-                var current = string.IsNullOrEmpty(_model.stringValue) ? "(empty)" : _model.stringValue;
-                EditorGUILayout.HelpBox(
-                    $"Model ID: {current}\n(This is a custom value. Ensure it matches the provider’s catalog.)",
-                    MessageType.None
-                );
-            }
+                "Llama-4-Maverick-17B-128E-Instruct-FP8",
+                "Llama-3.3-70B-Instruct",
+                CustomOption
+            };
+
+            var availableModels = FetchedModels is { Count: > 0 } ? FetchedModels.ToArray() : fallbackModels;
+            DrawDropdownPickerWithCustom(_model, availableModels, "Model", "Select a model or enter a custom model ID",
+                FetchModelsFromAPI, IsFetchingModels);
         }
 
-        private static int ComputePopupIndexFromModel(string currentId)
+        private void DrawModelStatusBox()
         {
-            if (string.IsNullOrEmpty(currentId))
-                return KModels.Length; // Custom
+            string modelInfo = null;
+            if (FetchedModelData != null && FetchedModelData.TryGetValue(_model?.stringValue, out var modelData))
+            {
+                modelInfo = $"Model: {modelData.id}\nOwned by: {modelData.owned_by}";
+            }
 
-            for (var i = 0; i < KModels.Length; i++)
-                if (KModels[i].ID == currentId)
-                    return i;
-
-            return KModels.Length; // not found => Custom
+            DrawModelStatusBox(IsFetchingModels, FetchError, FetchedModels is { Count: > 0 }, _model?.stringValue,
+                modelInfo);
         }
 
-        private static void DrawApiKeyRow(SerializedProperty apiProp, string label, string getKeyUrl, float buttonWidth = 95f)
+        private void FetchModelsFromAPI()
         {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.PropertyField(apiProp, new GUIContent(label));
-                GUILayout.Space(6);
-
-                var val = apiProp?.stringValue?.Trim();
-                if (string.IsNullOrEmpty(val) && !string.IsNullOrEmpty(getKeyUrl))
-                {
-                    if (GUILayout.Button(new GUIContent("Get Key…", $"Open {getKeyUrl}"), GUILayout.Width(buttonWidth)))
-                    {
-                        Application.OpenURL(getKeyUrl);
-                    }
-                }
-            }
+            FetchModelsWithBearerAuth(_endpointUrl, "https://api.llama.com/v1", "LlamaAPI");
         }
     }
 }

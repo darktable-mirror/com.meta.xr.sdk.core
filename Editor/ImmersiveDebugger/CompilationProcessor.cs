@@ -89,6 +89,13 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             foreach (var s in compiledAssemblies)
             {
                 string absolutePath = Path.Combine(Application.dataPath, "..", s);
+
+                // Skip if the assembly file doesn't exist (can happen if compilation was skipped)
+                if (!File.Exists(absolutePath))
+                {
+                    continue;
+                }
+
                 // not try-catch here because any compiler error would be intercepted as not surfaced well in console
                 Assembly assembly = Assembly.LoadFile(absolutePath);
                 var types = assembly.GetTypes().Where(

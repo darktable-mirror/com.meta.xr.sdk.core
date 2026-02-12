@@ -21,6 +21,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.XR.Telemetry;
 using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
@@ -58,7 +59,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             var meshRenderer = visualizer.GetComponent<MeshRenderer>();
             if (meshRenderer == null)
             {
-                Debug.LogError("Visualizer GameObject has no MeshRenderer. Cannot configure PassthroughCameraAccess.");
+                IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "passthrough-camera-visualizer-missing-meshrenderer",
+                    "Visualizer GameObject has no MeshRenderer. Cannot configure PassthroughCameraAccess.");
                 return;
             }
 
@@ -68,7 +70,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 var shader = Shader.Find("Unlit/Texture");
                 if (shader == null)
                 {
-                    Debug.LogError("Shader 'Unlit/Texture' not found. Cannot create new Passthrough material.");
+                    IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "passthrough-camera-visualizer-shader-not-found",
+                        "Shader 'Unlit/Texture' not found. Cannot create new Passthrough material.");
                     return;
                 }
 
@@ -144,7 +147,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (target == null)
             {
-                Debug.LogError(
+                IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "passthrough-camera-visualizer-access-failed",
                     $"Failed to obtain or create a PassthroughCameraAccess for visualizer '{visualizer.name}'.");
                 return;
             }
@@ -161,7 +164,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 var shader = Shader.Find("Unlit/Texture");
                 if (shader == null)
                 {
-                    Debug.LogError("Shader 'Unlit/Texture' not found. Cannot create new Passthrough material.");
+                    IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "passthrough-camera-visualizer-shader-not-found",
+                        "Shader 'Unlit/Texture' not found. Cannot create new Passthrough material.");
                     return;
                 }
 
@@ -179,14 +183,16 @@ namespace Meta.XR.BuildingBlocks.Editor
             var imported = await blockData.InstallWithDependencies();
             if (imported == null || imported.Count == 0)
             {
-                Debug.LogError("Failed to install PassthroughCameraAccess block.");
+                IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "passthrough-camera-access-install-failed",
+                    "Failed to install PassthroughCameraAccess block.");
                 return null;
             }
 
             var access = imported[0].GetComponentInChildren<PassthroughCameraAccess>();
             if (access == null)
             {
-                Debug.LogError($"PassthroughCameraAccess component not found on imported object '{imported[0].name}'.");
+                IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "passthrough-camera-access-component-not-found",
+                    $"PassthroughCameraAccess component not found on imported object '{imported[0].name}'.");
                 return null;
             }
 
@@ -195,7 +201,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             var shader = Shader.Find("Unlit/Texture");
             if (shader == null)
             {
-                Debug.LogError("Shader 'Unlit/Texture' not found. Cannot create new Passthrough material.");
+                IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "passthrough-camera-visualizer-shader-not-found",
+                    "Shader 'Unlit/Texture' not found. Cannot create new Passthrough material.");
                 return access;
             }
 

@@ -20,6 +20,7 @@
 
 using System;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -142,6 +143,8 @@ internal class OVRProjectSetupSettings : ScriptableObject
         }
         catch (Exception e)
         {
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-config-load-failed",
+                $"Unable to load ProjectSetupConfig from {oculusProjectConfigAssetPath}, error {e.Message}", enableDebugLog: false);
             Debug.LogWarningFormat("Unable to load ProjectSetupConfig from {0}, error {1}",
                 oculusProjectConfigAssetPath, e.Message);
         }

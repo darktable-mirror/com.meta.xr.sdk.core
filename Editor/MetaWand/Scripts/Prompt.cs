@@ -106,19 +106,17 @@ namespace Meta.XR.MetaWand.Editor
             var result = await _apiManager.SearchAssets(PromptText, Constants.SearchResultQueryCount, polyCount, Id);
             if (!result.Success)
             {
-                MetaWandEvent.Send(new MetaWandEvent.Data
+                var failureEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreviewsGenerated)
                 {
-                    Name = Constants.Telemetry.EventNamePreviewsGenerated,
-                    Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                    Target = Constants.Telemetry.TargetPreviewPanel,
-                    Metadata = new Dictionary<string, string>
-                    {
-                        { Constants.Telemetry.ParamIsPregenResult, true.ToString() },
-                        { Constants.Telemetry.ParamNumSuccessTiles, 0.ToString() },
-                        { Constants.Telemetry.ParamNumErrorTiles, Constants.SearchResultQueryCount.ToString() },
-                        { Constants.Telemetry.ParamSessionId, Id ?? string.Empty }
-                    }
-                });
+                    isEssential = OVRPlugin.Bool.False,
+                    entrypoint = Constants.Telemetry.EntrypointLoadState,
+                    target = Constants.Telemetry.TargetPreviewPanel
+                };
+                failureEvent.SetMetadata(Constants.Telemetry.ParamIsPregenResult, true.ToString());
+                failureEvent.SetMetadata(Constants.Telemetry.ParamNumSuccessTiles, 0.ToString());
+                failureEvent.SetMetadata(Constants.Telemetry.ParamNumErrorTiles, Constants.SearchResultQueryCount.ToString());
+                failureEvent.SetMetadata(Constants.Telemetry.ParamSessionId, Id ?? string.Empty);
+                failureEvent.SendMetaWandEvent();
 
                 FailedToLoadPreGen = true;
                 var permissionDeniedError = (result.ErrorSubCode != null &&
@@ -128,16 +126,12 @@ namespace Meta.XR.MetaWand.Editor
                     ? result.ErrorMessage
                     : Constants.ErrorMessageDefaultFailedToLoad;
 
-                MetaWandEvent.Send(new MetaWandEvent.Data
+                new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreGenerationFailure)
                 {
-                    Name = Constants.Telemetry.EventNamePreGenerationFailure,
-                    Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                    Target = Constants.Telemetry.TargetPreviewPanel,
-                    IsEssential = true,
-                    Metadata = new Dictionary<string, string>
-                    {
-                    }
-                });
+                    isEssential = OVRPlugin.Bool.True,
+                    entrypoint = Constants.Telemetry.EntrypointLoadState,
+                    target = Constants.Telemetry.TargetPreviewPanel
+                }.SendMetaWandEvent();
                 return;
             }
 
@@ -164,20 +158,17 @@ namespace Meta.XR.MetaWand.Editor
 
             var successCount = results.Count(success => success);
 
-            MetaWandEvent.Send(new MetaWandEvent.Data
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreviewsGenerated)
             {
-                Name = Constants.Telemetry.EventNamePreviewsGenerated,
-                Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                Target = Constants.Telemetry.TargetPreviewPanel,
-                IsEssential = true,
-                Metadata = new Dictionary<string, string>
-                {
-                    { Constants.Telemetry.ParamIsPregenResult, true.ToString() },
-                    { Constants.Telemetry.ParamNumSuccessTiles, successCount.ToString() },
-                    { Constants.Telemetry.ParamNumErrorTiles, (results.Length - successCount).ToString() },
-                    { Constants.Telemetry.ParamSessionId, Id ?? string.Empty }
-                }
-            });
+                isEssential = OVRPlugin.Bool.True,
+                entrypoint = Constants.Telemetry.EntrypointLoadState,
+                target = Constants.Telemetry.TargetPreviewPanel
+            };
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamIsPregenResult, true.ToString());
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamNumSuccessTiles, successCount.ToString());
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamNumErrorTiles, (results.Length - successCount).ToString());
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, Id ?? string.Empty);
+            unifiedEvent.SendMetaWandEvent();
         }
 
         private string GetKey(int index, bool isPreGen) => Constants.PreGenPrefix + $"{Id}_{index}";
@@ -223,19 +214,16 @@ namespace Meta.XR.MetaWand.Editor
 
         private async Task AddToScene()
         {
-            MetaWandEvent.Send(new MetaWandEvent.Data
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                Name = Constants.Telemetry.EventNameLinkClick,
-                Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                Target = Constants.Telemetry.TargetAddToSceneButton,
-                IsEssential = true,
-                Metadata = new Dictionary<string, string>
-                {
-                    { Constants.Telemetry.ParamAssetId, Asset.AssetId },
-                    { Constants.Telemetry.ParamIsPregenResult, _asset.IsPreGen.ToString() },
-                    { Constants.Telemetry.ParamSessionId, Prompt.Id ?? string.Empty }
-                }
-            });
+                isEssential = OVRPlugin.Bool.True,
+                entrypoint = Constants.Telemetry.EntrypointLoadState,
+                target = Constants.Telemetry.TargetAddToSceneButton
+            };
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamAssetId, Asset.AssetId);
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamIsPregenResult, _asset.IsPreGen.ToString());
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, Prompt.Id ?? string.Empty);
+            unifiedEvent.SendMetaWandEvent();
 
             if (_assetHasLods)
             {
@@ -245,18 +233,15 @@ namespace Meta.XR.MetaWand.Editor
             _ = PrefabUtility.InstantiatePrefab(_savedPrefab) as GameObject;
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
 
-            MetaWandEvent.Send(new MetaWandEvent.Data
+            var unifiedEvent2 = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameObjectAddedToScene)
             {
-                Name = Constants.Telemetry.EventNameObjectAddedToScene,
-                Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                IsEssential = true,
-                Metadata = new Dictionary<string, string>
-                {
-                    { Constants.Telemetry.ParamAssetId, Asset.AssetId },
-                    { Constants.Telemetry.ParamIsPregenResult, _asset.IsPreGen.ToString() },
-                    { Constants.Telemetry.ParamSessionId, Prompt.Id ?? string.Empty }
-                }
-            });
+                isEssential = OVRPlugin.Bool.True,
+                entrypoint = Constants.Telemetry.EntrypointLoadState
+            };
+            unifiedEvent2.SetMetadata(Constants.Telemetry.ParamAssetId, Asset.AssetId);
+            unifiedEvent2.SetMetadata(Constants.Telemetry.ParamIsPregenResult, _asset.IsPreGen.ToString());
+            unifiedEvent2.SetMetadata(Constants.Telemetry.ParamSessionId, Prompt.Id ?? string.Empty);
+            unifiedEvent2.SendMetaWandEvent();
         }
 
         private async Task FetchAndDownload(string assetId, int lod)
@@ -274,17 +259,14 @@ namespace Meta.XR.MetaWand.Editor
                     ? Constants.SomethingWrong
                     : result.ErrorMessage, null, ShouldShowTryAgain(result.ErrorSubCode));
 
-                MetaWandEvent.Send(new MetaWandEvent.Data
+                var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreGenerationFailure)
                 {
-                    Name = Constants.Telemetry.EventNamePreGenerationFailure,
-                    Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                    Target = Constants.Telemetry.TargetAddToSceneButton,
-                    IsEssential = true,
-                    Metadata = new Dictionary<string, string>
-                    {
-                        { Constants.Telemetry.ParamSessionId, Prompt.Id ?? string.Empty }
-                    }
-                });
+                    isEssential = OVRPlugin.Bool.True,
+                    entrypoint = Constants.Telemetry.EntrypointLoadState,
+                    target = Constants.Telemetry.TargetAddToSceneButton
+                };
+                unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, Prompt.Id ?? string.Empty);
+                unifiedEvent.SendMetaWandEvent();
                 return;
             }
 
@@ -487,12 +469,12 @@ namespace Meta.XR.MetaWand.Editor
             }
 
             var instance = Object.Instantiate(fbxModel);
+            var materialPath = _assetHasLods
+                ? Path.Combine(_pathToMaterials, subDirName, assetName + ".mat")
+                : Path.Combine(_pathToMaterials, assetName + ".mat");
             var renderer = instance.GetComponentInChildren<Renderer>();
             if (renderer != null && renderer.sharedMaterial != null)
             {
-                var materialPath = _assetHasLods
-                    ? Path.Combine(_pathToMaterials, subDirName, assetName + ".mat")
-                    : Path.Combine(_pathToMaterials, assetName + ".mat");
                 Material mat;
 
                 var absolutePath = Path.GetFullPath(materialPath);
@@ -522,6 +504,8 @@ namespace Meta.XR.MetaWand.Editor
             Object.DestroyImmediate(instance);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+
+            RegisterAssetsInRegistry(fbxPath, texPath, materialPath, prefabPath);
         }
 
 
@@ -590,6 +574,19 @@ namespace Meta.XR.MetaWand.Editor
             {
                 AssetDatabase.CreateFolder(_pathToMaterials, dirName);
             }
+        }
+
+        private void RegisterAssetsInRegistry(string fbxPath, string texPath, string materialPath, string prefabPath)
+        {
+            var fbxGuid = AssetDatabase.AssetPathToGUID(fbxPath);
+            var texGuid = AssetDatabase.AssetPathToGUID(texPath);
+            var matGuid = AssetDatabase.AssetPathToGUID(materialPath);
+            var prefabGuid = AssetDatabase.AssetPathToGUID(prefabPath);
+
+            MetaAssetRegistry.RegisterAsset(fbxGuid, Asset.AssetId, "Mesh", _asset.IsPreGen, Prompt.Id);
+            MetaAssetRegistry.RegisterAsset(texGuid, Asset.AssetId, "Texture", _asset.IsPreGen, Prompt.Id);
+            MetaAssetRegistry.RegisterAsset(matGuid, Asset.AssetId, "Material", _asset.IsPreGen, Prompt.Id);
+            MetaAssetRegistry.RegisterAsset(prefabGuid, Asset.AssetId, "Prefab", _asset.IsPreGen, Prompt.Id);
         }
 
         public async Task LoadFromAsset(Asset asset)

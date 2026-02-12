@@ -39,6 +39,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         internal Flex Flex => _viewport.Flex;
 
         private float _previousProgress;
+        private bool _preventScrollPreservation = false;
 
         /// <summary>
         /// The progress of the scroll view, specifically representing the normalized vertical position of the rectangle.
@@ -67,16 +68,37 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         protected override void RefreshLayoutPreChildren()
         {
-            _previousProgress = Progress;
+            if (!_preventScrollPreservation)
+            {
+                _previousProgress = Progress;
+            }
 
             base.RefreshLayoutPreChildren();
         }
 
         protected override void RefreshLayoutPostChildren()
         {
-            Progress = _previousProgress;
+            if (!_preventScrollPreservation)
+            {
+                Progress = _previousProgress;
+            }
+            else
+            {
+                _preventScrollPreservation = false; // Reset flag after use
+            }
 
             base.RefreshLayoutPostChildren();
+        }
+
+        /// <summary>
+        /// Sets the scroll position without preservation during layout updates
+        /// </summary>
+        /// <param name="progress">The scroll progress (0.0f = top, 1.0f = bottom)</param>
+        public void SetProgressWithoutPreservation(float progress)
+        {
+            _preventScrollPreservation = true;
+            _previousProgress = progress;
+            Progress = progress;
         }
     }
 }

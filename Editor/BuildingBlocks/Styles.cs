@@ -67,7 +67,8 @@ namespace Meta.XR.BuildingBlocks.Editor
         public static class Contents
         {
             public static readonly TextureContent AddIcon =
-                TextureContent.CreateContent("ovr_icon_addblock.png", Utils.BuildingBlocksIcons, "Add Block to current scene");
+                TextureContent.CreateContent("ovr_icon_addblock.png", Utils.BuildingBlocksIcons,
+                    "Add Block to current scene");
 
             public static readonly TextureContent CancelIcon =
                 TextureContent.CreateContent("ovr_icon_cancel.png", Utils.BuildingBlocksIcons, "Cancel");
@@ -76,13 +77,16 @@ namespace Meta.XR.BuildingBlocks.Editor
                 TextureContent.CreateContent("ovr_icon_confirm.png", Utils.BuildingBlocksIcons, "Confirm");
 
             public static readonly TextureContent DownloadIcon =
-                TextureContent.CreateContent("ovr_icon_download.png", Utils.BuildingBlocksIcons, "Download Block to your project");
+                TextureContent.CreateContent("ovr_icon_download.png", Utils.BuildingBlocksIcons,
+                    "Download Block to your project");
 
             public static readonly TextureContent DownloadPackageDependenciesIcon =
-                TextureContent.CreateContent("ovr_icon_download.png", Utils.BuildingBlocksIcons, "This Block requires packages to be installed");
+                TextureContent.CreateContent("ovr_icon_download.png", Utils.BuildingBlocksIcons,
+                    "This Block requires packages to be installed");
 
             public static readonly TextureContent SelectIcon =
-                TextureContent.CreateContent("ovr_icon_link.png", Utils.BuildingBlocksIcons, "Select Block in current scene");
+                TextureContent.CreateContent("ovr_icon_link.png", Utils.BuildingBlocksIcons,
+                    "Select Block in current scene");
 
             public static readonly TextureContent ErrorIcon =
                 TextureContent.CreateContent("ovr_error_greybg.png", Utils.BuildingBlocksIcons);
@@ -102,7 +106,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             public static readonly TextureContent BackIcon =
                 TextureContent.CreateContent("ovr_bb_icon_back.png", Utils.BuildingBlocksIcons);
 
-            public static readonly TextureContent BorderedBackground = TextureContent.CreateContent("ovr_bb_sqr_back.png", Utils.BuildingBlocksIcons);
+            public static readonly TextureContent BorderedBackground =
+                TextureContent.CreateContent("ovr_bb_sqr_back.png", Utils.BuildingBlocksIcons);
 
             public static readonly TextureContent BreakBuildingBlockConnectionIcon =
                 TextureContent.CreateContent("ovr_icon_break_bb_connection.png", Utils.BuildingBlocksIcons);
@@ -116,7 +121,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             public static readonly TextureContent DefaultCollectionThumb =
                 TextureContent.CreateContent("Collections/default.png", Utils.BuildingBlocksThumbnails);
 
-            public static readonly TextureContent CollectionIcon = TextureContent.CreateContent("bb_icon_collection.png", Utils.BuildingBlocksIcons);
+            public static readonly TextureContent CollectionIcon =
+                TextureContent.CreateContent("bb_icon_collection.png", Utils.BuildingBlocksIcons);
         }
 
         public class GUIStylesContainer
@@ -210,7 +216,6 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             public readonly GUIStyle LargeLinkButtonContainer = new GUIStyle()
             {
-                fixedHeight = 22,
                 alignment = TextAnchor.MiddleCenter
             };
 
@@ -269,7 +274,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
                 padding = new RectOffset(Margin, Margin, Padding, Padding),
                 alignment = TextAnchor.MiddleLeft
-
             };
 
             public readonly GUIStyle LargeLabelledButton = new GUIStyle(EditorStyles.miniButton)
@@ -280,7 +284,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 margin = new RectOffset(MiniPadding, MiniPadding, MiniPadding, MiniPadding),
                 padding = new RectOffset(Margin, Margin, Padding, Padding),
                 alignment = TextAnchor.MiddleLeft
-
             };
 
             public readonly GUIStyle LabelledButtonIcon = new GUIStyle()
@@ -478,7 +481,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 },
                 border = new RectOffset(6, 6, 6, 6),
                 padding = new RectOffset(18 + Padding, Padding, MiniPadding, MiniPadding)
-
             };
 
             public readonly ColorStates TagOverlayBackgroundColors = new ColorStates()
@@ -700,7 +702,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 },
                 border = new RectOffset(6, 6, 6, 6),
                 padding = new RectOffset(18 + Padding, Padding, MiniPadding, MiniPadding)
-
             };
 
             public readonly ColorStates TagBackgroundFeatureColors = new()
@@ -825,7 +826,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 padding = new RectOffset(Border, Border, Border, Border),
                 stretchWidth = false,
                 stretchHeight = false,
-
             };
 
             public readonly GUIStyle CollectionDescriptionAreaStyle = new()

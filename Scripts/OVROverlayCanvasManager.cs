@@ -18,7 +18,10 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 [ExecuteInEditMode]
@@ -31,14 +34,10 @@ public class OVROverlayCanvasManager : MonoBehaviour
         Application.isPlaying ? _instance = new GameObject(nameof(OVROverlayCanvasManager)).AddComponent<OVROverlayCanvasManager>() :
         null;
 
-    private List<OVROverlayCanvas> _canvases = new();
+    private readonly List<OVROverlayCanvas> _canvases = new();
 
     public static void AddCanvas(OVROverlayCanvas canvas) => Instance?._canvases.Add(canvas);
     public static void RemoveCanvas(OVROverlayCanvas canvas) => _instance?._canvases.Remove(canvas);
-
-    public bool IsCanvasPriority(OVROverlayCanvas canvas) =>
-        canvas.GetViewPriorityScore() is not null &&
-        _canvases.IndexOf(canvas) < OVROverlayCanvasSettings.Instance.MaxSimultaneousCanvases;
 
     public IEnumerable<OVROverlayCanvas> Canvases => _canvases;
 
@@ -49,18 +48,64 @@ public class OVROverlayCanvasManager : MonoBehaviour
         DontDestroyOnLoad(this);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static unsafe void InsertSorted(int* indexList, float* scoreList, int index, float score)
+    {
+        int insertIndex = index;
+        while (insertIndex > 0 && scoreList[insertIndex - 1] < score && !Mathf.Approximately(scoreList[insertIndex - 1], score))
+        {
+            scoreList[insertIndex] = scoreList[insertIndex - 1];
+            indexList[insertIndex] = indexList[insertIndex - 1];
+            insertIndex--;
+        }
+
+        scoreList[insertIndex] = score;
+        indexList[insertIndex] = index;
+    }
+
+
+    private void UpdateCanvasPriorities()
+    {
+        unsafe
+        {
+            // Sort the canvases by priority, and update IsCanvasPriority
+            int* indexSortList = stackalloc int[_canvases.Count];
+            float* prioritySortList = stackalloc float[_canvases.Count];
+            for (int i = 0; i < _canvases.Count; i++)
+            {
+                InsertSorted(indexSortList, prioritySortList, i, _canvases[i].GetViewPriorityScore() ?? -1000);
+            }
+
+            for (int i = 0; i < _canvases.Count; i++)
+            {
+                _canvases[indexSortList[i]].IsCanvasPriority =
+                    i < OVROverlayCanvasSettings.Instance.MaxSimultaneousCanvases;
+            }
+        }
+    }
+
+    private void UpdateCanvasDepths()
+    {
+        unsafe
+        {
+            // Sort the canvases by distance, and update CanvasDepth
+            int* indexSortList = stackalloc int[_canvases.Count];
+            float* distanceSortList = stackalloc float[_canvases.Count];
+            for (int i = 0; i < _canvases.Count; i++)
+            {
+                InsertSorted(indexSortList, distanceSortList, i, _canvases[i].GetViewDistance() ?? 1000);
+            }
+
+            for (int i = 0; i < _canvases.Count; i++)
+            {
+                _canvases[indexSortList[i]].CanvasDepth = -i;
+            }
+        }
+    }
     protected void Update()
     {
-        _canvases.Sort((a, b) =>
-        {
-            var scoreA = a.GetViewPriorityScore() ?? 0;
-            var scoreB = b.GetViewPriorityScore() ?? 0;
-            if (!Mathf.Approximately(scoreA, scoreB))
-                return (int)((scoreB - scoreA) * 10000);
-
-            // fallback to hashcode to keep it stable
-            return b.GetHashCode() - a.GetHashCode();
-        });
+        UpdateCanvasPriorities();
+        UpdateCanvasDepths();
     }
 
     protected void OnDestroy()

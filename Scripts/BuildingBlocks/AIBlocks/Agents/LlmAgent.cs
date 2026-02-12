@@ -18,11 +18,11 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine;
+using System;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
@@ -34,13 +34,29 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     /// </summary>
     public sealed class LlmAgent : MonoBehaviour
     {
+        [Header("Configuration")]
         [Tooltip("Provider asset that implements IChatTask (e.g., LlamaApiProvider). This defines how prompts are sent and responses are retrieved.")]
         [SerializeField] internal AIProviderBase providerAsset;
+
+        [Tooltip("Optional system prompt to set context/instructions for the LLM. This is prepended to all user messages.")]
+        [TextArea(3, 10)]
+        [SerializeField] private string systemPrompt;
 
         [Tooltip("True if the assigned provider supports multimodal input (text + images).")]
         public bool ProviderSupportsVision => _chatTask is { SupportsVision: true };
 
+        /// <summary>
+        /// Gets or sets the system prompt that provides context/instructions to the LLM.
+        /// This is prepended to all user messages.
+        /// </summary>
+        public string SystemPrompt
+        {
+            get => systemPrompt;
+            set => systemPrompt = value;
+        }
+
         private IChatTask _chatTask;
+        private UnityInferenceEngineProvider _unityProvider;
 
         [Header("Events")]
         [Tooltip("Invoked when a prompt is sent to the provider.")]
@@ -51,15 +67,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         [Tooltip("Invoked when a passthrough or debug image is captured and ready to be sent.")]
         public Texture2DEvent onImageCaptured = new();
-
-        [Tooltip("Internal log of sent prompts and responses for this session.")]
-        private readonly List<string> _history = new();
-
-        [Tooltip("Read-only view of the conversation history (prompts + responses).")]
-        public IReadOnlyList<string> History => _history;
-
-        [Tooltip("Raised whenever the provider returns an assistant reply. Useful for external listeners.")]
-        public event Action<string> OnAssistantReply;
 
 #if MRUK_INSTALLED
         [Tooltip("Passthrough camera access component (injected automatically when MRUK is installed).")]
@@ -74,153 +81,117 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         private void Awake()
         {
-            _chatTask = providerAsset as IChatTask;
-            if (_chatTask == null)
-                Debug.LogError("LlmAgent: chatTaskAsset must implement IChatTask.");
-#if MRUK_INSTALLED
-            _cam = FindAnyObjectByType<PassthroughCameraAccess>();
-#endif
-        }
+            try
+            {
+                _chatTask = providerAsset as IChatTask;
+                if (_chatTask == null)
+                {
+                    Debug.LogError("LlmAgent: Provider must implement IChatTask.");
+                }
 
-        public Task SendTextOnlyAsync(string userText)
-        {
-            return SendInternal(userText, imageOrNull: null);
+#if UNITY_INFERENCE_INSTALLED
+                _unityProvider = providerAsset as UnityInferenceEngineProvider;
+                if (_unityProvider != null)
+                {
+                    _ = _unityProvider.WarmUp();
+                }
+#endif
+
+#if MRUK_INSTALLED
+                _cam = FindAnyObjectByType<PassthroughCameraAccess>();
+#endif
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[LlmAgent] Initialization failed: {ex.Message}\n{ex.StackTrace}");
+            }
         }
 
         /// <summary>Capture passthrough if possible, otherwise send text only.</summary>
         public async Task SendPromptAsync(string userText)
         {
-#if MRUK_INSTALLED
-            if (!CanCapture)
+            if (TryCapturePassthroughImage(out var tex))
             {
-                await SendInternal(userText, null);
-                return;
-            }
-
-            var tex = CaptureCameraFrame();
-            var preview = Instantiate(tex);
-            onImageCaptured?.Invoke(preview);
-            await SendInternal(userText, tex);
-            Destroy(tex);
-#else
-            await SendInternal(userText, null);
-#endif
-        }
-
-        /// <summary>Send with a provided Texture2D (e.g., Inspector texture / fake camera).</summary>
-        public Task SendPromptAsync(string userText, Texture2D image)
-        {
-            return SendInternal(userText, image);
-        }
-
-        /// <summary>Prefer passthrough image, fall back to text if not available.</summary>
-        public async Task SendPromptWithPassthroughImageAsync(string userText)
-        {
-#if MRUK_INSTALLED
-            if (CanCapture)
-            {
-                var tex = CaptureCameraFrame();
                 var preview = Instantiate(tex);
                 onImageCaptured?.Invoke(preview);
-                await SendInternal(userText, tex);
+                await SendPromptAsync(userText, tex);
                 Destroy(tex);
-                return;
             }
-#endif
-            Debug.LogWarning("[LlmAgent] Passthrough camera not available – sending text only.");
-            await SendInternal(userText, null);
+            else
+            {
+                await SendPromptAsync(userText, image: null);
+            }
+        }
+
+        /// <summary>Send with a provided Texture2D (e.g., Inspector texture / fake camera). Pass null to send text only.</summary>
+        public Task SendPromptAsync(string userText, Texture2D image)
+        {
+            List<ImageInput> imgs = null;
+            if (image && _chatTask?.SupportsVision == true)
+            {
+                imgs = new List<ImageInput> { ChatImages.FromTexture(image) };
+            }
+            return SendPromptCoreAsync(userText, imgs);
         }
 
         /// <summary>Send with pre-built image inputs (URLs and/or bytes).</summary>
         public Task SendPromptWithImagesAsync(string userText, List<ImageInput> images)
         {
-            return SendInternalWithImages(userText, images);
+            var imgs = _chatTask?.SupportsVision == true && images is { Count: > 0 } ? images : null;
+            return SendPromptCoreAsync(userText, imgs);
         }
 
-        private async Task SendInternal(string userText, Texture2D imageOrNull)
+        private async Task SendPromptCoreAsync(string userText, List<ImageInput> images)
         {
-            onPromptSent?.Invoke(userText);
-            _history.Add($"User: {userText}");
+            var fullPrompt = string.IsNullOrEmpty(systemPrompt)
+                ? userText
+                : $"{systemPrompt}\n\n{userText}";
+
+            onPromptSent?.Invoke(fullPrompt);
 
             try
             {
                 if (_chatTask == null)
                 {
-                    Debug.LogError("No IChatTask assigned.");
-                    _history.Add("Assistant: (no chat task)");
-                    OnAssistantReply?.Invoke(string.Empty);
-                    onResponseReceived?.Invoke(string.Empty);
+                    HandleError("No IChatTask assigned.");
                     return;
                 }
 
-                List<ImageInput> imgs = null;
-                if (imageOrNull && _chatTask.SupportsVision)
-                {
-                    imgs = new List<ImageInput> { ChatImages.FromTexture(imageOrNull) };
-                }
-
-                var req = new ChatRequest(userText, imgs);
+                var req = new ChatRequest(fullPrompt, images);
                 var res = await _chatTask.ChatAsync(req);
-#if UNITY_EDITOR
-                if (res?.Raw != null)
-                {
-                    print($"[LlmAgent] Raw provider JSON:\n{res.Raw}");
-                }
-#endif
-                var assistant = res?.text ?? string.Empty;
-                _history.Add($"Assistant: {assistant}");
-                OnAssistantReply?.Invoke(assistant);
-                onResponseReceived?.Invoke(assistant);
+
+                HandleSuccess(res?.text ?? string.Empty);
             }
             catch (Exception ex)
             {
-                Debug.LogError($"SendPromptAsync failed: {ex}");
-                _history.Add("Assistant: (error)");
-                OnAssistantReply?.Invoke(string.Empty);
-                onResponseReceived?.Invoke(string.Empty);
+                Debug.LogError($"LlmAgent request failed: {ex}");
+                HandleError("(error)");
             }
         }
 
-        private async Task SendInternalWithImages(string userText, List<ImageInput> images)
+        private void HandleSuccess(string assistantText)
         {
-            onPromptSent?.Invoke(userText);
-            _history.Add($"User: {userText}");
+            onResponseReceived?.Invoke(assistantText);
+        }
 
-            try
-            {
-                if (_chatTask == null)
-                {
-                    Debug.LogError("No IChatTask assigned.");
-                    _history.Add("Assistant: (no chat task)");
-                    OnAssistantReply?.Invoke(string.Empty);
-                    onResponseReceived?.Invoke(string.Empty);
-                    return;
-                }
-
-                var imgs = _chatTask.SupportsVision && images is { Count: > 0 } ? images : null;
-                var req = new ChatRequest(userText, imgs);
-                var res = await _chatTask.ChatAsync(req);
-#if UNITY_EDITOR
-                if (res?.Raw != null)
-                {
-                    print($"[LlmAgent] Raw provider JSON:\n{res.Raw}");
-                }
-#endif
-                var assistant = res?.text ?? string.Empty;
-                _history.Add($"Assistant: {assistant}");
-                OnAssistantReply?.Invoke(assistant);
-                onResponseReceived?.Invoke(assistant);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"SendPromptWithImagesAsync failed: {ex}");
-                _history.Add("Assistant: (error)");
-                OnAssistantReply?.Invoke(string.Empty);
-                onResponseReceived?.Invoke(string.Empty);
-            }
+        private void HandleError(string errorMessage)
+        {
+            Debug.LogError($"LlmAgent: {errorMessage}");
+            onResponseReceived?.Invoke(string.Empty);
         }
 
 #if MRUK_INSTALLED
+        private bool TryCapturePassthroughImage(out Texture2D texture)
+        {
+            if (CanCapture)
+            {
+                texture = CaptureCameraFrame();
+                return true;
+            }
+            texture = null;
+            return false;
+        }
+
         private Texture2D CaptureCameraFrame()
         {
             var src = _cam.GetTexture();
@@ -235,6 +206,12 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             RenderTexture.active = null;
             RenderTexture.ReleaseTemporary(rt);
             return tex;
+        }
+#else
+        private bool TryCapturePassthroughImage(out Texture2D texture)
+        {
+            texture = null;
+            return false;
         }
 #endif
     }

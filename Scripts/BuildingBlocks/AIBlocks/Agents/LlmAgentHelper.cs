@@ -19,7 +19,6 @@
  */
 
 using System.Collections.Generic;
-using Meta.XR.ImmersiveDebugger;
 using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
@@ -75,20 +74,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             {
                 userInput = _lastText;
             }
-
-            _agent.onPromptSent.AddListener(Logger);
-            _agent.onResponseReceived.AddListener(Logger);
-        }
-
-        private void OnDestroy()
-        {
-            if (_agent == null)
-            {
-                return;
-            }
-
-            _agent.onPromptSent.RemoveListener(Logger);
-            _agent.onResponseReceived.RemoveListener(Logger);
         }
 
         private void Update()
@@ -107,7 +92,14 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _lastPrompt = selectedPrompt;
         }
 
-        [DebugMember(Category = "LLM Agent")]
+        /// <summary>
+        /// Hook this to e.g. the LlmAgent's OnPromptSent and OnResponseReceived events to print the prompt/response.
+        /// </summary>
+        public static void Logger(string text)
+        {
+            Debug.Log(text);
+        }
+
         public void SendPrompt()
         {
             var text = !string.IsNullOrWhiteSpace(userInput) ? userInput : GetDefaultPromptText(selectedPrompt);
@@ -118,16 +110,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 return;
             }
 
-            if (!includeImage)
+            if (!includeImage || !_agent.ProviderSupportsVision)
             {
-                _ = _agent.SendTextOnlyAsync(text);
-                return;
-            }
-
-            if (!_agent.ProviderSupportsVision)
-            {
-                Debug.LogWarning("[LlmAgentHelper] Current provider does not support image input. Sending text only.");
-                _ = _agent.SendTextOnlyAsync(text);
+                _ = _agent.SendPromptAsync(text, image: null);
                 return;
             }
 
@@ -136,12 +121,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 case PromptImageSource.Camera:
                     if (_agent.CanCapture)
                     {
-                        _ = _agent.SendPromptWithPassthroughImageAsync(text);
+                        _ = _agent.SendPromptAsync(text);
                     }
                     else
                     {
-                        Debug.LogWarning("[LlmAgentHelper] Passthrough not available and no Editor fake camera. Sending text only.");
-                        _ = _agent.SendTextOnlyAsync(text);
+                        SendTextOnlyWithWarning(text, "Passthrough not available. Sending text only.");
                     }
                     break;
 
@@ -152,28 +136,31 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                     }
                     else
                     {
-                        Debug.LogWarning("[LlmAgentHelper] No Inspector texture assigned. Sending text only.");
-                        _ = _agent.SendTextOnlyAsync(text);
+                        SendTextOnlyWithWarning(text, "No Inspector texture assigned. Sending text only.");
                     }
                     break;
 
                 case PromptImageSource.ImageUrl:
                     if (!string.IsNullOrWhiteSpace(promptImageUrl))
                     {
-                        var img = new ImageInput { url = promptImageUrl };
-                        _ = _agent.SendPromptWithImagesAsync(text, new List<ImageInput> { img });
+                        _ = _agent.SendPromptWithImagesAsync(text, new List<ImageInput> { new() { url = promptImageUrl } });
                     }
                     else
                     {
-                        Debug.LogWarning("[LlmAgentHelper] Empty image URL. Sending text only.");
-                        _ = _agent.SendTextOnlyAsync(text);
+                        SendTextOnlyWithWarning(text, "Empty image URL. Sending text only.");
                     }
                     break;
 
                 default:
-                    _ = _agent.SendTextOnlyAsync(text);
+                    _ = _agent.SendPromptAsync(text, image: null);
                     break;
             }
+        }
+
+        private void SendTextOnlyWithWarning(string text, string warningMessage)
+        {
+            Debug.LogWarning($"[LlmAgentHelper] {warningMessage}");
+            _ = _agent.SendPromptAsync(text, image: null);
         }
 
         private static string GetDefaultPromptText(DefaultPromptOption o) => o switch
@@ -183,7 +170,5 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             DefaultPromptOption.Greeting => "Hi, how are you?",
             _ => string.Empty
         };
-
-        public static void Logger(string text) => Debug.Log(text);
     }
 }

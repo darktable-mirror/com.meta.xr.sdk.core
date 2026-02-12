@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Threading.Tasks;
 using Meta.XR.Editor.Features;
 using UnityEngine;
@@ -63,8 +64,10 @@ public static class OVRSceneOpen
 
     private static async Task SendEvent(Scene scene, int eventType)
     {
+        var falco_event = eventType == OVRTelemetryConstants.Scene.MarkerId.SceneOpen ? "SCENE_OPEN" : "SCENE_CLOSE";
         var guid = AssetDatabase.AssetPathToGUID(scene.path);
         if (string.IsNullOrEmpty(guid)) return;
+        var guidID = Guid.NewGuid().ToString();
 
         var features = await FeatureManager.GetFeaturesInScene(scene);
         OVRTelemetry.Start(eventType)
@@ -78,6 +81,8 @@ public static class OVRSceneOpen
                             features)
             .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.EnabledSettings,
                             FeatureManager.GetFeatureStatusInSettings())
+            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigration, "1")
+            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationEventID, guidID)
             .Send();
     }
 }

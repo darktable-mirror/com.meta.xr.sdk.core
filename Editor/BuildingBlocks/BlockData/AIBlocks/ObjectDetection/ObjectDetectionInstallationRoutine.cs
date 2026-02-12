@@ -32,7 +32,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         [SerializeField]
         [Variant(
             Behavior = VariantAttribute.VariantBehavior.Parameter,
-            Description = "Whether visualization for the Object Detection should also be included.",
+            Description = "Whether object detection visualizer, which draws the bounding boxes, should also be included.",
             Default = true,
             Order = 100
         )]
@@ -41,11 +41,35 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         [SerializeField]
         [Variant(
             Behavior = VariantAttribute.VariantBehavior.Parameter,
-            Description = "Whether debugging tools should also be included.",
+            Description = "Whether the Passthrough Building Block should also be installed.",
             Default = true,
+            Condition = nameof(CanInstallPassthrough),
             Order = 110
         )]
+        public bool includePassthrough;
+
+        [SerializeField]
+        [Variant(
+            Behavior = VariantAttribute.VariantBehavior.Parameter,
+            Description = "Whether debugging tools should also be included.",
+            Default = false,
+            Order = 120
+        )]
         public bool includeDebuggingTools;
+
+        private bool CanInstallPassthrough()
+        {
+            var isPassthroughPresentInScene = FindAnyObjectByType<OVRPassthroughLayer>() != null;
+            return !isPassthroughPresentInScene;
+        }
+
+        internal override IEnumerable<BlockData> ComputeOptionalDependencies()
+        {
+            if (includePassthrough)
+            {
+                yield return Meta.XR.BuildingBlocks.Editor.Utils.GetBlockData(BlockDataIds.Passthrough);
+            }
+        }
 
         public override async Task<List<GameObject>> InstallAsync(BlockData block, GameObject selectedGameObject)
         {
@@ -75,7 +99,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
             }
         }
 
-        public void DisableDebuggingTools(IEnumerable<GameObject> objects)
+        private static void DisableDebuggingTools(IEnumerable<GameObject> objects)
         {
             foreach (var @object in objects)
             {

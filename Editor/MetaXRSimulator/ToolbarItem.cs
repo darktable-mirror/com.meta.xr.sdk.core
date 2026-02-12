@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using Meta.XR.Editor.PlayCompanion;
 using Meta.XR.Editor.StatusMenu;
@@ -113,7 +114,7 @@ namespace Meta.XR.Simulator
             }
             catch (System.Exception ex)
             {
-                UnityEngine.Debug.LogError($"[Meta XR Simulator] Failed to register Project Setup Tool task: {ex.Message}");
+                IssueTracker.TrackError(IssueTracker.SDK.XRSim, "xr-simulator-register-task-failed", ex);
             }
         }
 

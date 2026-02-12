@@ -58,8 +58,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         }
 
         private readonly List<LogEntry> _entries = new();
-        private readonly List<LogEntry> _allEntries = new();
-        private readonly Dictionary<int, LogEntry> _entryMap = new();
+        private readonly Dictionary<int, LogEntry> _collapsedLogs = new();
+        private readonly List<(string logString, string stackTrace, LogType type)> _allLogData = new();
         private Label _logDetailLabel;
         private Toggle _collapseBtn;
         private Texture2D _collapseActiveIcon;
@@ -220,23 +220,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             LogCollapseMode = !LogCollapseMode;
             _collapseBtn.Icon = LogCollapseMode ? _collapseInactiveIcon : _collapseActiveIcon;
-
-            if (LogCollapseMode)
-            {
-                MergeEntries();
-            }
-            else
-            {
-                FlattenEntries();
-            }
+            RebuildLogDisplay();
         }
 
-        private LogEntry CloneEntry(LogEntry entry)
+        private void RebuildLogDisplay()
         {
-            var clone = OVRObjectPool.Get<LogEntry>();
-            clone.Setup(entry.Label, entry.Callstack, entry.Severity);
-            clone.Count = entry.Count;
-            return clone;
+            _proxyFlex.Clear();
+            _collapsedLogs.Clear();
+            _entries.Clear();
+
+            foreach (var severity in _severities)
+            {
+                severity.Reset();
+            }
+
+            foreach (var logData in _allLogData)
+            {
+                AddLogEntryInternal(logData.logString, logData.stackTrace, logData.type, moveToEnd: false);
+            }
+
+            Dirty = true;
         }
 
         private void EnqueueLogEntry(string logString, string stackTrace, LogType type)
@@ -247,56 +250,112 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 return;
             }
 
-            var hash = ComputeLogHash(logString, stackTrace);
-            if (_entryMap.TryGetValue(hash, out var entry) && LogCollapseMode)
+            if (_allLogData.Count >= MaximumNumberOfLogEntries)
             {
-                _entries.Remove(entry);
-                _proxyFlex.RemoveProxy(entry.Line);
-                entry.Count++;
-                entry.Line?.Target?.RefreshLogCounter();
-            }
-            else
-            {
-                if (_entries.Count >= MaximumNumberOfLogEntries)
-                {
-                    _entryMap.Remove(ComputeLogHash(_entries[0].Label, _entries[0].Callstack));
-                    RemoveLogEntry(_entries[0]);
-                }
-
-                entry = OVRObjectPool.Get<LogEntry>();
-                entry.Setup(logString, stackTrace, severity);
-                _entryMap[hash] = entry;
+                RemoveOldestLogEntry();
             }
 
-            _entries.Add(entry);
-
-            // Need to duplicate otherwise changing one instance will affect others.
-            _allEntries.Add(CloneEntry(entry));
-
-            severity.Count++;
-
-            AppendToProxyFlex(entry);
+            _allLogData.Add((logString, stackTrace, type));
+            AddLogEntryInternal(logString, stackTrace, type, moveToEnd: true);
             Dirty = true;
         }
 
-        private void RemoveLogEntry(LogEntry logEntry)
+        private void AddLogEntryInternal(string logString, string stackTrace, LogType type, bool moveToEnd)
         {
-            logEntry.Severity.Count -= logEntry.Count;
+            var severity = GetSeverity(type);
+            if (severity == null) return;
 
-            _entries.Remove(logEntry);
-            _allEntries.RemoveAll(entry =>
+            if (LogCollapseMode)
             {
-                var canRemove = entry == logEntry;
-                if (canRemove)
+                var logHash = ComputeLogHash(logString, stackTrace);
+                if (_collapsedLogs.TryGetValue(logHash, out var existingEntry))
                 {
-                    OVRObjectPool.Return(entry);
+                    existingEntry.Count++;
+                    severity.Count++;
+
+                    if (moveToEnd)
+                    {
+                        if (existingEntry.Line != null)
+                        {
+                            _proxyFlex.RemoveProxy(existingEntry.Line);
+                            existingEntry.Line = null;
+                        }
+
+                        _entries.Remove(existingEntry);
+                        _entries.Add(existingEntry);
+
+                        AppendToProxyFlex(existingEntry);
+                    }
+                    return;
                 }
 
-                return canRemove;
-            });
-            _proxyFlex.RemoveProxy(logEntry.Line);
+                var entry = OVRObjectPool.Get<LogEntry>();
+                entry.Setup(logString, stackTrace, severity);
+                _collapsedLogs[logHash] = entry;
+                _entries.Add(entry);
+                severity.Count++;
+                AppendToProxyFlex(entry);
+            }
+            else
+            {
+                var entry = OVRObjectPool.Get<LogEntry>();
+                entry.Setup(logString, stackTrace, severity);
+                _entries.Add(entry);
+                severity.Count++;
+                AppendToProxyFlex(entry);
+            }
+        }
 
-            OVRObjectPool.Return(logEntry);
+        private void RemoveOldestLogEntry()
+        {
+            if (_allLogData.Count == 0) return;
+
+            var oldestLogData = _allLogData[0];
+            _allLogData.RemoveAt(0);
+
+            var oldestSeverity = GetSeverity(oldestLogData.type);
+            if (oldestSeverity == null) return;
+
+            if (LogCollapseMode)
+            {
+                var oldestHash = ComputeLogHash(oldestLogData.logString, oldestLogData.stackTrace);
+                if (_collapsedLogs.TryGetValue(oldestHash, out var collapsedEntry))
+                {
+                    collapsedEntry.Count--;
+                    oldestSeverity.Count--;
+
+                    if (collapsedEntry.Count <= 0)
+                    {
+                        if (collapsedEntry.Line != null)
+                        {
+                            _proxyFlex.RemoveProxy(collapsedEntry.Line);
+                            collapsedEntry.Line = null;
+                        }
+                        _entries.Remove(collapsedEntry);
+                        _collapsedLogs.Remove(oldestHash);
+                        OVRObjectPool.Return(collapsedEntry);
+                    }
+                    else if (collapsedEntry.Line != null && collapsedEntry.Line.Target != null)
+                    {
+                        collapsedEntry.Line.Target.RefreshLogCounter();
+                    }
+                }
+            }
+            else
+            {
+                if (_entries.Count > 0)
+                {
+                    var oldestEntry = _entries[0];
+                    if (oldestEntry.Line != null)
+                    {
+                        _proxyFlex.RemoveProxy(oldestEntry.Line);
+                        oldestEntry.Line = null;
+                    }
+                    _entries.RemoveAt(0);
+                    oldestSeverity.Count--;
+                    OVRObjectPool.Return(oldestEntry);
+                }
+            }
         }
 
         private void Update()
@@ -319,15 +378,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private void Clear()
         {
             _entries.Clear();
-
-            foreach (var entry in _allEntries)
-            {
-                OVRObjectPool.Return(entry);
-            }
-
-            _allEntries.Clear();
-
-            _entryMap.Clear();
+            _collapsedLogs.Clear();
+            _allLogData.Clear();
             _proxyFlex.Clear();
             foreach (var severity in _severities)
             {
@@ -343,6 +395,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             foreach (var entry in _entries)
             {
+                if (entry == null)
+                {
+                    continue;
+                }
+
                 if (!entry.Severity.ShouldShow)
                 {
                     if (entry.Shown)
@@ -359,56 +416,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                         line.Entry = entry;
                         entry.Line = line;
                     }
+                    else if (entry.Line != null && entry.Line.Target != null)
+                    {
+                        entry.Line.Target.RefreshLogCounter();
+                    }
                 }
             }
-        }
-
-        private void MergeEntries()
-        {
-            _entries.Clear();
-            _proxyFlex.Clear();
-            ResetLogCount();
-
-            foreach (var entry in _allEntries)
-            {
-                var hash = ComputeLogHash(entry.Label, entry.Callstack);
-                if (_entryMap.TryGetValue(hash, out var mappedEntry))
-                {
-                    _entries.Remove(mappedEntry);
-                    _proxyFlex.RemoveProxy(mappedEntry.Line);
-
-                    mappedEntry.Count++;
-                }
-
-                _entries.Add(mappedEntry);
-                AppendToProxyFlex(mappedEntry);
-                mappedEntry?.Line?.Target?.RefreshLogCounter();
-            }
-
-            Dirty = true;
-        }
-
-        private void ResetLogCount()
-        {
-            foreach (var entry in _allEntries) entry.Count = 0;
-            foreach (var entry in _entryMap.Values) entry.Count = 0;
-        }
-
-        private void FlattenEntries()
-        {
-            _entries.Clear();
-            _proxyFlex.Clear();
-            foreach (var entry in _allEntries)
-            {
-                var clonedEntry = CloneEntry(entry);
-                _entries.Add(clonedEntry);
-                AppendToProxyFlex(clonedEntry);
-
-                var hash = ComputeLogHash(entry.Label, entry.Callstack);
-                _entryMap[hash] = clonedEntry;
-            }
-
-            Dirty = true;
         }
 
         private void AppendToProxyFlex(LogEntry entry)

@@ -20,6 +20,7 @@
 
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Meta.XR.Telemetry;
 using UnityEditor.PackageManager;
 
 namespace Meta.XR.Simulator.Editor
@@ -61,7 +62,8 @@ namespace Meta.XR.Simulator.Editor
 
                 if (!removeRequest.IsCompleted)
                 {
-                    UnityEngine.Debug.LogError($"[Meta XR Simulator] Package removal timed out after {timeoutMs}ms");
+                    IssueTracker.TrackError(IssueTracker.SDK.XRSim, "xr-simulator-package-removal-timeout",
+                        $"Package removal timed out after {timeoutMs}ms");
                     return false;
                 }
 
@@ -72,13 +74,14 @@ namespace Meta.XR.Simulator.Editor
                 }
                 else
                 {
-                    UnityEngine.Debug.LogError($"[Meta XR Simulator] Failed to remove package '{packageName}': {removeRequest.Error?.message}");
+                    IssueTracker.TrackError(IssueTracker.SDK.XRSim, "xr-simulator-package-removal-failed",
+                        $"Failed to remove package '{packageName}': {removeRequest.Error?.message}");
                     return false;
                 }
             }
             catch (System.Exception ex)
             {
-                UnityEngine.Debug.LogError($"[Meta XR Simulator] Exception during package removal: {ex.Message}");
+                IssueTracker.TrackError(IssueTracker.SDK.XRSim, "xr-simulator-package-removal-exception", $"[Meta XR Simulator] Exception during package removal: {ex.Message}");
                 return false;
             }
         }

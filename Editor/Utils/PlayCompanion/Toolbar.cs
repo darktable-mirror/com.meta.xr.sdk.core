@@ -18,6 +18,10 @@
  * limitations under the License.
  */
 
+#if UNITY_6000_3_OR_NEWER
+#define USE_MAINTOOLBAR
+#endif
+
 using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.Reflection;
@@ -30,21 +34,51 @@ using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.PlayCompanion
 {
+    /// <summary>
+    /// Manages the Meta XR toolbar buttons that appear next to Unity's Play Mode controls.
+    /// Supports both Unity 6.3+ MainToolbarElement API and pre-Unity 6.3 reflection-based approach.
+    /// Dynamically manages multiple toggle buttons for play mode companions like XR Simulator.
+    /// </summary>
     [InitializeOnLoad]
     [Reflection]
     internal static class Toolbar
     {
+#if !USE_MAINTOOLBAR
         [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.Toolbar")]
         internal static readonly TypeHandle ToolbarType = new();
 
         [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.Toolbar", Name = "m_Root")]
         internal static readonly FieldInfoHandle<VisualElement> Root = new();
+#else
+        [Reflection(AssemblyTypeReference = typeof(UnityEditor.Editor), TypeName = "UnityEditor.Toolbars.MainToolbar", Name = "SetDisplayedAll")]
+        private static readonly StaticMethodInfoHandleWithWrapperAction<string, bool> SetDisplayedAll = new();
+
+        private const string MainToolbarPath = "MetaXR/PlayCompanion";
+        private const string ContainerClass = "metaxr-playcompanion-container";
+        private const string ContainerName = "MetaXRPlayCompanion";
+        private const string UnityOverlayId = "unity-overlay";
+        private const string OverlayContentId = "overlay-content";
+        private const string OverlayToolbarTypeName = "OverlayToolbar";
+        private const string UnityToolbarOverlayClass = "unity-toolbar-overlay";
+        private const string UnityEditorToolbarButtonStripClass = "unity-editor-toolbar__button-strip";
+        private static VisualElement _container;
+
+        /// <summary>
+        /// StyleSheet for the toolbar buttons.
+        /// </summary>
+        private static StyleSheet _styleSheet;
+#endif
 
         private const string StripElementClass = "unity-editor-toolbar__button-strip-element";
         private const string StripElementLeftClass = "unity-editor-toolbar__button-strip-element--left";
         private const string StripElementRightClass = "unity-editor-toolbar__button-strip-element--right";
         private const string StripElementMiddleClass = "unity-editor-toolbar__button-strip-element--middle";
         private const string PlayModeGroupId = "PlayMode";
+        private const string UnityBaseFieldClass = "unity-base-field";
+        private const string UnityBaseFieldNoLabelClass = "unity-base-field--no-label";
+        private const string UnityToolbarToggleClass = "unity-toolbar-toggle";
+        private const string UnityEditorToolbarToggleClass = "unity-editor-toolbar-toggle";
+        private const string UnityEditorToolbarElementClass = "unity-editor-toolbar-element";
 
         private const string ToolbarTooltip =
 #if UNITY_2022_2_OR_NEWER
@@ -58,17 +92,145 @@ namespace Meta.XR.Editor.PlayCompanion
         internal static readonly EditorToolbarButton MetaIcon;
 
         internal static readonly HashSet<Item> Items = new();
-        internal static readonly List<(Item, EditorToolbarButton)> Buttons = new();
+        internal static readonly List<(Item, VisualElement)> Buttons = new();
         internal static bool Enabled { get; set; }
 
         private static Object _toolbar;
         private static VisualElement _parent;
 
+#if USE_MAINTOOLBAR
+        private static MainToolbarElement _mainToolbarElement;
+
+        [MainToolbarElement(MainToolbarPath,
+            defaultDockPosition = MainToolbarDockPosition.Middle)]
+        public static MainToolbarElement CreatePlayCompanionContainer()
+        {
+            return null;
+        }
+
+        private static List<VisualElement> FindAllEditorPanelRoots()
+        {
+            var panelRoots = new List<VisualElement>();
+
+            var allWindows = Resources.FindObjectsOfTypeAll<EditorWindow>();
+
+            foreach (var window in allWindows)
+            {
+                if (window == null || window.rootVisualElement == null) continue;
+
+                var element = window.rootVisualElement;
+                while (element.parent != null)
+                {
+                    element = element.parent;
+                }
+
+                if (element.GetType().Name == "EditorPanelRootElement")
+                {
+                    if (!panelRoots.Contains(element))
+                    {
+                        panelRoots.Add(element);
+                    }
+                }
+            }
+
+            return panelRoots;
+        }
+
+        private static VisualElement FindContainer()
+        {
+            // Return cached container if still valid
+            if (_container is { parent: { } })
+            {
+                return _container;
+            }
+
+            // Try to find by custom class first
+            var panels = FindAllEditorPanelRoots();
+            _container = panels
+                .Select(panel => panel.Q<VisualElement>(className: ContainerClass))
+                .FirstOrDefault(element => element != null);
+
+            if (_container != null)
+            {
+                return _container;
+            }
+
+            // Search for our overlay's OverlayToolbar that Unity creates for us
+            foreach (var panel in panels)
+            {
+                var overlays = panel.Query<VisualElement>().ToList();
+
+                foreach (var overlay in overlays)
+                {
+                    if (overlay.name == null || !overlay.name.Contains(MainToolbarPath)) continue;
+
+                    var unityOverlay = overlay.Q(UnityOverlayId);
+                    var overlayContent = unityOverlay?.Q(OverlayContentId);
+
+                    if (overlayContent == null) continue;
+
+                    var overlayToolbar = overlayContent.Children()
+                        .FirstOrDefault(c => c.GetType().Name == OverlayToolbarTypeName ||
+                                            c.ClassListContains(UnityToolbarOverlayClass));
+
+                    if (overlayToolbar == null) continue;
+
+                    if (!overlayToolbar.ClassListContains(UnityEditorToolbarButtonStripClass))
+                    {
+                        overlayToolbar.AddToClassList(UnityEditorToolbarButtonStripClass);
+                    }
+
+                    overlayToolbar.name = ContainerName;
+
+                    // Load and apply the custom stylesheet
+                    LoadAndApplyStyleSheet(overlayToolbar);
+
+                    _container = overlayToolbar;
+                    return _container;
+                }
+            }
+
+            return _container;
+        }
+
+        /// <summary>
+        /// Loads and applies the custom USS stylesheet to the toolbar container.
+        /// </summary>
+        /// <param name="container">The container element to apply the stylesheet to.</param>
+        private static void LoadAndApplyStyleSheet(VisualElement container)
+        {
+            if (_styleSheet == null)
+            {
+                // Find the stylesheet in the project
+                var guids = AssetDatabase.FindAssets("t:StyleSheet Toolbar");
+                foreach (var guid in guids)
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (path.EndsWith("PlayCompanion/Toolbar.uss"))
+                    {
+                        _styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+                        break;
+                    }
+                }
+
+                if (_styleSheet == null)
+                {
+                    return;
+                }
+            }
+
+            if (!container.styleSheets.Contains(_styleSheet))
+            {
+                container.styleSheets.Add(_styleSheet);
+            }
+        }
+#endif
+
         static Toolbar()
         {
             if (!ShouldRenderEditorUI()) return;
 
-            MetaIcon = new EditorToolbarButton()
+            MetaIcon = new EditorToolbarButton
             {
                 style =
                 {
@@ -86,12 +248,12 @@ namespace Meta.XR.Editor.PlayCompanion
             MetaIcon.AddToClassList(StripElementClass);
             MetaIcon.AddToClassList(StripElementLeftClass);
 
-            if (MetaIcon.Children().FirstOrDefault() is UnityEngine.UIElements.Image image)
+            if (MetaIcon.Children().FirstOrDefault() is Image image)
             {
                 image.tintColor = UserInterface.Styles.Colors.UnselectedWhite;
             }
 
-            MarginOffset = new VisualElement()
+            MarginOffset = new VisualElement
             {
                 style =
                 {
@@ -103,7 +265,7 @@ namespace Meta.XR.Editor.PlayCompanion
                 }
             };
 
-            DummyOffset = new VisualElement()
+            DummyOffset = new VisualElement
             {
                 style =
                 {
@@ -122,23 +284,35 @@ namespace Meta.XR.Editor.PlayCompanion
         {
             if (!Manager.Enabled.Value)
             {
-                Disable();
+                if (Enabled)
+                {
+                    Disable();
+                }
                 return;
             }
 
-            if (Manager.Enabled.Value)
+            if (!Enabled)
             {
                 Enable();
             }
 
-            var shouldBeEnabled = !EditorApplication.isPlayingOrWillChangePlaymode;
-            Buttons.ForEach(button => button.Item2.SetEnabled(shouldBeEnabled));
+            if (Buttons.Count == 0) return;
 
-            Buttons.ForEach(UpdateButton);
+            var shouldBeEnabled = !EditorApplication.isPlayingOrWillChangePlaymode;
+
+            foreach (var button in Buttons)
+            {
+                button.Item2.SetEnabled(shouldBeEnabled);
+                UpdateButton(button);
+            }
         }
 
         private static VisualElement FetchParent()
         {
+#if USE_MAINTOOLBAR
+            SetDisplayedAll.Invoke?.Invoke(MainToolbarPath, true);
+            return FindContainer();
+#else
             if (_toolbar == null)
             {
                 var toolbars = Resources.FindObjectsOfTypeAll(ToolbarType.Target);
@@ -153,28 +327,31 @@ namespace Meta.XR.Editor.PlayCompanion
             }
 
             return null;
+#endif
         }
 
         private static void Enable()
         {
             var parent = FetchParent();
+            if (parent == null)
+            {
+                return;
+            }
 
-            if (_parent == parent && Enabled) return;
+            if (_parent == parent && Enabled)
+            {
+                return;
+            }
 
             Disable();
 
             _parent = parent;
 
-            var wouldHaveAnyButton = Manager.RegisteredItems.Count(item => item.Show) > 0;
-            if (wouldHaveAnyButton)
+            var hasButtons = Manager.RegisteredItems.Any(item => item.Show);
+            if (hasButtons && _parent != null)
             {
-                _parent?.Add(DummyOffset);
-                _parent?.Insert(0, MarginOffset);
-                _parent?.Insert(0, MetaIcon);
-
+                _parent.Add(MetaIcon);
                 RefreshButtons();
-
-                SetDummyOffsetCompensation();
             }
 
             Enabled = true;
@@ -188,9 +365,7 @@ namespace Meta.XR.Editor.PlayCompanion
             Buttons.Clear();
             Items.Clear();
 
-            DummyOffset.RemoveFromHierarchy();
             MetaIcon.RemoveFromHierarchy();
-            MarginOffset.RemoveFromHierarchy();
 
             Enabled = false;
         }
@@ -202,50 +377,74 @@ namespace Meta.XR.Editor.PlayCompanion
             var parent = MetaIcon?.parent;
             if (parent == null) return;
 
-
-            var index = parent.IndexOf(MetaIcon) + 1;
-
-            parent.Insert(index, visualElement);
-
-            if (Buttons.Count > 0)
-            {
-                var previous = parent.Children().ElementAt(index);
-                previous.AddToClassList(StripElementClass);
-                previous.RemoveFromClassList(StripElementLeftClass);
-                if (Buttons.Count != 2)
-                {
-                    previous.RemoveFromClassList(StripElementRightClass);
-                    previous.AddToClassList(StripElementMiddleClass);
-                }
-
-                visualElement.AddToClassList(StripElementClass);
-                visualElement.AddToClassList(StripElementClass);
-                visualElement.AddToClassList(StripElementLeftClass);
-            }
+            parent.Add(visualElement);
         }
 
         private static void RefreshButtons()
         {
-            // Remove Buttons that don't exist
             foreach (var button in Buttons.Where(item => !item.Item1.IsRegistered))
             {
                 RemoveButton(button);
             }
 
-            // Add new buttons
             foreach (var item in Manager.RegisteredItems.Where(item => item.Show && !Items.Contains(item)))
             {
                 CreateButton(item);
             }
+
+            UpdateButtonPositionClasses();
         }
 
-        private static void UpdateButton((Item, EditorToolbarButton) button)
+        private static void UpdateButtonPositionClasses()
         {
-            button.Item2.style.backgroundColor = button.Item1.IsSelected
-                ? new StyleColor(Styles.Colors.SelectedBackground)
-                : new StyleColor(StyleKeyword.Null);
+            if (Buttons.Count == 0) return;
 
-            if (button.Item2.Children().FirstOrDefault() is not UnityEngine.UIElements.Image image) return;
+            if (Buttons.Count == 1)
+            {
+                var element = Buttons[0].Item2;
+                element.RemoveFromClassList(StripElementLeftClass);
+                element.RemoveFromClassList(StripElementMiddleClass);
+                element.RemoveFromClassList(StripElementRightClass);
+                return;
+            }
+
+            for (int i = 0; i < Buttons.Count; i++)
+            {
+                var element = Buttons[i].Item2;
+
+                element.RemoveFromClassList(StripElementLeftClass);
+                element.RemoveFromClassList(StripElementMiddleClass);
+                element.RemoveFromClassList(StripElementRightClass);
+
+                if (i == 0)
+                {
+                    element.AddToClassList(StripElementLeftClass);
+                }
+                else if (i == Buttons.Count - 1)
+                {
+                    element.AddToClassList(StripElementRightClass);
+                }
+                else
+                {
+                    element.AddToClassList(StripElementMiddleClass);
+                }
+            }
+        }
+
+        private static void UpdateButton((Item, VisualElement) button)
+        {
+            if (button.Item2 is EditorToolbarToggle toggle)
+            {
+                toggle.SetValueWithoutNotify(button.Item1.IsSelected);
+            }
+            else
+            {
+                button.Item2.style.backgroundColor = button.Item1.IsSelected
+                    ? new StyleColor(Styles.Colors.SelectedBackground)
+                    : new StyleColor(StyleKeyword.Null);
+            }
+
+            if (button.Item2.Children().FirstOrDefault() is not Image image) return;
 
             image.tintColor =
                 button.Item1.TintColor?.Invoke() ??
@@ -256,36 +455,70 @@ namespace Meta.XR.Editor.PlayCompanion
 
         private static void CreateButton(Item item)
         {
-            var button = new EditorToolbarButton()
-            {
-                icon = item.Icon.Image as Texture2D,
-                style =
-                {
-                    width = Styles.Constants.ButtonWidth,
-                    maxWidth = Styles.Constants.ButtonWidth,
-                    minWidth = Styles.Constants.ButtonWidth,
-                    paddingRight = 0,
-                    marginRight = 0,
-                    marginLeft = 0,
-                    paddingLeft = 0
-                },
-                tooltip = item.Tooltip
-            };
+            VisualElement element;
+
             if (item.IsButton)
             {
+                var button = new EditorToolbarButton
+                {
+                    icon = item.Icon.Image as Texture2D,
+                    style =
+                    {
+                        width = Styles.Constants.ButtonWidth,
+                        maxWidth = Styles.Constants.ButtonWidth,
+                        minWidth = Styles.Constants.ButtonWidth,
+                        paddingRight = 0,
+                        marginRight = 0,
+                        marginLeft = 0,
+                        paddingLeft = 0
+                    },
+                    tooltip = item.Tooltip
+                };
                 button.clicked += () => item.OnSelect?.Invoke();
+                element = button;
             }
             else
             {
-                button.clicked += () => Manager.Toggle(item);
+                var toggle = new EditorToolbarToggle
+                {
+                    icon = item.Icon.Image as Texture2D,
+                    style =
+                    {
+                        width = Styles.Constants.ButtonWidth,
+                        maxWidth = Styles.Constants.ButtonWidth,
+                        minWidth = Styles.Constants.ButtonWidth,
+                        paddingRight = 0,
+                        marginRight = 0,
+                        marginLeft = 0,
+                        paddingLeft = 0
+                    },
+                    tooltip = item.Tooltip
+                };
+                toggle.RegisterValueChangedCallback(evt =>
+                {
+                    if (evt.newValue != item.IsSelected)
+                    {
+                        Manager.Toggle(item);
+                    }
+                });
+                element = toggle;
             }
-            Insert(button);
 
-            Buttons.Add((item, button));
+            element.AddToClassList(UnityBaseFieldClass);
+            element.AddToClassList(UnityBaseFieldNoLabelClass);
+            element.AddToClassList(UnityToolbarToggleClass);
+            element.AddToClassList(UnityEditorToolbarToggleClass);
+            element.AddToClassList(UnityEditorToolbarElementClass);
+            element.AddToClassList(StripElementClass);
+            element.style.marginRight = 2;
+
+            Insert(element);
+
+            Buttons.Add((item, element));
             Items.Add(item);
         }
 
-        private static void RemoveButton((Item, EditorToolbarButton) button)
+        private static void RemoveButton((Item, VisualElement) button)
         {
             button.Item2.RemoveFromHierarchy();
 

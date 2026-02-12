@@ -25,6 +25,7 @@ using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Reflection;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
@@ -263,9 +264,9 @@ internal class OVRConfigurationTask : IIdentified
                 rules.Remove(ruleToRemove);
             }
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            // ignored
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-remove-rule-failed", e, enableDebugLog: false);
         }
     }
 #endif
@@ -302,6 +303,8 @@ internal class OVRConfigurationTask : IIdentified
         }
         catch (OVRConfigurationTaskException exception)
         {
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-task-fix-failed",
+                $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
             fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
@@ -358,12 +361,16 @@ internal class OVRConfigurationTask : IIdentified
         }
         catch (OVRConfigurationTaskException exception)
         {
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-async-task-fix-failed",
+                $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
             fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
         }
         catch (Exception exception)
         {
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-async-task-fix-exception",
+                $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
             fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
@@ -446,15 +453,18 @@ internal class OVRConfigurationTask : IIdentified
             case OVRProjectSetup.TaskLevel.Optional:
                 break;
             case OVRProjectSetup.TaskLevel.Recommended:
+                IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-task-recommended", logMessage, enableDebugLog: false);
                 Debug.LogWarning(logMessage);
                 break;
             case OVRProjectSetup.TaskLevel.Required:
                 if (OVRProjectSetup.RequiredThrowErrors.Value)
                 {
+                    IssueTracker.TrackError(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-task-required", logMessage, enableDebugLog: false);
                     Debug.LogError(logMessage);
                 }
                 else
                 {
+                    IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-task-required", logMessage, enableDebugLog: false);
                     Debug.LogWarning(logMessage);
                 }
 

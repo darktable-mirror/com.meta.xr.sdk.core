@@ -89,6 +89,7 @@ namespace Meta.XR.MetaWand.Editor
             public const string EventNameObjectAddedToScene = "METAWAND_OBJECT_ADDED_TO_SCENE";
             public const string EventNamePreGenerationFailure = "METAWAND_PREGEN_GENERATION_FAILURE";
             public const string EventNameBannedUserError = "METAWAND_BANNED_USER_ERROR";
+            public const string EventNameAssetDeleted = "METAWAND_OBJECT_DELETED_FROM_PROJECT";
 
             public const string EntrypointAuthToolbar = "METAWAND_AUTH_TOOLBAR";
             public const string EntrypointSignUp = "METAWAND_SIGN_UP";
@@ -111,6 +112,7 @@ namespace Meta.XR.MetaWand.Editor
             public const string TargetBannedUserReapplyButton = "metawand_banned_user_reapply_button";
             public const string TargetRecentsPanel = "metawand_recents_panel";
             public const string TargetRecentChat = "metawand_recent_chat";
+            public const string TargetProjectAssets = "project_assets";
 
             public const string ParamInputText = "metawand_input_text";
             public const string ParamShowLibraryResults = "show_results_meta_3d_asset_library";
@@ -120,6 +122,9 @@ namespace Meta.XR.MetaWand.Editor
             public const string ParamNumErrorTiles = "num_error_tiles";
             public const string ParamAssetId = "Metawand_asset_id";
             public const string ParamSessionId = "metawand_session_id";
+            public const string ParamAssetPath = "asset_path";
+            public const string ParamAssetType = "asset_type";
+            public const string ParamAssetName = "asset_name";
         }
     }
 }

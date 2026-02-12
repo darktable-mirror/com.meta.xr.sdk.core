@@ -39,6 +39,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
+using Meta.XR.Telemetry;
 
 /// <summary>
 /// Allows Oculus to build apps from the command line.
@@ -125,14 +126,14 @@ partial class OculusBuildApp : EditorWindow
 
     static bool? apkOutputSuccessful;
 
-    [MenuItem("Meta/OVR Build/OVR Build APK... %#k", false, 20)]
+    [MenuItem("Meta/Tools/OVR Build/OVR Build APK... %#k", false, 90000)]
     static void Init()
     {
         EditorWindow.GetWindow<OculusBuildApp>(false, "OVR Build APK", true);
         OnBuildComplete();
     }
 
-    [MenuItem("Meta/OVR Build/OVR Build APK And Run %k", false, 21)]
+    [MenuItem("Meta/Tools/OVR Build/OVR Build APK And Run %k", false, 90001)]
     static void InitAndRun()
     {
         var window = EditorWindow.GetWindow<OculusBuildApp>(false, "OVR Build APK", true);
@@ -345,9 +346,9 @@ partial class OculusBuildApp : EditorWindow
                 path = Path.GetDirectoryName(outputApkPath);
                 fileName = Path.GetFileName(outputApkPath);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                //do nothing, we just have a malformed apkPath and should accept defaults
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-build-malformed-apk-path", e, enableDebugLog: false);
             }
         }
 
@@ -624,7 +625,8 @@ partial class OculusBuildApp : EditorWindow
             if (e != null && e.Data != null &&
                 e.Data.Length != 0)
             {
-                UnityEngine.Debug.LogErrorFormat("Gradle: {0}", e.Data);
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-gradle-error",
+                    $"Gradle: {e.Data}");
             }
 
             apkOutputSuccessful = false;
@@ -643,7 +645,8 @@ partial class OculusBuildApp : EditorWindow
         {
             if (timeout.ElapsedMilliseconds > 5000)
             {
-                UnityEngine.Debug.LogError("Gradle has exited unexpectedly.");
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-gradle-timeout",
+                    "Gradle has exited unexpectedly.");
                 apkOutputSuccessful = false;
             }
 
@@ -673,8 +676,7 @@ partial class OculusBuildApp : EditorWindow
         }
         catch (Exception e)
         {
-            UnityEngine.Debug.Log("OVRBuild: Processing gradle project failed with exception: " +
-                                  e.Message);
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-gradle-sync-failed", e);
             return false;
         }
 
@@ -716,8 +718,9 @@ partial class OculusBuildApp : EditorWindow
                 Process.Start("explorer.exe", Path.GetDirectoryName(outputApkPath));
                 return true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-apk-copy-failed", e, enableDebugLog: false);
                 return false;
             }
         }
@@ -740,8 +743,8 @@ partial class OculusBuildApp : EditorWindow
             gradleExportFolder = gradleExportFolder.Replace("/", "\\");
             if (!Directory.Exists(gradleExportFolder))
             {
-                UnityEngine.Debug.LogError("Could not find the gradle project at the expected path: " +
-                                           gradleExportFolder);
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-gradle-project-not-found",
+                    "Could not find the gradle project at the expected path: " + gradleExportFolder);
                 return false;
             }
 
@@ -749,8 +752,8 @@ partial class OculusBuildApp : EditorWindow
             apkPathLocal = Path.Combine(gradleExportFolder, productName + $"-{buildFlavor}.apk");
             if (!System.IO.File.Exists(apkPathLocal))
             {
-                UnityEngine.Debug.LogError(string.Format("Could not find {0} in the gradle project.",
-                    productName + $"-{buildFlavor}.apk"));
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-apk-not-found",
+                    string.Format("Could not find {0} in the gradle project.", productName + $"-{buildFlavor}.apk"));
                 return false;
             }
 
@@ -825,7 +828,8 @@ partial class OculusBuildApp : EditorWindow
         }
         else
         {
-            UnityEngine.Debug.LogError("Could not find the ADB executable in the specified Android SDK directory.");
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-adb-not-found",
+                "Could not find the ADB executable in the specified Android SDK directory.");
         }
 
         return false;
@@ -850,12 +854,13 @@ partial class OculusBuildApp : EditorWindow
             List<string> devices = adbTool.GetDevices();
             if (devices.Count == 0)
             {
-                UnityEngine.Debug.LogError("No ADB devices connected. Connect a device to this computer to run APK.");
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-no-adb-devices",
+                    "No ADB devices connected. Connect a device to this computer to run APK.");
                 return false;
             }
             else if (devices.Count > 1)
             {
-                UnityEngine.Debug.LogError(
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-multiple-adb-devices",
                     "Multiple ADB devices connected. Disconnect extra devices from this computer to run APK.");
                 return false;
             }
@@ -867,7 +872,7 @@ partial class OculusBuildApp : EditorWindow
         }
         else
         {
-            UnityEngine.Debug.LogError(
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-build-adb-tool-init-failed",
                 "OVR ADB Tool failed to initialize. Check the Android SDK path in [Edit -> Preferences -> External Tools]");
             return false;
         }

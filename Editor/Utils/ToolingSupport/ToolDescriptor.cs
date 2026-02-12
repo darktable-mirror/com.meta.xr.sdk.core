@@ -52,6 +52,7 @@ namespace Meta.XR.Editor.ToolingSupport
         public string MenuDescription;
         public Color Color;
         public bool IsStatusMenuItemDarker;
+        public bool GreyedOut;
         public int Order;
         public TextureContent Icon;
         public List<LinkDescription> HeaderIcons;
@@ -167,6 +168,10 @@ namespace Meta.XR.Editor.ToolingSupport
 
         public void DrawButton(Action onClick, bool showHeaderIcons, bool prependOpen, Origins origin)
         {
+            var overallColor = GreyedOut
+                ? TransparentGreyOut
+                : Color.white;
+            using var colorScope = new ColorScope(ColorScope.Scope.All, overallColor);
             using var indentScope = new IndentScope(0);
             var buttonRect = EditorGUILayout.BeginVertical(Styles.GUIStyles.ItemDiv);
             var hover = buttonRect.Contains(Event.current.mousePosition);

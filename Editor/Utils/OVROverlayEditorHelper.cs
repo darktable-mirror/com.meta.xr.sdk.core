@@ -21,6 +21,7 @@
 using System;
 using System.Linq;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -42,22 +43,22 @@ public static class OVROverlayEditorHelper
         }
     }
 
-    public const string DefaultCanvasLayerName = "Overlay UI";
-    public static int CanvasLayer
+    public const string DefaultHiddenCanvasLayerName = "Overlay UI";
+    public static int HiddenCanvasLayer
     {
         get
         {
             var settings = OVROverlayCanvasSettings.Instance;
-            if (settings.CanvasLayer != -1 && !string.IsNullOrEmpty(LayerMask.LayerToName(settings.CanvasLayer)))
-                return settings.CanvasLayer;
+            if (settings.HiddenCanvasLayer != -1 && !string.IsNullOrEmpty(LayerMask.LayerToName(settings.HiddenCanvasLayer)))
+                return settings.HiddenCanvasLayer;
 
-            if (LayerMask.NameToLayer(DefaultCanvasLayerName) is var layer and not -1)
-                settings.CanvasLayer = layer;
+            if (LayerMask.NameToLayer(DefaultHiddenCanvasLayerName) is var layer and not -1)
+                settings.HiddenCanvasLayer = layer;
 
-            return settings.CanvasLayer;
+            return settings.HiddenCanvasLayer;
         }
     }
-    public static bool CanvasLayerSelected => CanvasLayer != -1 && !string.IsNullOrEmpty(LayerMask.LayerToName(CanvasLayer));
+    public static bool HiddenCanvasLayerSelected => HiddenCanvasLayer != -1 && !string.IsNullOrEmpty(LayerMask.LayerToName(HiddenCanvasLayer));
 
     public static void SetLayerName(int layer, string name)
     {
@@ -119,23 +120,24 @@ public static class OVROverlayEditorHelper
 
     public static void CanvasLayerSelectionUI(int canvasLayer, Action<int> setCanvasLayer, Action<int> setMask)
     {
-        if (CanvasLayer != -1)
+        if (HiddenCanvasLayer != -1)
         {
-            var layerName = LayerMask.LayerToName(CanvasLayer);
-            if (canvasLayer != CanvasLayer && GUILayout.Button($"Set Layer to \"{layerName}\""))
+            var layerName = LayerMask.LayerToName(HiddenCanvasLayer);
+            if (canvasLayer != HiddenCanvasLayer && GUILayout.Button($"Set Layer to \"{layerName}\""))
             {
-                setCanvasLayer(CanvasLayer);
+                setCanvasLayer(HiddenCanvasLayer);
                 setMask(~LayerMask.GetMask(layerName));
                 OVRPlugin.SendEvent("canvas_set_layer_clicked");
             }
         }
         else if (FindUnusedLayer() is not { } unusedLayer)
         {
-            Debug.LogError("All Layers are Used!");
+            IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-overlay-all-layers-used",
+                "All Layers are Used!");
         }
-        else if (GUILayout.Button($"Set Layer {unusedLayer} to \"{DefaultCanvasLayerName}\""))
+        else if (GUILayout.Button($"Set Layer {unusedLayer} to \"{DefaultHiddenCanvasLayerName}\""))
         {
-            SetLayerName(unusedLayer, DefaultCanvasLayerName);
+            SetLayerName(unusedLayer, DefaultHiddenCanvasLayerName);
             setCanvasLayer(unusedLayer);
             setMask(~(1 << unusedLayer));
             OVRPlugin.SendEvent("canvas_set_default_layer_clicked");

@@ -65,6 +65,13 @@ namespace Meta.XR.BuildingBlocks.Editor
         public string Condition { get; set; } = null;
 
         /// <summary>
+        /// Optional MethodName that is used as a delegate to check whether or not this variant field should be disabled (grayed out).
+        /// If this returns false, the field will be disabled but still visible.
+        /// This is separate from Condition which controls visibility.
+        /// </summary>
+        public string DisableCondition { get; set; } = null;
+
+        /// <summary>
         /// Optional Default value for this Variant Attribute, this will reset to this value independently of the
         /// routines values each time the popup is shown.
         /// </summary>

@@ -31,4 +31,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.MCPBridge")]
 [assembly: InternalsVisibleTo("Meta.MCPBridge.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
+[assembly: InternalsVisibleTo("meta.xr.mrutilitykit.tests")]
 

@@ -61,6 +61,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             RefreshStyle();
         }
 
+        protected override void OnTransparencyChanged()
+        {
+        }
+
         protected override void UpdateBackground()
         {
             if (_backgroundStyle != null && _backgroundStyle.enabled)
@@ -76,4 +80,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
     }
 }
-

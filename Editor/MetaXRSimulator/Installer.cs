@@ -23,6 +23,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine.Networking;
 
@@ -69,7 +70,8 @@ namespace Meta.XR.Simulator.Editor
             if (state == PlayModeStateChange.ExitingEditMode)
             {
                 // Cancel entering play mode
-                UnityEngine.Debug.LogError($"Synthetic Environments installation is in progress. Please wait until is finished.");
+                IssueTracker.TrackWarning(IssueTracker.SDK.XRSim, "xr-simulator-download-in-progress",
+                    "Meta XR Simulator download is in progress. Please wait until is finished.");
                 EditorApplication.isPlaying = false;
             }
         }
@@ -104,7 +106,7 @@ namespace Meta.XR.Simulator.Editor
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogWarning($"[Meta XR Simulator 2] Failed to open download folder: {ex.Message}");
+                IssueTracker.TrackWarning(IssueTracker.SDK.XRSim, "xr-simulator-open-folder-failed", $"[Meta XR Simulator] Failed to open download folder: {ex.Message}");
             }
 
             onSuccess?.Invoke();

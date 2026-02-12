@@ -79,6 +79,23 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
 
         /// <summary>
+        /// Overriding the <see cref="SetCanvasCursorStartDest"/> from <see cref="OVRCursor"/>, setting the starting point
+        /// and the destination point of the cursor in both world and canvas space.
+        /// </summary>
+        /// <param name="start"><see cref="Vector3"/> of the starting point position</param>
+        /// <param name="worldDest"><see cref="Vector3"/> of the destination point position in world space</param>
+        /// <param name="worldNormal"><see cref="Vector3"/> representing the normal of the cursor in world space</param>
+        /// <param name="canvasDest"><see cref="Vector3"/> of the destination point position in canvas space</param>
+        /// <param name="canvsNormal"><see cref="Vector3"/> representing the normal of the cursor in canvas space</param>
+        public override void SetCanvasCursorStartDest(Vector3 start, Vector3 worldDest, Vector3 worldNormal, Vector3 canvasDest, Vector3 canvasNormal)
+        {
+            // Use canvas position instead of world position, as Cursor is attached to the panel
+            _endPoint = canvasDest;
+            _normal = canvasNormal;
+            _hit = true;
+        }
+
+        /// <summary>
         /// Overriding the <see cref="SetCursorRay"/> from <see cref="OVRCursor"/>, setting the transform of the cursor ray.
         /// </summary>
         /// <param name="t"><see cref="Transform"/> that's used to set the cursor's starting point and forward direction</param>
@@ -136,4 +153,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
     }
 }
-

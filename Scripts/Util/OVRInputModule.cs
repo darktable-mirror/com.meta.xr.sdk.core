@@ -665,6 +665,27 @@ namespace UnityEngine.EventSystems
             return Vector3.Cross(BottomEdge, LeftEdge).normalized;
         }
 
+        /// <summary>
+        /// Get the OVROverlayCanvas that this rectTransform belongs to, if any.
+        /// </summary>
+        /// <param name="rectTransform"></param>
+        /// <param name="overlayCanvas"></param>
+        /// <returns></returns>
+        protected static bool TryGetOverlayCanvas(RectTransform rectTransform, out OVROverlayCanvas overlayCanvas)
+        {
+            if (rectTransform.TryGetComponent(out overlayCanvas))
+            {
+                return true;
+            }
+
+            if (rectTransform.parent is RectTransform parent)
+            {
+                return TryGetOverlayCanvas(parent, out overlayCanvas);
+            }
+
+            return false;
+        }
+
         protected readonly MouseState m_MouseState = new MouseState();
 
         // The following 2 functions are equivalent to PointerInputModule.GetMousePointerEventData but are customized to
@@ -724,9 +745,20 @@ namespace UnityEngine.EventSystems
                     // Find the world position and normal the Graphic the ray intersected
                     if (m_Cursor && raycast.gameObject.TryGetComponent(out RectTransform graphicRect))
                     {
-                        Vector3 worldPos = raycast.worldPosition;
-                        Vector3 normal = GetRectTransformNormal(graphicRect);
-                        m_Cursor.SetCursorStartDest(handRay.position, worldPos, normal);
+                        if (TryGetOverlayCanvas(graphicRect, out var overlayCanvas))
+                        {
+                            overlayCanvas.GetWorldIntersectionFromCanvas(raycast.worldPosition, out var worldPos,
+                                out var worldNormal);
+                            Vector3 canvasPos = raycast.worldPosition;
+                            Vector3 canvasNormal = GetRectTransformNormal(graphicRect);
+                            m_Cursor.SetCanvasCursorStartDest(handRay.position, worldPos, worldNormal, canvasPos, canvasNormal);
+                        }
+                        else
+                        {
+                            Vector3 worldPos = raycast.worldPosition;
+                            Vector3 normal = GetRectTransformNormal(graphicRect);
+                            m_Cursor.SetCursorStartDest(handRay.position, worldPos, normal);
+                        }
                     }
                 }
 
@@ -843,10 +875,21 @@ namespace UnityEngine.EventSystems
                 // Find the world position and normal the Graphic the ray intersected
                 if (m_Cursor && raycast.gameObject.TryGetComponent(out RectTransform graphicRect))
                 {
-                    // Set are gaze indicator with this world position and normal
-                    Vector3 worldPos = raycast.worldPosition;
-                    Vector3 normal = GetRectTransformNormal(graphicRect);
-                    m_Cursor.SetCursorStartDest(rayOrigin.position, worldPos, normal);
+                    // Set gaze indicator with this world position and normal
+                    if (TryGetOverlayCanvas(graphicRect, out var overlayCanvas))
+                    {
+                        overlayCanvas.GetWorldIntersectionFromCanvas(raycast.worldPosition, out var worldPos,
+                            out var worldNormal);
+                        Vector3 canvasPos = raycast.worldPosition;
+                        Vector3 canvasNormal = GetRectTransformNormal(graphicRect);
+                        m_Cursor.SetCanvasCursorStartDest(rayOrigin.position, worldPos, worldNormal, canvasPos, canvasNormal);
+                    }
+                    else
+                    {
+                        Vector3 worldPos = raycast.worldPosition;
+                        Vector3 normal = GetRectTransformNormal(graphicRect);
+                        m_Cursor.SetCursorStartDest(rayOrigin.position, worldPos, normal);
+                    }
                 }
             }
 

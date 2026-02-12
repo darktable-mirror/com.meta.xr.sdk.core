@@ -18,6 +18,10 @@
  * limitations under the License.
  */
 
+#if FUSION2 || FUSION_2_1
+#define FUSION_COMPATIBLE_VERSION
+#endif
+
 using Meta.XR.BuildingBlocks.Editor;
 using UnityEditor;
 
@@ -39,13 +43,13 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                 PackageDisplayName = "Photon Fusion",
                 IsPackageInstalled = () =>
                 {
-#if FUSION_WEAVER && FUSION2
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
                     return true;
 #else
                     return false;
-#endif // FUSION_WEAVER && FUSION2
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
                 },
-                InstallationInstructions = "You can find Photon Fusion2 package from https://assetstore.unity.com/packages/tools/network/photon-fusion-267958"
+                InstallationInstructions = "You can find Photon Fusion2 package from https://doc.photonengine.com/fusion/current/getting-started/sdk-download"
             });
         }
     }

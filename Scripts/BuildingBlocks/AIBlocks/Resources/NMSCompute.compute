@@ -20,14 +20,32 @@
 
 #pragma kernel CSMain
 
-StructuredBuffer<float4> boxes; // xywh
+StructuredBuffer<float4> boxes;
 StructuredBuffer<float> scores;
-RWStructuredBuffer<int> keep; // 1 = keep, 0 = suppress
+StructuredBuffer<int> classIds;
+
+RWStructuredBuffer<int> keep;
+RWStructuredBuffer<int> keptIndices;
+RWStructuredBuffer<uint> keptCount;
+
+struct Detection {
+  float4 box;
+  float score;
+  int id;
+  float2 pad; // keep 32-byte alignment
+};
+
+RWStructuredBuffer<Detection> outDetections;
 
 int numBoxes;
 float iouThreshold;
+float minConfidence;
+int maxKeep;
+float scaleX;
+float scaleY;
 
-// Helper: IoU must be declared before use
+#define THREADS 64
+
 float IoU(float4 a, float4 b) {
   float2 aMin = a.xy - a.zw * 0.5;
   float2 aMax = a.xy + a.zw * 0.5;
@@ -42,36 +60,117 @@ float IoU(float4 a, float4 b) {
   float areaA = a.z * a.w;
   float areaB = b.z * b.w;
 
-  return interArea / (areaA + areaB - interArea + 1e-6); // avoid div by zero
+  return interArea / (areaA + areaB - interArea + 1e-6);
 }
 
-// Kernel
-[numthreads(64, 1, 1)]
-void CSMain(uint id : SV_DispatchThreadID) {
-  if (id >= numBoxes)
-    return;
+bool Overlaps(float4 a, float4 b) {
+  float2 aMin = a.xy - a.zw * 0.5;
+  float2 aMax = a.xy + a.zw * 0.5;
+  float2 bMin = b.xy - b.zw * 0.5;
+  float2 bMax = b.xy + b.zw * 0.5;
 
-  float4 b1 = boxes[id];
-  float s1 = scores[id];
+  return !(aMax.x < bMin.x || bMax.x < aMin.x || aMax.y < bMin.y || bMax.y < aMin.y);
+}
 
-  // Default: keep the box
-  int keepFlag = 1;
+groupshared float4 gsTileBoxes[THREADS];
+groupshared float gsTileScores[THREADS];
+groupshared uint gsLaneKeep[THREADS];
+groupshared uint gsGroupBase;
+groupshared uint gsGroupCount;
 
-  for (uint j = 0; j < numBoxes; j++) {
-    if (j == id)
-      continue;
+[numthreads(THREADS, 1, 1)]
+void CSMain(uint3 tid : SV_DispatchThreadID, uint gi : SV_GroupIndex) {
+  int gid = tid.x;
 
-    float4 b2 = boxes[j];
-    float s2 = scores[j];
+  bool inRange = (gid < numBoxes);
 
-    if (s2 > s1) {
-      float inter = IoU(b1, b2);
-      if (inter > iouThreshold) {
-        keepFlag = 0;
-        break;
-      }
-    }
+  float4 b1 = 0;
+  float s1 = -1e9;
+
+  if (inRange) {
+    b1 = boxes[gid];
+    s1 = scores[gid];
   }
 
-  keep[id] = keepFlag;
+  // No early return: track activity & keepFlag
+  bool active = inRange && (s1 >= minConfidence);
+  int keepFlag = active ? 1 : 0;
+
+  // Tiled compares — all lanes execute loop & barriers
+  for (int baseIdx = 0; baseIdx < numBoxes; baseIdx += THREADS) {
+    int j = baseIdx + (int)gi;
+    gsTileBoxes[gi] = (j < numBoxes) ? boxes[j] : 0;
+    gsTileScores[gi] = (j < numBoxes) ? scores[j] : -1e9;
+
+    GroupMemoryBarrierWithGroupSync();
+
+    if (active && keepFlag == 1) {
+      [unroll]
+      for (int k = 0; k < THREADS; k++) {
+        int idx = baseIdx + k;
+        if (idx == gid || idx >= numBoxes)
+          continue;
+
+        float s2 = gsTileScores[k];
+        if (s2 <= s1)
+          continue;
+
+        float4 b2 = gsTileBoxes[k];
+        if (!Overlaps(b1, b2))
+          continue;
+
+        if (IoU(b1, b2) > iouThreshold) {
+          keepFlag = 0; // suppressed
+          break; // exit inner k-loop only
+        }
+      }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+  }
+
+  // Write keep flag for debug/compat
+  if (inRange)
+    keep[gid] = (active && keepFlag == 1) ? 1 : 0;
+
+  // Build per-lane flag: only active & kept lanes contribute.
+  gsLaneKeep[gi] = (active && keepFlag == 1) ? 1u : 0u;
+  GroupMemoryBarrierWithGroupSync();
+
+  // Inclusive scan to get per-lane prefix
+  [unroll] for (uint off = 1u; off < THREADS; off <<= 1u) {
+    uint add = (gi >= off) ? gsLaneKeep[gi - off] : 0u;
+    GroupMemoryBarrierWithGroupSync();
+    uint cur = gsLaneKeep[gi];
+    gsLaneKeep[gi] = cur + add;
+    GroupMemoryBarrierWithGroupSync();
+  }
+
+  if (gi == THREADS - 1u)
+    gsGroupCount = gsLaneKeep[gi];
+  GroupMemoryBarrierWithGroupSync();
+
+  if (gi == 0u) {
+    uint baseOut = 0u;
+    if (gsGroupCount > 0u)
+      InterlockedAdd(keptCount[0], gsGroupCount, baseOut);
+    gsGroupBase = baseOut;
+  }
+  GroupMemoryBarrierWithGroupSync();
+
+  // Write compact detection (only active & kept)
+  if (active && keepFlag == 1) {
+    uint idxInGroup = gsLaneKeep[gi] - 1u; // 0-based
+    uint outIdx = gsGroupBase + idxInGroup;
+    if (outIdx < (uint)maxKeep) {
+      keptIndices[outIdx] = gid;
+
+      Detection d;
+      d.box = float4(b1.x * scaleX, b1.y * scaleY, b1.z * scaleX, b1.w * scaleY);
+      d.score = s1;
+      d.id = classIds[gid];
+      d.pad = 0;
+      outDetections[outIdx] = d;
+    }
+  }
 }

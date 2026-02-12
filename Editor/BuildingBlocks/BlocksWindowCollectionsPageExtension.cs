@@ -310,12 +310,17 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private static void ReturnToCollections()
         {
-            var window = GetWindow<BuildingBlocksWindow>(WindowName);
-            window.ReturnToCollections(GetOrigin(window.CurrentTargetPage), _selectedBlock);
+            if (_instance != null)
+            {
+                _instance.ReturnToCollections(GetOrigin(_instance.CurrentTargetPage), _selectedBlock);
+            }
         }
 
-        private void ReturnToCollections(Origins origin, IIdentified originData) =>
+        private void ReturnToCollections(Origins origin, IIdentified originData)
+        {
             SwitchToPage(Page.Collections, origin, originData);
+            _backHistory.Clear();
+        }
 
         private void SwitchToPage(Page targetPage, Origins origin, IIdentified originData, BlockData blockData = null)
         {

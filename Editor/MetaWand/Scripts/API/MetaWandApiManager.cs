@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.XR.Editor.RemoteContent;
+using Meta.XR.Telemetry;
 
 namespace Meta.XR.MetaWand.Editor.API
 {
@@ -56,6 +57,8 @@ namespace Meta.XR.MetaWand.Editor.API
             }
             catch (Exception ex)
             {
+                IssueTracker.TrackError(IssueTracker.SDK.MetaWand, "metawand-check-usage-failed",
+                    $"Failed to check usage for filter '{usageFilter}': {ex.Message}", enableDebugLog: false);
                 return new UsageResult(false, null, ex.Message);
             }
         }
@@ -91,6 +94,8 @@ namespace Meta.XR.MetaWand.Editor.API
             }
             catch (Exception ex)
             {
+                IssueTracker.TrackError(IssueTracker.SDK.MetaWand, "metawand-search-assets-manager-failed",
+                    $"Failed to search assets for '{searchText}': {ex.Message}", enableDebugLog: false);
                 return new SearchResult(
                     success: false,
                     errorMessage: ex.Message
@@ -119,6 +124,8 @@ namespace Meta.XR.MetaWand.Editor.API
             }
             catch (Exception ex)
             {
+                IssueTracker.TrackError(IssueTracker.SDK.MetaWand, "metawand-download-asset-failed",
+                    $"Failed to download asset from '{assetUrl}': {ex.Message}", enableDebugLog: false);
                 return DownloadResult<byte[]>.Failure(ex.Message);
             }
         }

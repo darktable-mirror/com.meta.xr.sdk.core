@@ -39,8 +39,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 {
     public partial class BuildingBlocksWindow : EditorWindow
     {
+        private static BuildingBlocksWindow _instance;
         private const string WindowName = Utils.BlocksPublicName;
-
         private const string DragAndDropLabel = "Dragging Block";
 
         private const string DragAndDropBlockDataLabel =
@@ -154,8 +154,14 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static void ShowWindow(Origins origin, IIdentified originData, bool showDetailPane = false,
             BlockData data = null)
         {
-            var window = GetWindow<BuildingBlocksWindow>(WindowName);
-            window.minSize = new Vector2(800, 400);
+            if (_instance == null)
+            {
+                _instance = GetWindow<BuildingBlocksWindow>();
+                _instance.titleContent = new GUIContent(WindowName);
+                _instance.minSize = new Vector2(800, 400);
+            }
+
+            _instance.Focus();
 
             OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.OpenWindow)
                 .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.ActionTrigger, origin.ToString())
@@ -164,13 +170,12 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (showDetailPane)
             {
-                EditorCoroutine.Start(window.ToggleDetailPane(data, origin, originData));
+                EditorCoroutine.Start(_instance.ToggleDetailPane(data, origin, originData));
             }
         }
 
         private void OnGUI()
         {
-            // To get mouse position relative to base window.
             CurrentMousePosition = Event.current.mousePosition;
 
             if (HandleMouseEvents())
@@ -255,6 +260,16 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void OnEnable()
         {
+            if (_instance == null)
+            {
+                _instance = this;
+            }
+            else if (_instance != this)
+            {
+                EditorApplication.delayCall += Close;
+                return;
+            }
+
             RefreshBlockList();
             RefreshCollectionTags();
 
@@ -262,9 +277,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             BlocksContentManager.OnContentChanged += RefreshCollectionTags;
 
             wantsMouseMove = true;
-            RefreshShowTutorial();
 
-            // Init current block list to detect filter change
+            RefreshShowTutorial();
             ResetCurrentBlockList();
 
             if (!ValidCollections)
@@ -317,6 +331,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             BlocksContentManager.OnContentChanged -= RefreshBlockList;
 
             _repainter.OnDisable();
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
         }
 
         private static IReadOnlyCollection<BlockBaseData> _blockList = Array.Empty<BlockBaseData>();
@@ -546,7 +568,11 @@ namespace Meta.XR.BuildingBlocks.Editor
                     Content = new GUIContent(addIcon),
                     Style = Styles.GUIStyles.LargeButton,
                     Action = () =>
-                        block.AddToProject(null, block.RequireListRefreshAfterInstall ? RefreshBlockList : null),
+                    {
+                        // Defer installation to avoid GUI state corruption during async operations
+                        EditorApplication.delayCall += () =>
+                            block.AddToProject(null, block.RequireListRefreshAfterInstall ? RefreshBlockList : null);
+                    },
                     ActionData = block,
                     Origin = Origins.BlockGrid,
                     OriginData = null

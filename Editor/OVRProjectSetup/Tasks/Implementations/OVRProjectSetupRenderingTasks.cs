@@ -38,6 +38,8 @@ using UnityEngine.XR.OpenXR;
 [InitializeOnLoad]
 internal static class OVRProjectSetupRenderingTasks
 {
+    private static readonly System.Version kUnityVersion = System.Version.Parse(new System.Text.RegularExpressions.Regex("[0-9]+.[0-9]+.[0-9]+").Match(Application.unityVersion).Value);
+
 #if USING_URP && UNITY_2022_2_OR_NEWER
     // Call action for all UniversalRendererData being used, return true if all the return value of action is true
     private static bool ForEachRendererData(Func<UniversalRendererData, bool> action)
@@ -262,7 +264,12 @@ internal static class OVRProjectSetupRenderingTasks
                 ForEachRendererData(rd => { return rd.intermediateTextureMode == IntermediateTextureMode.Auto; }),
             message: "Setting the Intermediate Texture Mode to \"Always\" might have a performance impact, it is recommended to use \"Auto\"",
             fix: _ =>
-                ForEachRendererData(rd => { rd.intermediateTextureMode = IntermediateTextureMode.Auto; return true; }),
+                ForEachRendererData(rd =>
+                {
+                    rd.intermediateTextureMode = IntermediateTextureMode.Auto;
+                    EditorUtility.SetDirty(rd);
+                    return true;
+                }),
             fixMessage: "Set Intermediate Texture Mode to \"Auto\""
         );
 
@@ -282,10 +289,13 @@ internal static class OVRProjectSetupRenderingTasks
                 ForEachRendererData(rd =>
                 {
                     rd.rendererFeatures.ForEach(feature =>
-                    {
-                        if (feature != null && feature.GetType().Name == "ScreenSpaceAmbientOcclusion")
-                            feature.SetActive(false);
-                    }
+                        {
+                            if (feature != null && feature.GetType().Name == "ScreenSpaceAmbientOcclusion")
+                            {
+                                feature.SetActive(false);
+                                EditorUtility.SetDirty(feature);
+                            }
+                        }
                     );
                     return true;
                 }),
@@ -328,74 +338,79 @@ internal static class OVRProjectSetupRenderingTasks
             fixMessage: "PlayerSettings.gpuSkinning = true"
         );
 
-#if USING_XR_SDK_OPENXR && !UNITY_2022_3_49_OR_NEWER
-        //[Optional] Dynamic Resolution w/ OpenXR Requires Unity 2022.3.49+
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Optional,
-            platform: BuildTargetGroup.Android,
-            group: targetGroup,
-            conditionalValidity: _ => OVRProjectSetupUtils.FindComponentInScene<OVRManager>() &&
-                                      PackageList.IsPackageInstalled("com.unity.xr.openxr"),
-            isDone: _ =>
-            {
-                var ovrMan = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
-                return !ovrMan || !ovrMan.enableDynamicResolution;
-            },
-            fix: _ => {
-                var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
-                if (ovrManager != null)
+#if USING_XR_SDK_OPENXR
+        if (kUnityVersion < new System.Version(2022, 3, 49))
+        {
+            //[Optional] Dynamic Resolution w/ OpenXR Requires Unity 2022.3.49+
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Optional,
+                platform: BuildTargetGroup.Android,
+                group: targetGroup,
+                conditionalValidity: _ => OVRProjectSetupUtils.FindComponentInScene<OVRManager>() &&
+                                        PackageList.IsPackageInstalled("com.unity.xr.openxr"),
+                isDone: _ =>
                 {
-                    ovrManager.enableDynamicResolution = false;
-                    EditorUtility.SetDirty(ovrManager);
-                    EditorSceneManager.MarkSceneDirty(ovrManager.gameObject.scene);
-                }
-            },
-            message: "Please note that OpenXR Plugin (com.unity.xr.openxr) support for Dynamic Resolution" +
-                     " is only available from Unity 2022.3.49f1 onwards." +
-                     " Click 'Apply' to disable Dynamic Resolution in this scene."
-        );
-#else // if !USING_XR_SDK_OPENXR || UNITY_2022_3_49_OR_NEWER ...
-        //[Recommended] Dynamic Resolution
-        OVRProjectSetup.AddTask(
-            level: OVRProjectSetup.TaskLevel.Recommended,
-            conditionalValidity: _ =>
-            {
-                var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
-                return ovrManager != null;
-            },
-            platform: BuildTargetGroup.Android,
-            group: targetGroup,
-            isDone: _ =>
-            {
-                var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
-                return ovrManager == null || ovrManager.enableDynamicResolution;
-            },
-            message: "Using Dynamic Resolution can help improve quality when GPU Utilization is low, and improve framerate in GPU heavy scenes. It also unlocks GPU Level 5 on Meta Quest 2, Pro and 3. Consider disabling it when profiling and optimizing your application.",
-            fix: _ =>
-            {
-                var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
-                if (ovrManager)
+                    var ovrMan = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+                    return !ovrMan || !ovrMan.enableDynamicResolution;
+                },
+                fix: _ => {
+                    var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+                    if (ovrManager != null)
+                    {
+                        ovrManager.enableDynamicResolution = false;
+                        EditorUtility.SetDirty(ovrManager);
+                        EditorSceneManager.MarkSceneDirty(ovrManager.gameObject.scene);
+                    }
+                },
+                message: "Please note that OpenXR Plugin (com.unity.xr.openxr) support for Dynamic Resolution" +
+                        " is only available from Unity 2022.3.49f1 onwards." +
+                        " Click 'Apply' to disable Dynamic Resolution in this scene."
+            );
+        }
+        else
+#endif
+        {
+            //[Recommended] Dynamic Resolution
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                conditionalValidity: _ =>
                 {
-                    ovrManager.enableDynamicResolution = true;
-                    if (ovrManager.quest2MinDynamicResolutionScale == 1.0f && ovrManager.quest2MaxDynamicResolutionScale == 1.0f)
+                    var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+                    return ovrManager != null;
+                },
+                platform: BuildTargetGroup.Android,
+                group: targetGroup,
+                isDone: _ =>
+                {
+                    var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+                    return ovrManager == null || ovrManager.enableDynamicResolution;
+                },
+                message: "Using Dynamic Resolution can help improve quality when GPU Utilization is low, and improve framerate in GPU heavy scenes. It also unlocks GPU Level 5 on Meta Quest 2, Pro and 3. Consider disabling it when profiling and optimizing your application.",
+                fix: _ =>
+                {
+                    var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
+                    if (ovrManager)
                     {
-                        ovrManager.quest2MinDynamicResolutionScale = 0.7f;
-                        ovrManager.quest2MaxDynamicResolutionScale = 1.3f;
-                    }
+                        ovrManager.enableDynamicResolution = true;
+                        if (ovrManager.quest2MinDynamicResolutionScale == 1.0f && ovrManager.quest2MaxDynamicResolutionScale == 1.0f)
+                        {
+                            ovrManager.quest2MinDynamicResolutionScale = 0.7f;
+                            ovrManager.quest2MaxDynamicResolutionScale = 1.3f;
+                        }
 
-                    if (ovrManager.quest3MinDynamicResolutionScale == 1.0f && ovrManager.quest3MaxDynamicResolutionScale == 1.0f)
-                    {
-                        ovrManager.quest3MinDynamicResolutionScale = 0.7f;
-                        ovrManager.quest3MaxDynamicResolutionScale = 1.6f;
-                    }
+                        if (ovrManager.quest3MinDynamicResolutionScale == 1.0f && ovrManager.quest3MaxDynamicResolutionScale == 1.0f)
+                        {
+                            ovrManager.quest3MinDynamicResolutionScale = 0.7f;
+                            ovrManager.quest3MaxDynamicResolutionScale = 1.6f;
+                        }
 
-                    EditorUtility.SetDirty(ovrManager);
-                    EditorSceneManager.MarkSceneDirty(ovrManager.gameObject.scene);
-                }
-            },
-            fixMessage: "OVRManager.enableDynamicResolution = true, OVRManager.quest2MinDynamicResolutionScale = 0.7f, OVRManager.quest2MaxDynamicResolutionScale = 1.3f, OVRManager.quest3MinDynamicResolutionScale = 0.7f, OVRManager.quest3MaxDynamicResolutionScale = 1.6f"
-        );
-#endif // !USING_XR_SDK_OPENXR || UNITY_2022_3_49_OR_NEWER
+                        EditorUtility.SetDirty(ovrManager);
+                        EditorSceneManager.MarkSceneDirty(ovrManager.gameObject.scene);
+                    }
+                },
+                fixMessage: "OVRManager.enableDynamicResolution = true, OVRManager.quest2MinDynamicResolutionScale = 0.7f, OVRManager.quest2MaxDynamicResolutionScale = 1.3f, OVRManager.quest3MinDynamicResolutionScale = 0.7f, OVRManager.quest3MaxDynamicResolutionScale = 1.6f"
+            );
+        }
 
 #if USING_URP && UNITY_2022_2_OR_NEWER
         // [Recommended] Disable Depth Texture
@@ -418,6 +433,7 @@ internal static class OVRProjectSetupRenderingTasks
                 foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
                 {
                     urpAsset.supportsCameraDepthTexture = false;
+                    EditorUtility.SetDirty(urpAsset);
                 }
             },
             message: "Enabling Depth Texture may significantly impact performance. It is recommended to disable it when it isn't required in a shader.");
@@ -442,6 +458,7 @@ internal static class OVRProjectSetupRenderingTasks
                 foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
                 {
                     urpAsset.supportsCameraOpaqueTexture = false;
+                    EditorUtility.SetDirty(urpAsset);
                 }
             },
             message: "Enabling Opaque Texture may significantly impact performance. It is recommended to disable it when it isn't required in a shader.");
@@ -468,6 +485,7 @@ internal static class OVRProjectSetupRenderingTasks
                 foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
                 {
                     urpAsset.supportsHDR = false;
+                    EditorUtility.SetDirty(urpAsset);
                 }
             },
             message: "Using HDR may significantly impact performance. It is recommended to disable HDR.");
@@ -494,6 +512,7 @@ internal static class OVRProjectSetupRenderingTasks
                 foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
                 {
                     urpAsset.upscalingFilter = UpscalingFilterSelection.Auto;
+                    EditorUtility.SetDirty(urpAsset);
                 }
             },
             message: "Using FSR may significantly impact performance. It is recommended to switch Upscaling Filter to Auto.");
@@ -597,7 +616,8 @@ internal static class OVRProjectSetupRenderingTasks
                QualitySettings.GetAllRenderPipelineAssetsForPlatform("Android", ref pipelineAssets);
                foreach (var urpAsset in pipelineAssets.OfType<UniversalRenderPipelineAsset>())
                {
-                   urpAsset.msaaSampleCount = OVRPlugin.recommendedMSAALevel;
+                    urpAsset.msaaSampleCount = OVRPlugin.recommendedMSAALevel;
+                    EditorUtility.SetDirty(urpAsset);
                }
 #else
                QualitySettings.antiAliasing = OVRPlugin.recommendedMSAALevel;

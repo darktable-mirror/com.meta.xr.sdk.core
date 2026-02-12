@@ -309,7 +309,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     {
                         foreach (var variant in variants)
                         {
-                            if (variant.RawValue.Equals(variant.Attribute.Default))
+                            if (variant.RawValue != null && variant.RawValue.Equals(variant.Attribute.Default))
                             {
                                 return variant; // try best to use the one matching default value for this variant
                             }

@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -87,7 +88,8 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                 }
                 catch (Exception e)
                 {
-                    Debug.LogErrorFormat("Could not remove Scripting Define Symbol for build target: {1} group: {2} {3}", target, group, e);
+                    IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "photon-scripting-define-symbol-failed",
+                        $"Could not remove Scripting Define Symbol for build target: {target} group: {group} {e}");
                 }
             }
         }

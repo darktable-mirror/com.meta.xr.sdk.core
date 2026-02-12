@@ -19,6 +19,7 @@
  */
 
 using System;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using ColorMapEditorType = OVRPassthroughLayer.ColorMapEditorType;
@@ -193,7 +194,8 @@ public class OVRPassthroughLayerEditor : Editor
         int colorMapTypeIndex = Array.IndexOf(ColorMapTypes, layer.colorMapEditorType);
         if (colorMapTypeIndex == -1)
         {
-            Debug.LogWarning("Invalid color map type encountered");
+            IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-passthrough-invalid-colormap-type",
+                $"Invalid color map type encountered: {layer.colorMapEditorType}. Resetting to None.");
             colorMapTypeIndex = 0;
         }
 

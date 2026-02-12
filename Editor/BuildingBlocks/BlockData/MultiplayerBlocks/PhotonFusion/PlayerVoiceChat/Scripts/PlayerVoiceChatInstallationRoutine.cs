@@ -18,19 +18,25 @@
  * limitations under the License.
  */
 
+
+#if FUSION2 || FUSION_2_1
+#define FUSION_COMPATIBLE_VERSION
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Meta.XR.BuildingBlocks.Editor;
 using Meta.XR.MultiplayerBlocks.Shared.Editor;
+using Meta.XR.Telemetry;
 using UnityEngine;
-#if FUSION_WEAVER && FUSION2
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
 using Fusion;
 #if PHOTON_VOICE_DEFINED
 using Photon.Voice.Fusion;
 #endif // PHOTON_VOICE_DEFINED
-#endif // FUSION_WEAVER && FUSION2
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
@@ -46,7 +52,8 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
             var networkRunnerBB = Utils.GetBlocksWithType<NetworkRunner>().First();
 
             if (cameraRigBB == null || networkRunnerBB == null) {
-                Debug.LogWarning("Some blocks could not be found, aborting installing Multiplayer Voice block");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "player-voice-chat-missing-blocks",
+                    "Some blocks could not be found, aborting installing Multiplayer Voice block");
                 return new List<GameObject>();
             }
 
@@ -64,7 +71,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 #endif // PHOTON_VOICE_DEFINED
 #else
             throw new Exception("Photon Fusion package not installed, cannot use this block");
-#endif // FUSION_WEAVER && FUSION2
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
         }
 
         internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)

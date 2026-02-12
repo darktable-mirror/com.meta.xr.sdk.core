@@ -141,7 +141,14 @@ namespace Meta.XR.Editor.Settings
             OnChanged(origin, originData);
         }
 
-        public virtual bool Equals(T lhs, T rhs) => lhs.Equals(rhs);
+        public virtual bool Equals(T lhs, T rhs)
+        {
+            if (lhs == null)
+            {
+                return rhs == null;
+            }
+            return lhs.Equals(rhs);
+        }
 
         public override void Reset()
         {

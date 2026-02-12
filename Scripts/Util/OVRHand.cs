@@ -219,6 +219,8 @@ public class OVRHand : MonoBehaviour,
         {
             RayHelper.gameObject.SetActive(false);
         }
+
+
     }
 
     private void FixedUpdate()

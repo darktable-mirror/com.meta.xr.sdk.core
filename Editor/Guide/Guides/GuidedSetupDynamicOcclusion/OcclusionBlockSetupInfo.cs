@@ -32,7 +32,8 @@ namespace Meta.XR.Guides.Editor
     {
         private static GuideWindow _window;
 
-        private static string ImportantTag = $"<color={XR.Editor.UserInterface.Utils.ColorToHex(Styles.Colors.Yellow)}>[Important]</color>";
+        private static string ImportantTag =
+            $"<color={XR.Editor.UserInterface.Utils.ColorToHex(Styles.Colors.Yellow)}>[Important]</color>";
 
         public static void Show(bool forceShow = false)
         {
@@ -43,7 +44,8 @@ namespace Meta.XR.Guides.Editor
         private List<IUserInterfaceItem> GetItems()
         {
             var graphicsAPIInfo = "Set the <b>Graphics API</b> to <b>Vulkan</b> only in Unity Player Settings.";
-            var quest3Info = "It's a <b>Quest 3</b> only feature and set the target device to <b>Quest 3</b>.";
+            var quest3Info =
+                "It's a <b>Quest 3</b> and <b>Quest 3S</b> only feature and set the target device to <b>Quest 3</b> and <b>Quest 3S</b>.";
             return new List<IUserInterfaceItem>
             {
                 new BulletedLabel(graphicsAPIInfo, UIStyles.ContentStatusType.Warning),
@@ -57,7 +59,8 @@ namespace Meta.XR.Guides.Editor
                 new GroupedItem(new List<IUserInterfaceItem>
                 {
                     new Label("Visit the following link for more details:"),
-                    new LinkLabel(new GUIContent("DepthAPI documentation"), "https://developer.oculus.com/documentation/unity/unity-depthapi/", this),
+                    new LinkLabel(new GUIContent("DepthAPI documentation"),
+                        "https://developer.oculus.com/documentation/unity/unity-depthapi/", this),
                     new AddSpace(flexibleSpace: true)
                 })
             };
@@ -68,7 +71,8 @@ namespace Meta.XR.Guides.Editor
             if (_window != null) return _window;
 
             var title = "Occlusion Building Block";
-            var description = ImportantTag + " Occlusion Building Block made the following critical changes in the current project.";
+            var description = ImportantTag +
+                              " Occlusion Building Block made the following critical changes in the current project.";
             _window = Guide.Create(title, description, this);
             return _window;
         }

@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
@@ -105,7 +106,7 @@ public class OVRSceneChangeListener
             double sessionDuration = lastActivityEventTime - SessionState.GetFloat(SessionStartTimeKey, 0f);
 
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.SceneInactivity)
-                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString())
+                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture))
                 .Send();
 
             SessionState.SetBool(IsActiveSessionKey, false);
@@ -146,7 +147,7 @@ public class OVRSceneChangeListener
             // Include full session duration without subtracting timeout
             double sessionDuration = EditorApplication.timeSinceStartup - SessionState.GetFloat(SessionStartTimeKey, 0f);
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.SceneInactivity)
-                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration)
+                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture))
                 .Send();
         }
 

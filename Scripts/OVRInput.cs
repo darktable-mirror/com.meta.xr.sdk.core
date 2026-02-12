@@ -787,6 +787,12 @@ public static class OVRInput
     }
 
     /// <summary>
+    /// helper function for GetLocalControllerPosition
+    private static Vector3 GetLocalHandPosition(OVRPlugin.Node node) {
+        return OVRPlugin.GetNodePose(node, stepType).ToOVRPose().position;
+    }
+
+    /// <summary>
     /// Gets the position of the given Controller local to its tracking space.
     /// Only supported for Oculus LTouch and RTouch controllers. Non-tracked controllers will return Vector3.zero.
     /// </summary>
@@ -808,7 +814,7 @@ public static class OVRInput
                 }
             case Controller.LHand:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
-                    return OVRPlugin.GetNodePose(OVRPlugin.Node.HandLeft, stepType).ToOVRPose().position;
+                    return GetLocalHandPosition(OVRPlugin.Node.HandLeft);
                 else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
                     return openVRControllerDetails[0].localPosition;
                 else
@@ -833,7 +839,7 @@ public static class OVRInput
                 }
             case Controller.RHand:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
-                    return OVRPlugin.GetNodePose(OVRPlugin.Node.HandRight, stepType).ToOVRPose().position;
+                    return GetLocalHandPosition(OVRPlugin.Node.HandRight);
                 else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
                     return openVRControllerDetails[1].localPosition;
                 else
@@ -2387,7 +2393,7 @@ public static class OVRInput
 
     // dotnet-format does not yet support columnar formatting
     // (https://github.com/dotnet/roslyn/issues/28729)
-    #pragma warning disable format
+#pragma warning disable format
 
     /// <summary>
     /// Provides the base class for instances representing specific types of physical controllers
@@ -3341,6 +3347,9 @@ public static class OVRInput
                 controllerType == Controller.Hands)
             {
                 InjectPinchButtonMapping(ref state.Buttons);
+
+                // Synthesize Start from HandStatus.MenuPressed for Multimodal mode compatibility
+                SynthesizeStartForHands(ref state.Buttons);
             }
 #endif
 
@@ -3348,6 +3357,32 @@ public static class OVRInput
             currentState = state;
 
             return ((Controller)currentState.ConnectedControllers & controllerType);
+        }
+
+        private void SynthesizeStartForHands(ref uint buttons)
+        {
+            bool isLHand = (controllerType & Controller.LHand) == Controller.LHand;
+            bool isRHand = (controllerType & Controller.RHand) == Controller.RHand;
+
+            if (isLHand)
+            {
+                CheckHandMenuPressed(OVRPlugin.Hand.HandLeft, ref buttons);
+            }
+
+            if (isRHand)
+            {
+                CheckHandMenuPressed(OVRPlugin.Hand.HandRight, ref buttons);
+            }
+        }
+
+        private void CheckHandMenuPressed(OVRPlugin.Hand hand, ref uint buttons)
+        {
+            OVRPlugin.HandState handState = default;
+            if (OVRPlugin.GetHandState(stepType, hand, ref handState)
+                && (handState.Status & OVRPlugin.HandStatus.MenuPressed) != 0)
+            {
+                buttons |= (uint)RawButton.Start;
+            }
         }
 
         private OVRPlugin.ControllerState6 GetOpenVRControllerState(Controller controllerType)

@@ -42,7 +42,7 @@ namespace Meta.XR.Guides.Editor.About
 
         public static ToolDescriptor ToolDescriptor = new()
         {
-            Order = -10,
+            Order = 100,
             Icon = Meta.XR.Guides.Editor.GuideStyles.Contents.LearnIcon,
             Name = "Learn",
             MenuDescription = "Documentation & external tools",

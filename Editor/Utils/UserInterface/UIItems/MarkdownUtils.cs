@@ -143,13 +143,13 @@ namespace Meta.XR.Editor.UserInterface
             const string boldReplacement = "<b>$1</b>";
             input = Regex.Replace(input, boldPattern, boldReplacement);
 
+            const string boldUnderscorePattern = @"__(.+?)__";
+            const string boldUnderscoreReplacement = "<b>$1</b>";
+            input = Regex.Replace(input, boldUnderscorePattern, boldUnderscoreReplacement);
+
             const string italicsPattern = @"(\*|_)(.+?)\1";
             const string italicsReplacement = "<i>$2</i>";
             input = Regex.Replace(input, italicsPattern, italicsReplacement);
-
-            const string underlinePattern = @"__(.+?)__";
-            const string underlineReplacement = "<u>$1</u>";
-            input = Regex.Replace(input, underlinePattern, underlineReplacement);
 
             const string strikethroughPattern = @"~~(.+?)~~";
             const string strikethroughReplacement = "<s>$1</s>";

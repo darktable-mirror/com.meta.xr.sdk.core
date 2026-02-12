@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
@@ -225,8 +226,10 @@ namespace Meta.XR.Editor.Utils
 
                 return package.SampleName == null || package.SampleName.Length > 0;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "package-list-invalid-package-id",
+                    $"Failed to validate package ID '{packageId}': {e.Message}", enableDebugLog: false);
                 return false;
             }
         }

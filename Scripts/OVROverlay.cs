@@ -26,31 +26,11 @@ using System.Collections.Generic;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Add OVROverlay script to an object with an optional mesh primitive
-/// rendered as a TimeWarp overlay instead by drawing it into the eye buffer.
-/// This will take full advantage of the display resolution and avoid double
-/// resampling of the texture.
-///
-/// We support 3 types of Overlay shapes right now
-/// 1. Quad : This is most common overlay type , you render a quad in Timewarp space.
-/// 2. Cylinder: [Mobile Only][Experimental], Display overlay as partial surface of a cylinder
-///   * The cylinder's center will be your game object's center
-///   * We encoded the cylinder's parameters in transform.scale,
-///     **[scale.z] is the radius of the cylinder
-///     **[scale.y] is the height of the cylinder
-///     **[scale.x] is the length of the arc of cylinder
-///   * Limitations
-///     **Only the half of the cylinder can be displayed, which means the arc angle has to be smaller than 180 degree,  [scale.x] / [scale.z] &lt;= PI
-///     **Your camera has to be inside of the inscribed sphere of the cylinder, the overlay will be faded out automatically when the camera is close to the inscribed sphere's surface.
-///     **Translation only works correctly with vrDriver 1.04 or above
-/// 3. Cubemap: Display overlay as a cube map
-/// 4. OffcenterCubemap: [Mobile Only] Display overlay as a cube map with a texture coordinate offset
-///   * The actually sampling will looks like [color = texture(cubeLayerSampler, normalize(direction) + offset)] instead of [color = texture( cubeLayerSampler, direction )]
-///   * The extra center offset can be feed from transform.position
-///   * Note: if transform.position's magnitude is greater than 1, which will cause some cube map pixel always invisible
-///     Which is usually not what people wanted, we don't kill the ability for developer to do so here, but will warn out.
-/// 5. Equirect: Display overlay as a 360-degree equirectangular skybox.
-/// 6. ScaledEquirect: Display overlay as a 360-degree equirectangular sphere with a radius, centered at the location of the overlay.
+/// Enables efficient rendering of UI elements and media as compositor layers that bypass Unity's rendering pipeline.
+/// Overlays are rendered directly by the VR compositor at native display resolution for improved visual quality.
+/// Supports multiple shapes (quad, cylinder, equirect, cubemap), stereo textures, and advanced filtering options.
+/// Use for UI elements, HUD components, video playback, and content requiring maximum visual clarity.
+/// Works with <see cref="OVRManager"/> for VR runtime integration and <see cref="OVRPlugin"/> for native functionality.
 /// </summary>
 [ExecuteInEditMode]
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-ovroverlay/")]
@@ -59,166 +39,340 @@ public class OVROverlay : MonoBehaviour
     #region Interface
 
     /// <summary>
-    /// Determines the on-screen appearance of a layer.
+    /// Geometric shape and projection method for overlay rendering. Platform support varies by shape.
+    /// Defines rendering projections from flat quads to 360° environments. Used with <see cref="currentOverlayShape"/> property.
+    /// Each shape interprets <see cref="Transform"/> components differently for positioning, rotation, and scaling.
+    /// Supports standard surfaces (Quad, Cylinder), 360° content (Cubemap, Equirect), and mixed reality (Passthrough shapes).
     /// </summary>
     public enum OverlayShape
     {
+        /// <summary>
+        /// Flat rectangular surface for UI panels and video content. Most efficient option.
+        /// Position: Uses Transform.position for world placement. Rotation: Uses Transform.rotation for orientation.
+        /// Scale: Transform.lossyScale defines width (X), height (Y), and depth (Z, typically ignored).
+        /// </summary>
         Quad = OVRPlugin.OverlayShape.Quad,
+
+        /// <summary>
+        /// Cylindrical surface wrapping around user. [Mobile Only]
+        /// Position: Uses Transform.position for cylinder center. Rotation: Uses Transform.rotation for cylinder orientation.
+        /// Scale: lossyScale.z defines radius, lossyScale.x defines the arc angle, lossyScale.y defines height.
+        /// </summary>
         Cylinder = OVRPlugin.OverlayShape.Cylinder,
+
+        /// <summary>
+        /// 360° cube map using 6 faces. Requires <see cref="Cubemap"/> texture.
+        /// Position: Always positioned at head camera location (Transform.position ignored). Rotation: Uses Transform.rotation with platform-specific adjustments.
+        /// Scale: Transform.lossyScale typically ignored as cubemap fills entire view. Legacy rotation behavior controlled by useLegacyCubemapRotation.
+        /// </summary>
         Cubemap = OVRPlugin.OverlayShape.Cubemap,
+
+        /// <summary>
+        /// Off-center cube map with custom positioning. [Mobile Only]
+        /// Position: Transform.position defines offset from head center (magnitude must be ≤ 1.0 to avoid invisible pixels). Rotation: Uses Transform.rotation.
+        /// Scale: Transform.lossyScale typically ignored as cubemap fills entire view. Used for asymmetric 360° environments or rooms with off-center viewing positions.
+        /// </summary>
         OffcenterCubemap = OVRPlugin.OverlayShape.OffcenterCubemap,
+
+        /// <summary>
+        /// Equirectangular projection for 360° content at infinite distance. 2:1 aspect ratio optimal.
+        /// Position: Rendered at infinite distance (Transform.position typically ignored). Rotation: Uses Transform.rotation for environment orientation.
+        /// Scale: Transform.scale has no effect on the visuals of the layer. Ideal for skyboxes and distant 360° backgrounds.
+        /// </summary>
         Equirect = OVRPlugin.OverlayShape.Equirect,
+
+        /// <summary>
+        /// Finite-distance equirectangular projection with depth positioning.
+        /// Position: Uses Transform.position for distance from viewer (enables parallax and depth perception). Rotation: Uses Transform.rotation for orientation.
+        /// Scale: Transform.lossyScale controls apparent size at the specified distance. Allows 360° content with spatial depth relationships.
+        /// </summary>
         ScaledEquirect = OVRPlugin.OverlayShape.ScaledEquirect,
+
+        /// <summary>
+        /// Passthrough overlay displaying real-world environment with reconstruction. No texture required.
+        /// </summary>
         ReconstructionPassthrough = OVRPlugin.OverlayShape.ReconstructionPassthrough,
+
+        /// <summary>
+        /// Surface-projected passthrough mapping virtual content onto real surfaces. No texture required.
+        /// </summary>
         SurfaceProjectedPassthrough = OVRPlugin.OverlayShape.SurfaceProjectedPassthrough,
+
+        /// <summary>
+        /// Fisheye projection for wide field of view content. Not supported on OpenXR.
+        /// Position: Uses Transform.position for placement. Rotation: Uses Transform.rotation for orientation.
+        /// Scale: Transform.lossyScale controls fisheye effect intensity and apparent size.
+        /// </summary>
         Fisheye = OVRPlugin.OverlayShape.Fisheye,
+
+        /// <summary>
+        /// Passthrough showing hands over keyboard for mixed reality typing. No texture required.
+        /// </summary>
         KeyboardHandsPassthrough = OVRPlugin.OverlayShape.KeyboardHandsPassthrough,
+
+        /// <summary>
+        /// Masked passthrough showing hands over keyboard with occlusion handling. No texture required.
+        /// </summary>
         KeyboardMaskedHandsPassthrough = OVRPlugin.OverlayShape.KeyboardMaskedHandsPassthrough,
     }
 
     /// <summary>
-    /// Whether the layer appears behind or infront of other content in the scene.
+    /// Depth ordering and compositing behavior relative to main scene content.
+    /// Ordered by <see cref="compositionDepth"/> within each type.
+    /// Controls whether overlay renders behind (Underlay), in front (Overlay), or disabled (None) relative to scene content.
     /// </summary>
     public enum OverlayType
     {
+        /// <summary>Disables overlay rendering completely.</summary>
         None,
+
+        /// <summary>Renders behind main scene content. Ideal for background environments and skyboxes.</summary>
         Underlay,
+
+        /// <summary>Renders in front of main scene content. Most common type for UI elements and HUD components.</summary>
         Overlay,
     };
 
     /// <summary>
-    /// Specify overlay's type
+    /// Controls overlay depth ordering relative to scene content. Combined with <see cref="compositionDepth"/> for final render order.
+    /// Determines whether overlay renders behind, in front, or disabled relative to scene content.
+    /// Underlay for backgrounds/skyboxes, Overlay for UI/HUD, None to disable rendering completely.
     /// </summary>
-    [Tooltip("Specify overlay's type")]
     public OverlayType currentOverlayType = OverlayType.Overlay;
 
     /// <summary>
-    /// If true, the texture's content is copied to the compositor each frame.
+    /// Controls whether texture content is updated every frame (dynamic) or once (static).
+    /// Dynamic mode enables video and animated UI but consumes more GPU resources.
     /// </summary>
-    [Tooltip("If true, the texture's content is copied to the compositor each frame.")]
     public bool isDynamic = false;
 
     /// <summary>
-    /// If true, the layer would be used to present protected content (e.g. HDCP),
-    /// the content won't be shown in screenshots or recordings.
+    /// Enables protected content rendering to prevent the overlay from appearing in screenshots, recordings, or screen captures.
+    /// When true, the layer uses HDCP (High-bandwidth Digital Content Protection) or similar mechanisms to protect copyrighted content.
+    /// Use for DRM-protected media, copyrighted video content, or sensitive information. May have performance overhead and platform limitations.
     /// </summary>
-    [Tooltip("If true, the layer would be used to present protected content (e.g. HDCP), " +
-             "the content won't be shown in screenshots or recordings.")]
     public bool isProtectedContent = false;
 
-    //Source and dest rects
+    /// <summary>
+    /// Source rectangle for left eye in normalized coordinates (0,0) to (1,1).
+    /// For side-by-side stereo: use (0,0,0.5,1). For over-under: use (0,0.5,1,1).
+    /// </summary>
     public Rect srcRectLeft = new Rect(0, 0, 1, 1);
+
+    /// <summary>
+    /// Source rectangle for right eye in normalized coordinates (0,0) to (1,1).
+    /// For side-by-side stereo: use (0.5,0,0.5,1). For over-under: use (0,0,1,0.5).
+    /// </summary>
     public Rect srcRectRight = new Rect(0, 0, 1, 1);
+
+    /// <summary>
+    /// Destination rectangle for left eye in normalized coordinates (0-1).
+    /// Requires <see cref="overrideTextureRectMatrix"/> enabled to take effect.
+    /// </summary>
     public Rect destRectLeft = new Rect(0, 0, 1, 1);
+
+    /// <summary>
+    /// Destination rectangle for right eye in normalized coordinates (0-1).
+    /// Requires <see cref="overrideTextureRectMatrix"/> enabled to take effect.
+    /// </summary>
     public Rect destRectRight = new Rect(0, 0, 1, 1);
 
-    // Used to support legacy behavior where the top left was considered the origin
+    /// <summary>
+    /// Inverts texture coordinates vertically to support legacy content where the texture origin was at the top-left.
+    /// Modern VR systems typically use bottom-left as the texture origin, so this property provides backward compatibility.
+    /// Enable when working with legacy textures or content that appears upside-down in the overlay.
+    /// </summary>
     public bool invertTextureRects = false;
 
+    /// <summary>
+    /// Internal texture rect matrix used for advanced texture coordinate transformations.
+    /// Stores UV mapping parameters for source and destination rectangle adjustments.
+    /// </summary>
     private OVRPlugin.TextureRectMatrixf textureRectMatrix = OVRPlugin.TextureRectMatrixf.zero;
 
+    /// <summary>
+    /// Enables the use of custom source and destination rectangles instead of default full-texture mapping.
+    /// When true, the <see cref="srcRectLeft"/>, <see cref="srcRectRight"/>, <see cref="destRectLeft"/>, and <see cref="destRectRight"/>
+    /// properties control texture sampling and positioning. Use for stereo layouts, texture atlasing, or custom viewport positioning.
+    /// </summary>
     public bool overrideTextureRectMatrix = false;
 
+    /// <summary>
+    /// Enables per-layer color adjustment by applying custom color scaling and offset transformations.
+    /// When true, allows fine-tuning the visual appearance of overlays without modifying source textures.
+    /// Use <see cref="colorScale"/> and <see cref="colorOffset"/> to control the adjustments.
+    /// Final color = (SourceColor * colorScale) + colorOffset. More efficient than CPU texture modifications.
+    /// </summary>
     public bool overridePerLayerColorScaleAndOffset = false;
 
+    /// <summary>
+    /// RGBA color multiplier applied to the overlay when <see cref="overridePerLayerColorScaleAndOffset"/> is enabled.
+    /// Each component multiplies the corresponding channel in the source texture before <see cref="colorOffset"/> is applied.
+    /// Default value (1,1,1,1) applies no scaling. Use for brightness adjustment, color tinting, or transparency fading.
+    /// </summary>
     public Vector4 colorScale = Vector4.one;
 
+    /// <summary>
+    /// RGBA color offset added to the overlay when <see cref="overridePerLayerColorScaleAndOffset"/> is enabled.
+    /// Each component is added to the corresponding channel after <see cref="colorScale"/> multiplication.
+    /// Default value (0,0,0,0) applies no offset. Use for color tinting, brightness boost, or fade to color.
+    /// </summary>
     public Vector4 colorOffset = Vector4.zero;
 
-    //Warning: Developers should only use this supersample setting if they absolutely have the budget and need for it.
-    //It is extremely expensive, and will not be relevant for most developers.
+    /// <summary>
+    /// Enables expensive super sampling for maximum image quality.
+    /// <para>
+    /// <b>WARNING:</b> Performance-intensive feature that should only be used
+    /// when you have sufficient GPU budget and require the highest possible visual quality.
+    /// Not recommended for most applications.
+    /// </para>
+    /// <para>
+    /// Consider useAutomaticFiltering instead, to achieve better quality filtering
+    /// when performance headroom allows.
+    /// </para>
+    /// </summary>
     public bool useExpensiveSuperSample = false;
 
-    //Warning: Developers should only use this sharpening setting if they absolutely have the budget and need for it.
-    //It is extremely expensive, and will not be relevant for most developers.
+    /// <summary>
+    /// Enables expensive sharpening filter for enhanced edge clarity.
+    /// <para>
+    /// <b>WARNING:</b> Performance-intensive feature that should only be used
+    /// when you have sufficient GPU budget and require the highest possible visual quality.
+    /// Not recommended for most applications.
+    /// </para>
+    /// <para>
+    /// Consider useAutomaticFiltering instead, to achieve better quality filtering
+    /// when performance headroom allows.
+    /// </para>
+    /// </summary>
     public bool useExpensiveSharpen = false;
 
-    //Property that can hide overlays when required. Should be false when present, true when hidden.
+    /// <summary>
+    /// Controls overlay visibility. When true, the overlay is hidden from rendering.
+    /// Use this property to dynamically show/hide overlays without disabling the component.
+    /// This is useful when the overlay may be frequently hidden and shown, without
+    /// the performance hit of full layer teardown and setup.
+    /// </summary>
     public bool hidden = false;
 
 
     /// <summary>
-    /// If true, the layer will be created as an external surface. externalSurfaceObject contains
-    /// the Surface object. It's effective only on Android.
+    /// [Android Only] Enables external surface rendering for advanced video and media integration.
+    /// When true, creates an Android Surface object that can be used with MediaPlayer, Camera2 API,
+    /// or other native Android media frameworks. Use for video playback, camera feeds, or streaming content.
+    /// External surfaces provide optimal video performance by bypassing Unity's texture management.
     /// </summary>
-    [Tooltip("If true, the layer will be created as an external surface. externalSurfaceObject contains " +
-             "the Surface object. It's effective only on Android.")]
     public bool isExternalSurface = false;
 
     /// <summary>
-    /// The width which will be used to create the external surface. It's effective only on Android.
+    /// [Android Only] Specifies the width in pixels for the external surface when <see cref="isExternalSurface"/> is enabled.
+    /// This dimension determines the resolution of the media content that can be rendered to the surface.
+    /// Choose dimensions that match your media content resolution for optimal quality. Higher resolutions consume more GPU resources.
+    /// Some image producers may override these dimensions to match source content size.
     /// </summary>
-    [Tooltip("The width which will be used to create the external surface. It's effective only on Android.")]
     public int externalSurfaceWidth = 0;
 
     /// <summary>
-    /// The height which will be used to create the external surface. It's effective only on Android.
+    /// [Android Only] Specifies the height in pixels for the external surface when <see cref="isExternalSurface"/> is enabled.
+    /// This dimension determines the resolution of the media content that can be rendered to the surface.
+    /// Ensure the width/height ratio matches your content's aspect ratio to prevent distortion. Use the lowest resolution that provides acceptable quality.
+    /// Some image producers may override these dimensions to match source content size.
     /// </summary>
-    [Tooltip("The height which will be used to create the external surface. It's effective only on Android.")]
     public int externalSurfaceHeight = 0;
 
     /// <summary>
-    /// The compositionDepth defines the order of the OVROverlays in composition. The overlay/underlay with smaller
-    /// compositionDepth would be composited in the front of the overlay/underlay with larger compositionDepth.
+    /// Controls depth ordering within the same <see cref="OverlayType"/>. Lower values render first (behind).
     /// </summary>
-    [Tooltip("The compositionDepth defines the order of the OVROverlays in composition. The overlay/underlay with " +
-             "smaller compositionDepth would be composited in the front of the overlay/underlay with larger compositionDepth.")]
     public int compositionDepth = 0;
 
     private int layerCompositionDepth = 0;
 
     /// <summary>
-    /// The noDepthBufferTesting will stop layer's depth buffer compositing even if the engine has
-    /// "Depth buffer sharing" enabled on Rift.
+    /// Disables depth buffer-based compositing and forces overlay ordering based solely on <see cref="compositionDepth"/> and <see cref="currentOverlayType"/>.
+    /// When true, prevents the overlay from being occluded by scene geometry even when "Shared Depth Buffer" is enabled in the VR runtime.
+    /// Enable for UI elements that should always be visible (HUD, menus). Disable for 3D UI that should interact with scene geometry.
     /// </summary>
-    [Tooltip("The noDepthBufferTesting will stop layer's depth buffer compositing even if the engine has " +
-             "\"Shared Depth Buffer\" enabled. The layer's ordering will be used instead which is determined by it's " +
-             "composition depth and overlay/underlay type.")]
     public bool noDepthBufferTesting = true;
 
-    //Format corresponding to the source texture for this layer. sRGB by default, but can be modified if necessary
+    /// <summary>
+    /// Specifies the pixel format for the overlay layer's texture data.
+    /// Controls color depth, precision, and gamma correction behavior. Use sRGB for standard UI/video, floating point for HDR content, linear for custom color management.
+    /// The system automatically detects HDR formats from texture types. Higher precision formats consume more memory and bandwidth.
+    /// </summary>
     public OVRPlugin.EyeTextureFormat layerTextureFormat = OVRPlugin.EyeTextureFormat.R8G8B8A8_sRGB;
 
     /// <summary>
-    /// Specify overlay's shape
+    /// Defines the geometric projection and rendering method for the overlay layer.
+    /// Each shape provides different ways to display content in 3D space, from flat panels to immersive 360-degree environments.
+    /// Choose based on content type: Quad for UI/video, Cylinder for wrap-around content, Cubemap/Equirect for 360° content, Passthrough for mixed reality.
+    /// Some shapes have platform limitations (Cylinder/OffcenterCubemap are mobile-only, Fisheye not supported on OpenXR).
     /// </summary>
-    [Tooltip("Specify overlay's shape")]
     public OverlayShape currentOverlayShape = OverlayShape.Quad;
 
     private OverlayShape prevOverlayShape = OverlayShape.Quad;
 
     /// <summary>
-    /// The left- and right-eye Textures to show in the layer.
-    /// \note If you need to change the texture on a per-frame basis, please use OverrideOverlayTextureInfo(..)
-    /// to avoid caching issues.
+    /// Defines the texture content displayed by the overlay layer for left and right eyes respectively.
+    /// Array index 0 contains the left eye texture, index 1 contains the right eye texture.
+    /// For mono content, only index 0 is used and the same texture is displayed to both eyes.
+    /// Use Cubemap textures for Cubemap shapes, Texture2D/RenderTexture for others.
+    /// For dynamic content, use OverrideOverlayTextureInfo() to avoid expensive native pointer lookups per frame.
     /// </summary>
-    [Tooltip("The left- and right-eye Textures to show in the layer.")]
     public Texture[] textures = new Texture[] { null, null };
 
-    [Tooltip("When checked, the texture is treated as if the alpha was already premultiplied")]
+    /// <summary>
+    /// Specifies whether the texture's alpha channel has been pre-multiplied with the RGB color channels.
+    /// This affects alpha blending behavior during overlay composition with scene content.
+    /// In premultiplied alpha, RGB values are already multiplied by alpha (e.g., red pixel (1,0,0) with 50% alpha becomes (0.5,0,0,0.5)).
+    /// Enable for modern rendering pipelines that use premultiplied alpha. Disable for standard "straight alpha" textures.
+    /// </summary>
     public bool isAlphaPremultiplied = false;
 
-    [Tooltip("When checked, the layer will use bicubic filtering")]
+    /// <summary>
+    /// Enables bicubic texture filtering for higher quality image scaling at the cost of increased GPU processing.
+    /// Provides smoother visual results compared to standard bilinear filtering when textures are scaled up or down.
+    /// Use for high-resolution UI elements, text overlays, or detailed images when you have sufficient GPU budget.
+    /// Consider useAutomaticFiltering to let the runtime decide based on performance characteristics.
+    /// </summary>
     public bool useBicubicFiltering = false;
 
-    [Tooltip("When checked, the cubemap will retain the legacy rotation which was rotated 180 degrees around " +
-             "the Y axis comapred to Unity's definition of cubemaps. This setting will be deprecated in the near future, " +
-             "therefore it is recommended to fix the cubemap texture instead.")]
+    /// <summary>
+    /// Enables legacy cubemap rotation behavior for backward compatibility.
+    /// <para>
+    /// <b>DEPRECATED:</b> This setting will be removed in future versions.
+    /// Fix your cubemap textures instead of relying on this legacy behavior.
+    /// </para>
+    /// </summary>
     public bool useLegacyCubemapRotation = false;
 
-    [Tooltip("When checked, the layer will use efficient super sampling")]
+    /// <summary>
+    /// Enables efficient super sampling for improved visual quality with moderate performance impact.
+    /// This is a performance-optimized alternative to <see cref="useExpensiveSuperSample"/> that provides better quality
+    /// with reasonable GPU cost. Super sampling renders content at higher resolution then downsamples for display, reducing aliasing.
+    /// Use for text overlays, UI elements with fine details, or when visual quality is prioritized over performance.
+    /// Cannot be used simultaneously with sharpening filters unless using useAutomaticFiltering.
+    /// </summary>
     public bool useEfficientSupersample = false;
 
-    [Tooltip(
-        "When checked, the layer will use efficient sharpen.")]
+    /// <summary>
+    /// Enables efficient sharpening filter to enhance edge clarity and text readability with moderate performance impact.
+    /// This is a performance-optimized alternative to <see cref="useExpensiveSharpen"/> that provides good quality
+    /// enhancement with reasonable GPU cost. Sharpening enhances edge contrast to make content appear crisper.
+    /// Use for text-heavy UI overlays, soft/blurry images, or content with fine details. Cannot be used simultaneously with super sampling unless using useAutomaticFiltering.
+    /// </summary>
     public bool useEfficientSharpen = false;
 
-    [Tooltip(
-        "When checked, The runtime automatically chooses the appropriate sharpening or super sampling filter")]
+    /// <summary>
+    /// Enables intelligent filtering where the runtime automatically selects optimal image enhancement
+    /// based on performance headroom and content. Recommended for most applications.
+    /// </summary>
     public bool useAutomaticFiltering = false;
 
     /// <summary>
-    /// Preview the overlay in the editor using a mesh renderer.
+    /// [Editor Only] Enables preview visualization of the overlay in the Unity Scene view using a mesh renderer.
+    /// This helps with positioning and setup during development but has no effect at runtime.
+    /// Creates a visual representation for positioning overlays, visualizing size/shape, and debugging placement.
+    /// Only approximates VR appearance and may not represent all shapes accurately. No impact on runtime performance.
     /// </summary>
     public bool previewInEditor
     {
@@ -255,9 +409,13 @@ public class OVROverlay : MonoBehaviour
     public ExternalSurfaceObjectCreated externalSurfaceObjectCreated;
 
     /// <summary>
-    /// Use this function to set texture and texNativePtr when app is running
-    /// GetNativeTexturePtr is a slow behavior, the value should be pre-cached
+    /// Overrides the overlay texture information for dynamic texture updates at runtime.
+    /// Use this method to efficiently update overlay textures without triggering expensive native texture pointer lookups each frame.
+    /// GetNativeTexturePtr() is expensive - pre-cache the pointer and use this method instead of directly assigning to textures array.
     /// </summary>
+    /// <param name="srcTexture">The source texture to display in the overlay</param>
+    /// <param name="nativePtr">Pre-cached native texture pointer obtained from GetNativeTexturePtr()</param>
+    /// <param name="node">XR node specifying which eye (LeftEye=0, RightEye=1) to update</param>
     public void OverrideOverlayTextureInfo(Texture srcTexture, IntPtr nativePtr, UnityEngine.XR.XRNode node)
     {
         int index = (node == UnityEngine.XR.XRNode.RightEye) ? 1 : 0;
@@ -271,17 +429,47 @@ public class OVROverlay : MonoBehaviour
         isOverridePending = true;
     }
 
+    /// <summary>
+    /// Indicates whether a texture override operation is pending application.
+    /// Set to true when <see cref="OverrideOverlayTextureInfo"/> is called, reset after processing.
+    /// </summary>
     protected bool isOverridePending;
 
-    public static List<OVROverlay> instances = new();
+    /// <summary>
+    /// Global registry of all active OVROverlay instances in the scene.
+    /// Used by the overlay system to manage layer indices, track overlay lifecycle, and optimize resource allocation.
+    /// Provides automatic layer index assignment, efficient reuse of destroyed overlay slots, and proper cleanup coordination.
+    /// Not thread-safe - use only on main Unity thread. Total overlay count can impact VR compositor performance.
+    /// </summary>
+    public static readonly List<OVROverlay> instances = new();
 
-    public int layerId { get; private set; } = 0; // The layer's internal handle in the compositor.
+    /// <summary>
+    /// The unique identifier assigned by the VR compositor for this overlay layer.
+    /// This handle is used internally to reference the layer in all compositor operations and submissions.
+    /// Set to 0 initially, positive values indicate active layer, reset to 0 when destroyed.
+    /// Used for texture submission, property updates, and cleanup operations. Managed on main Unity thread only.
+    /// A layerId of 0 indicates initialization failure or destroyed state.
+    /// </summary>
+    public int layerId { get; private set; } = 0;
 
     #endregion
 
+    /// <summary>
+    /// Shared material used for blitting 2D textures to overlay swap chains.
+    /// Contains the shader and settings for efficient texture copying and format conversion.
+    /// </summary>
     protected static Material tex2DMaterial;
+
+    /// <summary>
+    /// Array of materials used for blitting individual cubemap faces to overlay swap chains.
+    /// Each material extracts and processes a specific face of the cubemap.
+    /// </summary>
     protected static readonly Material[] cubeMaterial = new Material[6];
 
+    /// <summary>
+    /// Determines texture layout for the overlay layer based on configured textures.
+    /// Returns Stereo if separate left/right eye textures are provided on Android, otherwise Mono.
+    /// </summary>
     protected OVRPlugin.LayerLayout layout
     {
         get
@@ -294,26 +482,81 @@ public class OVROverlay : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Texture information for a single eye/stage in the overlay rendering pipeline.
+    /// Manages Unity textures and compositor swap chain textures for multi-buffered rendering.
+    /// Contains both application textures from <see cref="textures"/> and compositor-managed swap chain for efficient GPU rendering.
+    /// Used in <see cref="layerTextures"/> array with one entry per eye/stage for stereo or mono content.
+    /// </summary>
     protected struct LayerTexture
     {
+        /// <summary>
+        /// Unity application texture provided through <see cref="textures"/> array. Contains the original texture source for overlay rendering.
+        /// This is the source texture that gets copied to the compositor swap chain for VR display. Can be Texture2D, RenderTexture, or Cubemap.
+        /// </summary>
         public Texture appTexture;
+
+        /// <summary>Native pointer to application texture for direct compositor access. Cached pointer for efficient texture submission to VR runtime.</summary>
         public IntPtr appTexturePtr;
+
+        /// <summary>Compositor-managed textures forming the swap chain for multi-buffered rendering. Array of textures provided by VR compositor for direct rendering.</summary>
         public Texture[] swapChain;
+
+        /// <summary>Native pointers to each swap chain texture for efficient GPU memory access. Cached native handles for direct GPU texture operations.</summary>
         public IntPtr[] swapChainPtr;
     };
 
+    /// <summary>
+    /// Array of texture structures for each eye/stage. Single entry for mono, two entries for stereo rendering.
+    /// </summary>
     protected LayerTexture[] layerTextures;
 
+    /// <summary>
+    /// Layer descriptor containing the complete specification for the overlay layer as submitted to the compositor.
+    /// Defines all rendering parameters including format, size, layout, and feature flags.
+    /// </summary>
     protected OVRPlugin.LayerDesc layerDesc;
+
+    /// <summary>
+    /// Number of texture stages in the compositor swap chain for this overlay layer.
+    /// Typically 3 for triple buffering to prevent blocking during texture updates.
+    /// </summary>
     protected int stageCount = -1;
 
-    public int layerIndex { get; protected set; } = -1; // Controls the composition order based on wake-up time.
+    /// <summary>
+    /// Index of this overlay instance within the global instances registry.
+    /// Used for layer composition ordering and efficient overlay management.
+    /// </summary>
+    public int layerIndex { get; protected set; } = -1;
+
+    /// <summary>
+    /// GC handle maintaining a pinned reference to the layerId for safe compositor access.
+    /// Prevents garbage collection from moving the layerId value while compositor holds a pointer to it.
+    /// </summary>
     protected GCHandle layerIdHandle;
+
+    /// <summary>
+    /// Native pointer to the pinned layerId value for efficient compositor communication.
+    /// Allows VR runtime to directly access and modify the layer ID without managed/native transitions.
+    /// </summary>
     protected IntPtr layerIdPtr = IntPtr.Zero;
 
+    /// <summary>
+    /// Current frame index used for swap chain stage selection and texture update timing.
+    /// Increments each frame for dynamic overlays to cycle through available texture stages.
+    /// </summary>
     protected int frameIndex = 0;
+
+    /// <summary>
+    /// Previous frame index used to detect when texture updates are needed and prevent duplicate processing.
+    /// Helps optimize rendering by avoiding redundant texture population within the same frame.
+    /// </summary>
     protected int prevFrameIndex = -1;
 
+    /// <summary>
+    /// Reference to the Renderer component attached to this GameObject, if any.
+    /// Used for backward compatibility and automatic renderer visibility management.
+    /// </summary>
     protected Renderer rend;
 
     private static readonly int _tempRenderTextureId = Shader.PropertyToID("_OVROverlayTempTexture");
@@ -321,18 +564,57 @@ public class OVROverlay : MonoBehaviour
     private Mesh _blitMesh;
 
 
+    /// <summary>
+    /// Indicates whether the overlay layer is currently visible and successfully submitted to the compositor.
+    /// Updated each frame during rendering to reflect the actual visibility state.
+    /// </summary>
+    /// <remarks>
+    /// This property is set to true when the overlay is successfully submitted to the VR compositor
+    /// and not hidden via the <see cref="hidden"/> flag. Used to determine whether to disable
+    /// the associated <see cref="Renderer"/> component for performance optimization.
+    /// </remarks>
+    /// <seealso cref="TrySubmitLayer"/>
+    /// <seealso cref="hidden"/>
+    /// <seealso cref="rend"/>
     public bool isOverlayVisible { get; private set; }
 
+    /// <summary>
+    /// Returns the number of textures needed per stage based on the current layout configuration.
+    /// Returns 2 for stereo layout (separate left/right eye textures), 1 for mono layout (shared texture).
+    /// </summary>
+    /// <remarks>
+    /// Used to determine array sizes for texture management and processing loops.
+    /// Stereo layout is only supported on Android platforms with separate eye textures.
+    /// </remarks>
+    /// <seealso cref="layout"/>
+    /// <seealso cref="layerTextures"/>
     protected int texturesPerStage
     {
         get { return (layout == OVRPlugin.LayerLayout.Stereo) ? 2 : 1; }
     }
 
+    /// <summary>
+    /// Determines if the specified overlay shape requires texture content.
+    /// Passthrough shapes don't need textures as they display real-world content.
+    /// </summary>
+    /// <param name="shape">The overlay shape to check</param>
+    /// <returns>True if the shape requires texture content, false for passthrough shapes</returns>
     protected static bool NeedsTexturesForShape(OverlayShape shape)
     {
         return !IsPassthroughShape(shape);
     }
 
+    /// <summary>
+    /// Creates a new overlay layer in the VR compositor with the specified parameters.
+    /// Handles layer descriptor creation, compositor setup, and instance registry management.
+    /// </summary>
+    /// <param name="mipLevels">Number of mip levels for the layer texture</param>
+    /// <param name="sampleCount">Sample count for multisampling</param>
+    /// <param name="etFormat">Texture format for the layer</param>
+    /// <param name="flags">Layer feature flags</param>
+    /// <param name="size">Layer texture dimensions</param>
+    /// <param name="shape">Geometric shape of the overlay</param>
+    /// <returns>True if layer creation succeeded, false otherwise</returns>
     protected bool CreateLayer(int mipLevels, int sampleCount, OVRPlugin.EyeTextureFormat etFormat, int flags,
         OVRPlugin.Sizei size, OVRPlugin.OverlayShape shape)
     {
@@ -402,6 +684,13 @@ public class OVROverlay : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Creates compositor-managed texture swap chains for this overlay layer.
+    /// </summary>
+    /// <param name="useMipmaps">Whether to create textures with mipmap support</param>
+    /// <param name="size">Dimensions of the textures to create in pixels</param>
+    /// <param name="isHdr">Whether to use HDR texture format (16-bit floating point)</param>
+    /// <returns>True if new textures were created or texture copying is needed for this frame</returns>
     protected bool CreateLayerTextures(bool useMipmaps, OVRPlugin.Sizei size, bool isHdr)
     {
         if (isExternalSurface)
@@ -471,6 +760,10 @@ public class OVROverlay : MonoBehaviour
         return needsCopy;
     }
 
+    /// <summary>
+    /// Destroys all layer textures and cleans up swap chain resources.
+    /// Called during layer teardown to free compositor texture memory.
+    /// </summary>
     protected void DestroyLayerTextures()
     {
         if (isExternalSurface)
@@ -490,6 +783,12 @@ public class OVROverlay : MonoBehaviour
         layerTextures = null;
     }
 
+    /// <summary>
+    /// Destroys the overlay layer and releases all associated compositor resources.
+    /// Cleans up the layer ID, destroys textures, and removes the overlay from the global instances registry.
+    /// Performs comprehensive cleanup: hides overlay, removes from registry, destroys layer, releases handles, resets state.
+    /// Can be called multiple times safely. Automatically invoked by OnDisable, OnDestroy, and TrySubmitLayer when needed.
+    /// </summary>
     protected void DestroyLayer()
     {
         if (layerIndex != -1)
@@ -517,9 +816,14 @@ public class OVROverlay : MonoBehaviour
     }
 
     /// <summary>
-    /// Sets the source and dest rects for both eyes. Source explains what portion of the source texture is used, and
-    /// dest is what portion of the destination texture is rendered into.
+    /// Configures texture mapping rectangles for stereo rendering by setting source and destination rectangles for both left and right eyes simultaneously.
+    /// Source rectangles define which portion of the input texture is sampled (normalized 0-1 coordinates).
+    /// Destination rectangles define where the content appears in the final overlay rendering.
     /// </summary>
+    /// <param name="srcLeft">Source rectangle for left eye texture sampling (normalized 0-1)</param>
+    /// <param name="srcRight">Source rectangle for right eye texture sampling (normalized 0-1)</param>
+    /// <param name="destLeft">Destination rectangle for left eye rendering (normalized 0-1)</param>
+    /// <param name="destRight">Destination rectangle for right eye rendering (normalized 0-1)</param>
     public void SetSrcDestRects(Rect srcLeft, Rect srcRight, Rect destLeft, Rect destRight)
     {
         srcRectLeft = srcLeft;
@@ -528,6 +832,12 @@ public class OVROverlay : MonoBehaviour
         destRectRight = destRight;
     }
 
+    /// <summary>
+    /// Updates the internal texture rectangle matrix for advanced UV coordinate transformations.
+    /// Handles coordinate conversions for external surfaces, texture inversion, and fisheye projections.
+    /// Converts source/destination rectangles into GPU-ready transformation matrices. External surfaces use inverted Y coordinates,
+    /// fisheye applies -0.5 offset for centering. Populates textureRectMatrix with scale/bias values for compositor UV transformation.
+    /// </summary>
     public void UpdateTextureRectMatrix()
     {
         // External surfaces are encoded with reversed UV's, so our texture rects are also inverted
@@ -567,12 +877,29 @@ public class OVROverlay : MonoBehaviour
             srcRectRightConverted.y - destRectRightConverted.y * rightHeightFactor);
     }
 
+    /// <summary>
+    /// Sets custom color scaling and offset values for the overlay layer and enables color adjustment.
+    /// This method provides a convenient way to apply color transformations without manually setting individual properties.
+    /// </summary>
+    /// <param name="scale">RGBA color multiplier values. Default (1,1,1,1) applies no scaling.</param>
+    /// <param name="offset">RGBA color offset values added after scaling. Default (0,0,0,0) applies no offset.</param>
+    /// <remarks>
+    /// Applies the provided scale and offset values. The final color is calculated as: (SourceColor * scale) + offset.
+    /// </remarks>
+    /// <seealso cref="overridePerLayerColorScaleAndOffset"/>
+    /// <seealso cref="colorScale"/>
+    /// <seealso cref="colorOffset"/>
     public void SetPerLayerColorScaleAndOffset(Vector4 scale, Vector4 offset)
     {
         colorScale = scale;
         colorOffset = offset;
     }
 
+    /// <summary>
+    /// Validates and caches native texture pointers for overlay rendering.
+    /// Ensures application textures are properly prepared and accessible to the VR compositor.
+    /// </summary>
+    /// <returns>True if all required textures are valid and ready for rendering</returns>
     protected bool LatchLayerTextures()
     {
         if (isExternalSurface)
@@ -632,6 +959,13 @@ public class OVROverlay : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Creates a layer descriptor structure with current overlay configuration for compositor submission.
+    /// Analyzes texture properties and overlay settings to generate the appropriate layer specification.
+    /// Automatically detects HDR formats from texture types, sets feature flags based on enabled properties,
+    /// and calculates appropriate dimensions from external surfaces or texture dimensions.
+    /// </summary>
+    /// <returns>Complete layer descriptor containing format, size, flags, and shape information for the compositor</returns>
     protected OVRPlugin.LayerDesc GetCurrentLayerDesc()
     {
         OVRPlugin.Sizei textureSize = new OVRPlugin.Sizei() { w = 0, h = 0 };
@@ -689,6 +1023,8 @@ public class OVROverlay : MonoBehaviour
             if (rt.format == RenderTextureFormat.ARGBHalf || rt.format == RenderTextureFormat.ARGBFloat ||
                 rt.format == RenderTextureFormat.RGB111110Float)
                 newDesc.Format = OVRPlugin.EyeTextureFormat.R16G16B16A16_FP;
+
+            newDesc.MipLevels = rt.mipmapCount;
         }
 
         if (isProtectedContent)
@@ -709,6 +1045,17 @@ public class OVROverlay : MonoBehaviour
         return newDesc;
     }
 
+    /// <summary>
+    /// Calculates the pixel-perfect blit rectangle for texture copying operations.
+    /// Converts normalized source rectangles to exact pixel coordinates with appropriate padding.
+    /// For stereo textures, uses appropriate eye rectangle. For shared textures, calculates union of both eyes.
+    /// Adds 2-pixel border to handle texture filtering edge cases.
+    /// </summary>
+    /// <param name="eyeId">Eye index (0=left, 1=right) for stereo or shared texture rectangle calculation</param>
+    /// <param name="width">Target texture width in pixels</param>
+    /// <param name="height">Target texture height in pixels</param>
+    /// <param name="invertRect">Whether to invert Y coordinates for different texture coordinate systems</param>
+    /// <returns>Pixel-accurate rectangle with 2-pixel padding for safe blitting operations</returns>
     protected Rect GetBlitRect(int eyeId, int width, int height, bool invertRect)
     {
         Rect rect;
@@ -732,14 +1079,24 @@ public class OVROverlay : MonoBehaviour
         }
 
         // Round our rect to the bounding pixel rect, and add two pixel padding
-        return new Rect(
-            Mathf.Max(0, Mathf.Floor(width * rect.x) - 2),
-            Mathf.Max(0, Mathf.Floor(height * rect.y) - 2),
-            Mathf.Min(width, Mathf.Ceil(width * rect.xMax) - Mathf.Floor(width * rect.x) + 4),
-            Mathf.Min(height, Mathf.Ceil(height * rect.yMax) - Mathf.Floor(height * rect.y) + 4));
+        float xMin = Mathf.Max(0, Mathf.Round(width * rect.x) - 2);
+        float yMin = Mathf.Max(0, Mathf.Round(height * rect.y) - 2);
+        float xMax = Mathf.Min(width, Mathf.Round(width * rect.xMax) + 2);
+        float yMax = Mathf.Min(height, Mathf.Round(height * rect.yMax) + 2);
+        return new Rect(xMin, yMin, xMax - xMin, yMax - yMin);
     }
 
-    // A blit method that only draws into the specified rect by setting the viewport.
+    /// <summary>
+    /// Performs optimized texture blitting to a specific region using command buffer operations.
+    /// Renders the source texture to a sub-region with custom projection and viewport settings.
+    /// Uses scissor rectangle and viewport offsetting to blit only the necessary region, reducing GPU bandwidth.
+    /// Integrates with Unity's command buffer system for efficient GPU command submission.
+    /// </summary>
+    /// <param name="src">Source texture to blit from</param>
+    /// <param name="width">Full target texture width in pixels</param>
+    /// <param name="height">Full target texture height in pixels</param>
+    /// <param name="mat">Material/shader to use for the blit operation</param>
+    /// <param name="rect">Target rectangle in pixel coordinates within the destination texture</param>
     protected void BlitSubImage(Texture src, int width, int height, Material mat, Rect rect)
     {
         // do our blit using our command buffer
@@ -762,6 +1119,16 @@ public class OVROverlay : MonoBehaviour
         _commandBuffer.DrawMesh(_blitMesh, Matrix4x4.identity, mat);
     }
 
+    /// <summary>
+    /// Copies application textures to compositor swap chain textures using optimized blitting operations.
+    /// Handles format conversion, alpha premultiplication, and texture rectangle processing.
+    /// </summary>
+    /// <param name="mipLevels">Number of mip levels to populate</param>
+    /// <param name="isHdr">Whether to use HDR rendering format</param>
+    /// <param name="size">Texture dimensions</param>
+    /// <param name="sampleCount">MSAA sample count</param>
+    /// <param name="stage">Swap chain stage index to populate</param>
+    /// <returns>True if texture population succeeded</returns>
     protected bool PopulateLayer(int mipLevels, bool isHdr, OVRPlugin.Sizei size, int sampleCount, int stage)
     {
         if (isExternalSurface)
@@ -788,10 +1155,10 @@ public class OVROverlay : MonoBehaviour
 
             ret = true;
 
-            // PC requries premultiplied Alpha, premultiply it unless its already premultiplied
+            // If this platform requries premultiplied Alpha, premultiply it unless its already premultiplied
             bool premultiplyAlpha = !isAlphaPremultiplied && !OVRPlugin.unpremultipliedAlphaLayersSupported;
 
-            // Mobile requires unpremultiplied alpha, so if it is premultiplied, divide it out if possible.
+            // If this platform requires unpremultiplied alpha, and the buffer is already premultiplied, divide it out if possible.
             bool unmultiplyAlpha = isAlphaPremultiplied && !OVRPlugin.premultipliedAlphaLayersSupported;
 
             // OpenGL does not support copy texture between different format
@@ -887,6 +1254,17 @@ public class OVROverlay : MonoBehaviour
         return ret;
     }
 
+    /// <summary>
+    /// Submits the overlay layer to the VR compositor with configured rendering parameters.
+    /// Handles filtering validation, texture matrix updates, and alpha premultiplication settings.
+    /// </summary>
+    /// <param name="overlay">Whether to render as overlay (true) or underlay (false)</param>
+    /// <param name="headLocked">Whether the overlay is locked to head movement</param>
+    /// <param name="noDepthBufferTesting">Whether to disable depth buffer testing</param>
+    /// <param name="pose">World-space pose of the overlay</param>
+    /// <param name="scale">Scale transformation for the overlay</param>
+    /// <param name="frameIndex">Frame index for swap chain synchronization</param>
+    /// <returns>True if overlay submission succeeded and is visible</returns>
     protected bool SubmitLayer(bool overlay, bool headLocked, bool noDepthBufferTesting, OVRPose pose, Vector3 scale,
         int frameIndex)
     {
@@ -932,6 +1310,10 @@ public class OVROverlay : MonoBehaviour
         return isOverlayVisible;
     }
 
+    /// <summary>
+    /// Creates or destroys the editor preview object based on previewInEditor setting.
+    /// Manages Unity editor visualization for overlay positioning and debugging.
+    /// </summary>
     protected void SetupEditorPreview()
     {
 #if UNITY_EDITOR
@@ -956,12 +1338,27 @@ public class OVROverlay : MonoBehaviour
 #endif
     }
 
+    /// <summary>
+    /// Resets the editor preview by toggling the previewInEditor setting.
+    /// Forces recreation of the preview visualization object with current overlay settings.
+    /// </summary>
     public void ResetEditorPreview()
     {
         previewInEditor = false;
         previewInEditor = true;
     }
 
+    /// <summary>
+    /// Determines whether the specified overlay shape is a passthrough type that displays real-world content.
+    /// Passthrough shapes don't require texture content as they render camera or environment data directly.
+    /// </summary>
+    /// <param name="shape">The overlay shape to check</param>
+    /// <returns>True if the shape displays real-world content, false if it requires application textures</returns>
+    /// <remarks>
+    /// Passthrough shapes include: ReconstructionPassthrough, SurfaceProjectedPassthrough,
+    /// KeyboardHandsPassthrough, and KeyboardMaskedHandsPassthrough. These shapes are used
+    /// for mixed reality applications where real-world content is integrated with virtual elements.
+    /// </remarks>
     public static bool IsPassthroughShape(OverlayShape shape)
     {
         return OVRPlugin.IsPassthroughShape((OVRPlugin.OverlayShape)shape);
@@ -969,6 +1366,9 @@ public class OVROverlay : MonoBehaviour
 
     #region Unity Messages
 
+    /// <summary>
+    /// Initializes shared materials for texture blitting and sets up OpenVR integration.
+    /// </summary>
     void Awake()
     {
         if (Application.isPlaying)
@@ -1008,6 +1408,9 @@ public class OVROverlay : MonoBehaviour
 
     private ulong OpenVROverlayHandle = OVR.OpenVR.OpenVR.k_ulOverlayHandleInvalid;
 
+    /// <summary>
+    /// Initializes the overlay, sets up editor preview, and registers camera rendering callbacks.
+    /// </summary>
     void OnEnable()
     {
         if (OVRManager.OVRManagerinitialized)
@@ -1024,6 +1427,10 @@ public class OVROverlay : MonoBehaviour
         RenderPipelineManager.beginCameraRendering += HandleBeginCameraRendering;
     }
 
+    /// <summary>
+    /// Initializes the VR overlay system based on the loaded XR device.
+    /// Handles setup for both Oculus and OpenVR platforms with proper error checking.
+    /// </summary>
     void InitOVROverlay()
     {
 #if USING_XR_SDK_OPENXR
@@ -1064,6 +1471,9 @@ public class OVROverlay : MonoBehaviour
         xrDeviceConstructed = true;
     }
 
+    /// <summary>
+    /// Cleans up preview objects, unregisters callbacks, and destroys the overlay layer.
+    /// </summary>
     void OnDisable()
     {
         if (gameObject.scene.name == "DontDestroyOnLoad")
@@ -1078,6 +1488,10 @@ public class OVROverlay : MonoBehaviour
         DisableImmediately();
     }
 
+    /// <summary>
+    /// Immediately disables the overlay component and cleans up all associated resources.
+    /// Called internally by OnDisable or when the component needs to be shut down immediately.
+    /// </summary>
     void DisableImmediately()
     {
 
@@ -1116,10 +1530,14 @@ public class OVROverlay : MonoBehaviour
             }
         }
 
+        isOverlayVisible = false;
         constructedOverlayXRDevice = OVRManager.XRDevice.Unknown;
         xrDeviceConstructed = false;
     }
 
+    /// <summary>
+    /// Ensures proper cleanup of layer resources and removes from global registry.
+    /// </summary>
     void OnDestroy()
     {
         DisableImmediately();
@@ -1145,6 +1563,10 @@ public class OVROverlay : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// Calculates the world-space pose and scale for overlay rendering.
+    /// Handles head-locked overlays and cubemap positioning with platform-specific rotation adjustments.
+    /// </summary>
     void ComputePoseAndScale(out OVRPose pose, out Vector3 scale, out bool overlay, out bool headLocked)
     {
         Camera headCamera = OVRManager.FindMainCamera();
@@ -1177,6 +1599,10 @@ public class OVROverlay : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Validates overlay parameters and computes final pose/scale for compositor submission.
+    /// Performs platform-specific validation and geometry sanity checks before rendering.
+    /// </summary>
     bool ComputeSubmit(out OVRPose pose, out Vector3 scale, out bool overlay, out bool headLocked)
     {
         ComputePoseAndScale(out pose, out scale, out overlay, out headLocked);
@@ -1214,6 +1640,10 @@ public class OVROverlay : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Updates OpenVR overlay display with texture, transforms and texture bounds.
+    /// Handles OpenVR-specific overlay configuration and rendering.
+    /// </summary>
     bool OpenVROverlayUpdate(Vector3 scale, OVRPose pose)
     {
         OVR.OpenVR.CVROverlay overlayRef = OVR.OpenVR.OpenVR.Overlay;
@@ -1271,22 +1701,45 @@ public class OVROverlay : MonoBehaviour
     private OVRManager.XRDevice constructedOverlayXRDevice;
     private bool xrDeviceConstructed = false;
 
+    /// <summary>
+    /// Handles overlay submission before camera rendering.
+    /// Called by Unity's camera pre-render callback for legacy rendering pipeline.
+    /// </summary>
     void HandlePreRender(Camera camera)
     {
         if (camera == OVRManager.FindMainCamera())
         {
-            isOverlayVisible = TrySubmitLayer();
+            isOverlayVisible = TrySubmitLayer() && !hidden;
         }
     }
 
+    /// <summary>
+    /// Handles overlay submission for Scriptable Render Pipeline cameras.
+    /// Called by Unity's SRP rendering callback to submit overlays before camera rendering.
+    /// </summary>
     void HandleBeginCameraRendering(ScriptableRenderContext context, Camera camera)
     {
         if (camera == OVRManager.FindMainCamera())
         {
-            isOverlayVisible = TrySubmitLayer();
+            isOverlayVisible = TrySubmitLayer() && !hidden;
         }
     }
 
+    /// <summary>
+    /// Attempts to submit the overlay layer to the VR compositor with validation and error handling.
+    /// Main rendering pipeline method that coordinates texture creation, validation, and compositor submission.
+    /// </summary>
+    /// <returns>True if overlay was successfully submitted and is visible to the user</returns>
+    /// <remarks>
+    /// <para>
+    /// <b>Submission Pipeline:</b> Validates overlay state, creates/updates textures, submits to compositor.
+    /// Handles frame timing, swap chain management, and backward compatibility with legacy renderers.
+    /// </para>
+    /// <para>
+    /// <b>Error Handling:</b> Returns false for invalid configurations, missing textures, or compositor errors.
+    /// Automatically cleans up resources when overlay becomes invalid or disabled.
+    /// </para>
+    /// </remarks>
     bool TrySubmitLayer()
     {
         if (!this || !enabled)

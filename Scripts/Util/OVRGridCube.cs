@@ -34,8 +34,9 @@ public class OVRGridCube : MonoBehaviour
     public KeyCode GridKey = KeyCode.G;
 
     private GameObject CubeGrid = null;
-
+#if ENABLE_LEGACY_INPUT_MANAGER
     private bool CubeGridOn = false;
+#endif
     private bool CubeSwitchColorOld = false;
     private bool CubeSwitchColor = false;
 

@@ -92,37 +92,36 @@ namespace Meta.XR.MetaWand.Editor
 
             if (ShouldLogIn())
             {
-                MetaWandEvent.Send(new MetaWandEvent.Data
+                new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
                 {
-                    Name = Constants.Telemetry.EventNamePageImpression,
-                    Entrypoint = Constants.Telemetry.EntrypointSignUp,
-                    IsEssential = true
-                });
+                    isEssential = OVRPlugin.Bool.True,
+                    entrypoint = Constants.Telemetry.EntrypointSignUp
+                }.SendMetaWandEvent();
             }
             else
             {
                 if (_sessionIsDirty)
-                    MetaWandEvent.Send(new MetaWandEvent.Data
+                {
+                    var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
                     {
-                        Name = Constants.Telemetry.EventNamePageImpression,
-                        Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                        Target = Constants.Telemetry.TargetLoadingResultsPanel,
-                        Metadata = new Dictionary<string, string>
-                        {
-                            { Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty }
-                        }
-                    });
+                        isEssential = OVRPlugin.Bool.False,
+                        entrypoint = Constants.Telemetry.EntrypointLoadState,
+                        target = Constants.Telemetry.TargetLoadingResultsPanel
+                    };
+                    unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty);
+                    unifiedEvent.SendMetaWandEvent();
+                }
                 else
-                    MetaWandEvent.Send(new MetaWandEvent.Data
+                {
+                    var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
                     {
-                        Name = Constants.Telemetry.EventNamePageImpression,
-                        Entrypoint = Constants.Telemetry.EntrypointNullState,
-                        Target = Constants.Telemetry.TargetStartPanel,
-                        Metadata = new Dictionary<string, string>
-                        {
-                            { Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty }
-                        }
-                    });
+                        isEssential = OVRPlugin.Bool.False,
+                        entrypoint = Constants.Telemetry.EntrypointNullState,
+                        target = Constants.Telemetry.TargetStartPanel
+                    };
+                    unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty);
+                    unifiedEvent.SendMetaWandEvent();
+                }
             }
         }
 
@@ -130,16 +129,14 @@ namespace Meta.XR.MetaWand.Editor
         {
             await AssetLibrarySession.SaveSession();
 
-            MetaWandEvent.Send(new MetaWandEvent.Data
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                Name = Constants.Telemetry.EventNameLinkClick,
-                Entrypoint = Constants.Telemetry.EntrypointLoadState,
-                Target = Constants.Telemetry.TargetDismissButton,
-                Metadata = new Dictionary<string, string>
-                {
-                    { Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty }
-                }
-            });
+                isEssential = OVRPlugin.Bool.False,
+                entrypoint = Constants.Telemetry.EntrypointLoadState,
+                target = Constants.Telemetry.TargetDismissButton
+            };
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty);
+            unifiedEvent.SendMetaWandEvent();
         }
 
         private void OnGUI()
@@ -217,17 +214,15 @@ namespace Meta.XR.MetaWand.Editor
 
             Utils.ToolDescriptorAssetLibrary.Usage.RecordUsage();
 
-            MetaWandEvent.Send(new MetaWandEvent.Data
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                Name = Constants.Telemetry.EventNameLinkClick,
-                Entrypoint = Constants.Telemetry.EntrypointNullState,
-                Target = Constants.Telemetry.TargetSearchButton,
-                Metadata = new Dictionary<string, string>
-                {
-                    { Constants.Telemetry.ParamInputText, SearchText },
-                    { Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty }
-                }
-            });
+                isEssential = OVRPlugin.Bool.False,
+                entrypoint = Constants.Telemetry.EntrypointNullState,
+                target = Constants.Telemetry.TargetSearchButton
+            };
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamInputText, SearchText);
+            unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty);
+            unifiedEvent.SendMetaWandEvent();
 
             InitAssetSearch(SearchText);
 
@@ -425,13 +420,12 @@ namespace Meta.XR.MetaWand.Editor
             Utils.DrawURLLabel("Learn more about Meta accounts", learnMetaAccountUrl,
                 Styles.GUIStyles.BodySmallCenterAlign, () =>
                 {
-                    MetaWandEvent.Send(new MetaWandEvent.Data
+                    new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
                     {
-                        Name = Constants.Telemetry.EventNameLinkClick,
-                        Entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
-                        Target = Constants.Telemetry.TargetLearnMoreButton,
-                        IsEssential = true
-                    });
+                        isEssential = OVRPlugin.Bool.True,
+                        entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
+                        target = Constants.Telemetry.TargetLearnMoreButton
+                    }.SendMetaWandEvent();
                 });
 
             if (_showLoginError)
@@ -456,13 +450,12 @@ namespace Meta.XR.MetaWand.Editor
         {
             if (MetaWandAuth.IsAuthenticating) return;
 
-            MetaWandEvent.Send(new MetaWandEvent.Data
+            new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                Name = Constants.Telemetry.EventNameLinkClick,
-                Entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
-                Target = Constants.Telemetry.TargetLoginButton,
-                IsEssential = true
-            });
+                isEssential = OVRPlugin.Bool.True,
+                entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
+                target = Constants.Telemetry.TargetLoginButton
+            }.SendMetaWandEvent();
 
             _showLoginError = false;
             var authTask = MetaWandAuth.Authenticate();
@@ -489,12 +482,11 @@ namespace Meta.XR.MetaWand.Editor
                 _showLoginError = true;
                 MetaWandAuthWindow.CloseWindow();
 
-                MetaWandEvent.Send(new MetaWandEvent.Data
+                new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLoginFailure)
                 {
-                    Name = Constants.Telemetry.EventNameLoginFailure,
-                    Entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
-                    IsEssential = true
-                });
+                    isEssential = OVRPlugin.Bool.True,
+                    entrypoint = Constants.Telemetry.EntrypointAuthToolbar
+                }.SendMetaWandEvent();
 
                 return;
             }
@@ -508,12 +500,11 @@ namespace Meta.XR.MetaWand.Editor
             };
             _userHasAccess.SetValue(access);
 
-            MetaWandEvent.Send(new MetaWandEvent.Data
+            new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLoginSuccess)
             {
-                Name = Constants.Telemetry.EventNameLoginSuccess,
-                Entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
-                IsEssential = true
-            });
+                isEssential = OVRPlugin.Bool.True,
+                entrypoint = Constants.Telemetry.EntrypointAuthToolbar
+            }.SendMetaWandEvent();
 
             MetaWandAuthWindow.CloseWindow();
         }

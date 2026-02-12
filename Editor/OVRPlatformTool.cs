@@ -23,8 +23,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -414,9 +416,9 @@ namespace Assets.Oculus.VR.Editor
 
             // Run OVR Lint Option
             EditorGUIUtility.labelWidth = DEFAULT_LABEL_WIDTH;
-            GUIContent RunOvrLintLabel = new GUIContent("Run OVR Lint (Recommended) [?]: ",
-                "Run OVR Lint tool to ensure project is optimized for performance and meets Oculus packaging requirement for publishing.");
-            OVRPlatformToolSettings.RunOvrLint = MakeToggleBox(RunOvrLintLabel, OVRPlatformToolSettings.RunOvrLint);
+            GUIContent RunProjectSetupToolLabel = new GUIContent("Run Project Setup Tool (Recommended) [?]: ",
+                "Run project setup tool to ensure project is optimized for performance and meets Oculus packaging requirement for publishing.");
+            OVRPlatformToolSettings.RunProjectSetupTool = MakeToggleBox(RunProjectSetupToolLabel, OVRPlatformToolSettings.RunProjectSetupTool);
 
             // Add an Upload button
             GUI.enabled = !activeProcess;
@@ -532,18 +534,24 @@ namespace Assets.Oculus.VR.Editor
         {
             OVRPlatformTool.log = string.Empty;
             SetDirtyOnGUIChange();
-            var lintCount = 0;
-            if (OVRPlatformToolSettings.RunOvrLint)
+            var fixCount = 0;
+            if (OVRPlatformToolSettings.RunProjectSetupTool)
             {
-                lintCount = OVRLint.RunCheck();
+                var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(targetPlatform == TargetPlatform.Quest ? BuildTarget.Android : BuildTarget.StandaloneWindows);
+                OVRProjectSetup.UpdateTasks(buildTargetGroup, onCompleted: processor =>
+                {
+                    fixCount = processor.Tasks.Count(task => !task.IsDone(buildTargetGroup)
+                                                              && !task.IsIgnored(buildTargetGroup)
+                                                              && task.Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required);
+                });
             }
 
-            if (lintCount != 0)
+            if (fixCount != 0)
             {
-                OVRPlatformTool.log += lintCount.ToString() + " lint suggestions are found. \n" +
-                                       "Please run Oculus\\Tools\\OVR Performance Lint Tool to review and fix lint errors. \n" +
-                                       "You can uncheck Run OVR Lint to bypass lint errors. \n";
-                OVRPlugin.SendEvent("oculus_platform_tool_lint", lintCount.ToString());
+                OVRPlatformTool.log += fixCount.ToString() + " project setup fix" + (fixCount == 1 ? " was" : "es were") + " found. \n" +
+                                       "Please run Meta\\Tools\\Project Setup Tool to review and fix project setup errors. \n" +
+                                       "You can uncheck 'Run Project Setup Tool' to bypass project setup errors. \n";
+                OVRPlugin.SendEvent("oculus_platform_tool_lint", fixCount.ToString());
             }
             else
             {
@@ -587,7 +595,8 @@ namespace Assets.Oculus.VR.Editor
             }
             else
             {
-                UnityEngine.Debug.LogError("Failed to generated upload command.");
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-platform-upload-command-generation-failed",
+                    "Failed to generated upload command.");
             }
         }
 
@@ -1272,7 +1281,7 @@ namespace Assets.Oculus.VR.Editor
 #endif
             {
                 var networkErrorMsg = "Failed to provision Oculus Platform Util\n";
-                UnityEngine.Debug.LogError(networkErrorMsg);
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-platform-util-provision-failed", networkErrorMsg);
                 OVRPlatformTool.log += networkErrorMsg;
             }
             else

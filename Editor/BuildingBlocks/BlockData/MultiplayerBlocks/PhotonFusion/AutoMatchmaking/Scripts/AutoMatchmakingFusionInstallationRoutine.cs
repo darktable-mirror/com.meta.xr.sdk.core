@@ -18,13 +18,19 @@
  * limitations under the License.
  */
 
+
+#if FUSION2 || FUSION_2_1
+#define FUSION_COMPATIBLE_VERSION
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.XR.BuildingBlocks.Editor;
 using Meta.XR.MultiplayerBlocks.Shared.Editor;
+using Meta.XR.Telemetry;
 using UnityEngine;
-#if FUSION_WEAVER && FUSION2
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
 using Fusion;
 #endif // FUSION_WEAVER && FUSION2
 
@@ -46,12 +52,13 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 #pragma warning restore CS1998
         {
 
-#if FUSION_WEAVER && FUSION2
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
             var autoMatchmakingGOsList = await base.InstallAsync(blockData, selectedGameObject);
             var networkRunnerComps = Utils.GetBlocksWithType<NetworkRunner>();
             if (networkRunnerComps.Count == 0 || autoMatchmakingGOsList.Count == 0)
             {
-                Debug.LogWarning("NetworkRunner block or AutoMatchmaking object cannot be found, aborting installing AutoMatchmaking block");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "auto-matchmaking-fusion-install-failed",
+                    "Network Runner Building Block or Auto Matchmaking Object could not be found.");
                 return new List<GameObject>();
             }
             autoMatchmakingGOsList[0].GetComponent<FusionBootstrap>().RunnerPrefab = networkRunnerComps[0];
@@ -59,7 +66,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
             return new List<GameObject>{ autoMatchmakingGOsList[0] };
 #else
             throw new InvalidOperationException("It's required to install Photon Fusion to use this component");
-#endif // FUSION_WEAVER && FUSION2
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
         }
     }
 }

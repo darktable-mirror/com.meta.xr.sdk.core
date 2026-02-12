@@ -27,4 +27,5 @@ abstract public class OVRCursor : MonoBehaviour
 {
     public abstract void SetCursorRay(Transform ray);
     public abstract void SetCursorStartDest(Vector3 start, Vector3 dest, Vector3 normal);
+    public virtual void SetCanvasCursorStartDest(Vector3 start, Vector3 worldDest, Vector3 worldNormal, Vector3 canvasDest, Vector3 canvasNormal) => SetCursorStartDest(start, worldDest, worldNormal);
 }

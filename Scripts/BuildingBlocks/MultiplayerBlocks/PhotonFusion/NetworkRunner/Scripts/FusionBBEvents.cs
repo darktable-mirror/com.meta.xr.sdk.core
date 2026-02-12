@@ -21,6 +21,7 @@
 using Fusion;
 using Fusion.Sockets;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -31,7 +32,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
     /// of all the exposed callbacks please see the <see cref="INetworkRunnerCallbacks"/> documentation page
     /// https://doc-api.photonengine.com/en/fusion/v2/interface_fusion_1_1_i_network_runner_callbacks.html.
     /// </summary>
-    public class FusionBBEvents : MonoBehaviour, INetworkRunnerCallbacks
+    public class FusionBBEvents : MonoBehaviour, INetworkRunnerCallbacks, IDisposable
     {
         // The INetworkRunnerCallbacks interface has to be placed in the root of the
         // network runner. This helper allows us to share these events
@@ -52,7 +53,14 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
         public static event Action<NetworkRunner, NetworkObject, PlayerRef> OnObjectExitAOI;
         public static event Action<NetworkRunner, NetworkObject, PlayerRef> OnObjectEnterAOI;
         public static event Action<NetworkRunner, NetDisconnectReason> OnDisconnectedFromServer;
+
+
+#if FUSION_2_1_OR_NEWER
+        private byte[] _sharedDataReceivedArray;
+        public static event Action<NetworkRunner, PlayerRef, ReliableKey, ReadOnlyMemory<byte>> OnReliableDataReceived;
+#else // FUSION_2_1_OR_NEWER
         public static event Action<NetworkRunner, PlayerRef, ReliableKey, ArraySegment<byte>> OnReliableDataReceived;
+#endif // FUSION_2_1_OR_NEWER
         public static event Action<NetworkRunner, PlayerRef, ReliableKey, float> OnReliableDataProgress;
 
         void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner)
@@ -145,16 +153,42 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
             OnDisconnectedFromServer?.Invoke(runner, reason);
         }
 
+#if FUSION_2_1_OR_NEWER
+        void INetworkRunnerCallbacks.OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key,
+            ReadOnlySpan<byte> data)
+        {
+            if (_sharedDataReceivedArray != null)
+            {
+                ArrayPool<byte>.Shared.Return(_sharedDataReceivedArray, clearArray: true);
+                _sharedDataReceivedArray = null;
+            }
+            _sharedDataReceivedArray = ArrayPool<byte>.Shared.Rent(data.Length);
+            data.CopyTo(_sharedDataReceivedArray);
+            OnReliableDataReceived?.Invoke(runner, player, key, _sharedDataReceivedArray.AsMemory(0, data.Length));
+        }
+#else // FUSION_2_1_OR_NEWER
         void INetworkRunnerCallbacks.OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key,
             ArraySegment<byte> data)
         {
             OnReliableDataReceived?.Invoke(runner, player, key, data);
         }
+#endif // FUSION_2_1_OR_NEWER
 
         void INetworkRunnerCallbacks.OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key,
             float progress)
         {
             OnReliableDataProgress?.Invoke(runner, player, key, progress);
+        }
+
+        public void Dispose()
+        {
+#if FUSION_2_1_OR_NEWER
+            if (_sharedDataReceivedArray == null)
+            {
+                return;
+            }
+            ArrayPool<byte>.Shared.Return(_sharedDataReceivedArray, clearArray: true);
+#endif // FUSION_2_1_OR_NEWER
         }
     }
 }

@@ -36,7 +36,9 @@ namespace Meta.XR.Editor.PlayCompanion
             {
                 Owner = null,
                 Uid = "PlayCompanion.Enabled",
-                Default = true
+                Default = true,
+                Label = "Shows Play Companion toolbar",
+                Tooltip = "Requires domain reload to refresh"
             };
 
         static Manager()
@@ -155,7 +157,7 @@ namespace Meta.XR.Editor.PlayCompanion
 
         private static void OnSettingsGUI()
         {
-            Enabled.DrawForGUI(Origins.UserSettings, null);
+            Enabled.DrawForGUI(Origins.UserSettings, null, UnityEditor.EditorUtility.RequestScriptReload);
         }
     }
 }

@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Meta.XR.Telemetry;
 
 namespace Meta.XR.Simulator.Editor
 {
@@ -63,7 +64,7 @@ namespace Meta.XR.Simulator.Editor
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError(ex);
+                IssueTracker.TrackError(IssueTracker.SDK.XRSim, "xr-simulator-get-process-by-pid-failed", ex);
                 procName = "-";
             }
 
@@ -93,8 +94,8 @@ namespace Meta.XR.Simulator.Editor
 #endif
             if (retCode != 0)
             {
-                UnityEngine.Debug.LogError(
-                                $"{path} {args} call failed, exitCode={retCode}, content={content}");
+                IssueTracker.TrackError(IssueTracker.SDK.XRSim, "xr-simulator-netstat-failed",
+                    $"{path} {args} call failed, exitCode={retCode}, content={content}");
                 return new List<ProcessPort>();
             }
 
@@ -137,7 +138,8 @@ namespace Meta.XR.Simulator.Editor
                     }
                     catch (Exception ex)
                     {
-                        UnityEngine.Debug.LogError(tokens[1] + " " + tokens[4] + " " + tokens[5]);
+                        IssueTracker.TrackError(IssueTracker.SDK.XRSim, "xr-simulator-parse-netstat-failed",
+                            $"Failed to parse netstat output tokens: {tokens[1]} {tokens[4]} {tokens[5]}");
                         throw ex;
                     }
                 }

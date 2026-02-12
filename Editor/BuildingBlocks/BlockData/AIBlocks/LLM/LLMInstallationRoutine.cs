@@ -33,7 +33,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         [Variant(
             Behavior = VariantAttribute.VariantBehavior.Parameter,
             Description = "Whether debugging tools should also be included.",
-            Default = true,
+            Default = false,
             Order = 110
         )]
         public bool includeDebuggingTools;

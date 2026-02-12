@@ -18,19 +18,24 @@
  * limitations under the License.
  */
 
+#if FUSION2 || FUSION_2_1
+#define FUSION_COMPATIBLE_VERSION
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Meta.XR.BuildingBlocks;
 using Meta.XR.BuildingBlocks.Editor;
 using Meta.XR.BuildingBlocks.Shared.Editor;
+using Meta.XR.Telemetry;
 using UnityEngine;
-#if FUSION_WEAVER && FUSION2
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
 using Fusion;
 #if PHOTON_FUSION_PHYSICS_ADDON_DEFINED
 using Fusion.Addons.Physics;
 #endif // PHOTON_FUSION_PHYSICS_ADDON_DEFINED
-#endif // FUSION_WEAVER && FUSION2
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
@@ -41,7 +46,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
 #pragma warning restore CS1998
         {
-#if FUSION_WEAVER && FUSION2
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
             var blocks = await base.InstallAsync(blockData, selectedGameObject);
             var visualGos = new List<GameObject>();
 
@@ -57,18 +62,22 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                 ConfigureComponents(block);
 #else
                 var networkTransform = block.AddComponent<NetworkTransform>();
+#if FUSION_2_1
+                networkTransform.ConfigFlags = NetworkTransform.NetworkTransformFlags.DisableSharedModeInterpolation; // otherwise object cannot be grabbed by ISDK
+#else // FUSION_2_1
                 networkTransform.DisableSharedModeInterpolation = true; // otherwise object cannot be grabbed by ISDK
+#endif // FUSION_2_1
 #endif // PHOTON_FUSION_PHYSICS_ADDON_DEFINED
             }
 
             return blocks;
 #else
             throw new InvalidOperationException("It's required to install the Photon Fusion package to use this component");
-#endif // FUSION_WEAVER && FUSION2
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
         }
 
 
-#if FUSION_WEAVER && FUSION2 && PHOTON_FUSION_PHYSICS_ADDON_DEFINED
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION && PHOTON_FUSION_PHYSICS_ADDON_DEFINED
         private void ConfigureComponents(GameObject destinationObject)
         {
             ExtractVisualsToChild(destinationObject, out var visualGo);
@@ -86,7 +95,8 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
             var visualComp = destinationObject.GetComponentInChildren<MeshFilter>();
             if (visualComp == null)
             {
-                Debug.LogWarning("Target object doesn't contain visual components like MeshFilter/MeshRenderer");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "networked-grabbable-object-missing-visual",
+                    "Target object doesn't contain visual components like MeshFilter/MeshRenderer");
                 visualGo = null;
                 return;
             }
@@ -129,9 +139,10 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                     {
                         field.SetValue(newComp, field.GetValue(comp));
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        // ignored
+                        IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "networked-grabbable-copy-field-failed",
+                            $"Failed to copy field '{field.Name}' from {type.Name}: {e.Message}", enableDebugLog: false);
                     }
                 }
             }
@@ -145,15 +156,16 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                     {
                         prop.SetValue(newComp, prop.GetValue(comp));
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        // ignored
+                        IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "networked-grabbable-copy-property-failed",
+                            $"Failed to copy property '{prop.Name}' from {type.Name}: {e.Message}", enableDebugLog: false);
                     }
                 }
             }
 
         }
-#endif // FUSION_WEAVER && FUSION2 && PHOTON_FUSION_PHYSICS_ADDON_DEFINED
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION && PHOTON_FUSION_PHYSICS_ADDON_DEFINED
 
         internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
         {

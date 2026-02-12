@@ -24,6 +24,8 @@ using System.Diagnostics;
 
 public static class OVREditorUtil
 {
+    public static readonly System.Version unityVersion = System.Version.Parse(new System.Text.RegularExpressions.Regex("[0-9]+.[0-9]+.[0-9]+").Match(Application.unityVersion).Value);
+
     private static GUIContent tooltipLink = new GUIContent("[?]");
 
     [Conditional("UNITY_EDITOR_WIN"), Conditional("UNITY_STANDALONE_WIN"), Conditional("UNITY_EDITOR_OSX"), Conditional("UNITY_STANDALONE_OSX"), Conditional("UNITY_ANDROID")]
@@ -133,6 +135,19 @@ public static class OVREditorUtil
     }
 
     [Conditional("UNITY_EDITOR_WIN"), Conditional("UNITY_STANDALONE_WIN"), Conditional("UNITY_EDITOR_OSX"), Conditional("UNITY_STANDALONE_OSX"), Conditional("UNITY_ANDROID")]
+    public static void SetupVector3Field(Object target, GUIContent name, ref Vector3 member, ref bool modified)
+    {
+        EditorGUI.BeginChangeCheck();
+        Vector3 value = EditorGUILayout.Vector3Field(name, member);
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Changed " + name.text);
+            member = value;
+            modified = true;
+        }
+    }
+
+    [Conditional("UNITY_EDITOR_WIN"), Conditional("UNITY_STANDALONE_WIN"), Conditional("UNITY_EDITOR_OSX"), Conditional("UNITY_STANDALONE_OSX"), Conditional("UNITY_ANDROID")]
     public static void SetupLayerMaskField(Object target, string name, ref LayerMask layerMask,
         string[] layerMaskOptions, ref bool modified)
     {
@@ -167,6 +182,52 @@ public static class OVREditorUtil
 
         EditorGUI.BeginChangeCheck();
         T value = (T)(object)EditorGUILayout.EnumPopup(name, member as System.Enum);
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Changed " + name.text);
+            member = value;
+            modified = true;
+        }
+
+        if (!string.IsNullOrEmpty(docLink))
+        {
+            DisplayDocLink(docLink);
+        }
+
+        GUILayout.EndHorizontal();
+    }
+
+    [Conditional("UNITY_EDITOR_WIN"), Conditional("UNITY_STANDALONE_WIN"), Conditional("UNITY_EDITOR_OSX"), Conditional("UNITY_STANDALONE_OSX"), Conditional("UNITY_ANDROID")]
+    public static void SetupEnumFlagsField<T>(Object target, GUIContent name, ref T member, ref bool modified,
+        string docLink = "") where T : struct
+    {
+        GUILayout.BeginHorizontal();
+
+        EditorGUI.BeginChangeCheck();
+        T value = (T)(object)EditorGUILayout.EnumFlagsField(name, member as System.Enum);
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(target, "Changed " + name.text);
+            member = value;
+            modified = true;
+        }
+
+        if (!string.IsNullOrEmpty(docLink))
+        {
+            DisplayDocLink(docLink);
+        }
+
+        GUILayout.EndHorizontal();
+    }
+
+    [Conditional("UNITY_EDITOR_WIN"), Conditional("UNITY_STANDALONE_WIN"), Conditional("UNITY_EDITOR_OSX"), Conditional("UNITY_STANDALONE_OSX"), Conditional("UNITY_ANDROID")]
+    public static void SetupMaskField(Object target, GUIContent name, ref int member, string[] options, ref bool modified,
+        string docLink = "")
+    {
+        GUILayout.BeginHorizontal();
+
+        EditorGUI.BeginChangeCheck();
+        int value = EditorGUILayout.MaskField(name, member, options);
         if (EditorGUI.EndChangeCheck())
         {
             Undo.RecordObject(target, "Changed " + name.text);

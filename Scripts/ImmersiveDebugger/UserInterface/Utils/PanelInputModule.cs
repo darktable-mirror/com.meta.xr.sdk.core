@@ -192,10 +192,21 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                     // And we're only interested in intersections on RectTransforms
                     if (m_Cursor && raycast.gameObject.TryGetComponent(out RectTransform graphicRect))
                     {
-                        // Set are gaze indicator with this world position and normal
-                        var worldPos = raycast.worldPosition;
-                        var normal = GetRectTransformNormal(graphicRect);
-                        m_Cursor.SetCursorStartDest(rayOrigin.position, worldPos, normal);
+                        // Set gaze indicator with this world position and normal
+                        if (TryGetOverlayCanvas(graphicRect, out var overlayCanvas))
+                        {
+                            overlayCanvas.GetWorldIntersectionFromCanvas(raycast.worldPosition, out var worldPos,
+                                out var worldNormal);
+                            Vector3 canvasPos = raycast.worldPosition;
+                            Vector3 canvasNormal = GetRectTransformNormal(graphicRect);
+                            m_Cursor.SetCanvasCursorStartDest(rayOrigin.position, worldPos, worldNormal, canvasPos, canvasNormal);
+                        }
+                        else
+                        {
+                            Vector3 worldPos = raycast.worldPosition;
+                            Vector3 normal = GetRectTransformNormal(graphicRect);
+                            m_Cursor.SetCursorStartDest(rayOrigin.position, worldPos, normal);
+                        }
                     }
                 }
             }

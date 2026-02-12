@@ -24,6 +24,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Meta.XR.Editor.RemoteContent;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -113,8 +114,10 @@ namespace Meta.XR.MetaWand.Editor.API
                 result.success = response.IsSuccessStatusCode;
                 return result;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                IssueTracker.TrackError(IssueTracker.SDK.MetaWand, "metawand-search-assets-failed",
+                    $"Failed to search assets with prompt '{searchText}': {e.Message}", enableDebugLog: false);
                 return new SearchAssetsResponse()
                 {
                     success = false,

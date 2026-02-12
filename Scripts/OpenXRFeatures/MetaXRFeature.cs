@@ -119,7 +119,6 @@ namespace Meta.XR
             "XR_META_hand_tracking_microgestures " +
             "XR_META_spatial_entity_persistence " +
             "XR_META_spatial_entity_discovery " +
-            "XR_META_spatial_entity_semantic_label " +
             "XR_META_spatial_entity_room_mesh " +
             "XR_META_boundary_visibility " +
             "XR_META_face_tracking_visemes " +
@@ -318,7 +317,8 @@ namespace Meta.XR
 
         protected override void OnProcessBootConfigExt(BuildReport report, BootConfigBuilder builder)
         {
-            builder.SetBootConfigValue("xr-meta-enabled", "1");
+            builder.SetBootConfigBoolean("xr-meta-enabled", true);
+            builder.SetBootConfigBoolean("xr-vulkan-extension-fragment-density-map-enabled", true);
         }
     }
 #endif

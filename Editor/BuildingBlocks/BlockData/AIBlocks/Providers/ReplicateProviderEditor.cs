@@ -24,10 +24,9 @@ using UnityEngine;
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
     [CustomEditor(typeof(ReplicateProvider))]
-    public class ReplicateProviderEditor : UnityEditor.Editor
+    public class ReplicateProviderEditor : AIProviderEditorBase
     {
-        // Auth & Model
-        private SerializedProperty _apiKey;
+        // Model
         private SerializedProperty _modelId;
         private SerializedProperty _supportsVision;
 
@@ -45,7 +44,8 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         private void OnEnable()
         {
-            _apiKey = serializedObject.FindProperty("apiKey");
+            InitializeCredentialStorage("apiKey");
+
             _modelId = serializedObject.FindProperty("modelId");
             _supportsVision = serializedObject.FindProperty("supportsVision");
             _overrideEndpointUrl = serializedObject.FindProperty("overrideEndpointUrl");
@@ -53,15 +53,42 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _maxInlineBytes = serializedObject.FindProperty("maxInlineBytes");
         }
 
+        private void OnDisable()
+        {
+            CleanupValidationRequest();
+        }
+
+        protected override void OnTestConnection()
+        {
+            var provider = target as ReplicateProvider;
+            if (provider is not IUsesCredential credentialProvider)
+            {
+                return;
+            }
+
+            var config = credentialProvider.GetTestConfig();
+            TestConnection(config.Endpoint, config.Model, config.ProviderId);
+        }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUILayout.LabelField("OpenAI Provider", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Replicate Provider", EditorStyles.boldLabel);
             EditorGUILayout.Space();
-            DrawApiKeyRow(_apiKey, "API Key", "https://replicate.com/account/api-tokens");
+
+            // Load cached validation result before drawing
+            var provider = target as ReplicateProvider;
+            if (provider is IUsesCredential credProvider)
+            {
+                var config = credProvider.GetTestConfig();
+                TryLoadCachedValidation(config.Endpoint, config.Model, config.ProviderId);
+            }
+
+            DrawApiKeyField("API Key", "https://replicate.com/account/api-tokens",
+                drawExtraTopRight: () => DrawTestConnectionButton());
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(_modelId, new GUIContent("Model ID",
-                    "Format: 'owner/model' or 'owner/model:version'. The endpoint is derived automatically unless overridden."));
+                "Format: 'owner/model' or 'owner/model:version'. The endpoint is derived automatically unless overridden."));
             EditorGUILayout.Space();
             EditorGUILayout.PropertyField(_supportsVision,
                 new GUIContent("Supports Vision", "Enable if the selected model accepts image input."));
@@ -103,24 +130,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
             EditorGUILayout.EndFoldoutHeaderGroup();
             serializedObject.ApplyModifiedProperties();
-        }
-
-        private static void DrawApiKeyRow(SerializedProperty apiProp, string label, string getKeyUrl, float buttonWidth = 95f)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.PropertyField(apiProp, new GUIContent(label));
-                GUILayout.Space(6);
-
-                var val = apiProp?.stringValue?.Trim();
-                if (string.IsNullOrEmpty(val) && !string.IsNullOrEmpty(getKeyUrl))
-                {
-                    if (GUILayout.Button(new GUIContent("Get Key…", $"Open {getKeyUrl}"), GUILayout.Width(buttonWidth)))
-                    {
-                        Application.OpenURL(getKeyUrl);
-                    }
-                }
-            }
         }
     }
 }

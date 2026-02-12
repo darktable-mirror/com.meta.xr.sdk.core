@@ -47,7 +47,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                                                AdditionalCanvasShaderChannels.TexCoord1 |
                                                AdditionalCanvasShaderChannels.Tangent;
             _overlayCanvas = GameObject.AddComponent<OverlayCanvas>();
-            _overlayCanvas.overlayType = OVROverlay.OverlayType.Overlay;
+            _overlayCanvas.compositionMode = OVROverlayCanvas.CompositionMode.DepthTested;
             _overlayCanvas.layer = RuntimeSettings.Instance.MeshRendererLayer;
             _overlayCanvas.shape = OVROverlayCanvas.CanvasShape.Curved;
             _overlayCanvas._dynamicResolution = false;

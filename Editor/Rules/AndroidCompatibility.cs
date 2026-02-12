@@ -51,16 +51,16 @@ namespace Meta.XR.Editor.Rules
                 fixMessage: $"PlayerSettings.Android.minSdkVersion = {MinimumAPILevel}"
             );
 
-            const AndroidSdkVersions targetAPILevel = (AndroidSdkVersions)32;
+            const AndroidSdkVersions targetAPILevel = (AndroidSdkVersions)34;
 
             // [Recommended] Android target level API
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Recommended,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
                 platform: BuildTargetGroup.Android,
-                conditionalValidity: _ => Enum.IsDefined(typeof(AndroidSdkVersions), "AndroidApiLevel32"),
+                conditionalValidity: _ => Enum.IsDefined(typeof(AndroidSdkVersions), "AndroidApiLevel34"),
                 isDone: _ => PlayerSettings.Android.targetSdkVersion == targetAPILevel,
-                message: $"Target API should be set to {ComputeTargetAPILevelNumericalName(targetAPILevel)} as to ensure the latest supported version",
+                message: $"Target API must be set to {ComputeTargetAPILevelNumericalName(targetAPILevel)} to upload to the Meta Quest Store.",
                 fix: _ => PlayerSettings.Android.targetSdkVersion = targetAPILevel,
                 fixMessage: $"PlayerSettings.Android.targetSdkVersion = {ComputeTargetAPILevelNumericalName(targetAPILevel)}"
             );

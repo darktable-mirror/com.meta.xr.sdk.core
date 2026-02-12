@@ -20,6 +20,7 @@
 
 using System;
 using System.Linq;
+using Meta.XR.Telemetry;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -67,7 +68,7 @@ internal static class OVRPassthroughHelper
             }
             else
             {
-                Debug.LogError(
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-passthrough-multiple-layers-no-underlay",
                     "There are multiple OVRPassthroughLayer instances in the scene, but none of them is an Underlay. Set one of the layer's Placement to Underlay.");
                 return false;
             }

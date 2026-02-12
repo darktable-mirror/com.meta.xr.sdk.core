@@ -23,10 +23,14 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System;
+using Meta.XR.Telemetry;
 using Oculus.VR.Editor;
 using UnityEngine.Serialization;
 using System.Linq;
 
+#if UNITY_EDITOR
+using Meta.XR.Editor.Callbacks;
+#endif // UNITY_EDITOR
 
 [System.Serializable]
 #if UNITY_EDITOR
@@ -69,13 +73,6 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         [Tooltip("Max: Fast Motion Mode (FMM). There is no functional difference between " +
                  "High and Max values as both track hands at high frequency.")]
         MAX = 2
-    }
-
-    public enum HandTrackingVersion
-    {
-        Default = 0,
-        V1 = 1,
-        V2 = 2
     }
 
     public enum AnchorSupport
@@ -124,7 +121,6 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool allowOptional3DofHeadTracking = false;
     public HandTrackingSupport handTrackingSupport = HandTrackingSupport.ControllersOnly;
     public HandTrackingFrequency handTrackingFrequency = HandTrackingFrequency.LOW;
-    public HandTrackingVersion handTrackingVersion = HandTrackingVersion.Default;
 
     [FormerlySerializedAs("spatialAnchorsSupport")]
     public AnchorSupport anchorSupport = AnchorSupport.Disabled;
@@ -152,6 +148,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool enableIL2CPPLTO = false;
 
     public bool removeGradleManifest = true;
+
+    public bool metaXrFeaturePromptDeclined = false;
 
     [System.Obsolete("Focus awareness is now required. The option will be deprecated.", false)]
     public bool focusAware = true;
@@ -228,16 +226,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     static OVRProjectConfig()
     {
         // BuildPipeline.isBuildingPlayer cannot be called in a static constructor
-        // Run Update once to call GetProjectConfig then remove delegate
-        EditorApplication.update += Update;
-    }
-
-    static void Update()
-    {
-        // Initialize the asset if it doesn't exist
-        GetOrCreateProjectConfig();
-        // Stop running Update
-        EditorApplication.update -= Update;
+        // Wait for asset database to be ready before attempting to load
+        InitializeOnLoad.Register(() => { GetOrCreateProjectConfig(); });
     }
 
     internal static string ComputeOculusProjectAssetPath(string assetName)
@@ -286,8 +276,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         }
         catch (System.Exception e)
         {
-            Debug.LogWarningFormat("Unable to load ProjectConfig from {0}, error {1}", oculusProjectConfigAssetPath,
-                e.Message);
+            IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-project-config-load-failed",
+                $"Unable to load ProjectConfig from {oculusProjectConfigAssetPath}, error {e.Message}");
         }
 
         // Initialize the asset only if a build is not currently running.
@@ -295,7 +285,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         {
             if (File.Exists(Path.GetFullPath(oculusProjectConfigAssetPath)))
             {
-                Debug.LogError("OVRProjectConfig exists but could not be loaded. Config values may not be available until restart.");
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-project-config-exists-but-not-loaded-v2",
+                    "OVRProjectConfig exists but could not be loaded. Config values may not be available until restart.");
             }
             else
             {
@@ -310,7 +301,6 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
                 projectConfig.allowOptional3DofHeadTracking = false;
                 projectConfig.handTrackingSupport = HandTrackingSupport.ControllersOnly;
                 projectConfig.handTrackingFrequency = HandTrackingFrequency.LOW;
-                projectConfig.handTrackingVersion = HandTrackingVersion.Default;
                 projectConfig.anchorSupport = AnchorSupport.Disabled;
                 projectConfig.sharedAnchorSupport = FeatureSupport.None;
                 projectConfig.trackedKeyboardSupport = TrackedKeyboardSupport.None;
@@ -331,6 +321,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
                 projectConfig.horizonOsSdkDisabled = false;
                 projectConfig.minHorizonOsSdkVersion = horizonOsSdkVersions[0];
                 projectConfig.targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
+                projectConfig.metaXrFeaturePromptDeclined = false;
                 AssetDatabase.CreateAsset(projectConfig, oculusProjectConfigAssetPath);
             }
         }
@@ -379,8 +370,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         string oculusProjectConfigAssetPath = ComputeOculusProjectConfigAssetPath();
         if (AssetDatabase.GetAssetPath(projectConfig) != oculusProjectConfigAssetPath)
         {
-            Debug.LogWarningFormat("The asset path of ProjectConfig is wrong. Expect {0}, get {1}",
-                oculusProjectConfigAssetPath, AssetDatabase.GetAssetPath(projectConfig));
+            IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-project-config-wrong-asset-path",
+                $"The asset path of ProjectConfig is wrong. Expect {oculusProjectConfigAssetPath}, get {AssetDatabase.GetAssetPath(projectConfig)}");
         }
 
         EditorUtility.SetDirty(projectConfig);

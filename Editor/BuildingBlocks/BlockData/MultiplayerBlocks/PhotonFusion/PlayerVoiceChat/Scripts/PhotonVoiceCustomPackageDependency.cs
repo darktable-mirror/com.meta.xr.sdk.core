@@ -45,7 +45,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                     return false;
 #endif // PHOTON_VOICE_DEFINED
                 },
-                InstallationInstructions = "You can find Photon Voice2 package from https://assetstore.unity.com/packages/tools/audio/photon-voice-2-130518"
+                InstallationInstructions = "You can find Photon Voice2 package from https://doc.photonengine.com/fusion/current/getting-started/sdk-download#voice"
             });
         }
     }

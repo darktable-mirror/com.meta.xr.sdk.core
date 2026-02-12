@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEditor;
 #if USING_XR_SDK_OCULUS
@@ -204,7 +205,8 @@ public class OVROverlayEditor : Editor
             int currentShapeIndex = Array.IndexOf(selectableShapeValues, overlay.currentOverlayShape);
             if (currentShapeIndex == -1)
             {
-                Debug.LogError("Invalid shape encountered");
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-overlay-invalid-shape",
+                    $"Invalid overlay shape encountered: {overlay.currentOverlayShape}. Resetting to default.");
                 currentShapeIndex = 0;
             }
 

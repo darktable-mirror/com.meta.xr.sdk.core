@@ -28,6 +28,8 @@ using Meta.XR.BuildingBlocks;
 using Meta.XR.BuildingBlocks.AIBlocks;
 using Meta.XR.BuildingBlocks.Editor;
 using Meta.XR.Editor.RemoteContent;
+using Meta.XR.Editor.Utils;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -44,12 +46,54 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
 
         static AIBlocksSetupRules()
         {
+            RegisterInferencePackageNamespaceTask();
 #if UNITY_INFERENCE_INSTALLED
             RegisterProviderProfileContentTask();
             RegisterUnityInferenceEngineNmsShaderTask();
 #endif // UNITY_INFERENCE_INSTALLED
             RegisterAgentProfileTask();
             RegisterProviderFieldValidationTask();
+            EditorApplication.projectChanged += () =>
+            {
+                ProviderAssetsCache.Clear();
+            };
+        }
+
+        private static void RegisterInferencePackageNamespaceTask()
+        {
+            OVRProjectSetup.AddTask(
+                conditionalValidity: _ => PackageList.IsPackageInstalled("com.unity.ai.inference") && IsUsingAIBlocks(),
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                group: OVRProjectSetup.TaskGroup.Features,
+                isDone: _ => IsUsingInferenceEngineNamespace(),
+                message: "The 'com.unity.ai.inference' package is installed but uses the old Sentis namespace. " +
+                         "Unity 6+ with AI Building Blocks requires the Inference Engine namespace. " +
+                         "In Package Manager, find the Sentis package, click 'Version History', and install the latest " +
+                         "'Recommended' version with the 'Inference Engine' package title.",
+                fix: _ => { UnityEditor.PackageManager.UI.Window.Open("com.unity.ai.inference@recommended"); },
+                fixMessage: "Open Package Manager to update to Inference Engine"
+            );
+        }
+
+        private static bool IsUsingAIBlocks()
+        {
+#if UNITY_INFERENCE_INSTALLED
+            var profiles = GetProviderProfiles();
+            return profiles?.OfType<UnityInferenceEngineProvider>().Any() ?? false;
+#else
+            return false;
+#endif
+        }
+
+        private static bool IsUsingInferenceEngineNamespace()
+        {
+            var package = PackageList.GetPackage("com.unity.ai.inference");
+            if (package == null)
+            {
+                return true;
+            }
+
+            return package.displayName == "Inference Engine";
         }
 
 #if UNITY_INFERENCE_INSTALLED
@@ -87,7 +131,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         {
             return GetProviderProfiles()
                 .OfType<UnityInferenceEngineProvider>()
-                .Where(profile => profile.nmsShader == null);
+                .Where(profile => profile.mode == UnityInferenceProviderMode.ObjectDetection && profile.nmsShader == null);
         }
 
         private static void AutoAssignNmsShaders()
@@ -147,7 +191,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Failed to create provider profile for tracking agent: {ex.Message}");
+                    IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "ai-provider-profile-creation-error", $"Failed to create provider profile for tracking agent: {ex.Message}");
                 }
             }
         }
@@ -234,20 +278,36 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
 
             var inferenceType = GetInferenceTypeFromSelection(selection);
             var modelProviderName = GetModelProviderNameFromSelection(selection);
+            var selectedProviderAssetName = GetProviderAssetPathFromSelection(selection);
 
             var selectedProviderProfile = RemoteProviderProfileRegistry
                 .AvailableProviderProfilesFor(bb.BlockId, inferenceType)
                 .First(provider => provider.GetDisplayName() == modelProviderName);
 
-            var providerProfile = CreateProviderForProviderName(selectedProviderProfile.provider);
-            FillProviderProfileData(providerProfile, selectedProviderProfile);
+            AIProviderBase providerProfile = null;
 
-            Directory.CreateDirectory(MetaXRDirectory);
-            var assetPath = GetUniqueProviderAssetPath(bb, selectedProviderProfile, MetaXRDirectory);
+            // Check if user selected an existing provider asset
+            if (!string.IsNullOrEmpty(selectedProviderAssetName) &&
+                selectedProviderAssetName != AIBlocksInstallationRoutine.CreateNewProviderOption)
+            {
+                // Find the provider asset by name
+                var existingProviders = FindExistingProviderAssets(bb.BlockId);
+                providerProfile = existingProviders.FirstOrDefault(p => p.name == selectedProviderAssetName);
+            }
 
-            AssetDatabase.CreateAsset(providerProfile, assetPath);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            // If no existing provider was found/selected, create a new one
+            if (providerProfile == null)
+            {
+                providerProfile = CreateProviderForProviderName(selectedProviderProfile.provider);
+                FillProviderProfileData(providerProfile, selectedProviderProfile);
+
+                Directory.CreateDirectory(MetaXRDirectory);
+                var assetPath = GetUniqueProviderAssetPath(bb, selectedProviderProfile, MetaXRDirectory);
+
+                AssetDatabase.CreateAsset(providerProfile, assetPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
 
             switch (agent)
             {
@@ -304,6 +364,146 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 .RawValue.ToString();
         }
 
+        private static string GetProviderAssetPathFromSelection(VariantsSelection selection)
+        {
+            var variant = selection.FirstOrDefault(v => v.MemberInfo.Name == nameof(AIBlocksInstallationRoutine.providerAssetSelection));
+            if (variant == null) return null;
+
+            var providerAssetName = variant.RawValue?.ToString();
+            if (string.IsNullOrEmpty(providerAssetName) || providerAssetName == AIBlocksInstallationRoutine.CreateNewProviderOption)
+            {
+                return null;
+            }
+
+            return providerAssetName;
+        }
+
+        private static readonly Dictionary<string, Type> BlockInterfaceCache = new();
+        private static readonly Dictionary<string, List<AIProviderBase>> ProviderAssetsCache = new();
+
+        public static List<AIProviderBase> FindExistingProviderAssets(string blockId)
+        {
+            if (ProviderAssetsCache.TryGetValue(blockId, out var cachedProviders))
+            {
+                return cachedProviders;
+            }
+
+            var compatibleProviders = new List<AIProviderBase>();
+
+            var requiredInterface = GetRequiredInterfaceForBlock(blockId);
+
+            if (requiredInterface == null)
+            {
+                ProviderAssetsCache[blockId] = compatibleProviders;
+                return compatibleProviders;
+            }
+
+            var allProviderTypes = new List<Type>
+            {
+                typeof(HuggingFaceProvider),
+                typeof(ElevenLabsProvider),
+                typeof(LlamaApiProvider),
+                typeof(OllamaProvider),
+                typeof(OpenAIProvider),
+                typeof(ReplicateProvider),
+#if UNITY_INFERENCE_INSTALLED
+                typeof(UnityInferenceEngineProvider)
+#endif
+            };
+
+            foreach (var providerType in allProviderTypes)
+            {
+                var guids = AssetDatabase.FindAssets($"t:{providerType.Name}");
+
+                foreach (var guid in guids)
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    var provider = AssetDatabase.LoadAssetAtPath(path, providerType) as AIProviderBase;
+
+                    if (provider != null && requiredInterface.IsInstanceOfType(provider))
+                    {
+                        compatibleProviders.Add(provider);
+                    }
+                }
+            }
+
+            ProviderAssetsCache[blockId] = compatibleProviders;
+
+            return compatibleProviders;
+        }
+
+        private static Type GetRequiredInterfaceForBlock(string blockId)
+        {
+            if (BlockInterfaceCache.TryGetValue(blockId, out var cachedInterface))
+            {
+                return cachedInterface;
+            }
+
+            var blockData = Meta.XR.BuildingBlocks.Editor.Utils.GetBlockData(blockId);
+
+            if (blockData == null)
+            {
+                return null;
+            }
+
+            var installationRoutines = InstallationRoutine.Registry.Values
+                .Where(routine => routine.TargetBlockDataId == blockId)
+                .ToList();
+
+            if (!installationRoutines.Any())
+            {
+                return null;
+            }
+
+            var prefab = installationRoutines.First().Prefab;
+
+            if (prefab == null)
+            {
+                return null;
+            }
+
+            var prefabPath = AssetDatabase.GetAssetPath(prefab);
+
+            if (string.IsNullOrEmpty(prefabPath))
+            {
+                return null;
+            }
+
+            var prefabContents = PrefabUtility.LoadPrefabContents(prefabPath);
+            Type interfaceType = null;
+
+            try
+            {
+                if (prefabContents.GetComponent<ObjectDetectionAgent>() != null)
+                {
+                    interfaceType = typeof(IObjectDetectionTask);
+                }
+                else if (prefabContents.GetComponent<LlmAgent>() != null)
+                {
+                    interfaceType = typeof(IChatTask);
+                }
+                else if (prefabContents.GetComponent<SpeechToTextAgent>() != null)
+                {
+                    interfaceType = typeof(ISpeechToTextTask);
+                }
+                else if (prefabContents.GetComponent<TextToSpeechAgent>() != null)
+                {
+                    interfaceType = typeof(ITextToSpeechTask);
+                }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabContents);
+            }
+
+            if (interfaceType != null)
+            {
+                BlockInterfaceCache[blockId] = interfaceType;
+            }
+
+            return interfaceType;
+        }
+
         private static string[] GetMissingProviderFields(AIProviderBase profile)
         {
             if (profile == null)
@@ -333,7 +533,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                     { nameof(OpenAIProvider.apiKey), nameof(OpenAIProvider.model), nameof(OpenAIProvider.apiRoot) },
                 ReplicateProvider => new[] { nameof(ReplicateProvider.apiKey), nameof(ReplicateProvider.modelId) },
 #if UNITY_INFERENCE_INSTALLED
-                UnityInferenceEngineProvider => new[]
+                UnityInferenceEngineProvider uie when uie.mode == UnityInferenceProviderMode.ObjectDetection => new[]
                 {
                     nameof(UnityInferenceEngineProvider.nmsShader)
                 },
@@ -364,16 +564,38 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
 #if UNITY_INFERENCE_INSTALLED
         private static IEnumerable<Task> GetFixTasksForProviderProfiles(UnityInferenceEngineProvider profiles)
         {
-            if (profiles.modelFile == null)
+            if (profiles.modelFile == null && profiles.modelContentId != 0)
             {
                 yield return FixMissingContent<ModelAsset>(profiles, profiles.modelContentId,
                     modelAsset => profiles.modelFile = modelAsset);
             }
 
-            if (profiles.classLabelsAsset == null)
+            if (profiles.classLabelsAsset == null && profiles.classLabelsContentId != 0)
             {
                 yield return FixMissingContent<TextAsset>(profiles, profiles.classLabelsContentId,
-                    modelAsset => profiles.classLabelsAsset = modelAsset);
+                    textAsset => profiles.classLabelsAsset = textAsset);
+            }
+
+            // On-device SLM tokenizer files
+            if (profiles.llmConfig != null)
+            {
+                if (profiles.llmConfig.vocabFile == null && profiles.llmConfig.vocabFileContentId != 0)
+                {
+                    yield return FixMissingContent<TextAsset>(profiles, profiles.llmConfig.vocabFileContentId,
+                        textAsset => profiles.llmConfig.vocabFile = textAsset);
+                }
+
+                if (profiles.llmConfig.mergesFile == null && profiles.llmConfig.mergesFileContentId != 0)
+                {
+                    yield return FixMissingContent<TextAsset>(profiles, profiles.llmConfig.mergesFileContentId,
+                        textAsset => profiles.llmConfig.mergesFile = textAsset);
+                }
+
+                if (profiles.llmConfig.tokenizerConfigFile == null && profiles.llmConfig.tokenizerConfigFileContentId != 0)
+                {
+                    yield return FixMissingContent<TextAsset>(profiles, profiles.llmConfig.tokenizerConfigFileContentId,
+                        textAsset => profiles.llmConfig.tokenizerConfigFile = textAsset);
+                }
             }
         }
 
@@ -404,7 +626,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
 
                 if (!result.IsSuccess)
                 {
-                    Debug.LogWarning($"Failed to download content with ID: {contentId}");
+                    IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "ai-content-download-failed", $"Failed to download content with ID: {contentId}");
                     return;
                 }
 
@@ -421,12 +643,12 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 }
                 else
                 {
-                    Debug.LogError($"Failed to load asset at path: {filePath}");
+                    IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "ai-content-asset-load-failed", $"Failed to load asset at path: {filePath}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Error fixing missing content for ID {contentId}: {ex.Message}");
+                IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, "ai-content-fix-error", $"Error fixing missing content for ID {contentId}: {ex.Message}");
             }
         }
 
@@ -460,7 +682,10 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
             return GetProviderProfiles()
                 .OfType<UnityInferenceEngineProvider>()
                 .Where(profile => (profile.modelFile == null && profile.modelContentId != 0)
-                                  || (profile.classLabelsAsset == null && profile.classLabelsContentId != 0));
+                                  || (profile.classLabelsAsset == null && profile.classLabelsContentId != 0)
+                                  || (profile.llmConfig != null && profile.llmConfig.vocabFile == null && profile.llmConfig.vocabFileContentId != 0)
+                                  || (profile.llmConfig != null && profile.llmConfig.mergesFile == null && profile.llmConfig.mergesFileContentId != 0)
+                                  || (profile.llmConfig != null && profile.llmConfig.tokenizerConfigFile == null && profile.llmConfig.tokenizerConfigFileContentId != 0));
         }
 #endif
 
@@ -530,6 +755,28 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                     if (Enum.TryParse(data.backendType, out BackendType backendType))
                     {
                         unityInferenceEngineProvider.backend = backendType;
+                    }
+
+                    // Set UnityInferenceEngine mode
+                    if (!string.IsNullOrEmpty(data.unityInferenceMode) &&
+                        Enum.TryParse(data.unityInferenceMode, out UnityInferenceProviderMode mode))
+                    {
+                        unityInferenceEngineProvider.mode = mode;
+                    }
+
+                    // Initialize and populate LLM tokenizer content IDs for Chat mode
+                    if (unityInferenceEngineProvider.mode == UnityInferenceProviderMode.Chat)
+                    {
+                        // Initialize llmConfig if it doesn't exist
+                        if (unityInferenceEngineProvider.llmConfig == null)
+                        {
+                            unityInferenceEngineProvider.llmConfig = new OnDeviceLlmConfig();
+                        }
+
+                        // Populate tokenizer content IDs
+                        unityInferenceEngineProvider.llmConfig.vocabFileContentId = data.vocabFileContentId;
+                        unityInferenceEngineProvider.llmConfig.mergesFileContentId = data.mergesFileContentId;
+                        unityInferenceEngineProvider.llmConfig.tokenizerConfigFileContentId = data.tokenizerConfigFileContentId;
                     }
 
                     break;

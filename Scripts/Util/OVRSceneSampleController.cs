@@ -52,9 +52,10 @@ public class OVRSceneSampleController : MonoBehaviour
     /// a specific camera to render it.
     /// </summary>
     public string layerName = "Default";
-
+#if ENABLE_LEGACY_INPUT_MANAGER
     // Vision mode on/off
     private bool visionMode = true;
+#endif
 
     // We want to hold onto GridCube, for potential sharing
     // of the menu RenderTarget

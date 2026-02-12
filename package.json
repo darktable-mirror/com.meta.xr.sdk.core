@@ -1,7 +1,7 @@
 {
   "name": "com.meta.xr.sdk.core",
   "displayName": "Meta XR Core SDK",
-  "version": "83.0.4",
+  "version": "85.0.0",
   "description": "Meta XR Core SDK package provides the latest features to create immersive experiences for Meta XR devices.",
   "samples": [
     {
@@ -18,6 +18,11 @@
       "displayName": "Tracking Origin Sample",
       "description": "A sample showing the various tracking origins for VR and MR",
       "path": "Samples~/TrackingOrigin"
+    },
+    {
+      "displayName": "Haptics Sample",
+      "description": "A sample demonstrating haptic playback through various APIs.",
+      "path": "Samples~/Haptics"
     }
   ],
   "unity": "2022.3",

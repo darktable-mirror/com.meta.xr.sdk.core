@@ -74,7 +74,7 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
 
     public int MaxSimultaneousCanvases = 4;
     public int CanvasRenderLayer = 31;
-    public int CanvasLayer = -1;
+    [FormerlySerializedAs("CanvasLayer")] public int HiddenCanvasLayer = -1;
 
 #if UNITY_EDITOR
     public static string GetOculusOverlayCanvasSettingsAssetPath()

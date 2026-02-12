@@ -384,7 +384,7 @@ public class OVRNetwork
                     }
 
                     readyReceiveDataEvent.Reset();
-                    int maximumDataSize = OVRSystemPerfMetrics.MaxBufferLength - receivedBufferDataSize;
+                    int maximumDataSize = OVRNetwork.MaxBufferLength - receivedBufferDataSize;
 
                     tcpClient.GetStream().BeginRead(receivedBuffers[receivedBufferIndex], receivedBufferDataSize,
                         maximumDataSize, new AsyncCallback(OnReadDataCallback), tcpClient.GetStream());

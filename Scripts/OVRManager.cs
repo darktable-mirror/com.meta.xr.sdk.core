@@ -279,6 +279,12 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
     }
 
+    /// <summary>
+    /// Gets a reference to the core metrics utility, to enable or disable the visibility of metrics
+    /// at runtime
+    /// </summary>
+    public static OVRMetricsCore metrics { get; private set; }
+
     protected IEnumerable<Camera> disabledCameras;
 
     /// <summary>
@@ -447,6 +453,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
 
 
+
     /// <summary>
     /// If true, a head-mounted display is connected and present.
     /// </summary>
@@ -545,12 +552,10 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
     }
 
-    [Header("Performance/Quality")]
     /// <summary>
     /// If true, both eyes will see the same image, rendered from the center eye pose, saving performance.
     /// </summary>
     [SerializeField]
-    [Tooltip("If true, both eyes will see the same image, rendered from the center eye pose, saving performance.")]
     private bool _monoscopic = false;
 
     public bool monoscopic
@@ -574,7 +579,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 
     [SerializeField]
-    [Tooltip("The sharpen filter of the eye buffer. This amplifies contrast and fine details.")]
     private OVRPlugin.LayerSharpenType _sharpenType = OVRPlugin.LayerSharpenType.None;
 
     /// <summary>
@@ -590,7 +594,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
     }
 
-    [HideInInspector]
     private OVRManager.ColorSpace _colorGamut = OVRManager.ColorSpace.P3;
 
     /// <summary>
@@ -615,9 +618,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 
     [SerializeField]
-    [HideInInspector]
-    [Tooltip("Enable Dynamic Resolution. This will allocate render buffers to maxDynamicResolutionScale size and " +
-             "will change the viewport to adapt performance. Mobile only.")]
     private bool _enableDynamicResolution = false;
     public bool enableDynamicResolution
     {
@@ -632,25 +632,19 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
     }
 
-    [HideInInspector]
     public float minDynamicResolutionScale = 1.0f;
-    [HideInInspector]
     public float maxDynamicResolutionScale = 1.0f;
 
     [SerializeField]
-    [HideInInspector]
     public float quest2MinDynamicResolutionScale = 0.7f;
 
     [SerializeField]
-    [HideInInspector]
     public float quest2MaxDynamicResolutionScale = 1.3f;
 
     [SerializeField]
-    [HideInInspector]
     public float quest3MinDynamicResolutionScale = 0.7f;
 
     [SerializeField]
-    [HideInInspector]
     public float quest3MaxDynamicResolutionScale = 1.6f;
 
     private const int _pixelStepPerFrame = 32;
@@ -670,18 +664,12 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// Min RenderScale the app can reach under adaptive resolution mode ( enableAdaptiveResolution = true );
     /// </summary>
-    [RangeAttribute(0.5f, 2.0f)]
-    [HideInInspector]
-    [Tooltip("Min RenderScale the app can reach under adaptive resolution mode")]
     [System.Obsolete("Deprecated. Use minDynamicRenderScale instead.", false)]
     public float minRenderScale = 0.7f;
 
     /// <summary>
     /// Max RenderScale the app can reach under adaptive resolution mode ( enableAdaptiveResolution = true );
     /// </summary>
-    [RangeAttribute(0.5f, 2.0f)]
-    [HideInInspector]
-    [Tooltip("Max RenderScale the app can reach under adaptive resolution mode")]
     [System.Obsolete("Deprecated. Use maxDynamicRenderScale instead.", false)]
     public float maxRenderScale = 1.0f;
 
@@ -689,7 +677,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// Set the relative offset rotation of head poses
     /// </summary>
     [SerializeField]
-    [Tooltip("Set the relative offset rotation of head poses")]
     private Vector3 _headPoseRelativeOffsetRotation;
 
     public Vector3 headPoseRelativeOffsetRotation
@@ -714,7 +701,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// Set the relative offset translation of head poses
     /// </summary>
     [SerializeField]
-    [Tooltip("Set the relative offset translation of head poses")]
     private Vector3 _headPoseRelativeOffsetTranslation;
 
     public Vector3 headPoseRelativeOffsetTranslation
@@ -738,34 +724,39 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 
     /// <summary>
-    /// The TCP listening port of Oculus Profiler Service, which will be activated in Debug/Developerment builds
-    /// When the app is running on editor or device, open "Meta/Tools/(Deprecated) Oculus Profiler Panel" to view the realtime system metrics
-    /// </summary>
-    public int profilerTcpPort = OVRSystemPerfMetrics.TcpListeningPort;
-
-    /// <summary>
     /// If premultipled alpha blending is used for the eye fov layer.
     /// Useful for changing how the eye fov layer blends with underlays.
     /// </summary>
-    [HideInInspector]
     public static bool eyeFovPremultipliedAlphaModeEnabled
     {
         get { return OVRPlugin.eyeFovPremultipliedAlphaModeEnabled; }
         set { OVRPlugin.eyeFovPremultipliedAlphaModeEnabled = value; }
     }
 
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
     /// <summary>
-    /// If true, the MixedRealityCapture properties will be displayed
+    /// Whether core metrics from Unity should be reported to OVRMetricsTool in release builds.
+    /// If enabled, all core metrics will be sent to OVRMetricsTool and recorded, and may be viewed
+    /// by any OVR Metrics Tool user. Metrics marked as visible will also be visible to all OMT users.
     /// </summary>
-    [HideInInspector]
-    public bool expandMixedRealityCapturePropertySheet = false;
+    public bool enableCoreMetricsRelease = false;
 
+    /// <summary>
+    /// Whether core metrics from Unity should be reported to OVRMetricsTool in development builds.
+    /// If enabled, all core metrics will be sent to OVRMetricsTool and recorded, however, only
+    /// metrics marked as visible will show on the overlay HUD.
+    /// </summary>
+    public bool enableCoreMetricsDevelopment = true;
+
+    /// <summary>
+    /// What core application metrics should be visible in OVRMetricsTool.
+    /// </summary>
+    public OVRMetricsCore.AppMetricsVisibilityConfiguration coreMetricVisibility = default;
+
+
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_ANDROID
     /// <summary>
     /// If true, Mixed Reality mode will be enabled
     /// </summary>
-    [HideInInspector, Tooltip("If true, Mixed Reality mode will be enabled. It would be always set to false when " +
-                              "the game is launching without editor")]
     public bool enableMixedReality = false;
 
     public enum CompositionMethod
@@ -779,37 +770,31 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// Composition method
     /// </summary>
-    [HideInInspector]
     public CompositionMethod compositionMethod = CompositionMethod.External;
 
     /// <summary>
     /// Extra hidden layers
     /// </summary>
-    [HideInInspector, Tooltip("Extra hidden layers")]
     public LayerMask extraHiddenLayers;
 
     /// <summary>
     /// Extra visible layers
     /// </summary>
-    [HideInInspector, Tooltip("Extra visible layers")]
     public LayerMask extraVisibleLayers;
 
     /// <summary>
     /// Whether MRC should dynamically update the culling mask using the Main Camera's culling mask, extraHiddenLayers, and extraVisibleLayers
     /// </summary>
-    [HideInInspector, Tooltip("Dynamic Culling Mask")]
     public bool dynamicCullingMask = true;
 
     /// <summary>
     /// The backdrop color will be used when rendering the foreground frames (on Rift). It only applies to External Composition.
     /// </summary>
-    [HideInInspector, Tooltip("Backdrop color for Rift (External Compositon)")]
     public Color externalCompositionBackdropColorRift = Color.green;
 
     /// <summary>
     /// The backdrop color will be used when rendering the foreground frames (on Quest). It only applies to External Composition.
     /// </summary>
-    [HideInInspector, Tooltip("Backdrop color for Quest (External Compositon)")]
     public Color externalCompositionBackdropColorQuest = Color.clear;
 
     /// <summary>
@@ -826,21 +811,18 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// (Deprecated) The camera device for direct composition
     /// </summary>
-    [HideInInspector, Tooltip("The camera device for direct composition")]
     [System.Obsolete("Deprecated", false)]
     public CameraDevice capturingCameraDevice = CameraDevice.WebCamera0;
 
     /// <summary>
     /// (Deprecated) Flip the camera frame horizontally
     /// </summary>
-    [HideInInspector, Tooltip("Flip the camera frame horizontally")]
     [System.Obsolete("Deprecated", false)]
     public bool flipCameraFrameHorizontally = false;
 
     /// <summary>
     /// (Deprecated) Flip the camera frame vertically
     /// </summary>
-    [HideInInspector, Tooltip("Flip the camera frame vertically")]
     [System.Obsolete("Deprecated", false)]
     public bool flipCameraFrameVertically = false;
 
@@ -848,8 +830,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// (Deprecated) Delay the touch controller pose by a short duration (0 to 0.5 second)
     /// to match the physical camera latency
     /// </summary>
-    [HideInInspector, Tooltip("Delay the touch controller pose by a short duration (0 to 0.5 second) " +
-                              "to match the physical camera latency")]
     [System.Obsolete("Deprecated", false)]
     public float handPoseStateLatency = 0.0f;
 
@@ -857,8 +837,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// (Deprecated) Delay the foreground / background image in the sandwich composition to match the physical camera latency.
     /// The maximum duration is sandwichCompositionBufferedFrames / {Game FPS}
     /// </summary>
-    [HideInInspector, Tooltip("Delay the foreground / background image in the sandwich composition to match " +
-                              "the physical camera latency. The maximum duration is sandwichCompositionBufferedFrames / {Game FPS}")]
     [System.Obsolete("Deprecated", false)]
     public float sandwichCompositionRenderLatency = 0.0f;
 
@@ -866,8 +844,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// (Deprecated) The number of frames are buffered in the SandWich composition.
     /// The more buffered frames, the more memory it would consume.
     /// </summary>
-    [HideInInspector, Tooltip("The number of frames are buffered in the SandWich composition. " +
-                              "The more buffered frames, the more memory it would consume.")]
     [System.Obsolete("Deprecated", false)]
     public int sandwichCompositionBufferedFrames = 8;
 
@@ -875,35 +851,30 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// (Deprecated) Chroma Key Color
     /// </summary>
-    [HideInInspector, Tooltip("Chroma Key Color")]
     [System.Obsolete("Deprecated", false)]
     public Color chromaKeyColor = Color.green;
 
     /// <summary>
     /// (Deprecated) Chroma Key Similarity
     /// </summary>
-    [HideInInspector, Tooltip("Chroma Key Similarity")]
     [System.Obsolete("Deprecated", false)]
     public float chromaKeySimilarity = 0.60f;
 
     /// <summary>
     /// (Deprecated) Chroma Key Smooth Range
     /// </summary>
-    [HideInInspector, Tooltip("Chroma Key Smooth Range")]
     [System.Obsolete("Deprecated", false)]
     public float chromaKeySmoothRange = 0.03f;
 
     /// <summary>
     /// (Deprecated) Chroma Key Spill Range
     /// </summary>
-    [HideInInspector, Tooltip("Chroma Key Spill Range")]
     [System.Obsolete("Deprecated", false)]
     public float chromaKeySpillRange = 0.06f;
 
     /// <summary>
     /// (Deprecated) Use dynamic lighting (Depth sensor required)
     /// </summary>
-    [HideInInspector, Tooltip("Use dynamic lighting (Depth sensor required)")]
     [System.Obsolete("Deprecated", false)]
     public bool useDynamicLighting = false;
 
@@ -919,15 +890,12 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// (Deprecated) The quality level of depth image. The lighting could be more smooth and accurate
     /// with high quality depth, but it would also be more costly in performance.
     /// </summary>
-    [HideInInspector, Tooltip("The quality level of depth image. The lighting could be more smooth and accurate " +
-                              "with high quality depth, but it would also be more costly in performance.")]
     [System.Obsolete("Deprecated", false)]
     public DepthQuality depthQuality = DepthQuality.Medium;
 
     /// <summary>
     /// (Deprecated) Smooth factor in dynamic lighting. Larger is smoother
     /// </summary>
-    [HideInInspector, Tooltip("Smooth factor in dynamic lighting. Larger is smoother")]
     [System.Obsolete("Deprecated", false)]
     public float dynamicLightingSmoothFactor = 8.0f;
 
@@ -935,8 +903,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// (Deprecated) The maximum depth variation across the edges.
     /// Make it smaller to smooth the lighting on the edges.
     /// </summary>
-    [HideInInspector, Tooltip("The maximum depth variation across the edges. " +
-                              "Make it smaller to smooth the lighting on the edges.")]
     [System.Obsolete("Deprecated", false)]
     public float dynamicLightingDepthVariationClampingValue = 0.001f;
 
@@ -953,29 +919,24 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// (Deprecated) Set the current type of the virtual green screen
     /// </summary>
-    [HideInInspector, Tooltip("Type of virutal green screen ")]
     [System.Obsolete("Deprecated", false)]
     public VirtualGreenScreenType virtualGreenScreenType = VirtualGreenScreenType.Off;
 
     /// <summary>
     /// (Deprecated) Top Y of virtual screen
     /// </summary>
-    [HideInInspector, Tooltip("Top Y of virtual green screen")]
     [System.Obsolete("Deprecated", false)]
     public float virtualGreenScreenTopY = 10.0f;
 
     /// <summary>
     /// (Deprecated) Bottom Y of virtual screen
     /// </summary>
-    [HideInInspector, Tooltip("Bottom Y of virtual green screen")]
     [System.Obsolete("Deprecated", false)]
     public float virtualGreenScreenBottomY = -10.0f;
 
     /// <summary>
     /// (Deprecated) When using a depth camera (e.g. ZED), whether to use the depth in virtual green screen culling.
     /// </summary>
-    [HideInInspector, Tooltip("When using a depth camera (e.g. ZED), " +
-                              "whether to use the depth in virtual green screen culling.")]
     [System.Obsolete("Deprecated", false)]
     public bool virtualGreenScreenApplyDepthCulling = false;
 
@@ -983,8 +944,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// (Deprecated) The tolerance value (in meter) when using the virtual green screen with a depth camera.
     /// Make it bigger if the foreground objects got culled incorrectly.
     /// </summary>
-    [HideInInspector, Tooltip("The tolerance value (in meter) when using the virtual green screen with " +
-                              "a depth camera. Make it bigger if the foreground objects got culled incorrectly.")]
     [System.Obsolete("Deprecated", false)]
     public float virtualGreenScreenDepthTolerance = 0.2f;
 
@@ -997,8 +956,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// (Quest-only) control if the mixed reality capture mode can be activated automatically through remote network connection.
     /// </summary>
-    [HideInInspector, Tooltip("(Quest-only) control if the mixed reality capture mode can be activated automatically " +
-                              "through remote network connection.")]
     public MrcActivationMode mrcActivationMode;
 
     public enum MrcCameraType
@@ -1228,15 +1185,12 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// Specify if simultaneous hands and controllers should be enabled.
     /// </summary>
-    [HideInInspector, Tooltip("Specify if simultaneous hands and controllers should be enabled. ")]
     public bool launchSimultaneousHandsControllersOnStartup = false;
 
     /// <summary>
     /// Specify if Insight Passthrough should be enabled.
     /// Passthrough layers can only be used if passthrough is enabled.
     /// </summary>
-    [HideInInspector, Tooltip("Specify if Insight Passthrough should be enabled. " +
-                              "Passthrough layers can only be used if passthrough is enabled.")]
     public bool isInsightPassthroughEnabled = false;
 
     /// <summary>
@@ -1251,7 +1205,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// to false when disabling the <see cref="OVRPassthroughLayer"/>, and set boundary
     /// suppression to true only when the layer is active).
     /// </remarks>
-    [HideInInspector] public bool shouldBoundaryVisibilityBeSuppressed = false;
+    public bool shouldBoundaryVisibilityBeSuppressed = false;
 
     /// <summary>
     /// The system state of the Guardian boundary visibility.
@@ -1268,34 +1222,34 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>`
     /// Specify if the app will request body tracking permission on startup.
     /// </summary>
-    [SerializeField, HideInInspector]
+    [SerializeField]
     internal bool requestBodyTrackingPermissionOnStartup;
 
     /// <summary>
     /// Specify if the app will request face tracking permission on startup.
     /// </summary>
-    [SerializeField, HideInInspector]
+    [SerializeField]
     internal bool requestFaceTrackingPermissionOnStartup;
 
     /// <summary>
     /// Specify if the app will request eye tracking permission on startup.
     /// </summary>
-    [SerializeField, HideInInspector]
+    [SerializeField]
     internal bool requestEyeTrackingPermissionOnStartup;
 
     /// <summary>
     /// Specify if the app will request scene permission on startup.
     /// </summary>
-    [SerializeField, HideInInspector]
+    [SerializeField]
     internal bool requestScenePermissionOnStartup;
 
     /// <summary>
     /// Specify if the app will request audio recording permission on startup.
     /// </summary>
-    [SerializeField, HideInInspector]
+    [SerializeField]
     internal bool requestRecordAudioPermissionOnStartup;
 
-    [SerializeField, HideInInspector]
+    [SerializeField]
     internal bool requestPassthroughCameraAccessPermissionOnStartup;
     #endregion
 
@@ -1834,13 +1788,24 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 #endif
 
     [SerializeField]
-    [Tooltip("Available only for devices that support local dimming. It improves visual quality with " +
-             "a better display contrast ratio, but at a minor GPU performance cost.")]
     private bool _localDimming = true;
 
-    [Header("Tracking")]
+    /// <summary>
+    /// Defines whether local dimming will be enabled on supported platforms
+    /// </summary>
+    public bool localDimming
+    {
+        get
+        {
+            return _localDimming;
+        }
+        set
+        {
+            _localDimming = value;
+        }
+    }
+
     [SerializeField]
-    [Tooltip("Defines the current tracking origin type.")]
     private OVRManager.TrackingOrigin _trackingOriginType = OVRManager.TrackingOrigin.FloorLevel;
 
     /// <summary>
@@ -1931,25 +1896,21 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// If true, head tracking will affect the position of each OVRCameraRig's cameras.
     /// </summary>
-    [Tooltip("If true, head tracking will affect the position of each OVRCameraRig's cameras.")]
     public bool usePositionTracking = true;
 
     /// <summary>
     /// If true, head tracking will affect the rotation of each OVRCameraRig's cameras.
     /// </summary>
-    [HideInInspector]
     public bool useRotationTracking = true;
 
     /// <summary>
     /// If true, the distance between the user's eyes will affect the position of each OVRCameraRig's cameras.
     /// </summary>
-    [Tooltip("If true, the distance between the user's eyes will affect the position of each OVRCameraRig's cameras.")]
     public bool useIPDInPositionTracking = true;
 
     /// <summary>
     /// If true, each scene load will cause the head pose to reset. This function only works on Rift.
     /// </summary>
-    [Tooltip("If true, each scene load will cause the head pose to reset. This function only works on Rift.")]
     public bool resetTrackerOnLoad = false;
 
     /// <summary>
@@ -1959,11 +1920,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// Set this to false if you have a locomotion system because resetting the view would effectively teleport
     /// the player to potentially invalid locations.
     /// </summary>
-    [Tooltip("If true, the Reset View in the universal menu will cause the pose to be reset in PC VR. This should " +
-             "generally be enabled for applications with a stationary position in the virtual world and will allow " +
-             "the View Reset command to place the person back to a predefined location (such as a cockpit seat). " +
-             "Set this to false if you have a locomotion system because resetting the view would effectively teleport " +
-             "the player to potentially invalid locations.")]
     public bool AllowRecenter = true;
 
     /// <summary>
@@ -1973,29 +1929,33 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// it also creates a slight disconnect between rendered and simulated controller poses.
     /// Visit online Oculus documentation to learn more.
     /// </summary>
-    [Tooltip("If true, rendered controller latency is reduced by several ms, as the left/right controllers will " +
-             "have their positions updated right before rendering.")]
     public bool LateControllerUpdate = true;
 
 #if UNITY_2020_3_OR_NEWER
-    [Tooltip("Late latching is a feature that can reduce rendered head/controller latency by a substantial amount. " +
-             "Before enabling, be sure to go over the documentation to ensure that the feature is used correctly. " +
-             "This feature must also be enabled through the Oculus XR Plugin settings.")]
+    /// <summary>
+    /// Late latching is a feature that can reduce rendered head/controller latency by a substantial amount.
+    /// Before enabling, be sure to go over the documentation to ensure that the feature is used correctly.
+    /// This feature must also be enabled through the Oculus XR Plugin settings.
+    /// </summary>
     public bool LateLatching = false;
 #endif
 
     private static OVRManager.ControllerDrivenHandPosesType _readOnlyControllerDrivenHandPosesType = OVRManager.ControllerDrivenHandPosesType.None;
-    [Tooltip("Defines if hand poses can be populated by controller data.")]
+
+    /// <summary>
+    /// Defines if hand poses can be populated by controller data.
+    /// </summary>
     public OVRManager.ControllerDrivenHandPosesType controllerDrivenHandPosesType = OVRManager.ControllerDrivenHandPosesType.None;
 
-    [Tooltip("Allows the application to use simultaneous hands and controllers functionality. This option must be enabled at build time.")]
+    /// <summary>
+    /// Allows the application to use simultaneous hands and controllers functionality. This option must be enabled at build time.
+    /// </summary>
     public bool SimultaneousHandsAndControllersEnabled = false;
 
     [SerializeField]
-    [HideInInspector]
     private bool _readOnlyWideMotionModeHandPosesEnabled = false;
-    [Tooltip("Defines if hand poses can leverage algorithms to retrieve hand poses outside of the normal tracking area.")]
     public bool wideMotionModeHandPosesEnabled = false;
+
 
 
     public bool IsSimultaneousHandsAndControllersSupported
@@ -2171,7 +2131,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     public static int MaxDynamicResolutionVersion = 1;
     [SerializeField]
-    [HideInInspector]
     public int dynamicResolutionVersion = 0;
 
     private void Reset()
@@ -2345,25 +2304,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (resetTrackerOnLoad)
             display.RecenterPose();
 
-        if (Debug.isDebugBuild)
-        {
-            // Activate system metrics collection in Debug/Developerment build
-            if (GetComponent<OVRSystemPerfMetrics.OVRSystemPerfMetricsTcpServer>() == null)
-            {
-                gameObject.AddComponent<OVRSystemPerfMetrics.OVRSystemPerfMetricsTcpServer>();
-            }
-
-            OVRSystemPerfMetrics.OVRSystemPerfMetricsTcpServer perfTcpServer =
-                GetComponent<OVRSystemPerfMetrics.OVRSystemPerfMetricsTcpServer>();
-            perfTcpServer.listeningPort = profilerTcpPort;
-            if (!perfTcpServer.enabled)
-            {
-                perfTcpServer.enabled = true;
-            }
 #if !UNITY_EDITOR
-            OVRPlugin.SetDeveloperMode(OVRPlugin.Bool.True);
+        OVRPlugin.SetDeveloperMode(Debug.isDebugBuild ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
 #endif
-        }
 
         // Refresh the client color space
         OVRManager.ColorSpace clientColorSpace = runtimeSettings.colorSpace;
@@ -2472,6 +2415,16 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 #endif
 
+        bool isDevelopment = false;
+#if DEVELOPMENT_BUILD
+        isDevelopment = true;
+#endif
+        bool enableMetrics = isDevelopment ? enableCoreMetricsDevelopment : enableCoreMetricsRelease;
+        if (enableMetrics)
+        {
+            metrics.EnableMetrics(coreMetricVisibility);
+        }
+
         OVRManagerinitialized = true;
     }
 
@@ -2522,6 +2475,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (OVRPlugin.initialized)
             InitOVRManager();
 #endif
+
     }
 
 #if UNITY_EDITOR
@@ -2612,6 +2566,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             tracker = new OVRTracker();
         if (boundary == null)
             boundary = new OVRBoundary();
+        if (metrics == null)
+            metrics = new OVRMetricsCore();
 
         SetCurrentXRDevice();
     }
@@ -2716,6 +2672,13 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
                 float scalingFactorX = targetWidth / (float)Settings.eyeTextureWidth;
                 float scalingFactorY = targetHeight / (float)Settings.eyeTextureHeight;
+
+                if (XRSettings.eyeTextureWidth == 0 || XRSettings.eyeTextureHeight == 0)
+                {
+                    // When app pause and resume, eyeTextureWidth might not be initialized.
+                    scalingFactorX = 1.0f;
+                    scalingFactorY = 1.0f;
+                }
 
                 // Scaling factor is a single floating point value.
                 // Try to determine which scaling factor produces the recommended resolution.
@@ -3025,7 +2988,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
 
 
+
         OVRInput.Update();
+        metrics.Update();
 
         UpdateHMDEvents();
 
@@ -3385,16 +3350,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
         lastFoundMainCamera = new WeakReference<Camera>(result);
         return result;
-    }
-
-    private void OnDisable()
-    {
-        OVRSystemPerfMetrics.OVRSystemPerfMetricsTcpServer perfTcpServer =
-            GetComponent<OVRSystemPerfMetrics.OVRSystemPerfMetricsTcpServer>();
-        if (perfTcpServer != null)
-        {
-            perfTcpServer.enabled = false;
-        }
     }
 
     private void LateUpdate()

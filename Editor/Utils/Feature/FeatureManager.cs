@@ -104,10 +104,6 @@ namespace Meta.XR.Editor.Features
             builder.Append(projectConfig.handTrackingFrequency);
             builder.Append(",");
 
-            builder.Append("HandTrackingVersion:");
-            builder.Append(projectConfig.handTrackingVersion);
-            builder.Append(",");
-
             builder.Append("AnchorSupport:");
             builder.Append(projectConfig.anchorSupport);
             builder.Append(",");

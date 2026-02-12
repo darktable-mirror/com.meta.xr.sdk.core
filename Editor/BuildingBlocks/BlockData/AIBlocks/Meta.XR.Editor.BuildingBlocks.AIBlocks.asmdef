@@ -10,7 +10,8 @@
         "Meta.XR.Editor.UserInterface",
         "Meta.XR.EnvironmentDepth",
         "Meta.XR.ImmersiveDebugger",
-        "Meta.XR.BuildingBlocks.AIBlocks"
+        "Meta.XR.BuildingBlocks.AIBlocks",
+        "Oculus.VR"
     ],
     "includePlatforms": [
         "Editor"

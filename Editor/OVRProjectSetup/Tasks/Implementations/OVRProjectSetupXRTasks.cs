@@ -20,6 +20,7 @@
 
 using System.Linq;
 using Meta.XR.Editor.Utils;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -117,6 +118,12 @@ internal static class OVRProjectSetupXRTasks
     internal static void AddLoader<T>(BuildTargetGroup buildTargetGroup)
         where T : XRLoaderHelper
     {
+        // Check if loader is already active to avoid false-positive errors
+        if (IsActiveLoader<T>(buildTargetGroup))
+        {
+            return;
+        }
+
         var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, true);
         if (settings == null)
         {
@@ -125,9 +132,16 @@ internal static class OVRProjectSetupXRTasks
 
         var loader = GetLoader<T>(buildTargetGroup);
 
-        if(!settings.Manager.TryAddLoader(loader))
+        if (!settings.Manager.TryAddLoader(loader))
         {
-            Debug.LogError("Failed to add loader, try doing it manually.");
+            // Double-check if it's actually missing before logging error
+            // TryAddLoader can return false if loader was added by another process
+            if (!IsActiveLoader<T>(buildTargetGroup))
+            {
+                IssueTracker.TrackError(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-add-loader-failed-v2",
+                    "Failed to add XR loader, try doing it manually.", enableDebugLog: false);
+                Debug.LogError("Failed to add loader, try doing it manually.");
+            }
         }
         EditorUtility.SetDirty(settings);
     }
@@ -145,6 +159,8 @@ internal static class OVRProjectSetupXRTasks
 
         if (!settings.Manager.TryRemoveLoader(loader))
         {
+            IssueTracker.TrackError(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-remove-loader-failed",
+                "Failed to remove XR loader, try doing it manually.", enableDebugLog: false);
             Debug.LogError("Failed to remove loader, try doing it manually.");
         }
         EditorUtility.SetDirty(settings);

@@ -57,7 +57,18 @@ namespace Meta.XR
             if (featureSetAndroid != null && !featureSetAndroid.isEnabled)
                 needEnable = true;
 
-            bool promptDeclined = EditorPrefs.GetBool("meta_xr_feature_declined", false);
+            // First check if OVRProjectConfig has said we declined the prompt before
+            var config = OVRProjectConfig.CachedProjectConfig;
+            bool promptDeclined = config.metaXrFeaturePromptDeclined;
+
+            // If we don't have a signal from OVRProjectConfig, check old path which was an editor pref setting and update project config to match
+            if (!promptDeclined)
+            {
+                promptDeclined = EditorPrefs.GetBool("meta_xr_feature_declined", false);
+                config.metaXrFeaturePromptDeclined = promptDeclined;
+                OVRProjectConfig.CommitProjectConfig(config);
+            }
+
             if (promptDeclined)
                 return;
 
@@ -74,6 +85,8 @@ namespace Meta.XR
                         "You can enable Meta XR Feature Set in XR Plugin-in Management / OpenXR for using Meta Quest Features. Please enable it in both Standalone and Android settings.",
                         "Ok");
                     EditorPrefs.SetBool("meta_xr_feature_declined", true);
+                    config.metaXrFeaturePromptDeclined = true;
+                    OVRProjectConfig.CommitProjectConfig(config);
                 }
             }
 

@@ -18,7 +18,8 @@
         "Meta.XR.MultiplayerBlocks.Shared.Editor",
         "Meta.XR.MultiplayerBlocks.Shared",
         "Meta.XR.Movement.Networking.Editor",
-        "Meta.XR.Movement.Networking.Fusion"
+        "Meta.XR.Movement.Networking.Fusion",
+        "Photon.Realtime"
     ],
     "includePlatforms": [
         "Editor"

@@ -52,8 +52,12 @@ namespace Meta.XR.Editor.UserInterface
 
             // Border/Background
             var borderRect = Expand(rect, UIStyles.Constants.ImageBorderWidth);
-            GUI.DrawTexture(borderRect, _style.normal.background, ScaleMode.StretchToFill, false, 1, GUI.color,
-                Vector4.zero, UIStyles.Constants.RoundedBorderVectors);
+            var background = _style.normal.background;
+            if (background != null)
+            {
+                GUI.DrawTexture(borderRect, background, ScaleMode.StretchToFill, false, 1, GUI.color,
+                    Vector4.zero, UIStyles.Constants.RoundedBorderVectors);
+            }
 
             // Actual Image
             GUI.DrawTexture(rect, _texture, ScaleMode.ScaleAndCrop, false, ratio, GUI.color,

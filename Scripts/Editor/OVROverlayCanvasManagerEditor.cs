@@ -38,13 +38,25 @@ public class OVROverlayCanvasManagerEditor : Editor
         var green = new GUIStyle(GUI.skin.label);
         green.normal.textColor = Color.green;
 
+        {
+
+            using var horizontalScope = new EditorGUILayout.HorizontalScope();
+            using var disabledScope = new EditorGUI.DisabledScope(true);
+            EditorGUILayout.LabelField("OVR Overlay Canvas", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Priority", EditorStyles.boldLabel, GUILayout.MaxWidth(100));
+            EditorGUILayout.LabelField("Distance", EditorStyles.boldLabel, GUILayout.MaxWidth(100));
+            EditorGUILayout.LabelField("Sort", EditorStyles.boldLabel, GUILayout.MaxWidth(80));
+        }
+
         foreach (var canvas in OVROverlayCanvasManager.Instance?.Canvases)
         {
             using var horizontalScope = new EditorGUILayout.HorizontalScope();
             using var disabledScope = new EditorGUI.DisabledScope(true);
 
             _ = EditorGUILayout.ObjectField(canvas, typeof(OVROverlayCanvas), true);
-            EditorGUILayout.LabelField(canvas.GetViewPriorityScore()?.ToString() ?? "N/A", canvas.IsCanvasPriority ? green : red);
+            EditorGUILayout.LabelField(canvas.GetViewPriorityScore()?.ToString() ?? "N/A", canvas.IsCanvasPriority ? green : red, GUILayout.MaxWidth(100));
+            EditorGUILayout.LabelField(canvas.GetViewDistance()?.ToString() ?? "N/A", GUILayout.MaxWidth(100));
+            EditorGUILayout.LabelField(canvas.CanvasDepth.ToString(), GUILayout.MaxWidth(80));
         }
     }
 }

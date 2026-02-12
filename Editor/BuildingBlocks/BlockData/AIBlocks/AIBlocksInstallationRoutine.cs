@@ -22,30 +22,55 @@ using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.BuildingBlocks.Editor;
 using Meta.XR.BuildingBlocks.AIBlocks;
+using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
 {
     internal class AIBlocksInstallationRoutine : InstallationRoutine
     {
+        internal const string CreateNewProviderOption = "Create a new provider asset";
+        private static readonly Dictionary<string, List<string>> ProviderOptionsCache = new();
+
+        [SerializeField]
+        [Variant(
+            Behavior = VariantAttribute.VariantBehavior.Parameter,
+            OptionsMethod = nameof(GetAvailableProviderAssets),
+            Description =
+                "Choose an existing provider asset or import a default one. Provider assets that come from a provider " +
+                "supporting the task at hand are listed here as 'existing'. This does not mean that every " +
+                "asset listed here is suitable for this block.",
+            Default = CreateNewProviderOption,
+            Condition = nameof(HasExistingProviders),
+            Order = 0
+        )]
+        public string providerAssetSelection;
+
         [SerializeField]
         [Variant(
             Behavior = VariantAttribute.VariantBehavior.Parameter,
             Description = "Select where the ML model is ran (on device, cloud, etc).",
             OptionsMethod = nameof(GetAvailableInferenceTypes),
             Default = InferenceType.OnDevice,
-            Order = 0
+            DisableCondition = nameof(ShouldEnableModelProvider),
+            Order = 1
         )]
-        public InferenceType inferenceType;
 
+        public InferenceType inferenceType;
         [SerializeField]
         [Variant(
             Behavior = VariantAttribute.VariantBehavior.Parameter,
             OptionsMethod = nameof(GetAvailableProviders),
-            Description = "Select model provider to use for inference.",
-            Order = 1
+            Description = "Select a model provider to use for inference.",
+            DisableCondition = nameof(ShouldEnableModelProvider),
+            Order = 2
         )]
         public string modelProvider;
+
+        static AIBlocksInstallationRoutine()
+        {
+            EditorApplication.projectChanged += () => ProviderOptionsCache.Clear();
+        }
 
         private IEnumerable<string> GetAvailableProviders()
         {
@@ -60,13 +85,57 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 .Select(provider => provider.GetDisplayName());
         }
 
-        private IEnumerable<InferenceType> GetAvailableInferenceTypes() =>
-            RemoteProviderProfileRegistry.AvailableInferenceTypesForBlockId(TargetBlockDataId);
+        private IEnumerable<InferenceType> GetAvailableInferenceTypes()
+        {
+            return RemoteProviderProfileRegistry.AvailableInferenceTypesForBlockId(TargetBlockDataId);
+        }
+
+        public bool ShouldEnableModelProvider()
+        {
+            return string.IsNullOrEmpty(providerAssetSelection) || providerAssetSelection == CreateNewProviderOption;
+        }
+
+        public bool HasExistingProviders()
+        {
+            if (string.IsNullOrEmpty(TargetBlockDataId))
+            {
+                return false;
+            }
+
+            var options = GetAvailableProviderAssets() as List<string> ?? GetAvailableProviderAssets().ToList();
+
+            if (!string.IsNullOrEmpty(providerAssetSelection) && !options.Contains(providerAssetSelection))
+            {
+                providerAssetSelection = CreateNewProviderOption;
+            }
+
+            return options.Count > 1;
+        }
+
+        private IEnumerable<string> GetAvailableProviderAssets()
+        {
+            if (ProviderOptionsCache.TryGetValue(TargetBlockDataId, out var cachedOptions))
+            {
+                return cachedOptions;
+            }
+
+            var existingProviders = AIBlocksSetupRules.FindExistingProviderAssets(TargetBlockDataId);
+            var options = new List<string> { CreateNewProviderOption };
+
+            foreach (var provider in existingProviders)
+            {
+                options.Add(provider.name);
+            }
+
+            ProviderOptionsCache[TargetBlockDataId] = options;
+
+            return options;
+        }
 
         protected static void RemoveComponent<T>(GameObject @object) where T : Component
         {
             var component = @object.GetComponent<T>();
-            if (component != null)
+            if (component)
             {
                 DestroyImmediate(component);
             }

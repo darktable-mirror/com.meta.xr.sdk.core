@@ -51,33 +51,42 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
             CustomSpawnDict[customPrefabID] = func;
         }
 
+#if FUSION_2_1_OR_NEWER
+        public override NetworkObjectAcquireResult AcquireInstance(NetworkRunner runner, in NetworkObjectAcquireContext context, out NetworkObject result)
+        {
+            if (!context.TypeId.IsPrefab ||
+                !CustomSpawnDict.TryGetValue(context.TypeId.AsPrefabId.RawValue, out var spawnFunc))
+            {
+                return base.AcquireInstance(runner, context, out result);
+            }
+#else
         public override NetworkObjectAcquireResult AcquirePrefabInstance(NetworkRunner runner, in NetworkPrefabAcquireContext context, out NetworkObject result)
         {
-            if (CustomSpawnDict.TryGetValue(context.PrefabId.RawValue, out var spawnFunc))
+            if (!CustomSpawnDict.TryGetValue(context.PrefabId.RawValue, out var spawnFunc))
             {
-                var spawnedGameObject = spawnFunc();
-                var networkObject = spawnedGameObject.GetComponent<NetworkObject>();
-                if (networkObject == null)
-                {
-                    networkObject = spawnedGameObject.AddComponent<NetworkObject>();
-                }
-
-                Baker.Bake(spawnedGameObject);
-
-                if (context.DontDestroyOnLoad)
-                {
-                    runner.MakeDontDestroyOnLoad(spawnedGameObject);
-                }
-                else
-                {
-                    runner.MoveToRunnerScene(spawnedGameObject);
-                }
-
-                result = networkObject;
-                return NetworkObjectAcquireResult.Success;
+                return base.AcquirePrefabInstance(runner, context, out result);
+            }
+#endif // FUSION_2_1_OR_NEWER
+            var spawnedGameObject = spawnFunc();
+            var networkObject = spawnedGameObject.GetComponent<NetworkObject>();
+            if (networkObject == null)
+            {
+                networkObject = spawnedGameObject.AddComponent<NetworkObject>();
             }
 
-            return base.AcquirePrefabInstance(runner, context, out result);
+            Baker.Bake(spawnedGameObject);
+
+            if (context.DontDestroyOnLoad)
+            {
+                runner.MakeDontDestroyOnLoad(spawnedGameObject);
+            }
+            else
+            {
+                runner.MoveToRunnerScene(spawnedGameObject);
+            }
+
+            result = networkObject;
+            return NetworkObjectAcquireResult.Success;
         }
     }
 }

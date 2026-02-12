@@ -28,38 +28,64 @@ using System;
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
     [CreateAssetMenu(menuName = "Meta/AI/Provider Assets/Cloud/Replicate Provider")]
-    public sealed class ReplicateProvider : AIProviderBase, IChatTask
+    public sealed class ReplicateProvider : AIProviderBase, IUsesCredential, IChatTask
     {
         [Tooltip("Your Replicate API token (r8_...).")]
         [SerializeField] internal string apiKey;
+
+        [Tooltip("If ON, use this asset's API key instead of CredentialStorage.")]
+        [SerializeField] internal bool overrideApiKey;
 
         [Tooltip("Model identifier: 'owner/model' or 'owner/model:version'.")]
         [SerializeField] internal string modelId = "owner/model:version";
 
         [Tooltip("Enable if the selected model supports image input.")]
         [SerializeField] internal bool supportsVision;
+
+        /// <summary>
+        /// Indicates whether this provider prepares single-image inputs for supported Replicate models.
+        /// Disable for text-only models or when the selected model ignores images.
+        /// </summary>
+        /// <remarks>
+        /// See <see cref="IChatTask"/> and the model card on Replicate for vision capabilities.
+        /// </remarks>
         public bool SupportsVision => supportsVision;
 
         [Tooltip("If set, this full URL will be used instead of the default Replicate endpoint.\n" +
                  "Example: https://my-proxy.example.com/v1/models/owner/model/predictions")]
-        [SerializeField] private string overrideEndpointUrl;
+        [SerializeField] internal string overrideEndpointUrl;
 
         [Tooltip("Max bytes allowed when inlining images from URLs or bytes.")]
         [SerializeField] internal int maxInlineBytes = 12 * 1024 * 1024;
 
         protected override InferenceType DefaultSupportedTypes => InferenceType.Cloud;
+        string IUsesCredential.ProviderId => "Replicate";
+        bool IUsesCredential.OverrideApiKey { get => overrideApiKey; set => overrideApiKey = value; }
 
+        ProviderTestConfig IUsesCredential.GetTestConfig()
+        {
+            return new ProviderTestConfig
+            {
+                Endpoint = string.IsNullOrEmpty(overrideEndpointUrl) ? "https://api.replicate.com/v1" : overrideEndpointUrl,
+                Model = modelId,
+                ProviderId = ((IUsesCredential)this).ProviderId
+            };
+        }
+
+        /// <summary>
+        /// Executes a text (or multimodal) prediction on Replicate and returns assistant text.
+        /// Handles model id vs specific version and chooses the simplest synchronous polling flow.
+        /// </summary>
+        /// <param name="req">Input message and optional images, validated against model parameters.</param>
+        /// <param name="stream">Optional partial callback; final text is returned after completion.</param>
+        /// <param name="ct">Cancellation token for HTTP and polling.</param>
+        /// <returns><see cref="ChatResponse"/> with extracted text and raw response for debugging.</returns>
+        /// <remarks>
+        /// See <see cref="IChatTask"/>. Docs: https://replicate.com/docs/reference/http
+        /// </remarks>
         public async Task<ChatResponse> ChatAsync(ChatRequest req, IProgress<ChatDelta> stream = null, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                throw new InvalidOperationException("ReplicateProvider: API key is not set.");
-            }
-
-            if (string.IsNullOrWhiteSpace(modelId))
-            {
-                throw new InvalidOperationException("ReplicateProvider: Model Id is not set.");
-            }
+            ValidateConfiguration(apiKey, model: modelId);
 
             var url = !string.IsNullOrWhiteSpace(overrideEndpointUrl) ? overrideEndpointUrl : BuildUrl(modelId);
             var prompt = req?.text ?? string.Empty;
@@ -67,7 +93,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
             if (SupportsVision && req?.images is { Count: > 0 })
             {
-                // Replicate often expects a single inline image
                 imageDataUri = await ToDataUriAsync(req.images[0], ct);
             }
 
@@ -114,16 +139,14 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         private static string Escape(string s)
         {
-            return s?.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
+            return EscapeJson(s);
         }
 
-        // Convert ImageInput → data URI accepted by many Replicate models.
         private async Task<string> ToDataUriAsync(ImageInput img, CancellationToken ct)
         {
             return await ImageInputUtils.ToDataUriAsync(img, maxInlineBytes, ct);
         }
 
-        // Parse common Replicate response shapes
         [Serializable]
         private class RootStr
         {

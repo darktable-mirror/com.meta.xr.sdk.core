@@ -49,6 +49,7 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using System.Text;
 
 #if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
 using UnityEngine.XR.OpenXR.Features.Extensions.PerformanceSettings;
@@ -67,7 +68,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_115_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_117_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -159,6 +160,43 @@ public static partial class OVRPlugin
             }
 
             return _nativeSDKVersion;
+#endif
+        }
+    }
+
+#if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
+    private static string _runtimeName;
+#endif
+    public static string runtimeName
+    {
+        get
+        {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
+            return string.Empty;
+#else
+            if (_runtimeName == null)
+            {
+                try
+                {
+                    if (version >= OVRP_1_117_0.version)
+                    {
+                        IntPtr ptr;
+                        if (OVRP_1_117_0.ovrp_GetRuntimeName(out ptr) == Result.Success && ptr != IntPtr.Zero)
+                        {
+                            _runtimeName = Marshal.PtrToStringAnsi(ptr);
+                        }
+                    }
+
+                    if (_runtimeName == null)
+                        _runtimeName = string.Empty;
+                }
+                catch
+                {
+                    _runtimeName = string.Empty;
+                }
+            }
+
+            return _runtimeName;
 #endif
         }
     }
@@ -4371,7 +4409,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
             return false;
 #else
-            return !Application.isMobilePlatform && version >= OVRP_1_3_0.version;
+            return (!Application.isMobilePlatform && version >= OVRP_1_3_0.version) || (Application.isMobilePlatform && version >= OVRP_1_116_0.version);
 #endif
         }
     }
@@ -5930,6 +5968,7 @@ public static partial class OVRPlugin
         }
 #endif
     }
+
 
 
     public static EyeTextureFormat GetDesiredEyeTextureFormat()
@@ -7895,6 +7934,9 @@ public static partial class OVRPlugin
         public OptionalBool is_internal_build;
         public OptionalBool batch_mode;
         public ulong machine_oculus_user_id;
+        public int metadataHandle;
+        public string result;
+        private Dictionary<string, string> MetadataDictionary;
 
         public UnifiedEventData(string eventName)
         {
@@ -7903,15 +7945,173 @@ public static partial class OVRPlugin
             this.eventName = eventName;
             project_name = "";
             entrypoint = "";
-            project_guid = "";
             type = "";
             target = "";
             error_msg = "";
             metadata_json = "";
-            is_internal_build = OptionalBool.Unknown;
             batch_mode = OptionalBool.Unknown;
             machine_oculus_user_id = 0;
+            metadataHandle = 0;
+            result = "";
+            MetadataDictionary = null;
+
+#if UNITY_EDITOR
+            project_guid = Meta.XR.Editor.Callbacks.InitializeOnLoad.EditorReady
+                ? OVRRuntimeSettings.Instance.TelemetryProjectGuid
+                : string.Empty;
+
+            if (batch_mode == OptionalBool.Unknown)
+            {
+                batch_mode = UnityEngine.Application.isBatchMode ? OptionalBool.True : OptionalBool.False;
+            }
+
+#else
+            project_guid = OVRRuntimeSettings.Instance.TelemetryProjectGuid;
+#endif
+
+            is_internal_build = OVRPlugin.OptionalBool.False;
         }
+
+        private bool EnsureMetadataHandle()
+        {
+            if (metadataHandle != 0)
+            {
+                return true;
+            }
+
+            Result createResult = OVRP_1_116_0.ovrp_TelemetryCreateMetadataHandle(out metadataHandle);
+            return createResult == Result.Success;
+        }
+
+        public bool SetMetadata(string key, string value)
+        {
+            if (version < OVRP_1_116_0.version)
+            {
+                MetadataDictionary ??= new Dictionary<string, string>();
+                MetadataDictionary[key] = value;
+                return true;
+            }
+
+            if (!EnsureMetadataHandle())
+            {
+                return false;
+            }
+
+            Result result = OVRP_1_116_0.ovrp_TelemetrySetMetadata(key, value, metadataHandle);
+            return result == Result.Success;
+        }
+
+        public bool SetMetadata(string key, int value)
+        {
+            if (version < OVRP_1_116_0.version)
+            {
+                return SetMetadata(key, value.ToString());
+            }
+
+            if (!EnsureMetadataHandle())
+            {
+                return false;
+            }
+
+            Result result = OVRP_1_116_0.ovrp_TelemetrySetMetadataInt(key, value, metadataHandle);
+            return result == Result.Success;
+        }
+
+        public bool SetMetadata(string key, float value)
+        {
+            if (version < OVRP_1_116_0.version)
+            {
+                return SetMetadata(key, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            if (!EnsureMetadataHandle())
+            {
+                return false;
+            }
+
+            Result result = OVRP_1_116_0.ovrp_TelemetrySetMetadataFloat(key, value, metadataHandle);
+            return result == Result.Success;
+        }
+
+        public bool SetMetadata(string key, double value)
+        {
+            if (version < OVRP_1_116_0.version)
+            {
+                return SetMetadata(key, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            if (!EnsureMetadataHandle())
+            {
+                return false;
+            }
+
+            Result result = OVRP_1_116_0.ovrp_TelemetrySetMetadataDouble(key, value, metadataHandle);
+            return result == Result.Success;
+        }
+
+        public bool SetMetadata(string key, bool value)
+        {
+            if (version < OVRP_1_116_0.version)
+            {
+                return SetMetadata(key, value.ToString());
+            }
+
+            if (!EnsureMetadataHandle())
+            {
+                return false;
+            }
+
+            Result result = OVRP_1_116_0.ovrp_TelemetrySetMetadataBool(key, value, metadataHandle);
+            return result == Result.Success;
+        }
+
+        public string GetMetadata()
+        {
+            if (version < OVRP_1_116_0.version)
+            {
+                if (!string.IsNullOrEmpty(metadata_json))
+                {
+                    return metadata_json;
+                }
+
+                return GetJsonFromMetadataDictionary();
+            }
+
+            if (metadataHandle == 0)
+            {
+                return "{}";
+            }
+
+            return "{}";
+        }
+
+        private string GetJsonFromMetadataDictionary()
+        {
+            if (MetadataDictionary == null || MetadataDictionary.Count == 0)
+            {
+                return "{}";
+            }
+
+            var sb = new StringBuilder();
+            sb.Append("{");
+            var first = true;
+            foreach (var (key, value) in MetadataDictionary)
+            {
+                if (!first)
+                    sb.Append(",");
+                first = false;
+
+                sb.Append($"\n  \"{key}\": \"{value}\"");
+            }
+            sb.Append("\n}");
+            return sb.ToString();
+        }
+
+        public bool Send()
+        {
+            return SendUnifiedEvent(this) == Result.Success;
+        }
+
     }
 
     public static Result SendUnifiedEvent(UnifiedEventData eventData)
@@ -7919,20 +8119,31 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version >= OVRP_1_114_0.version)
+        if (!OVRTelemetry.IsActive)
         {
+            return Result.Failure_NotInitialized;
+        }
+
+
+        if (version >= OVRP_1_116_0.version)
+        {
+            return OVRP_1_116_0.ovrp_SendUnifiedEventV4(eventData.isEssential, eventData.productType, eventData.eventName,
+                eventData.metadataHandle, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build,
+                eventData.batch_mode, eventData.machine_oculus_user_id);
+        } else if (version >= OVRP_1_114_0.version) {
             return OVRP_1_114_0.ovrp_SendUnifiedEventV3(eventData.isEssential, eventData.productType, eventData.eventName,
-                eventData.metadata_json, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.GetMetadata(), eventData.project_name, eventData.entrypoint, eventData.project_guid,
                 eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build,
                 eventData.batch_mode, eventData.machine_oculus_user_id);
         } else if (version >= OVRP_1_110_0.version) {
             return OVRP_1_110_0.ovrp_SendUnifiedEventV2(eventData.isEssential, eventData.productType, eventData.eventName,
-                eventData.metadata_json, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.GetMetadata(), eventData.project_name, eventData.entrypoint, eventData.project_guid,
                 eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build.ToString(),
                 eventData.batch_mode.ToString());
         } else if (version == OVRP_1_109_0.version) {
             return OVRP_1_109_0.ovrp_SendUnifiedEvent(eventData.isEssential, eventData.productType, eventData.eventName,
-                eventData.metadata_json, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.GetMetadata(), eventData.project_name, eventData.entrypoint, eventData.project_guid,
                 eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build.ToString());
         }
         else // < OVRP_1_109_0.version
@@ -7973,6 +8184,45 @@ public static partial class OVRPlugin
         };
 
         return SendUnifiedEvent(eventData);
+    }
+
+    public static Result SendUnifiedEventV4(
+        Bool isEssential,
+        string productType,
+        string eventName,
+        int metadataHandle,
+        string project_name = "",
+        string event_entrypoint = "",
+        string project_guid = "",
+        string event_type = "",
+        string event_target = "",
+        string error_msg = "",
+        OptionalBool is_internal_build = OptionalBool.Unknown,
+        OptionalBool batch_mode = OptionalBool.Unknown,
+        ulong machine_oculus_user_id = 0)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version >= OVRP_1_116_0.version)
+        {
+            return OVRP_1_116_0.ovrp_SendUnifiedEventV4(
+                isEssential,
+                productType,
+                eventName,
+                metadataHandle,
+                project_name,
+                event_entrypoint,
+                project_guid,
+                event_type,
+                event_target,
+                error_msg,
+                is_internal_build,
+                batch_mode,
+                machine_oculus_user_id);
+        }
+        return Result.Failure_Unsupported;
+#endif
     }
 
     public static bool SetHeadPoseModifier(ref Quatf relativeRotation, ref Vector3f relativeTranslation)
@@ -9075,6 +9325,107 @@ public static partial class OVRPlugin
 #endif
     }
 
+    public static void FillHandStateFromCachedHandState3(ref HandState handState)
+    {
+        // attempt to avoid allocations if client provides appropriately pre-initialized HandState
+        if (handState.BoneRotations == null ||
+            handState.BoneRotations.Length != (int)SkeletonConstants.MaxXRHandBones)
+        {
+            handState.BoneRotations = new Quatf[(int)SkeletonConstants.MaxXRHandBones];
+        }
+
+        if (handState.BonePositions == null ||
+            handState.BonePositions.Length != (int)SkeletonConstants.MaxXRHandBones)
+        {
+            handState.BonePositions = new Vector3f[(int)SkeletonConstants.MaxXRHandBones];
+        }
+
+        if (handState.PinchStrength == null || handState.PinchStrength.Length != (int)HandFinger.Max)
+        {
+            handState.PinchStrength = new float[(int)HandFinger.Max];
+        }
+
+        if (handState.FingerConfidences == null || handState.FingerConfidences.Length != (int)HandFinger.Max)
+        {
+            handState.FingerConfidences = new TrackingConfidence[(int)HandFinger.Max];
+        }
+
+        // unrolling the arrays is necessary to avoid per-frame allocations during marshaling
+        handState.Status = cachedHandState3.Status;
+        handState.RootPose = cachedHandState3.RootPose;
+
+        handState.BoneRotations[0] = cachedHandState3.BonePoses_0.Orientation;
+        handState.BoneRotations[1] = cachedHandState3.BonePoses_1.Orientation;
+        handState.BoneRotations[2] = cachedHandState3.BonePoses_2.Orientation;
+        handState.BoneRotations[3] = cachedHandState3.BonePoses_3.Orientation;
+        handState.BoneRotations[4] = cachedHandState3.BonePoses_4.Orientation;
+        handState.BoneRotations[5] = cachedHandState3.BonePoses_5.Orientation;
+        handState.BoneRotations[6] = cachedHandState3.BonePoses_6.Orientation;
+        handState.BoneRotations[7] = cachedHandState3.BonePoses_7.Orientation;
+        handState.BoneRotations[8] = cachedHandState3.BonePoses_8.Orientation;
+        handState.BoneRotations[9] = cachedHandState3.BonePoses_9.Orientation;
+        handState.BoneRotations[10] = cachedHandState3.BonePoses_10.Orientation;
+        handState.BoneRotations[11] = cachedHandState3.BonePoses_11.Orientation;
+        handState.BoneRotations[12] = cachedHandState3.BonePoses_12.Orientation;
+        handState.BoneRotations[13] = cachedHandState3.BonePoses_13.Orientation;
+        handState.BoneRotations[14] = cachedHandState3.BonePoses_14.Orientation;
+        handState.BoneRotations[15] = cachedHandState3.BonePoses_15.Orientation;
+        handState.BoneRotations[16] = cachedHandState3.BonePoses_16.Orientation;
+        handState.BoneRotations[17] = cachedHandState3.BonePoses_17.Orientation;
+        handState.BoneRotations[18] = cachedHandState3.BonePoses_18.Orientation;
+        handState.BoneRotations[19] = cachedHandState3.BonePoses_19.Orientation;
+        handState.BoneRotations[20] = cachedHandState3.BonePoses_20.Orientation;
+        handState.BoneRotations[21] = cachedHandState3.BonePoses_21.Orientation;
+        handState.BoneRotations[22] = cachedHandState3.BonePoses_22.Orientation;
+        handState.BoneRotations[23] = cachedHandState3.BonePoses_23.Orientation;
+        handState.BoneRotations[24] = cachedHandState3.BonePoses_24.Orientation;
+        handState.BoneRotations[25] = cachedHandState3.BonePoses_25.Orientation;
+
+        handState.BonePositions[0] = cachedHandState3.BonePoses_0.Position;
+        handState.BonePositions[1] = cachedHandState3.BonePoses_1.Position;
+        handState.BonePositions[2] = cachedHandState3.BonePoses_2.Position;
+        handState.BonePositions[3] = cachedHandState3.BonePoses_3.Position;
+        handState.BonePositions[4] = cachedHandState3.BonePoses_4.Position;
+        handState.BonePositions[5] = cachedHandState3.BonePoses_5.Position;
+        handState.BonePositions[6] = cachedHandState3.BonePoses_6.Position;
+        handState.BonePositions[7] = cachedHandState3.BonePoses_7.Position;
+        handState.BonePositions[8] = cachedHandState3.BonePoses_8.Position;
+        handState.BonePositions[9] = cachedHandState3.BonePoses_9.Position;
+        handState.BonePositions[10] = cachedHandState3.BonePoses_10.Position;
+        handState.BonePositions[11] = cachedHandState3.BonePoses_11.Position;
+        handState.BonePositions[12] = cachedHandState3.BonePoses_12.Position;
+        handState.BonePositions[13] = cachedHandState3.BonePoses_13.Position;
+        handState.BonePositions[14] = cachedHandState3.BonePoses_14.Position;
+        handState.BonePositions[15] = cachedHandState3.BonePoses_15.Position;
+        handState.BonePositions[16] = cachedHandState3.BonePoses_16.Position;
+        handState.BonePositions[17] = cachedHandState3.BonePoses_17.Position;
+        handState.BonePositions[18] = cachedHandState3.BonePoses_18.Position;
+        handState.BonePositions[19] = cachedHandState3.BonePoses_19.Position;
+        handState.BonePositions[20] = cachedHandState3.BonePoses_20.Position;
+        handState.BonePositions[21] = cachedHandState3.BonePoses_21.Position;
+        handState.BonePositions[22] = cachedHandState3.BonePoses_22.Position;
+        handState.BonePositions[23] = cachedHandState3.BonePoses_23.Position;
+        handState.BonePositions[24] = cachedHandState3.BonePoses_24.Position;
+        handState.BonePositions[25] = cachedHandState3.BonePoses_25.Position;
+
+        handState.Pinches = cachedHandState3.Pinches;
+        handState.PinchStrength[0] = cachedHandState3.PinchStrength_0;
+        handState.PinchStrength[1] = cachedHandState3.PinchStrength_1;
+        handState.PinchStrength[2] = cachedHandState3.PinchStrength_2;
+        handState.PinchStrength[3] = cachedHandState3.PinchStrength_3;
+        handState.PinchStrength[4] = cachedHandState3.PinchStrength_4;
+        handState.PointerPose = cachedHandState3.PointerPose;
+        handState.HandScale = cachedHandState3.HandScale;
+        handState.HandConfidence = cachedHandState3.HandConfidence;
+        handState.FingerConfidences[0] = cachedHandState3.FingerConfidences_0;
+        handState.FingerConfidences[1] = cachedHandState3.FingerConfidences_1;
+        handState.FingerConfidences[2] = cachedHandState3.FingerConfidences_2;
+        handState.FingerConfidences[3] = cachedHandState3.FingerConfidences_3;
+        handState.FingerConfidences[4] = cachedHandState3.FingerConfidences_4;
+        handState.RequestedTimeStamp = cachedHandState3.RequestedTimeStamp;
+        handState.SampleTimeStamp = cachedHandState3.SampleTimeStamp;
+    }
+
     public static bool GetHandStateAtTime(double time, Hand hand, ref HandState handState)
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -9093,104 +9444,7 @@ public static partial class OVRPlugin
 
             if (res == Result.Success)
             {
-                // attempt to avoid allocations if client provides appropriately pre-initialized HandState
-                if (handState.BoneRotations == null ||
-                    handState.BoneRotations.Length != (int)SkeletonConstants.MaxXRHandBones)
-                {
-                    handState.BoneRotations = new Quatf[(int)SkeletonConstants.MaxXRHandBones];
-                }
-
-                if (handState.BonePositions == null ||
-                    handState.BonePositions.Length != (int)SkeletonConstants.MaxXRHandBones)
-                {
-                    handState.BonePositions = new Vector3f[(int)SkeletonConstants.MaxXRHandBones];
-                }
-
-                if (handState.PinchStrength == null || handState.PinchStrength.Length != (int)HandFinger.Max)
-                {
-                    handState.PinchStrength = new float[(int)HandFinger.Max];
-                }
-
-                if (handState.FingerConfidences == null || handState.FingerConfidences.Length != (int)HandFinger.Max)
-                {
-                    handState.FingerConfidences = new TrackingConfidence[(int)HandFinger.Max];
-                }
-
-                // unrolling the arrays is necessary to avoid per-frame allocations during marshaling
-                handState.Status = cachedHandState3.Status;
-                handState.RootPose = cachedHandState3.RootPose;
-
-                handState.BoneRotations[0] =    cachedHandState3.BonePoses_0.Orientation;
-                handState.BoneRotations[1] =    cachedHandState3.BonePoses_1.Orientation;
-                handState.BoneRotations[2] =    cachedHandState3.BonePoses_2.Orientation;
-                handState.BoneRotations[3] =    cachedHandState3.BonePoses_3.Orientation;
-                handState.BoneRotations[4] =    cachedHandState3.BonePoses_4.Orientation;
-                handState.BoneRotations[5] =    cachedHandState3.BonePoses_5.Orientation;
-                handState.BoneRotations[6] =    cachedHandState3.BonePoses_6.Orientation;
-                handState.BoneRotations[7] =    cachedHandState3.BonePoses_7.Orientation;
-                handState.BoneRotations[8] =    cachedHandState3.BonePoses_8.Orientation;
-                handState.BoneRotations[9] =    cachedHandState3.BonePoses_9.Orientation;
-                handState.BoneRotations[10] =   cachedHandState3.BonePoses_10.Orientation;
-                handState.BoneRotations[11] =   cachedHandState3.BonePoses_11.Orientation;
-                handState.BoneRotations[12] =   cachedHandState3.BonePoses_12.Orientation;
-                handState.BoneRotations[13] =   cachedHandState3.BonePoses_13.Orientation;
-                handState.BoneRotations[14] =   cachedHandState3.BonePoses_14.Orientation;
-                handState.BoneRotations[15] =   cachedHandState3.BonePoses_15.Orientation;
-                handState.BoneRotations[16] =   cachedHandState3.BonePoses_16.Orientation;
-                handState.BoneRotations[17] =   cachedHandState3.BonePoses_17.Orientation;
-                handState.BoneRotations[18] =   cachedHandState3.BonePoses_18.Orientation;
-                handState.BoneRotations[19] =   cachedHandState3.BonePoses_19.Orientation;
-                handState.BoneRotations[20] =   cachedHandState3.BonePoses_20.Orientation;
-                handState.BoneRotations[21] =   cachedHandState3.BonePoses_21.Orientation;
-                handState.BoneRotations[22] =   cachedHandState3.BonePoses_22.Orientation;
-                handState.BoneRotations[23] =   cachedHandState3.BonePoses_23.Orientation;
-                handState.BoneRotations[24] =   cachedHandState3.BonePoses_24.Orientation;
-                handState.BoneRotations[25] =   cachedHandState3.BonePoses_25.Orientation;
-
-                handState.BonePositions[0] = cachedHandState3.BonePoses_0.Position;
-                handState.BonePositions[1] = cachedHandState3.BonePoses_1.Position;
-                handState.BonePositions[2] = cachedHandState3.BonePoses_2.Position;
-                handState.BonePositions[3] = cachedHandState3.BonePoses_3.Position;
-                handState.BonePositions[4] = cachedHandState3.BonePoses_4.Position;
-                handState.BonePositions[5] = cachedHandState3.BonePoses_5.Position;
-                handState.BonePositions[6] = cachedHandState3.BonePoses_6.Position;
-                handState.BonePositions[7] = cachedHandState3.BonePoses_7.Position;
-                handState.BonePositions[8] = cachedHandState3.BonePoses_8.Position;
-                handState.BonePositions[9] = cachedHandState3.BonePoses_9.Position;
-                handState.BonePositions[10] = cachedHandState3.BonePoses_10.Position;
-                handState.BonePositions[11] = cachedHandState3.BonePoses_11.Position;
-                handState.BonePositions[12] = cachedHandState3.BonePoses_12.Position;
-                handState.BonePositions[13] = cachedHandState3.BonePoses_13.Position;
-                handState.BonePositions[14] = cachedHandState3.BonePoses_14.Position;
-                handState.BonePositions[15] = cachedHandState3.BonePoses_15.Position;
-                handState.BonePositions[16] = cachedHandState3.BonePoses_16.Position;
-                handState.BonePositions[17] = cachedHandState3.BonePoses_17.Position;
-                handState.BonePositions[18] = cachedHandState3.BonePoses_18.Position;
-                handState.BonePositions[19] = cachedHandState3.BonePoses_19.Position;
-                handState.BonePositions[20] = cachedHandState3.BonePoses_20.Position;
-                handState.BonePositions[21] = cachedHandState3.BonePoses_21.Position;
-                handState.BonePositions[22] = cachedHandState3.BonePoses_22.Position;
-                handState.BonePositions[23] = cachedHandState3.BonePoses_23.Position;
-                handState.BonePositions[24] = cachedHandState3.BonePoses_24.Position;
-                handState.BonePositions[25] = cachedHandState3.BonePoses_25.Position;
-
-                handState.Pinches = cachedHandState3.Pinches;
-                handState.PinchStrength[0] = cachedHandState3.PinchStrength_0;
-                handState.PinchStrength[1] = cachedHandState3.PinchStrength_1;
-                handState.PinchStrength[2] = cachedHandState3.PinchStrength_2;
-                handState.PinchStrength[3] = cachedHandState3.PinchStrength_3;
-                handState.PinchStrength[4] = cachedHandState3.PinchStrength_4;
-                handState.PointerPose = cachedHandState3.PointerPose;
-                handState.HandScale = cachedHandState3.HandScale;
-                handState.HandConfidence = cachedHandState3.HandConfidence;
-                handState.FingerConfidences[0] = cachedHandState3.FingerConfidences_0;
-                handState.FingerConfidences[1] = cachedHandState3.FingerConfidences_1;
-                handState.FingerConfidences[2] = cachedHandState3.FingerConfidences_2;
-                handState.FingerConfidences[3] = cachedHandState3.FingerConfidences_3;
-                handState.FingerConfidences[4] = cachedHandState3.FingerConfidences_4;
-                handState.RequestedTimeStamp = cachedHandState3.RequestedTimeStamp;
-                handState.SampleTimeStamp = cachedHandState3.SampleTimeStamp;
-
+                FillHandStateFromCachedHandState3(ref handState);
                 return true;
             }
             else
@@ -11021,11 +11275,11 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version < OVRP_1_115_0.version)
+        if (version < OVRP_1_117_0.version)
         {
             return Result.Failure_Unsupported;
         }
-        return OVRP_1_115_0.ovrp_RegisterShutdownEventHandler(eventHandler, IntPtr.Zero);
+        return OVRP_1_117_0.ovrp_RegisterShutdownEventHandler(eventHandler, IntPtr.Zero);
 #endif
     }
 
@@ -11034,11 +11288,11 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
         return Result.Failure_Unsupported;
 #else
-        if (version < OVRP_1_115_0.version)
+        if (version < OVRP_1_117_0.version)
         {
             return Result.Failure_Unsupported;
         }
-        return OVRP_1_115_0.ovrp_UnregisterShutdownEventHandler(eventHandler);
+        return OVRP_1_117_0.ovrp_UnregisterShutdownEventHandler(eventHandler);
 #endif
     }
 
@@ -15959,22 +16213,64 @@ public static partial class OVRPlugin
     {
         public static readonly System.Version version = new System.Version(1, 115, 0);
 
+    }
+
+    private static class OVRP_1_116_0
+    {
+        public static readonly System.Version version = new System.Version(1, 116, 0);
+
+
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TelemetryCreateMetadataHandle(out int returnHandle);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TelemetrySetMetadata(string key, string value, int handle);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TelemetrySetMetadataInt(string key, int value, int handle);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TelemetrySetMetadataFloat(string key, float value, int handle);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TelemetrySetMetadataDouble(string key, double value, int handle);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TelemetrySetMetadataBool(string key, bool value, int handle);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_TelemetryGetMetadata(int handle, System.Text.StringBuilder metadataJson, int bufferSize);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_SendUnifiedEventV4(
+            Bool isEssential,
+            string productType,
+            string eventName,
+            int metadataHandle,
+            string project_name,
+            string event_entrypoint,
+            string project_guid,
+            string event_type,
+            string event_target,
+            string error_msg,
+            OptionalBool is_internal_build,
+            OptionalBool batch_mode,
+            ulong machine_oculus_user_id);
+    }
+
+    private static class OVRP_1_117_0
+    {
+        public static readonly System.Version version = new System.Version(1, 117, 0);
+
+        [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Result ovrp_GetRuntimeName(out IntPtr runtimeName);
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_RegisterShutdownEventHandler(ShutdownEventDelegateType eventHandler, IntPtr context);
 
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_UnregisterShutdownEventHandler(ShutdownEventDelegateType eventHandler);
-    }
-
-    private static class OVRP_1_116_0
-    {
-        public static readonly System.Version version = new System.Version(1, 116, 0);
-    }
-
-    private static class OVRP_1_117_0
-    {
-        public static readonly System.Version version = new System.Version(1, 117, 0);
     }
 
     private static class OVRP_1_118_0

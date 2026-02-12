@@ -22,9 +22,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using System.Reflection;
+using Meta.XR.Telemetry;
 using UnityEditor;
+using UnityEngine;
 using static Meta.XR.BuildingBlocks.Editor.VariantAttribute;
 using static Meta.XR.Editor.UserInterface.Styles;
 
@@ -46,6 +47,10 @@ namespace Meta.XR.BuildingBlocks.Editor
         public Func<bool> OverrideCondition = null;
         public Func<bool> Condition => OverrideCondition ?? (_condition ??= FetchConditionDelegate());
 
+        private Func<bool> _disableCondition;
+        public Func<bool> OverrideDisableCondition = null;
+        public Func<bool> DisableCondition => OverrideDisableCondition ?? (_disableCondition ??= FetchDisableConditionDelegate());
+
         protected VariantHandle(MemberInfo memberInfo, VariantAttribute attribute, InstallationRoutine owner)
         {
             MemberInfo = memberInfo;
@@ -59,6 +64,25 @@ namespace Meta.XR.BuildingBlocks.Editor
             var conditionMethod = string.IsNullOrEmpty(conditionMethodName) ? null :
                 Owner.GetType().GetMethod(conditionMethodName, VariantHandle.BindingFLags);
             return conditionMethod?.CreateDelegate(typeof(Func<bool>), Owner) as Func<bool> ?? DefaultCondition;
+        }
+
+        private Func<bool> FetchDisableConditionDelegate()
+        {
+            // If no DisableCondition is specified, always return true (enabled)
+            if (string.IsNullOrEmpty(Attribute.DisableCondition))
+            {
+                return DefaultCondition;
+            }
+
+            var disableConditionMethod = Owner.GetType().GetMethod(Attribute.DisableCondition, VariantHandle.BindingFLags);
+            if (disableConditionMethod == null)
+            {
+                // Method not found, default to enabled
+                return DefaultCondition;
+            }
+
+            var del = disableConditionMethod.CreateDelegate(typeof(Func<bool>), Owner) as Func<bool>;
+            return del ?? DefaultCondition;
         }
 
         public static VariantHandle CreateFromRoutine(MemberInfo member, VariantAttribute attribute, InstallationRoutine owner)
@@ -205,7 +229,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         public override void DrawGUI(SerializedObject serializedObject, out bool changed)
         {
             changed = false;
-            using var disabledScope = new EditorGUI.DisabledScope(!Condition());
+            using var disabledScope = new EditorGUI.DisabledScope(!Condition() || !DisableCondition());
             EditorGUILayout.BeginVertical(GUIStyles.ContentBox);
             EditorGUILayout.BeginHorizontal();
 
@@ -306,7 +330,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 var optionsMethod = GetMethodFromTypeHierarchy(Owner.GetType(), Attribute.OptionsMethod);
                 if (optionsMethod == null)
                 {
-                    Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' not found on type '{Owner.GetType().Name}' or its base classes");
+                    IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "variant-options-method-not-found",
+                        $"Options method '{Attribute.OptionsMethod}' not found on type '{Owner.GetType().Name}' or its base classes");
                     DrawFallbackField(out changed);
                     return;
                 }
@@ -314,7 +339,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 var result = optionsMethod.Invoke(Owner, null);
                 if (result == null)
                 {
-                    Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' returned null");
+                    IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "variant-options-method-returned-null",
+                        $"Options method '{Attribute.OptionsMethod}' returned null");
                     DrawFallbackField(out changed);
                     return;
                 }
@@ -325,7 +351,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                     var options = enumerable.Cast<T>().ToArray();
                     if (options.Length == 0)
                     {
-                        Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' returned empty collection");
+                        IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "variant-options-method-empty-collection",
+                            $"Options method '{Attribute.OptionsMethod}' returned empty collection");
                         DrawFallbackField(out changed);
                         return;
                     }
@@ -350,12 +377,14 @@ namespace Meta.XR.BuildingBlocks.Editor
                     return;
                 }
 
-                Debug.LogWarning($"Options method '{Attribute.OptionsMethod}' did not return an IEnumerable");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "variant-options-method-not-enumerable",
+                    $"Options method '{Attribute.OptionsMethod}' did not return an IEnumerable");
                 DrawFallbackField(out changed);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to get options from method '{Attribute.OptionsMethod}': {ex.Message}");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "variant-options-method-exception",
+                    $"Failed to get options from method '{Attribute.OptionsMethod}': {ex.Message}");
                 DrawFallbackField(out changed);
             }
         }
@@ -403,7 +432,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to get string options from method '{Attribute.OptionsMethod}': {ex.Message}");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "variant-string-options-method-exception",
+                    $"Failed to get string options from method '{Attribute.OptionsMethod}': {ex.Message}");
             }
 
             return null;

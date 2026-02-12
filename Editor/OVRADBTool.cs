@@ -26,6 +26,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -163,7 +164,8 @@ public class OVRADBTool
 
         if (!isReady)
         {
-            Debug.LogWarning("OVRADBTool not ready");
+            IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-adb-tool-not-ready",
+                "OVRADBTool not ready");
             outputString = string.Empty;
             errorString = "OVRADBTool not ready";
             return exitCode;
@@ -214,7 +216,7 @@ public class OVRADBTool
         }
         catch (Exception e)
         {
-            Debug.LogWarningFormat("[OVRADBTool.RunCommand] exception {0}", e.Message);
+            IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-adb-tool-command-exception", e);
         }
 
         exitCode = process.ExitCode;
@@ -234,7 +236,8 @@ public class OVRADBTool
     {
         if (!isReady)
         {
-            Debug.LogWarning("OVRADBTool not ready");
+            IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-adb-tool-not-ready-async",
+                "OVRADBTool not ready");
             return null;
         }
 

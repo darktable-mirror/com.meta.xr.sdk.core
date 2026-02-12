@@ -19,6 +19,7 @@
  */
 
 using Meta.XR.BuildingBlocks.Editor;
+using Meta.XR.Telemetry;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -70,7 +71,8 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
             var objs = await base.InstallAsync(block, selectedGameObject);
             if (objs.Count == 0)
             {
-                Debug.LogWarning("Colocation object cannot be found, aborting installing Colocation block");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "colocation-object-not-found",
+                    "Colocation Object cannot be found after installation.");
                 return new List<GameObject>();
             }
             if (useColocationSession)

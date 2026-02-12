@@ -53,16 +53,16 @@ float4 frag(v2f i) : SV_Target {
             min(
                 tex2D(_MainTex, i.texcoord + dx - dy),
                 tex2D(_MainTex, i.texcoord - dx - dy)));
-    #elif EXPENSIVE
+    #elif SUPERSAMPLE
         // perform 4x multitap sample
         float2 dx = 0.25 * ddx(i.texcoord);
         float2 dy = 0.25 * ddy(i.texcoord);
         // sample four points inside the pixel
         float4 col = 0.25 * (
-            tex2D(_MainTex, i.texcoord + dx + dy) +
-            tex2D(_MainTex, i.texcoord - dx + dy) +
-            tex2D(_MainTex, i.texcoord + dx - dy) +
-            tex2D(_MainTex, i.texcoord - dx - dy));
+            tex2Dbias(_MainTex, float4(i.texcoord + dx + dy, 0, -1)) +
+            tex2Dbias(_MainTex, float4(i.texcoord - dx + dy, 0, -1)) +
+            tex2Dbias(_MainTex, float4(i.texcoord + dx - dy, 0, -1)) +
+            tex2Dbias(_MainTex, float4(i.texcoord - dx - dy, 0, -1)));
     #else
         float4 col = tex2D(_MainTex, i.texcoord);
     #endif
@@ -129,15 +129,15 @@ float4 frag(v2f i) : SV_Target {
         UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
         // We only need to sample from the texture with clip on
         #if WITH_CLIP || ALPHA_TO_MASK
-            #if EXPENSIVE
+            #if SUPERSAMPLE
                 // perform 4x multitap sample
                 float2 dx = 0.25 * ddx(i.texcoord);
                 float2 dy = 0.25 * ddy(i.texcoord);
                 float4 col = 0.25 * (
-                    tex2D(_MainTex, i.texcoord + dx + dy) +
-                    tex2D(_MainTex, i.texcoord - dx + dy) +
-                    tex2D(_MainTex, i.texcoord + dx - dy) +
-                    tex2D(_MainTex, i.texcoord - dx - dy));
+                    tex2Dbias(_MainTex, float4(i.texcoord + dx + dy, 0, -1)) +
+                    tex2Dbias(_MainTex, float4(i.texcoord - dx + dy, 0, -1)) +
+                    tex2Dbias(_MainTex, float4(i.texcoord + dx - dy, 0, -1)) +
+                    tex2Dbias(_MainTex, float4(i.texcoord - dx - dy, 0, -1)));
             #else
                 float4 col = tex2D(_MainTex, i.texcoord);
             #endif

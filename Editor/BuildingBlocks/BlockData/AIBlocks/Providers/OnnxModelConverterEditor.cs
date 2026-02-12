@@ -29,94 +29,82 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
 {
     public class OnnxModelConverterEditor : EditorWindow
     {
-        [MenuItem("Meta/Tools/Unity Inference Engine/ONNX Model Converter")]
-        public static void ShowWindow() => GetWindow<OnnxModelConverterEditor>("Sentis Converter");
+        private enum ModelType
+        {
+            ObjectDetection,
+            Segmentation
+        }
+
+        private ModelType _modelType = ModelType.ObjectDetection;
 
         private ModelAsset _onnxAsset;
-
         private string _outputFolder = "Assets/MetaXR";
+
         private float _iouThreshold = 0.5f;
         private float _scoreThreshold = 0.5f;
-        private QuantizationType _quantType = QuantizationType.Float16;
+        private QuantizationType _quantType = QuantizationType.Uint8;
+        private bool _addNms = true;
 
-        private readonly GUIContent _onnxContent = new(
-            "ONNX Model Asset",
-            "The ONNX model that you would like to convert."
-        );
+        // Segmentation-specific
+        private int _maskChannels = 32;
+        private int _maskSize = 160;
+        private int _numClasses = 80;
 
-        private readonly GUIContent _outputContent = new(
-            "Output Folder",
-            "Destination folder where the converted .sentis file will be saved. The filename is automatically derived from the ONNX asset name."
-        );
-
-        private readonly GUIContent _iouContent = new(
-            "IoU Threshold",
-            "Intersection‑over‑Union threshold used by Non‑Maximum Suppression (NMS).\n" +
-            "If two boxes overlap by more than this fraction, the one with lower confidence is discarded.\n" +
-            "0 = keep everything, 1 = keep only boxes that do NOT overlap at all. Typical range: 0.3–0.7."
-        );
-
-        private readonly GUIContent _scoreContent = new(
-            "Score Threshold",
-            "Minimum confidence a detection must have to be kept *before* running NMS.\n" +
-            "Lower this value to see more (but noisier) boxes; raise it to ignore weak detections entirely. Typical range: 0.2–0.6."
-        );
-
-        private readonly GUIContent _quantContent = new(
-            "Quantization Type",
-            "To reduce the model's storage size on disk and memory, use model quantization.\n" +
-            "Quantization represents the weight values in a lower‑precision format. At runtime,\n" +
-            "Inference Engine converts these values back to higher precision before processing."
-        );
+        [MenuItem("Meta/Tools/AI/Unity Inference Engine/ONNX model converter")]
+        private static void ShowWindow()
+        {
+            GetWindow<OnnxModelConverterEditor>("ONNX model converter");
+        }
 
         private void OnGUI()
         {
-            GUILayout.Label("Sentis Model Converter", EditorStyles.boldLabel);
+            GUILayout.Label("ONNX → Sentis Converter", EditorStyles.boldLabel);
 
-            // ONNX asset field with tooltip
             _onnxAsset = (ModelAsset)EditorGUILayout.ObjectField(
-                _onnxContent,
+                new GUIContent("ONNX Model", "The ONNX model to convert."),
                 _onnxAsset,
                 typeof(ModelAsset),
-                false
-            );
+                false);
 
-            // Output folder field
             _outputFolder = EditorGUILayout.TextField(
-                _outputContent,
-                _outputFolder
-            );
+                new GUIContent("Output Folder", "Project-relative folder for the .sentis file."),
+                _outputFolder);
 
-            GUILayout.Space(10);
-            GUILayout.Label("NMS Thresholds", EditorStyles.boldLabel);
+            _modelType = (ModelType)EditorGUILayout.EnumPopup(
+                new GUIContent("Model Type", "Choose Object Detection or Segmentation."),
+                _modelType);
 
-            // IoU slider
-            _iouThreshold = EditorGUILayout.Slider(
-                _iouContent,
-                _iouThreshold,
-                0f,
-                1f
-            );
+            _addNms = EditorGUILayout.Toggle(
+                new GUIContent("Add NMS Layer",
+                    "Bake a Non-Max-Suppression layer into the Sentis graph."),
+                _addNms);
 
-            // Score slider
-            _scoreThreshold = EditorGUILayout.Slider(
-                _scoreContent,
-                _scoreThreshold,
-                0f,
-                1f
-            );
+            GUILayout.Space(8);
+            GUILayout.Label("Thresholds", EditorStyles.boldLabel);
+            _iouThreshold = EditorGUILayout.Slider("IoU Threshold", _iouThreshold, 0f, 1f);
+            _scoreThreshold = EditorGUILayout.Slider("Score Threshold", _scoreThreshold, 0f, 1f);
 
-            GUILayout.Space(10);
+            GUILayout.Space(8);
             GUILayout.Label("Quantization", EditorStyles.boldLabel);
+            _quantType = (QuantizationType)EditorGUILayout.EnumPopup("Quantization Type", _quantType);
 
-            // Quantization enum popup
-            _quantType = (QuantizationType)EditorGUILayout.EnumPopup(
-                _quantContent,
-                _quantType
-            );
+            if (_modelType == ModelType.Segmentation)
+            {
+                GUILayout.Space(8);
+                GUILayout.Label("Segmentation Settings", EditorStyles.boldLabel);
+                _maskChannels = EditorGUILayout.IntField(
+                    new GUIContent("Mask Channels", "Number of prototype mask channels."),
+                    _maskChannels);
+                _maskSize = EditorGUILayout.IntField(
+                    new GUIContent("Mask Resolution", "Width/Height of prototype mask grid."),
+                    _maskSize);
+                _numClasses = EditorGUILayout.IntField(
+                    new GUIContent("Class Count", "Number of object categories in your dataset."),
+                    _numClasses);
+            }
 
-            GUILayout.Space(20);
-            if (!GUILayout.Button("Convert and Save Sentis Model", GUILayout.Height(40)))
+            GUILayout.Space(15);
+            if (!GUILayout.Button("Convert to Sentis", GUILayout.Height(40)))
             {
                 return;
             }
@@ -127,65 +115,117 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
             }
             else
             {
-                ConvertToSentis(_onnxAsset, _outputFolder, _iouThreshold, _scoreThreshold, _quantType);
+                if (_modelType == ModelType.ObjectDetection)
+                {
+                    ConvertObjectDetection();
+                }
+                else
+                {
+                    ConvertSegmentation();
+                }
             }
         }
 
-        private static void ConvertToSentis(
-            ModelAsset onnxAsset,
-            string outputFolder,
-            float iou,
-            float score,
-            QuantizationType qType)
+        private void ConvertObjectDetection()
         {
-            // Derive the filename from the ONNX asset
-            string fileName = $"{onnxAsset.name}.sentis";
-            string relativeSentisPath = Path.Combine(outputFolder, fileName).Replace("\\", "/");
-
-            // Ensure the destination folder exists on disk
-            string projectRoot = Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length);
-            string fullFolderPath = Path.Combine(projectRoot, outputFolder);
-            Directory.CreateDirectory(fullFolderPath);
-
-            // Load original ONNX
-            var model = ModelLoader.Load(onnxAsset);
+            var model = ModelLoader.Load(_onnxAsset);
             var graph = new FunctionalGraph();
             var input = graph.AddInputs(model);
-            var raw = FF.Forward(model, input)[0]; // shape=(1,C,B)
+            var raw = FF.Forward(model, input)[0]; // shape (1,C,B)
 
-            // Split coords and class-scores
-            var box = raw[0, 0..4, ..].Transpose(0, 1);
+            var boxes = raw[0, 0..4, ..].Transpose(0, 1);
             var cls = raw[0, 4.., ..].Transpose(0, 1);
             var sc = FF.ReduceMax(cls, 1);
-            var argId = FF.ArgMax(cls, 1);
+            var ids = FF.ArgMax(cls, 1);
 
-            // Centre -> corner conversion
             var c2C = FF.Constant(new TensorShape(4, 4), new[]
             {
-                1f, 0f, 1f, 0f,
-                0f, 1f, 0f, 1f,
-                -0.5f, 0f, 0.5f, 0f,
-                0f, -0.5f, 0f, 0.5f
+                1, 0, 1, 0,
+                0, 1, 0, 1,
+                -0.5f, 0, 0.5f, 0,
+                0, -0.5f, 0, 0.5f
             });
-            var corners = FF.MatMul(box, c2C);
+            var corners = FF.MatMul(boxes, c2C);
 
-            // Bake in NMS
-            var keep = FF.NMS(corners, sc, iou, score);
-            var outBox = corners.IndexSelect(0, keep);
-            var outId = argId.IndexSelect(0, keep);
-            var outSc = sc.IndexSelect(0, keep);
+            var outBoxes = corners;
+            var outIds = ids;
+            var outScores = sc;
 
-            // Compile with three outputs
-            var finalModel = graph.Compile(outBox, outId, outSc);
+            if (_addNms)
+            {
+                var keep = FF.NMS(corners, sc, _iouThreshold, _scoreThreshold);
+                outBoxes = corners.IndexSelect(0, keep);
+                outIds = ids.IndexSelect(0, keep);
+                outScores = sc.IndexSelect(0, keep);
+            }
 
-            // Quantize
-            ModelQuantizer.QuantizeWeights(qType, ref finalModel);
+            var finalModel = graph.Compile(outBoxes, outIds, outScores);
+            ModelQuantizer.QuantizeWeights(_quantType, ref finalModel);
+            SaveModel(finalModel);
+        }
 
-            // Save the .sentis model (project-relative path for AssetDatabase)
-            ModelWriter.Save(relativeSentisPath, finalModel);
+        private void ConvertSegmentation()
+        {
+            var model = ModelLoader.Load(_onnxAsset);
+            var graph = new FunctionalGraph();
+            var input = graph.AddInputs(model);
+            var outs = FF.Forward(model, input);
 
+            var boxOut = outs[0];
+            var maskOut = outs[1];
+
+            // Slice according to user-provided class count & mask channels
+            var allCoords = boxOut[0, ..4, ..].Transpose(0, 1);
+            var allScores = boxOut[0, 4..(4 + _numClasses), ..].Transpose(0, 1);
+            var allMasks = boxOut[0, (4 + _numClasses).., ..].Transpose(0, 1);
+
+            var scores = FF.ReduceMax(allScores, 1);
+            var ids = FF.ArgMax(allScores, 1);
+
+            var c2C = FF.Constant(new TensorShape(4, 4), new[]
+            {
+                1, 0, 1, 0,
+                0, 1, 0, 1,
+                -0.5f, 0, 0.5f, 0,
+                0, -0.5f, 0, 0.5f
+            });
+
+            var corners = FF.MatMul(allCoords, c2C);
+            var selCoords = allCoords;
+            var selIds = ids;
+            var selMasks = allMasks;
+
+            if (_addNms)
+            {
+                var keep = FF.NMS(corners, scores, _iouThreshold, _scoreThreshold);
+                var idx4 = keep.Unsqueeze(-1).BroadcastTo(new[] { 4 });
+                var idxCh = keep.Unsqueeze(-1).BroadcastTo(new[] { _maskChannels });
+
+                selCoords = allCoords.Gather(0, idx4);
+                selIds = ids.Gather(0, keep);
+                selMasks = allMasks.Gather(0, idxCh);
+            }
+
+            var reshaped = maskOut.Reshape(new[] { 1, _maskChannels, _maskSize * _maskSize })[0];
+            var maskWeights = FF.MatMul(selMasks, reshaped);
+            maskWeights = FF.Sigmoid(maskWeights);
+            maskWeights = maskWeights.Reshape(new[] { -1, _maskSize, _maskSize });
+
+            var finalModel = graph.Compile(selCoords, selIds, selMasks, maskWeights);
+            ModelQuantizer.QuantizeWeights(_quantType, ref finalModel);
+            SaveModel(finalModel);
+        }
+
+        private void SaveModel(Model finalModel)
+        {
+            var fileName = $"{_onnxAsset.name}.sentis";
+            var relPath = Path.Combine(_outputFolder, fileName).Replace("\\", "/");
+            var projectRoot = Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length);
+
+            Directory.CreateDirectory(Path.Combine(projectRoot, _outputFolder));
+            ModelWriter.Save(relPath, finalModel);
             AssetDatabase.Refresh();
-            EditorUtility.DisplayDialog("Success", $"Saved Sentis model to {relativeSentisPath}", "OK");
+            EditorUtility.DisplayDialog("Success", $"Saved Sentis model to {relPath}", "OK");
         }
     }
 }

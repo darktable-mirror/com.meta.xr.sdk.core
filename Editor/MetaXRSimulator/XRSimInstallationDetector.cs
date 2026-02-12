@@ -19,6 +19,7 @@
  */
 
 using System;
+using Meta.XR.Telemetry;
 using UnityEngine;
 
 namespace Meta.XR.Simulator.Editor
@@ -46,7 +47,7 @@ namespace Meta.XR.Simulator.Editor
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[{Name}] Failed to check installation status: {ex.Message}");
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "xr-simulator-check-installation-failed", ex);
                 return false;
             }
         }
@@ -65,7 +66,7 @@ namespace Meta.XR.Simulator.Editor
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[{Name}] Failed to get installation directory: {ex.Message}");
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "xr-simulator-get-installation-directory-failed", ex);
                 return null;
             }
         }

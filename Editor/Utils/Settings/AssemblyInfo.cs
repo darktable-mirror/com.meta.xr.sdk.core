@@ -39,5 +39,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.Editor.RemoteContent")]
 [assembly: InternalsVisibleTo("Meta.XR.MetaWand.Editor")]
 [assembly: InternalsVisibleTo("Meta.MCPBridge.Editor")]
+[assembly: InternalsVisibleTo("meta.xr.mrutilitykit.tests")]
+
 
 

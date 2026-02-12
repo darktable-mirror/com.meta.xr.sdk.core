@@ -233,15 +233,18 @@ namespace Meta.XR.EnvironmentDepth
             if (!IsSupported)
             {
 #if UNITY_EDITOR
-                Debug.LogError("Environment Depth could not be retrieved! Please ensure the following:" +
-                    "\n\n" +
-                    "When running over Link, the spatial data feature needs to be enabled in the Meta Quest Link app.\n" +
-                    " (Settings > Beta > Spatial Data over Meta Quest Link)." +
-                    "\n\n" +
-                    "Check the Project Setup Tool for any project related issues.\n" +
-                    " (Meta > Tools > Project Setup Tool)" +
-                    "\n\n" +
-                    "You are using a Quest 3 or newer device.");
+                if(!Application.isBatchMode)
+                {
+                    Debug.LogError("Environment Depth could not be retrieved! Please ensure the following:" +
+                                   "\n\n" +
+                                   "When running over Link, the spatial data feature needs to be enabled in the Meta Quest Link app.\n" +
+                                   " (Settings > Beta > Spatial Data over Meta Quest Link)." +
+                                   "\n\n" +
+                                   "Check the Project Setup Tool for any project related issues.\n" +
+                                   " (Meta > Tools > Project Setup Tool)" +
+                                   "\n\n" +
+                                   "You are using a Quest 3 or newer device.");
+                }
 #endif
                 return;
             }

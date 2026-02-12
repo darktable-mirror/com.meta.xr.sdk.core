@@ -75,6 +75,7 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly Color DarkBorderHover = HexToColor("#292929");
             public static readonly Color BlackSemiTransparent = HexToColor("#000000bb");
             public static readonly Color Transparent = new Color(0, 0, 0, 0);
+            public static readonly Color TransparentGreyOut = new Color(1, 1, 1, 0.7f);
 
         }
 
@@ -423,7 +424,8 @@ namespace Meta.XR.Editor.UserInterface
                 margin = new RectOffset(Constants.Padding, Constants.Padding, Constants.MiniPadding, 0),
                 padding = new RectOffset(0, 0, 0, 0),
                 fontSize = 12,
-                alignment = TextAnchor.UpperLeft
+                alignment = TextAnchor.UpperLeft,
+                richText = true
             };
 
             public readonly GUIStyle BoldLinkLabelStyle = new(EditorStyles.linkLabel)

@@ -52,6 +52,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private readonly Stack<BlockData> _backHistory = new();
         private static bool _variantInitialized;
         private static VariantsSelection _variantsSelection;
+
         private static VariantsSelection VariantsSelection
         {
             get
@@ -109,7 +110,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 InstallationStepsPanelHeight = SetupPanelHeight * 0.3f;
             }
 
-            EditorGUILayout.BeginHorizontal(GUILayout.Width(dimensions.WindowWidth * DetailPaneShowAmount), GUILayout.ExpandHeight(true));
+            EditorGUILayout.BeginHorizontal(GUILayout.Width(dimensions.WindowWidth * DetailPaneShowAmount),
+                GUILayout.ExpandHeight(true));
 
             // Back button
             DrawDetailPaneBackButton(_selectedBlock);
@@ -162,7 +164,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             UIHelpers.DrawBlockName(block, Origins.BlockDetails, block, false,
                 containerStyle: Styles.GUIStyles.LargeLinkButtonContainer,
                 labelStyle: Styles.GUIStyles.LargeLabelStyleWhite,
-                iconStyle: Styles.GUIStyles.LargeLinkIconStyle);
+                iconStyle: Styles.GUIStyles.LargeLinkIconStyle, pushContentLeft: false);
             EditorGUILayout.EndHorizontal();
 
             // Tags
@@ -180,11 +182,13 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             if (blockData == null) return;
 
-            EditorGUILayout.BeginVertical(Styles.GUIStyles.SetupPaneStyle, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+            EditorGUILayout.BeginVertical(Styles.GUIStyles.SetupPaneStyle, GUILayout.ExpandWidth(true),
+                GUILayout.ExpandHeight(true));
 
             _setupViewScrollPosition = EditorGUILayout.BeginScrollView(_setupViewScrollPosition,
                 false, false, GUIStyle.none, GUI.skin.verticalScrollbar,
-                Styles.GUIStyles.SetupPaneScrollViewStyle, GUILayout.ExpandWidth(true), GUILayout.Height(SetupPanelHeight - 48));
+                Styles.GUIStyles.SetupPaneScrollViewStyle, GUILayout.ExpandWidth(true),
+                GUILayout.Height(SetupPanelHeight - 48));
 
             // Variant selections
             ShowVariantsSelection(blockData);
@@ -220,7 +224,8 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             EditorGUILayout.BeginVertical(Styles.GUIStyles.SetupSection);
             EditorGUILayout.LabelField("Variants", Styles.GUIStyles.OffWhiteLargeLabel);
-            const string variantsDescription = "This block requires additional parameters before getting added to your scene. Pick your variant to automatically update the dependencies and installation steps accordingly.";
+            const string variantsDescription =
+                "This block requires additional parameters before getting added to your scene. Pick your variant to automatically update the dependencies and installation steps accordingly.";
             EditorGUILayout.LabelField(variantsDescription, Styles.GUIStyles.DefaultLabelStyleWrapped);
 
             foreach (var variant in VariantsSelection)
@@ -233,6 +238,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 variant.DrawGUI(null, out variantChanged);
                 _variantSelectionChanged |= variantChanged;
             }
+
             EditorGUILayout.EndVertical();
 
             if (_variantSelectionChanged)
@@ -278,13 +284,15 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             if (hasInstallationSteps)
             {
-                DrawInstallationStepGroup(blockData, $" <b>{blockData.BlockName}'s</b> installation steps", installationSteps, ref _stepsFoldout);
+                DrawInstallationStepGroup(blockData, $" <b>{blockData.BlockName}'s</b> installation steps",
+                    installationSteps, ref _stepsFoldout);
             }
 
             EditorGUILayout.EndVertical();
         }
 
-        private static void DrawInstallationStepGroup(BlockData owner, string groupTitle, IEnumerable<InstallationStepInfo> steps, ref bool foldout)
+        private static void DrawInstallationStepGroup(BlockData owner, string groupTitle,
+            IEnumerable<InstallationStepInfo> steps, ref bool foldout)
         {
             var installationStepInfos = steps as InstallationStepInfo[] ?? steps.ToArray();
             if (installationStepInfos.Length == 0) return;
@@ -304,6 +312,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     DrawStep(owner, step);
                 }
             }
+
             EditorGUILayout.EndVertical();
         }
 
@@ -386,13 +395,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             }.Draw();
 
             var packageMissing = ShouldShowMissingPackageDependencies(block);
-            var addBlockBtnContent = canBeAdded ?
-                canBeAddedOnObjects ?
-                    new GUIContent("Add Block to Selection", "Add block to the currently selected GameObject(s) in scene") :
-                    new GUIContent("Add Block", "Add block to the current scene") :
-                packageMissing ?
-                    new GUIContent("Add Block", "Missing required packages, unable to add block to the scene") :
-                    new GUIContent("Installed", "Block already added to the current scene");
+            var addBlockBtnContent = canBeAdded
+                ? canBeAddedOnObjects
+                    ? new GUIContent("Add Block to Selection",
+                        "Add block to the currently selected GameObject(s) in scene")
+                    : new GUIContent("Add Block", "Add block to the current scene")
+                : packageMissing
+                    ? new GUIContent("Add Block", "Missing required packages, unable to add block to the scene")
+                    : new GUIContent("Installed", "Block already added to the current scene");
             EditorGUI.BeginDisabledGroup(!canBeAdded || packageMissing);
             new ActionLinkDescription
             {
@@ -400,16 +410,20 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Style = Styles.GUIStyles.ThinButtonLarge,
                 Action = () =>
                 {
+                    // Defer installation to avoid GUI state corruption during async operations
+                    EditorApplication.delayCall += () =>
+                    {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    if (canBeAddedOnObjects)
-                    {
-                        block.AddToObjects(Selection.objects.OfType<GameObject>().ToList());
-                    }
-                    else
-                    {
-                        block.AddToProject(null, block.RequireListRefreshAfterInstall ? RefreshBlockList : null);
-                    }
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed,
+                        if (canBeAddedOnObjects)
+                        {
+                            block.AddToObjects(Selection.objects.OfType<GameObject>().ToList());
+                        }
+                        else
+                        {
+                            block.AddToProject(null, block.RequireListRefreshAfterInstall ? RefreshBlockList : null);
+                        }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    };
                 },
                 ActionData = block,
                 Origin = Origins.BlockDetails,
@@ -471,9 +485,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.LabelField(variantsDescription, Styles.GUIStyles.DefaultLabelStyleWrapped);
             foreach (var package in dependencies)
             {
-                var installed = Utils.IsPackageInstalled(package) ? UIStyles.ContentStatusType.Success : UIStyles.ContentStatusType.Error;
+                var installed = Utils.IsPackageInstalled(package)
+                    ? UIStyles.ContentStatusType.Success
+                    : UIStyles.ContentStatusType.Error;
                 new BulletedLabel($"<i>{package}</i>", installed).Draw();
             }
+
             EditorGUILayout.EndVertical();
         }
 
@@ -529,7 +546,8 @@ namespace Meta.XR.BuildingBlocks.Editor
             DrawSeparator(separatorRect, CharcoalGraySemiTransparent.ToTexture());
         }
 
-        private static void DrawSeparator(Rect rect, Texture texture) => GUI.DrawTexture(rect, texture, ScaleMode.ScaleAndCrop);
+        private static void DrawSeparator(Rect rect, Texture texture) =>
+            GUI.DrawTexture(rect, texture, ScaleMode.ScaleAndCrop);
 
         private void Back()
         {

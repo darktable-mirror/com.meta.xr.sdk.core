@@ -18,7 +18,11 @@
  * limitations under the License.
  */
 
-#if FUSION_WEAVER && FUSION2
+#if FUSION2 || FUSION_2_1
+#define FUSION_COMPATIBLE_VERSION
+#endif
+
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION
 using System.Linq;
 using Fusion;
 using Fusion.Editor;
@@ -54,4 +58,4 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
         }
     }
 }
-#endif // FUSION_WEAVER && FUSION2
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION

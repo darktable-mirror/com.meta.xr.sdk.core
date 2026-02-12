@@ -19,7 +19,6 @@
  */
 
 
-
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using System.Collections.Generic;
 using System.Reflection;
@@ -65,7 +64,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 _instanceHandle = value;
 
                 var instance = _instanceHandle.Instance;
-                var inspectorTitle = instance != null ? $"{instance.name} - {_instanceHandle.Type.Name}" : $"{_instanceHandle.Type.Name}";
+                var inspectorTitle = instance != null
+                    ? $"{instance.name} - {_instanceHandle.Type.Name}"
+                    : $"{_instanceHandle.Type.Name}";
                 Title = inspectorTitle;
 
                 UpdateInstanceState();
@@ -88,7 +89,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _title = Append<ToggleWithLabel>("title");
             _title.LayoutStyle = Style.Load<LayoutStyle>("InspectorTitle");
             _title.Background.LayoutStyle = Style.Load<LayoutStyle>("InspectorTitleBackground");
-            _title.BackgroundStyle = Style.Load<ImageStyle>("InspectorTitleBackground");
+            _title.BackgroundStyle = Style.Instantiate<ImageStyle>("InspectorTitleBackground");
 
             // Foldout
             _foldout = Append<Toggle>("foldout");
@@ -203,6 +204,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                     // Then remember the main member
                     _flex.Remember(member.Value);
                 }
+
                 _flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorFlex");
             }
             else

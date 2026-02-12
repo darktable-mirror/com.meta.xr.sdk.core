@@ -73,7 +73,7 @@ namespace Meta.XR.BuildingBlocks
         /// Use the <see cref="OnAnchorCreateCompleted"/> event to be notified when this operation is complete.
         /// Once the instantiation completed you can retrieve the <see cref="OVRSpatialAnchor"/> from the
         /// <see cref="OnAnchorCreateCompleted"/> callback.
-        /// For more information, see [Creating a New Spatial Anchor](https://developer.oculus.com/documentation/unity/android/openxr-lsa-overview/#creating-a-new-spatial-anchor).
+        /// For more information, see [Creating a New Spatial Anchor](https://developers.meta.com/horizon/documentation/unity/unity-spatial-anchors-persist-content#create-a-spatial-anchor).
         /// </remarks>
         /// <param name="prefab">A prefab to add the <see cref="OVRSpatialAnchor"/> component.</param>
         /// <param name="position">Position for the new anchor.</param>

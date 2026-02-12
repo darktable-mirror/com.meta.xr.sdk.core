@@ -39,6 +39,8 @@ internal static class OVRTelemetryConstants
             public const string BatchMode = "BatchMode";
             public const string ProcessorType = "ProcessorType";
             public const string FeatureRampUpValues = "FeatureRampUpValues";
+            public const string FalcoMigration = "FalcoMigration";
+            public const string FalcoMigrationEventID = "FalcoMigrationEventID";
         }
 
         public static readonly MarkerPoint InitializeInsightPassthrough = new("InitializeInsightPassthrough");
@@ -59,6 +61,13 @@ internal static class OVRTelemetryConstants
             public const int SceneActivity = 163061743;
             public const int SceneInactivity = 163060244;
             public const int EditorShutdown = 163059212;
+        }
+
+        public static class FalcoEventName
+        {
+            public const string Start = "EDITOR_START";
+            public const string StartRampKeys = "EDITOR_START_RAMP_KEYS";
+            public const string FeaturesInScene = "COMPONENTS_STATUS";
         }
 
         public static class AnnotationType
@@ -132,6 +141,12 @@ internal static class OVRTelemetryConstants
             public const int UseDefaultSceneModelLoader = 163059869;
             public const int SceneOpen = 163063049;
             public const int SceneClose = 163068562;
+        }
+
+        public static class FalcoEventName
+        {
+            public const string SceneOpen = "SCENE_OPEN";
+            public const string SceneClose = "SCENE_CLOSE";
         }
 
         public static class AnnotationType

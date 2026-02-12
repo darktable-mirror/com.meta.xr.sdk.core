@@ -20,7 +20,6 @@
 
 using System.Collections.Generic;
 using System.Text;
-using Meta.XR.Editor.FalcoOVRTelemetry;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -107,13 +106,15 @@ namespace Meta.XR.Samples.Editor
 
             if (sendEmpty || allSamplesData.Count > 0)
             {
-                var falcoEvent = OVRFalcoTelemetry.NewEvent(eventName);
+                var unifiedEvent = new OVRPlugin.UnifiedEventData(eventName);
+
                 foreach (var kvp in allSamplesData)
                 {
-                    falcoEvent.AddMetadata(kvp.Key, kvp.Value);
+                    unifiedEvent.SetMetadata(kvp.Key, string.Join(", ", kvp.Value));
                 }
 
-                falcoEvent.SendEssential();
+                unifiedEvent.isEssential = OVRPlugin.Bool.True;
+                unifiedEvent.Send();
             }
 
             SaveListOfSampleString(listOfSamplesString);

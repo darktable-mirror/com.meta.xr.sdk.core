@@ -37,22 +37,35 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         [Tooltip("Model name as listed by `ollama list`, e.g. `llama3.2` (text) or `llava` (vision).")]
         public string model = "llama3.2";
 
-        public bool SupportsVision => true;
+        [SerializeField] internal bool supportsVision = true;
+
+        /// <summary>
+        /// Indicates whether this provider will package images for multimodal local models (for example, llava).
+        /// Disable when using text-only models to avoid unnecessary payload work.
+        /// </summary>
+        /// <remarks>
+        /// See <see cref="IChatTask"/> and local model requirements in Ollama docs.
+        /// </remarks>
+        public bool SupportsVision => supportsVision;
+
         private const int MaxInlineBytes = 25 * 1024 * 1024;
 
         protected override InferenceType DefaultSupportedTypes => InferenceType.LocalServer;
 
+        /// <summary>
+        /// Sends a prompt to a local Ollama server and returns assistant text. Supports optional image
+        /// inputs by converting them to base64 when <see cref="SupportsVision"/> is enabled.
+        /// </summary>
+        /// <param name="req">Message and optional images.</param>
+        /// <param name="stream">Optional partial callback; final text is still returned.</param>
+        /// <param name="ct">Cancellation token for request/HTTP.</param>
+        /// <returns><see cref="ChatResponse"/> containing text plus raw JSON for inspection.</returns>
+        /// <remarks>
+        /// See <see cref="IChatTask"/>. Ollama API: https://docs.ollama.com/
+        /// </remarks>
         public async Task<ChatResponse> ChatAsync(ChatRequest req, IProgress<ChatDelta> stream = null, CancellationToken ct = default)
         {
-            if (string.IsNullOrEmpty(host))
-            {
-                throw new InvalidOperationException("[Ollama] Host is empty.");
-            }
-
-            if (string.IsNullOrEmpty(model))
-            {
-                throw new InvalidOperationException("[Ollama] Model is empty.");
-            }
+            ValidateConfiguration(host, host, model);
 
             var endpoint = $"{host.TrimEnd('/')}/api/generate";
 
@@ -117,11 +130,15 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         }
 
         /// <summary>
-        /// Converts ImageInput into a raw base64 string suitable for Ollama's /api/generate "images" field.
-        /// - If bytes are present, convert directly.
-        /// - If data: URL is present, extract base64 portion.
-        /// - If http(s) URL is present, download into bytes and convert.
+        /// Converts an <see cref="ImageInput"/> into a base64 payload suitable for Ollama’s image field.
+        /// Resolves remote URLs when allowed; otherwise reads local bytes or existing data URLs.
         /// </summary>
+        /// <param name="img">Image reference from the chat request.</param>
+        /// <param name="ct">Cancellation token for optional network fetch.</param>
+        /// <returns>Base64 string without MIME prefix, suitable for Ollama JSON schemas.</returns>
+        /// <remarks>
+        /// See <see cref="SupportsVision"/> and local model expectations for input size and formats.
+        /// </remarks>
         private static async Task<string> ImageInputToBase64Async(ImageInput img, CancellationToken ct)
         {
             return await ImageInputUtils.ToBase64Async(img, MaxInlineBytes, ct);
@@ -141,9 +158,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         {
             public string model;
             public string created_at;
-            public string response; // aggregated text if stream=false
+            public string response;
             public bool done;
-            public string done_reason; // e.g., "stop", "load", "unload"
+            public string done_reason;
         }
     }
 }

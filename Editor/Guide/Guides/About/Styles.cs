@@ -51,7 +51,7 @@ namespace Meta.XR.Guides.Editor.About
                 fontSize = 14,
                 wordWrap = true,
                 fontStyle = FontStyle.Normal,
-                normal = { textColor = Color.white, }
+                normal = { textColor = Color.white }
             };
 
             public readonly GUIStyle DynamicCardContent = new GUIStyle()

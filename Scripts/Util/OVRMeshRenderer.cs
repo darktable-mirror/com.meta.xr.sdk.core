@@ -182,6 +182,7 @@ public class OVRMeshRenderer : MonoBehaviour
         IsInitialized = true;
     }
 
+
     private void Update()
     {
 #if UNITY_EDITOR

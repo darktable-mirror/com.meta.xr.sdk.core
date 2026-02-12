@@ -65,6 +65,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             set => _rotateButton.State = value;
         }
 
+        /// <summary>
+        /// Gets or sets whether opacity control is enabled for the debug interface panels.
+        /// When enabled, panels are rendered with full opacity; when disabled, transparency is applied to all child controllers.
+        /// </summary>
         public bool OpacityOverride
         {
             get => _opacityButton.State;
@@ -280,7 +284,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             try
             {
                 // Get all loaded assemblies
-                var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+                var assemblies = System.AppDomain.CurrentDomain.GetAssemblies().Distinct();
+                var record = new HashSet<Type>();
 
                 foreach (var assembly in assemblies)
                 {
@@ -291,15 +296,19 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                             .Where(type => typeof(IPanelRegistrar).IsAssignableFrom(type) &&
                                           !type.IsInterface &&
                                           !type.IsAbstract)
+                            .Distinct()
                             .ToArray();
 
                         foreach (var registrarType in registrarTypes)
                         {
                             try
                             {
+                                if (record.Contains(registrarType)) return;
+
                                 // Create instance and register panel
                                 var registrar = Activator.CreateInstance(registrarType) as IPanelRegistrar;
                                 registrar?.RegisterPanel(this);
+                                record.Add(registrarType);
                             }
                             catch (Exception ex)
                             {
@@ -334,6 +343,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (panel == null)
             {
                 Debug.LogWarning("Attempted to register null debug panel");
+                return;
+            }
+
+            if (_allPanels.Contains(panel))
+            {
+                Debug.LogWarning($"Panel {panel.Title} is already registered");
                 return;
             }
 

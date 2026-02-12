@@ -51,12 +51,16 @@ public class OVROverlayCanvasEditor : Editor
 
             foreach (var canvasLayer in canvases.Select(c => c.gameObject.layer).Distinct())
             {
-                _ = EditorGUILayout.LayerField(new GUIContent("Canvas Layer", "The layer this canvas is drawn on"), canvasLayer);
+                _ = EditorGUILayout.LayerField(new GUIContent("Hidden Scene Layer",
+                        "The layer assigned to the canvas, and all sub-elements. "
+                        + "This layer should not be visible to the main camera."), canvasLayer);
             }
 
             foreach (var overlayLayer in canvases.Select(c => c.layer).Distinct())
             {
-                _ = EditorGUILayout.LayerField(new GUIContent("Overlay Layer", "The layer this overlay should be drawn on"), overlayLayer);
+                _ = EditorGUILayout.LayerField(new GUIContent("Visible Scene Layer",
+                        "The layer assigned to the overlay when rendered by the application. "
+                        + "This layer should be visible to the main camera."), overlayLayer);
             }
 
             CanvasRenderLayerGUI();
@@ -67,7 +71,9 @@ public class OVROverlayCanvasEditor : Editor
         var canvas = target as OVROverlayCanvas;
 
         bool layerError = false;
-        var newLayer = EditorGUILayout.LayerField(new GUIContent("Canvas Layer", "The layer this canvas is drawn on"), canvas.gameObject.layer);
+        var newLayer = EditorGUILayout.LayerField(new GUIContent("Hidden Scene Layer",
+            "The layer assigned to the canvas, and all sub-elements. "
+            + "This layer should not be visible to the main camera."), canvas.gameObject.layer);
 
         if (newLayer != canvas.gameObject.layer)
         {
@@ -77,7 +83,7 @@ public class OVROverlayCanvasEditor : Editor
         if (!HasConsistentLayersRecursive(canvas.gameObject, canvas.gameObject.layer))
         {
             DisplayMessage(DisplayMessageType.Warning, "Canvas Elements have inconsistent layers!");
-            if (GUILayout.Button("Fix Canvas Layers"))
+            if (GUILayout.Button("Fix Hidden Scene Layers"))
             {
                 canvas.SetCanvasLayer(canvas.gameObject.layer, true);
                 OVRPlugin.SendEvent("canvas_fix_canvas_layers_clicked");
@@ -86,15 +92,17 @@ public class OVROverlayCanvasEditor : Editor
 
         if (string.IsNullOrEmpty(LayerMask.LayerToName(canvas.gameObject.layer)))
         {
-            DisplayMessage(DisplayMessageType.Notice, "The current Canvas Layer is unnamed.");
-            if (GUILayout.Button("Set Canvas Layer Name"))
+            DisplayMessage(DisplayMessageType.Notice, "The current Hidden Scene Layer is unnamed.");
+            if (GUILayout.Button("Set Hidden Scene Layer Name"))
             {
-                SetLayerName(canvas.gameObject.layer, DefaultCanvasLayerName);
+                SetLayerName(canvas.gameObject.layer, DefaultHiddenCanvasLayerName);
                 OVRPlugin.SendEvent("canvas_set_canvas_layer_name_clicked");
             }
         }
 
-        canvas.layer = DirtyLayerField(canvas, canvas.layer, "Overlay Layer", "The layer this overlay should draw");
+        canvas.layer = DirtyLayerField(canvas, canvas.layer, "Visible Scene Layer",
+            "The layer assigned to the overlay when rendered by the application. "
+            + "This layer should be visible to the main camera.");
 
         CanvasRenderLayerGUI();
 
@@ -102,8 +110,8 @@ public class OVROverlayCanvasEditor : Editor
         if (canvas.layer == canvas.gameObject.layer)
         {
             DisplayMessage(DisplayMessageType.Error,
-                $"This GameObject's Layer is the same as Overlay Layer ('{LayerMask.LayerToName(canvas.layer)}'). "
-                + "To control camera visibility, this GameObject should have a Layer that is not the Overlay Layer.");
+                $"This GameObject's Layer is the same as Visible Scene Layer ('{LayerMask.LayerToName(canvas.layer)}'). "
+                + "To control camera visibility, this GameObject should have a Layer that is not the Visible Scene Layer.");
             layerError = true;
         }
         else if (mainCamera != null)
@@ -124,8 +132,8 @@ public class OVROverlayCanvasEditor : Editor
             if ((mainCamera.cullingMask & (1 << canvas.layer)) == 0)
             {
                 DisplayMessage(DisplayMessageType.Error,
-                    $"Overlay Layer '{LayerMask.LayerToName(canvas.layer)}' is culled by your main camera. "
-                    + "The Overlay Layer is expected to render in the scene, so it shouldn't be culled.");
+                    $"Visible Scene Layer '{LayerMask.LayerToName(canvas.layer)}' is culled by your main camera. "
+                    + "The Visible Scene Layer is expected to render in the scene, so it shouldn't be culled.");
                 layerError = true;
                 if (GUILayout.Button($"Add {LayerMask.LayerToName(canvas.layer)} to Camera cullingMask"))
                 {
@@ -159,11 +167,12 @@ public class OVROverlayCanvasEditor : Editor
     public static void CanvasRenderLayerGUI()
     {
         var settings = OVROverlayCanvasSettings.Instance;
-        settings.CanvasRenderLayer = DirtyLayerField(settings, settings.CanvasRenderLayer, "Global Hidden Render Layer", "The layer reserved for rendering overlays");
+        settings.CanvasRenderLayer = DirtyLayerField(settings, settings.CanvasRenderLayer, "Temporary Render Layer",
+            "This layer is reserved for the actively rendering overlay layer. No objects should be assigned to this layer.");
 
         if (LayerMask.LayerToName(CanvasRenderLayer) != DefaultCanvasRenderLayerName)
         {
-            if (GUILayout.Button("Create new Global Overlay Render Layer"))
+            if (GUILayout.Button("Create new Temporary Render Layer"))
             {
                 if (FindUnusedLayer(false) is { } newLayer)
                 {
@@ -173,6 +182,51 @@ public class OVROverlayCanvasEditor : Editor
                 OVRPlugin.SendEvent("canvas_create_render_layer_clicked");
             }
         }
+
+#if USING_URP
+        if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline is not UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urpAsset)
+        {
+            return;
+        }
+
+#if UNITY_URP_17_0_0_OR_NEWER
+        var rendererDatas = urpAsset.rendererDataList;
+#else
+        var rendererDatas = (UnityEngine.Rendering.Universal.ScriptableRendererData[])typeof(UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset)
+            .GetField("m_RendererDataList", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(urpAsset);
+#endif
+
+        foreach (var rendererData in rendererDatas)
+        {
+            if (rendererData is not UnityEngine.Rendering.Universal.UniversalRendererData urpData)
+            {
+                continue;
+            }
+
+            if ((urpData.opaqueLayerMask & (1 << settings.CanvasRenderLayer)) == 0)
+            {
+                DisplayMessage(DisplayMessageType.Warning,
+                    $"Temporary Render Layer '{LayerMask.LayerToName(settings.CanvasRenderLayer)}' is excluded from Opaque Layers for URP Renderer '{rendererData.name}'. "
+                    + "This will result in opaque elements of the canvas not being visible.");
+                if (GUILayout.Button($"Add Temporary Rendering Layer to '{rendererData.name}' Opaque Layers"))
+                {
+                    urpData.opaqueLayerMask |= (1 << settings.CanvasRenderLayer);
+                    urpData.SetDirty();
+                }
+            }
+            if ((urpData.transparentLayerMask & (1 << settings.CanvasRenderLayer)) == 0)
+            {
+                DisplayMessage(DisplayMessageType.Warning,
+                    $"Temporary Render Layer '{LayerMask.LayerToName(settings.CanvasRenderLayer)}' is excluded from Transparent Layers for URP Renderer '{rendererData.name}'. "
+                    + "This will result in transparent elements of the canvas not being visible.");
+                if (GUILayout.Button($"Add Temporary Rendering Layer to '{rendererData.name}' Transparent Layers"))
+                {
+                    urpData.transparentLayerMask |= (1 << settings.CanvasRenderLayer);
+                    urpData.SetDirty();
+                }
+            }
+        }
+#endif
     }
 
 #if UNITY_TEXTMESHPRO
@@ -259,7 +313,17 @@ public class OVROverlayCanvasEditor : Editor
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Overlay Configuration", EditorStyles.boldLabel);
 
-        EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(OVROverlayCanvas.overlayType)));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(OVROverlayCanvas._overlayEnabled)));
+
+        EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(OVROverlayCanvas.compositionMode)),
+            new GUIContent("Composition Mode",
+                "How this layer will be composited with the rendered scene.\n\n"
+                + "Punch-A-Hole: (canvas layer draws first, and the scene renders a transparent window to view it through the scene layer)\n"
+                + "  Pro:\n  - less GPU overhead\n  Cons:\n  - dark edge artifacts\n  - detail lost on complex edges\n\n"
+                + "Depth Tested: (scene layer draws first with depth, canvas layer draws second and tests against scene depth)\n"
+                + "  Pro:\n  - better looking layers when not occluded\n  Cons:\n  - more GPU overhead\n"
+                + "  - occlusions may show aliasing\n     and MSAA artifacts\n"
+                + "  - occlusions by transparent objects cannot be handled correctly\n\n"));
         if (serializedObject.ApplyModifiedProperties())
         {
             foreach (var canvas in canvases)
@@ -278,7 +342,26 @@ public class OVROverlayCanvasEditor : Editor
             }
         }
 
-
+        if (canvases.Any(c => c.compositionMode == OVROverlayCanvas.CompositionMode.DepthTested))
+        {
+            bool depthSubmissionEnabled = false;
+#if USING_XR_SDK_OPENXR && UNITY_ANDROID
+            depthSubmissionEnabled = (UnityEngine.XR.OpenXR.OpenXRSettings.Instance.depthSubmissionMode !=
+                                      UnityEngine.XR.OpenXR.OpenXRSettings.DepthSubmissionMode.None);
+#elif USING_XR_SDK_OCULUS
+            if (UnityEditor.EditorBuildSettings.TryGetConfigObject<Unity.XR.Oculus.OculusSettings>(
+                "Unity.XR.Oculus.Settings", out var settings))
+            {
+                depthSubmissionEnabled = settings.DepthSubmission;
+            }
+#endif
+            if (!depthSubmissionEnabled)
+            {
+                DisplayMessage(DisplayMessageType.Notice,
+                    "If Depth Submission is not enabled in the XR Plugin Settings, Depth Tested Overlays will always draw " +
+                    "in front of your scene.");
+            }
+        }
 
         EditorGUILayout.PropertyField(
             serializedObject.FindProperty(nameof(OVROverlayCanvas.opacity)),
@@ -286,7 +369,7 @@ public class OVROverlayCanvasEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
 #if !UNITY_2020_1_OR_NEWER
-        if (canvases.All(c => c.overlayType is OVROverlay.OverlayType.Underlay))
+        if (canvases.All(c => c.compositionMode is OVROverlayCanvas.CompositionMode.PunchAHole))
         {
             if (targets.Length == 1)
             {
@@ -413,8 +496,8 @@ public class OVROverlayCanvasEditor : Editor
                 new GUIContent("Max Texture Size", "The maximum width and height for this canvas texture."));
 
         EditorGUILayout.PropertyField(
-                serializedObject.FindProperty(nameof(OVROverlayCanvas.expensive)),
-                new GUIContent("Expensive", "Improve the visual appearance at the cost of additional GPU time"));
+            serializedObject.FindProperty(nameof(OVROverlayCanvas.superSample)),
+            new GUIContent("Super Sample", "Improve the visual appearance of app rendered overlays with mipmaps at the cost of additional GPU time"));
 
         EditorGUILayout.PropertyField(
                 serializedObject.FindProperty(nameof(OVROverlayCanvas.overlapMask)),
@@ -423,13 +506,14 @@ public class OVROverlayCanvasEditor : Editor
         {
             using var horizontalScope = new EditorGUILayout.HorizontalScope();
             EditorGUILayout.PropertyField(
-                serializedObject.FindProperty(nameof(OVROverlayCanvas._enableMipmapping)),
-                new GUIContent("Generate Mipmaps", "When enabled, the texture will generate mipmaps after rendering."));
-            if (canvases.Any(c => !c.manualRedraw && c._enableMipmapping))
+                serializedObject.FindProperty(nameof(OVROverlayCanvas._mipmapMode)),
+                new GUIContent("Mipmap Mode", "Enabling Mipmaps will improve quality at different distances, at the cost increased render time. "
+                                              + "Rendered mipmaps may slightly improve quality over autogenerated mipmaps at long distances, however this may incur additional rendering time."));
+            if (canvases.Any(c => !c.manualRedraw && c._mipmapMode != OVROverlayCanvas.MipMapMode.Disabled))
             {
                 DisplayMessage(DisplayMessageType.Warning, "Mipmapping increases the cost of re-rendering. Manual redraw is recommended.", "");
             }
-            else if (canvases.Any(c => c.manualRedraw && !c._enableMipmapping))
+            else if (canvases.Any(c => c.manualRedraw && c._mipmapMode == OVROverlayCanvas.MipMapMode.Disabled))
             {
                 DisplayMessage(DisplayMessageType.Notice, "When manual redraw is enabled, mipmapping is recommended to improve quality.", "");
             }
@@ -499,7 +583,6 @@ public class OVROverlayCanvasEditor : Editor
             }
         }
 
-        EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(OVROverlayCanvas._overlayEnabled)));
         serializedObject.ApplyModifiedProperties();
 
         bool updatedMaterials = false;

@@ -107,6 +107,21 @@
             "define": "UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER"
         },
         {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.14.0",
+            "define": "UNITY_OPENXR_PLUGIN_1_14_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.15.0",
+            "define": "UNITY_OPENXR_PLUGIN_1_15_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.16.0",
+            "define": "UNITY_OPENXR_PLUGIN_1_16_0_OR_NEWER"
+        },
+        {
             "name": "com.unity.textmeshpro",
             "expression": "",
             "define": "UNITY_TEXTMESHPRO"
@@ -115,6 +130,16 @@
             "name": "com.unity.xr.hands",
             "expression": "",
             "define": "USING_XR_HANDS"
+        },
+        {
+            "name": "com.unity.profiling.core",
+            "expression": "",
+            "define": "UNITY_PROFILING"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.0.0",
+            "define": "URP_17_0_OR_NEWER"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

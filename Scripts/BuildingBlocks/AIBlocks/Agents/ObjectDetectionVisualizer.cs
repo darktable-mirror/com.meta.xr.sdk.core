@@ -18,9 +18,10 @@
  * limitations under the License.
  */
 
+using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 using Meta.XR.EnvironmentDepth;
+using Unity.Collections;
 using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
@@ -32,6 +33,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     {
         [SerializeField] private GameObject boundingBoxPrefab;
         [SerializeField] private bool showBoundingBoxes = true;
+
+        private float[] _depthBuf;
+        private Matrix4x4[] _vpBuf;
 
         /// <summary>
         /// Global toggle for all currently spawned and future bounding‑box renderers.
@@ -48,8 +52,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 {
                     if (!g) continue;
                     var rc = g.GetComponent<RendererCache>() ?? g.AddComponent<RendererCache>();
-                    foreach (var r in rc.Renderers)
-                        r.enabled = value;
+                    rc.EnsureInitialized();
+                    foreach (var r in rc.renderers)
+                    {
+                        if (r) r.enabled = value;
+                    }
                 }
             }
         }
@@ -105,37 +112,72 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         {
             _agent.OnBoxesUpdated -= HandleBatch;
             _depth.OnDepthTextureUpdateCPU -= OnDepth;
+            ReturnBuffers();
+        }
+
+        private void ReturnBuffers()
+        {
+            if (_depthBuf != null)
+            {
+                ArrayPool<float>.Shared.Return(_depthBuf, clearArray: true);
+                _depthBuf = null;
+            }
+
+            if (_vpBuf != null)
+            {
+                ArrayPool<Matrix4x4>.Shared.Return(_vpBuf, clearArray: true);
+                _vpBuf = null;
+            }
         }
 
         private void OnDepth(DepthTextureAccess.DepthFrameData d)
         {
-            _frame.Pose = _cam.GetCameraPose();
+            _frame.Pose = d.CameraPose;
             _frame.CameraIntrinsics = _cam.Intrinsics;
-            _frame.Depth = d.DepthTexturePixels.ToArray();
-            _frame.ViewProjectionMatrix = d.ViewProjectionMatrix.ToArray();
+
+            if (_depthBuf == null || _depthBuf.Length < d.DepthTexturePixels.Length)
+            {
+                if (_depthBuf != null)
+                {
+                    ArrayPool<float>.Shared.Return(_depthBuf);
+                }
+                _depthBuf = ArrayPool<float>.Shared.Rent(d.DepthTexturePixels.Length);
+            }
+
+            if (_vpBuf == null || _vpBuf.Length < d.ViewProjectionMatrix.Length)
+            {
+                if (_vpBuf != null)
+                {
+                    ArrayPool<Matrix4x4>.Shared.Return(_vpBuf);
+                }
+                _vpBuf = ArrayPool<Matrix4x4>.Shared.Rent(d.ViewProjectionMatrix.Length);
+            }
+
+            NativeArray<float>.Copy(d.DepthTexturePixels, _depthBuf, d.DepthTexturePixels.Length);
+            System.Array.Copy(d.ViewProjectionMatrix, _vpBuf, d.ViewProjectionMatrix.Length);
+
+            _frame.Depth = _depthBuf;
+            _frame.ViewProjectionMatrix = _vpBuf;
         }
 #endif
 
         private void HandleBatch(List<BoxData> batch)
         {
-            Debug.Log($"[ObjectDetectionVisualizer] HandleBatch called with {batch.Count} detections");
-
-            // recycle previous quads / labels
             foreach (var g in _live)
             {
                 g.SetActive(false);
                 _pool.Enqueue(g);
             }
+
             _live.Clear();
 
 #if MRUK_INSTALLED
-            if (boundingBoxPrefab == null)
+            if (!boundingBoxPrefab)
             {
                 Debug.LogError("[ObjectDetectionVisualizer] boundingBoxPrefab is null! Cannot create bounding boxes.");
                 return;
             }
 
-            int projected = 0;
             foreach (var b in batch)
             {
                 var xmin = b.position.x;
@@ -143,34 +185,28 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 var xmax = b.scale.x;
                 var ymax = b.scale.y;
 
-                Debug.Log($"[ObjectDetectionVisualizer] Processing detection: {b.label} at ({xmin},{ymin},{xmax},{ymax})");
-
                 if (!TryProject(xmin, ymin, xmax, ymax, out var pos, out var rot, out var scl))
                 {
-                    Debug.Log($"[ObjectDetectionVisualizer] TryProject failed for detection {b.label}");
                     continue;
                 }
 
-                projected++;
-                Debug.Log($"[ObjectDetectionVisualizer] Projected {b.label} to world pos: {pos}, scale: {scl}");
-
-                // quad
                 var quad = _pool.Count > 0 ? _pool.Dequeue() : Instantiate(boundingBoxPrefab);
                 quad.SetActive(true);
 
-                // Renderer cache (created once per pooled object)
                 var rc = quad.GetComponent<RendererCache>() ?? quad.AddComponent<RendererCache>();
-                foreach (var r in rc.Renderers) r.enabled = showBoundingBoxes;
+                rc.EnsureInitialized();
+                foreach (var r in rc.renderers)
+                {
+                    if (r) r.enabled = showBoundingBoxes;
+                }
 
                 quad.transform.SetPositionAndRotation(pos, rot);
                 quad.transform.localScale = scl;
                 _live.Add(quad);
 
-                // label
                 var lbl = _pool.Count > 0 ? _pool.Dequeue() : new GameObject("Label");
                 lbl.SetActive(true);
-                if (lbl.TryGetComponent<Renderer>(out var lr))
-                    lr.enabled = showBoundingBoxes;
+                if (lbl.TryGetComponent<Renderer>(out var lr)) lr.enabled = showBoundingBoxes;
 
                 var tm = lbl.GetComponent<TextMesh>() ?? lbl.AddComponent<TextMesh>();
                 tm.text = b.label;
@@ -182,7 +218,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 lbl.transform.SetPositionAndRotation(pos + Vector3.up * .02f, rot);
                 _live.Add(lbl);
             }
-            Debug.Log($"[ObjectDetectionVisualizer] Successfully projected {projected}/{batch.Count} detections. Created {_live.Count} GameObjects.");
 #endif
         }
 
@@ -194,31 +229,65 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             rot = default;
             scale = default;
 
+            var cameraTexture = _cam.GetTexture();
+            if (cameraTexture == null)
+            {
+                return false;
+            }
+
             var px = (xmin + xmax) * 0.5f;
             var py = (ymin + ymax) * 0.5f;
 
-            var dirCam = new Vector3(
-                (px - _frame.CameraIntrinsics.PrincipalPoint.x) / _frame.CameraIntrinsics.FocalLength.x,
-                -(py - _frame.CameraIntrinsics.PrincipalPoint.y) / _frame.CameraIntrinsics.FocalLength.y,
-                1f).normalized;
+            var normalizedCenterX = px / cameraTexture.width;
+            var normalizedCenterY = py / cameraTexture.height;
 
-            var world1M = _frame.Pose.position + _frame.Pose.rotation * dirCam;
+            var ray = _cam.ViewportPointToRay(new Vector2(normalizedCenterX, 1.0f - normalizedCenterY), _frame.Pose);
+
+            var world1M = ray.origin + ray.direction;
             var clip = _frame.ViewProjectionMatrix[_eyeIdx] * new Vector4(world1M.x, world1M.y, world1M.z, 1f);
-            if (clip.w <= 0) return false;
+            if (clip.w <= 0)
+            {
+                return false;
+            }
 
             var uv = (new Vector2(clip.x, clip.y) / clip.w) * 0.5f + Vector2.one * 0.5f;
-            const int texSize = DepthTextureAccess.TextureSize;
+
+            if (_depth == null || !_depth.IsInitialized)
+            {
+                return false;
+            }
+
+            var texSize = _depth.TextureSize;
             var sx = Mathf.Clamp((int)(uv.x * texSize), 0, texSize - 1);
             var sy = Mathf.Clamp((int)(uv.y * texSize), 0, texSize - 1);
             var idx = _eyeIdx * texSize * texSize + sy * texSize + sx;
             var d = _frame.Depth[idx];
-            if (d <= 0 || d > 20 || float.IsInfinity(d)) return false;
 
-            world = _frame.Pose.position + _frame.Pose.rotation * (dirCam * d);
+            if (d <= 0 || d > 20 || float.IsInfinity(d))
+            {
+                return false;
+            }
+
+            world = ray.origin + ray.direction * d;
             rot = Quaternion.LookRotation(world - _frame.Pose.position);
-            var w = (xmax - xmin) / _frame.CameraIntrinsics.FocalLength.x * d;
-            var h = (ymax - ymin) / _frame.CameraIntrinsics.FocalLength.y * d;
+
+            var normalizedWidth = (xmax - xmin) / cameraTexture.width;
+            var normalizedHeight = (ymax - ymin) / cameraTexture.height;
+
+            var rayLeft = _cam.ViewportPointToRay(new Vector2(normalizedCenterX - normalizedWidth * 0.5f, 1.0f - normalizedCenterY), _frame.Pose);
+            var rayRight = _cam.ViewportPointToRay(new Vector2(normalizedCenterX + normalizedWidth * 0.5f, 1.0f - normalizedCenterY), _frame.Pose);
+            var rayTop = _cam.ViewportPointToRay(new Vector2(normalizedCenterX, 1.0f - (normalizedCenterY - normalizedHeight * 0.5f)), _frame.Pose);
+            var rayBottom = _cam.ViewportPointToRay(new Vector2(normalizedCenterX, 1.0f - (normalizedCenterY + normalizedHeight * 0.5f)), _frame.Pose);
+
+            var worldLeft = rayLeft.origin + rayLeft.direction * d;
+            var worldRight = rayRight.origin + rayRight.direction * d;
+            var worldTop = rayTop.origin + rayTop.direction * d;
+            var worldBottom = rayBottom.origin + rayBottom.direction * d;
+
+            var w = Vector3.Distance(worldLeft, worldRight);
+            var h = Vector3.Distance(worldTop, worldBottom);
             scale = new Vector3(w, h, 1f);
+
             return true;
         }
 #endif
@@ -228,11 +297,19 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         /// </summary>
         private sealed class RendererCache : MonoBehaviour
         {
-            public Renderer[] Renderers;
+            public Renderer[] renderers;
 
             private void Awake()
             {
-                Renderers = GetComponentsInChildren<Renderer>(true);
+                EnsureInitialized();
+            }
+
+            public void EnsureInitialized()
+            {
+                if (renderers == null)
+                {
+                    renderers = GetComponentsInChildren<Renderer>(true);
+                }
             }
         }
     }

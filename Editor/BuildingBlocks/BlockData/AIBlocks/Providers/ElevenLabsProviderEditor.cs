@@ -19,128 +19,37 @@
  */
 
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using UnityEngine.Networking;
 using UnityEditor;
 using UnityEngine;
 using System;
+using System.Threading.Tasks;
+using Meta.XR.Telemetry;
+using UnityEngine.Networking;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
     [CustomEditor(typeof(ElevenLabsProvider))]
-    public class ElevenLabsProviderEditor : UnityEditor.Editor
+    public sealed class ElevenLabsProviderEditor : AIProviderEditorBase
     {
-        // Top section
-        private SerializedProperty _apiKey;
         private SerializedProperty _endpoint;
         private SerializedProperty _model;
 
-        // STT & TTS foldouts
         private bool _sttOpen;
         private bool _ttsOpen;
 
-        // STT specific
         private SerializedProperty _sttLanguage;
         private SerializedProperty _sttIncludeAudioEvents;
-
-        // TTS voice
         private SerializedProperty _voiceId;
 
-        // Editor-only cache in EditorPrefs (no provider changes needed)
-        private string _assetGuid;
-        private const string ModelsKeyPrefix = "EL_MODELS_";
         private const string VoicesPackedKeyPrefix = "EL_VOICES_PACKED_";
 
-        // NEW: packed rich model metadata cache
-        private const string ModelsPackedKeyPrefix = "EL_MODELS_PACKED_";
-
-        // UI state
         private int _modelIndex = -1;
         private int _voiceIndex = -1;
-        private string[] _modelOptions = Array.Empty<string>();
-
-        // Voices: display options + rich metadata
         private string[] _voiceOptions = Array.Empty<string>();
+
         private List<VoiceMeta> _voiceMeta = new();
         private List<ElModelMeta> _modelMeta = new();
 
-        private struct ModelInfo
-        {
-            public string ID; // API model id
-            public string Category; // TTS / STT / Music
-            public string Notes; // key capabilities: languages, latency, char limits
-        }
-
-        private static readonly ModelInfo[] ELModelCatalog =
-        {
-            // TTS (flagship)
-            new ModelInfo
-                { ID = "eleven_v3", Category = "TTS", Notes = "Most expressive; ~70+ languages; ~3,000 chars" },
-            new ModelInfo
-            {
-                ID = "eleven_multilingual_v2", Category = "TTS", Notes = "High quality; 29 languages; ~10,000 chars"
-            },
-            new ModelInfo
-            {
-                ID = "eleven_flash_v2_5", Category = "TTS", Notes = "Ultra-fast (~75ms†); 32 languages; ~40,000 chars"
-            },
-            new ModelInfo
-                { ID = "eleven_flash_v2", Category = "TTS", Notes = "Ultra-fast (~75ms†); English; ~30,000 chars" },
-            new ModelInfo
-            {
-                ID = "eleven_turbo_v2_5", Category = "TTS",
-                Notes = "Balanced quality/latency (~250–300ms†); 32 languages; ~40,000 chars"
-            },
-            new ModelInfo
-            {
-                ID = "eleven_turbo_v2", Category = "TTS", Notes = "Balanced quality/latency; English; ~30,000 chars"
-            },
-
-            // Voice design / speech-to-speech
-            new ModelInfo
-            {
-                ID = "eleven_multilingual_sts_v2", Category = "STS", Notes = "Multilingual speech-to-speech; many langs"
-            },
-            new ModelInfo
-                { ID = "eleven_multilingual_ttv_v2", Category = "TTV", Notes = "Multilingual text-to-voice design" },
-            new ModelInfo { ID = "eleven_english_sts_v2", Category = "STS", Notes = "English speech-to-speech" },
-
-            // STT
-            new ModelInfo
-                { ID = "scribe_v1", Category = "STT", Notes = "Transcription; ~99 languages; timestamps, diarization" },
-            new ModelInfo
-            {
-                ID = "scribe_v1_experimental", Category = "STT",
-                Notes = "Experimental STT; improved multilingual, fewer hallucinations"
-            },
-
-            // Music
-            new ModelInfo
-            {
-                ID = "eleven_music", Category = "Music", Notes = "Studio-grade music generation; vocals or instrumental"
-            },
-        };
-
-        private static int FindElModelIndex(string id)
-        {
-            if (string.IsNullOrEmpty(id)) return -1;
-            for (int i = 0; i < ELModelCatalog.Length; i++)
-                if (ELModelCatalog[i].ID == id)
-                    return i;
-            return -1;
-        }
-
-        private static readonly string[] DefaultModelList =
-        {
-            "eleven_multilingual_v2",
-            "eleven_turbo_v2_5",
-            "eleven_flash_v2_5",
-            "scribe_v1", // <- ensure present by default
-            "scribe_v1_experimental",
-            "Custom…"
-        };
-
-        // Minimal default voices (will be replaced after fetch)
         private static readonly List<VoiceMeta> DefaultVoices = new()
         {
             new VoiceMeta()
@@ -154,29 +63,19 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         private void OnEnable()
         {
-            _apiKey = serializedObject.FindProperty("apiKey");
-            _endpoint = serializedObject.FindProperty("endpoint");
-            _model = serializedObject.FindProperty("model");
-            _voiceId = serializedObject.FindProperty("voiceId");
+            InitializeCredentialStorage(nameof(ElevenLabsProvider.apiKey));
 
-            _sttLanguage = serializedObject.FindProperty("sttLanguage");
-            _sttIncludeAudioEvents = serializedObject.FindProperty("sttIncludeAudioEvents");
+            _endpoint = serializedObject.FindProperty(nameof(ElevenLabsProvider.endpoint));
+            _model = serializedObject.FindProperty(nameof(ElevenLabsProvider.model));
+            _sttLanguage = serializedObject.FindProperty(nameof(ElevenLabsProvider.sttLanguage));
+            _sttIncludeAudioEvents = serializedObject.FindProperty(nameof(ElevenLabsProvider.sttIncludeAudioEvents));
+            _voiceId = serializedObject.FindProperty(nameof(ElevenLabsProvider.voiceId));
 
-            var path = AssetDatabase.GetAssetPath(target);
-            _assetGuid = AssetDatabase.AssetPathToGUID(path);
+            _voiceOptions = DefaultVoices.ConvertAll(v => v.name).ToArray();
 
-            _modelOptions = LoadListFromPrefs(ModelsKeyPrefix + _assetGuid, DefaultModelList);
-            _modelOptions = EnsureContainsModel(_modelOptions, "scribe_v1");
-
-            // Load voices
-            LoadVoicesPackedFromPrefs(VoicesPackedKeyPrefix + _assetGuid, DefaultVoices, out _voiceMeta,
-                out _voiceOptions);
-
-            // Load model metadata (if any cached)
-            LoadModelsPackedFromPrefs(ModelsPackedKeyPrefix + _assetGuid, out _modelMeta);
-
-            _modelIndex = IndexOfOrCustom(_modelOptions, _model?.stringValue);
             _voiceIndex = IndexOfOrCustomId(_voiceOptions, _voiceId?.stringValue);
+
+            InitializeModelCache("ElevenLabs", FetchModels);
         }
 
         public override void OnInspectorGUI()
@@ -184,21 +83,21 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             serializedObject.Update();
             EditorGUILayout.LabelField("ElevenLabs Provider", EditorStyles.boldLabel);
             EditorGUILayout.Space();
-            DrawApiKeyRow(_apiKey, "API Key", "https://elevenlabs.io/app/developers/api-keys");
+
+            var provider = target as ElevenLabsProvider;
+            if (provider is IUsesCredential credProvider)
+            {
+                var config = credProvider.GetTestConfig();
+                TryLoadCachedValidation(config.Endpoint, config.Model, config.ProviderId);
+            }
+
+            DrawApiKeyField("API Key", "https://elevenlabs.io/app/developers/api-keys",
+                drawExtraTopRight: () => DrawTestConnectionButton());
             EditorGUILayout.Space();
             SafeProp(_endpoint, new GUIContent("Endpoint", "e.g. https://api.elevenlabs.io"));
             EditorGUILayout.Space();
-            DrawModelPickerInline(); // includes inline custom + sets _model
-            DrawSelectedModelInfoBox(); // NEW: note below the field with provider info
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Refresh Models", GUILayout.Width(130)))
-                {
-                    FetchModelsAsync(); // safe async
-                }
-            }
+            DrawModelPickerInline();
+            DrawSelectedModelInfoBox();
 
             EditorGUILayout.Space();
             _sttOpen = EditorGUILayout.BeginFoldoutHeaderGroup(_sttOpen, "Speech-to-Text (STT)");
@@ -217,8 +116,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                         if (GUILayout.Button("Set model to scribe_v1", GUILayout.Width(180)))
                         {
                             _model.stringValue = "scribe_v1";
-                            _modelOptions = EnsureContainsModel(_modelOptions, "scribe_v1");
-                            _modelIndex = IndexOfOrCustom(_modelOptions, "scribe_v1");
                         }
                     }
                 }
@@ -239,9 +136,8 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 using (new EditorGUILayout.VerticalScope("box"))
                 {
                     GUILayout.Label("Voice", EditorStyles.label);
-                    DrawVoiceDropdown(); // sets _voiceId + shows custom field
+                    DrawVoiceDropdown();
 
-                    // Extra details panel (for selected non-Custom voice)
                     var meta = GetSelectedVoiceMeta();
                     if (meta != null && !IsCustom(meta.voiceId))
                     {
@@ -260,7 +156,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                             {
                                 GUILayout.FlexibleSpace();
 
-                                // Show Preview only when we have a URL
                                 if (!string.IsNullOrEmpty(meta.previewUrl))
                                 {
                                     if (GUILayout.Button("Preview", GUILayout.Width(90)))
@@ -273,14 +168,13 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
                                 if (GUILayout.Button("Refresh Voices", GUILayout.Width(130)))
                                 {
-                                    FetchVoicesAsync(); // safe async
+                                    FetchVoicesAsync();
                                 }
                             }
                         }
                     }
                     else
                     {
-                        // No details (e.g., "Custom…"): still offer Refresh in the same position line
                         using (new EditorGUILayout.HorizontalScope())
                         {
                             GUILayout.FlexibleSpace();
@@ -305,46 +199,46 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 return;
             }
 
-            if (_modelOptions == null || _modelOptions.Length == 0)
-                _modelOptions = DefaultModelList;
+            string[] fallbackModels = { "scribe_v1", "Custom…" };
+            var availableModels = FetchedModels is { Count: > 0 } ? FetchedModels.ToArray() : fallbackModels;
 
-            // Ensure scribe_v1 is always present (even after cached loads)
-            _modelOptions = EnsureContainsModel(_modelOptions, "scribe_v1");
+            availableModels = EnsureContainsModel(availableModels, "scribe_v1");
 
-            _modelIndex = Mathf.Clamp(_modelIndex < 0 ? _modelOptions.Length - 1 : _modelIndex, 0,
-                _modelOptions.Length - 1);
-            bool isCustom = IsCustomIndex(_modelOptions, _modelIndex);
+            _modelIndex = IndexOfOrCustom(availableModels, _model?.stringValue);
+            _modelIndex = Mathf.Clamp(_modelIndex, 0, availableModels.Length - 1);
+            var isCustom = IsCustomIndex(availableModels, _modelIndex);
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                // Prefix label in front of the dropdown (consistent with other providers)
                 EditorGUILayout.PrefixLabel("Model Selection");
 
                 if (!isCustom)
                 {
-                    // Full-width popup when NOT custom
-                    int newIndex = EditorGUILayout.Popup(_modelIndex, _modelOptions, GUILayout.ExpandWidth(true));
+                    var newIndex = EditorGUILayout.Popup(_modelIndex, availableModels, GUILayout.ExpandWidth(true));
                     if (newIndex != _modelIndex)
                     {
                         _modelIndex = newIndex;
-                        var selected = _modelOptions[Mathf.Clamp(_modelIndex, 0, _modelOptions.Length - 1)];
+                        var selected = availableModels[Mathf.Clamp(_modelIndex, 0, availableModels.Length - 1)];
                         if (!IsCustom(selected))
+                        {
                             _model.stringValue = selected;
+                        }
                     }
                 }
                 else
                 {
-                    // When custom: narrow popup + inline text field that takes remaining width
-                    int newIndex = EditorGUILayout.Popup(_modelIndex, _modelOptions, GUILayout.MaxWidth(280f));
+                    var newIndex = EditorGUILayout.Popup(_modelIndex, availableModels, GUILayout.MaxWidth(180f));
                     if (newIndex != _modelIndex)
                     {
                         _modelIndex = newIndex;
-                        isCustom = IsCustomIndex(_modelOptions, _modelIndex);
+                        isCustom = IsCustomIndex(availableModels, _modelIndex);
                         if (!isCustom)
                         {
-                            var selected = _modelOptions[Mathf.Clamp(_modelIndex, 0, _modelOptions.Length - 1)];
+                            var selected = availableModels[Mathf.Clamp(_modelIndex, 0, availableModels.Length - 1)];
                             if (!IsCustom(selected))
+                            {
                                 _model.stringValue = selected;
+                            }
                         }
                     }
 
@@ -352,6 +246,12 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                     var val = EditorGUILayout.TextField(_model.stringValue ?? string.Empty,
                         GUILayout.ExpandWidth(true));
                     if (val != _model.stringValue) _model.stringValue = val;
+                }
+
+                if (GUILayout.Button(new GUIContent("↻", "Fetch available models from ElevenLabs API"),
+                        GUILayout.Width(25)))
+                {
+                    FetchModels();
                 }
             }
         }
@@ -362,7 +262,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             if (string.IsNullOrEmpty(id))
             {
                 EditorGUILayout.HelpBox(
-                    "Model ID: (empty)\n(Enter or select a model. Click “Refresh Models” to fetch from your ElevenLabs account.)",
+                    "Model ID: (empty)\n(Enter or select a model. Click refresh to fetch from your ElevenLabs account.)",
                     MessageType.None);
                 return;
             }
@@ -370,34 +270,25 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             var meta = FindModelMeta(id);
             if (meta == null)
             {
-                // Fallback to small catalog hints or plain custom note
-                var idx = FindElModelIndex(id);
-                if (idx >= 0)
-                {
-                    var m = ELModelCatalog[idx];
-                    EditorGUILayout.HelpBox($"{id}\nCategory: {m.Category}\n{m.Notes}", MessageType.Info);
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox(
-                        $"Model ID: {id}\n(Custom value. Click “Refresh Models” to pull description & capabilities.)",
-                        MessageType.None);
-                }
-
+                EditorGUILayout.HelpBox(
+                    $"Model ID: {id}\n(Custom value or not yet fetched. Click refresh to pull description & capabilities.)",
+                    MessageType.None);
                 return;
             }
 
-            // Build concise, readable lines from metadata
-            string modalities =
+            var modalities =
                 (meta.can_do_text_to_speech == true ? "TTS" : null) +
-                ((meta.can_do_voice_conversion == true
+                (meta.can_do_voice_conversion == true
                     ? (string.IsNullOrEmpty((meta.can_do_text_to_speech ?? false) ? "x" : null) ? "" : ", ") +
                       "Voice Conversion"
-                    : ""));
+                    : "");
 
-            if (string.IsNullOrEmpty(modalities)) modalities = "—";
+            if (string.IsNullOrEmpty(modalities))
+            {
+                modalities = "—";
+            }
 
-            var languages = (meta.languages != null && meta.languages.Count > 0)
+            var languages = meta.languages is { Count: > 0 }
                 ? string.Join(", ", meta.languages)
                 : "—";
 
@@ -439,7 +330,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _voiceIndex = Mathf.Clamp(_voiceIndex < 0 ? _voiceOptions.Length - 1 : _voiceIndex, 0,
                 _voiceOptions.Length - 1);
 
-            int newIndex = EditorGUILayout.Popup(_voiceIndex, _voiceOptions, GUILayout.ExpandWidth(true));
+            var newIndex = EditorGUILayout.Popup(_voiceIndex, _voiceOptions, GUILayout.ExpandWidth(true));
             if (newIndex != _voiceIndex)
             {
                 _voiceIndex = newIndex;
@@ -452,75 +343,44 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
 
             var current = GetSelectedVoiceMeta();
-            if (current != null && IsCustom(current.voiceId))
+            if (current == null || !IsCustom(current.voiceId))
             {
-                EditorGUI.indentLevel++;
-                var val = EditorGUILayout.TextField(new GUIContent("Custom Voice Id"), _voiceId.stringValue,
-                    GUILayout.ExpandWidth(true));
-                if (val != _voiceId.stringValue) _voiceId.stringValue = val;
-                EditorGUI.indentLevel--;
+                return;
             }
+
+            EditorGUI.indentLevel++;
+            var val = EditorGUILayout.TextField(new GUIContent("Custom Voice Id"), _voiceId.stringValue,
+                GUILayout.ExpandWidth(true));
+            if (val != _voiceId.stringValue) _voiceId.stringValue = val;
+            EditorGUI.indentLevel--;
         }
 
-        private async void FetchModelsAsync()
+        private void FetchModels()
         {
-            var key = _apiKey?.stringValue ?? string.Empty;
-            var baseUrl = (_endpoint?.stringValue ?? "https://api.elevenlabs.io").TrimEnd('/');
-
+            var key = ApiKeyProperty?.stringValue ?? string.Empty;
             if (string.IsNullOrWhiteSpace(key))
             {
                 EditorUtility.DisplayDialog("ElevenLabs", "Please set your API Key first.", "OK");
                 return;
             }
 
-            var url = baseUrl + "/v1/models";
-            try
-            {
-                EditorUtility.DisplayProgressBar("ElevenLabs", "Fetching models…", 0.3f);
-                using var req = UnityWebRequest.Get(url);
-                req.SetRequestHeader("xi-api-key", key);
-
-                var op = req.SendWebRequest();
-                while (!op.isDone) await Task.Yield(); // poll instead of awaiting the op
-
-                if (req.result != UnityWebRequest.Result.Success)
-                    throw new Exception(req.error + "\n" + req.downloadHandler?.text);
-
-                var json = req.downloadHandler.text;
-
-                // Update simple list (IDs) for the dropdown
-                var ids = ParseModelIds(json);
-                AddIfMissing(ids, "scribe_v1");
-                EnsureCustomSuffix(ids);
-                _modelOptions = ids.ToArray();
-                SaveListToPrefs(ModelsKeyPrefix + _assetGuid, _modelOptions);
-                _modelIndex = IndexOfOrCustom(_modelOptions, _model?.stringValue);
-
-                // NEW: Parse and cache rich metadata for info box
-                ParseModels(json, out var metas);
-                _modelMeta = metas ?? new List<ElModelMeta>();
-                SaveModelsPackedToPrefs(ModelsPackedKeyPrefix + _assetGuid, _modelMeta);
-
-                EditorApplication.delayCall += () =>
+            FetchModelsFromAPIWithCache("https://api.elevenlabs.io/v1", "ElevenLabs",
+                req => req.SetRequestHeader("xi-api-key", key),
+                json =>
                 {
-                    if (this == null || target == null) return;
-                    Repaint();
-                };
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[ElevenLabs Editor] Failed to fetch models: {ex.Message}");
-                EditorUtility.DisplayDialog("ElevenLabs", "Failed to fetch models. Check Console for details.", "OK");
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
-            }
+                    var ids = ParseModelIds(json);
+                    AddIfMissing(ids, "scribe_v1");
+
+                    ParseModels(json, out var metas);
+                    _modelMeta = metas ?? new List<ElModelMeta>();
+
+                    return ids;
+                });
         }
 
         private async void FetchVoicesAsync()
         {
-            var key = _apiKey?.stringValue ?? string.Empty;
+            var key = ApiKeyProperty?.stringValue ?? string.Empty;
             var baseUrl = (_endpoint?.stringValue ?? "https://api.elevenlabs.io").TrimEnd('/');
 
             if (string.IsNullOrWhiteSpace(key))
@@ -537,38 +397,262 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 req.SetRequestHeader("xi-api-key", key);
 
                 var op = req.SendWebRequest();
-                while (!op.isDone) await Task.Yield();
+                while (!op.isDone)
+                {
+                    await Task.Yield();
+                }
 
                 if (req.result != UnityWebRequest.Result.Success)
+                {
                     throw new Exception(req.error + "\n" + req.downloadHandler?.text);
+                }
 
                 ParseVoices(req.downloadHandler.text, out var metas);
 
-                if (metas.Count == 0) metas = new List<VoiceMeta>(DefaultVoices);
+                if (metas.Count == 0)
+                {
+                    metas = new List<VoiceMeta>(DefaultVoices);
+                }
                 else if (!IsCustom(metas[^1].voiceId))
+                {
                     metas.Add(new VoiceMeta { voiceId = "Custom…", name = "Custom…", labels = "", description = "" });
+                }
 
                 _voiceMeta = metas;
                 _voiceOptions = BuildVoiceDisplay(_voiceMeta);
-                SaveVoicesPackedToPrefs(VoicesPackedKeyPrefix + _assetGuid, _voiceMeta);
+                var assetGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(target));
+                SaveVoicesPackedToPrefs(VoicesPackedKeyPrefix + assetGuid, _voiceMeta);
 
                 _voiceIndex = IndexOfOrCustomId(_voiceOptions, _voiceId?.stringValue);
 
                 EditorApplication.delayCall += () =>
                 {
-                    if (this == null || target == null) return;
+                    if (this == null || target == null)
+                    {
+                        return;
+                    }
                     Repaint();
                 };
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[ElevenLabs Editor] Failed to fetch voices: {ex.Message}");
+                IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "elevenlabs-fetch-voices-failed",
+                    $"[ElevenLabs] Failed to fetch voices: {ex.Message}");
                 EditorUtility.DisplayDialog("ElevenLabs", "Failed to fetch voices. Check Console for details.", "OK");
             }
             finally
             {
                 EditorUtility.ClearProgressBar();
             }
+        }
+
+        private static void SaveVoicesPackedToPrefs(string key, List<VoiceMeta> list)
+        {
+            try
+            {
+                EditorPrefs.SetString(key, string.Join("\n", list.ConvertAll(v => v.Pack())));
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        private static void AddIfMissing(List<string> list, string value)
+        {
+            if (list == null || string.IsNullOrEmpty(value)) return;
+            if (list.Contains(value))
+            {
+                return;
+            }
+
+            var customIdx = list.IndexOf("Custom…");
+            if (customIdx >= 0) list.Insert(customIdx, value);
+            else list.Add(value);
+        }
+
+        private static void EnsureCustomSuffix(List<string> list)
+        {
+            if (list == null) return;
+            if (list.Count == 0 || list[^1] != "Custom…")
+            {
+                list.Add("Custom…");
+            }
+        }
+
+        private static void InfoRow(string label, string value)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Label(label, GUILayout.Width(EditorGUIUtility.labelWidth - 4));
+                EditorGUILayout.SelectableLabel(value ?? "—", GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
+        }
+
+        private static bool IsCustom(string s) =>
+            !string.IsNullOrEmpty(s) && s.Equals("Custom…", StringComparison.Ordinal);
+
+        private static bool IsCustomIndex(string[] arr, int idx) =>
+            arr != null && idx >= 0 && idx < arr.Length && IsCustom(arr[idx]);
+
+        private static int IndexOfOrCustom(string[] arr, string value)
+        {
+            if (arr == null || arr.Length == 0) return -1;
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    if (arr[i] == value)
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (IsCustom(arr[i]))
+                {
+                    return i;
+                }
+            }
+            return 0;
+        }
+
+        private static int IndexOfOrCustomId(string[] displays, string id)
+        {
+            if (displays == null || displays.Length == 0) return -1;
+            if (!string.IsNullOrEmpty(id))
+            {
+                for (var i = 0; i < displays.Length; i++)
+                {
+                    if (displays[i] == id) return i;
+                    if (displays[i].EndsWith($"({id})", StringComparison.Ordinal)) return i;
+                }
+            }
+
+            for (int i = 0; i < displays.Length; i++)
+            {
+                if (IsCustom(displays[i]))
+                {
+                    return i;
+                }
+            }
+            return 0;
+        }
+
+        private VoiceMeta GetSelectedVoiceMeta()
+        {
+            if (_voiceMeta == null || _voiceMeta.Count == 0) return null;
+            var idx = Mathf.Clamp(_voiceIndex, 0, _voiceMeta.Count - 1);
+            return _voiceMeta[idx];
+        }
+
+        private static void SafeProp(SerializedProperty prop, GUIContent label)
+        {
+            if (prop == null)
+            {
+                EditorGUILayout.HelpBox($"Missing '{label.text}' property on provider.", MessageType.Warning);
+            }
+            else
+            {
+                EditorGUILayout.PropertyField(prop, label);
+            }
+        }
+
+
+        private static string[] EnsureContainsModel(string[] arr, string modelName)
+        {
+            if (string.IsNullOrEmpty(modelName)) return arr ?? Array.Empty<string>();
+            if (arr == null || arr.Length == 0)
+                return new[] { modelName, "Custom…" };
+
+            foreach (var t in arr)
+                if (t == modelName)
+                {
+                    return arr;
+                }
+
+            var list = new List<string>(arr);
+            var customIdx = list.IndexOf("Custom…");
+            if (customIdx >= 0) list.Insert(customIdx, modelName);
+            else list.Add(modelName);
+            return list.ToArray();
+        }
+
+        [Serializable]
+        private class VoiceMeta
+        {
+            public string voiceId;
+            public string name;
+            public string labels;
+            public string description;
+            public string previewUrl;
+
+            public string Pack()
+            {
+                return Escape(voiceId) + "|" + Escape(name) + "|" + Escape(labels) + "|" + Escape(description) + "|" +
+                       Escape(previewUrl);
+            }
+
+            private static string Escape(string v) => string.IsNullOrEmpty(v) ? "" : v.Replace("|", "%7C");
+            private static string Unescape(string v) => string.IsNullOrEmpty(v) ? "" : v.Replace("%7C", "|");
+        }
+
+        [Serializable]
+        private class ElModelMeta
+        {
+            public string model_id;
+            public string name;
+            public bool? can_be_finetuned;
+            public bool? can_do_text_to_speech;
+            public bool? can_do_voice_conversion;
+            public bool? can_use_style;
+            public bool? can_use_speaker_boost;
+            public bool? serves_pro_voices;
+            public double? token_cost_factor;
+            public string description;
+            public bool? requires_alpha_access;
+            public int? max_characters_request_free_user;
+            public int? max_characters_request_subscribed_user;
+            public int? maximum_text_length_per_request;
+            public List<string> languages;
+            public string concurrency_group;
+        }
+
+        private ElModelMeta FindModelMeta(string id)
+        {
+            if (string.IsNullOrEmpty(id) || _modelMeta == null || _modelMeta.Count == 0) return null;
+            for (int k = 0; k < _modelMeta.Count; k++)
+                if (string.Equals(_modelMeta[k].model_id, id, StringComparison.Ordinal))
+                    return _modelMeta[k];
+            return null;
+        }
+
+        private static string[] BuildVoiceDisplay(List<VoiceMeta> metas)
+        {
+            if (metas == null || metas.Count == 0) return Array.Empty<string>();
+            var arr = new string[metas.Count];
+            for (int i = 0; i < metas.Count; i++)
+            {
+                var m = metas[i];
+                if (IsCustom(m.voiceId))
+                {
+                    arr[i] = "Custom…";
+                }
+                else
+                {
+                    var display = string.IsNullOrEmpty(m.name) ? m.voiceId : m.name;
+                    if (!string.IsNullOrEmpty(m.labels))
+                    {
+                        display += $" ({m.labels})";
+                    }
+
+                    arr[i] = display;
+                }
+            }
+
+            return arr;
         }
 
         private static List<string> ParseModelIds(string json)
@@ -591,7 +675,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 i = quote2 + 1;
             }
 
-            if (list.Count == 0) list.AddRange(DefaultModelList);
+            if (list.Count == 0) list.AddRange(new[] { "scribe_v1", "Custom…" });
             return list;
         }
 
@@ -626,82 +710,146 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
                 bool? requires_alpha = ExtractBoolNullable(json, "\"requires_alpha_access\"", i);
 
-                int? max_free = ExtractIntNullable(json, "\"max_characters_request_free_user\"", i);
-                int? max_sub = ExtractIntNullable(json, "\"max_characters_request_subscribed_user\"", i);
-                int? max_len = ExtractIntNullable(json, "\"maximum_text_length_per_request\"", i);
+                int? max_chars_free = ExtractIntNullable(json, "\"max_characters_request_free_user\"", i);
+                int? max_chars_subscribed = ExtractIntNullable(json, "\"max_characters_request_subscribed_user\"", i);
+                int? max_text_length = ExtractIntNullable(json, "\"maximum_text_length_per_request\"", i);
 
-                // languages array: [{"language_id":"xx","name":"..."}]
-                var langs = ExtractLanguages(json, i);
-
-                // model_rates.character_cost_multiplier (optional)
-                double? char_mult = ExtractDoubleNullable(json, "\"character_cost_multiplier\"", i);
-
-                var cgIdx = json.IndexOf("\"concurrency_group\"", i, StringComparison.Ordinal);
-                var concurrency = (cgIdx >= 0) ? ExtractStringValue(json, cgIdx) : null;
-
-                if (!string.IsNullOrEmpty(model_id))
+                var langsIdx = json.IndexOf("\"languages\"", i, StringComparison.Ordinal);
+                List<string> languages = new List<string>();
+                if (langsIdx >= 0)
                 {
-                    metas.Add(new ElModelMeta
+                    var bracketStart = json.IndexOf('[', langsIdx);
+                    var bracketEnd = json.IndexOf(']', bracketStart + 1);
+                    if (bracketStart >= 0 && bracketEnd > bracketStart)
                     {
-                        model_id = model_id,
-                        name = name,
-                        can_be_finetuned = can_be_finetuned,
-                        can_do_text_to_speech = can_do_tts,
-                        can_do_voice_conversion = can_do_vc,
-                        can_use_style = can_use_style,
-                        can_use_speaker_boost = can_use_boost,
-                        serves_pro_voices = serves_pro,
-                        token_cost_factor = token_cost_factor ?? char_mult, // prefer top-level; fall back to rates
-                        description = description,
-                        requires_alpha_access = requires_alpha,
-                        max_characters_request_free_user = max_free,
-                        max_characters_request_subscribed_user = max_sub,
-                        maximum_text_length_per_request = max_len,
-                        languages = langs,
-                        concurrency_group = concurrency
-                    });
+                        var langsBlock = json.Substring(bracketStart + 1, bracketEnd - bracketStart - 1);
+                        int p = 0;
+                        while (p < langsBlock.Length)
+                        {
+                            var q1 = langsBlock.IndexOf('"', p);
+                            if (q1 < 0) break;
+                            var q2 = langsBlock.IndexOf('"', q1 + 1);
+                            if (q2 < 0) break;
+                            var lang = langsBlock.Substring(q1 + 1, q2 - q1 - 1).Trim();
+                            if (!string.IsNullOrEmpty(lang)) languages.Add(lang);
+                            p = q2 + 1;
+                        }
+                    }
                 }
+
+                var concurrIdx = json.IndexOf("\"concurrency_group\"", i, StringComparison.Ordinal);
+                var concurrency_group = (concurrIdx >= 0) ? ExtractStringValue(json, concurrIdx) : null;
+
+                metas.Add(new ElModelMeta
+                {
+                    model_id = model_id,
+                    name = name,
+                    can_be_finetuned = can_be_finetuned,
+                    can_do_text_to_speech = can_do_tts,
+                    can_do_voice_conversion = can_do_vc,
+                    can_use_style = can_use_style,
+                    can_use_speaker_boost = can_use_boost,
+                    serves_pro_voices = serves_pro,
+                    token_cost_factor = token_cost_factor,
+                    description = description,
+                    requires_alpha_access = requires_alpha,
+                    max_characters_request_free_user = max_chars_free,
+                    max_characters_request_subscribed_user = max_chars_subscribed,
+                    maximum_text_length_per_request = max_text_length,
+                    languages = languages,
+                    concurrency_group = concurrency_group
+                });
             }
         }
 
-        private static List<string> ExtractLanguages(string json, int startIdx)
+        private static void ParseVoices(string json, out List<VoiceMeta> metas)
         {
-            var list = new List<string>();
-            var langsIdx = json.IndexOf("\"languages\"", startIdx, StringComparison.Ordinal);
-            if (langsIdx < 0) return list;
-
-            int arrStart = json.IndexOf('[', langsIdx);
-            if (arrStart < 0) return list;
-            int depth = 0;
-            int arrEnd = -1;
-            for (int j = arrStart; j < json.Length; j++)
+            metas = new List<VoiceMeta>(64);
+            if (string.IsNullOrEmpty(json))
             {
-                if (json[j] == '[') depth++;
-                else if (json[j] == ']')
+                return;
+            }
+
+            var i = 0;
+            while (i < json.Length)
+            {
+                var vidIdx = json.IndexOf("\"voice_id\"", i, StringComparison.Ordinal);
+                if (vidIdx < 0) break;
+
+                var voiceId = ExtractStringValue(json, vidIdx);
+                i = vidIdx + 9;
+
+                var nameIdx = json.IndexOf("\"name\"", i, StringComparison.Ordinal);
+                var name = (nameIdx >= 0) ? ExtractStringValue(json, nameIdx) : null;
+
+                var descIdx = json.IndexOf("\"description\"", i, StringComparison.Ordinal);
+                var desc = (descIdx >= 0) ? ExtractStringValue(json, descIdx) : null;
+
+                var labelsIdx = json.IndexOf("\"labels\"", i, StringComparison.Ordinal);
+                string labelsFlat = null;
+                if (labelsIdx >= 0)
                 {
-                    depth--;
-                    if (depth == 0)
+                    int braceStart = json.IndexOf('{', labelsIdx);
+                    if (braceStart > 0)
                     {
-                        arrEnd = j;
-                        break;
+                        int braceEnd = FindMatchingBrace(json, braceStart);
+                        if (braceEnd > braceStart)
+                        {
+                            var labelsBlock = json.Substring(braceStart + 1, braceEnd - braceStart - 1);
+                            var parts = new List<string>();
+                            int p = 0;
+                            while (p < labelsBlock.Length)
+                            {
+                                var keyIdx = labelsBlock.IndexOf('"', p);
+                                if (keyIdx < 0) break;
+                                var keyEnd = labelsBlock.IndexOf('"', keyIdx + 1);
+                                if (keyEnd < 0) break;
+                                var key = labelsBlock.Substring(keyIdx + 1, keyEnd - keyIdx - 1);
+
+                                var colonIdx = labelsBlock.IndexOf(':', keyEnd);
+                                if (colonIdx < 0) break;
+                                var valIdx = labelsBlock.IndexOf('"', colonIdx);
+                                if (valIdx < 0) break;
+                                var valEnd = labelsBlock.IndexOf('"', valIdx + 1);
+                                if (valEnd < 0) break;
+                                var val = labelsBlock.Substring(valIdx + 1, valEnd - valIdx - 1);
+
+                                if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(val))
+                                {
+                                    parts.Add($"{key}={val}");
+                                }
+
+                                p = valEnd + 1;
+                            }
+
+                            labelsFlat = string.Join(", ", parts);
+                        }
                     }
                 }
-            }
 
-            if (arrEnd < 0) return list;
-            var inner = json.Substring(arrStart + 1, arrEnd - arrStart - 1);
-            // collect language "name" fields
-            int k = 0;
-            while (k < inner.Length)
-            {
-                var nameIdx = inner.IndexOf("\"name\"", k, StringComparison.Ordinal);
-                if (nameIdx < 0) break;
-                var name = ExtractStringValue(inner, nameIdx);
-                if (!string.IsNullOrEmpty(name)) list.Add(name);
-                k = nameIdx + 6;
-            }
+                var prevIdx = json.IndexOf("\"preview_url\"", i, StringComparison.Ordinal);
+                var previewUrl = (prevIdx >= 0) ? ExtractStringValue(json, prevIdx) : null;
 
-            return list;
+                metas.Add(new VoiceMeta
+                {
+                    voiceId = voiceId,
+                    name = name,
+                    labels = labelsFlat ?? "",
+                    description = desc ?? "",
+                    previewUrl = previewUrl ?? ""
+                });
+            }
+        }
+
+        private static string ExtractStringValue(string json, int keyIdx)
+        {
+            var colon = json.IndexOf(':', keyIdx);
+            if (colon < 0) return null;
+            var quote1 = json.IndexOf('"', colon + 1);
+            if (quote1 < 0) return null;
+            var quote2 = json.IndexOf('"', quote1 + 1);
+            if (quote2 < 0) return null;
+            return json.Substring(quote1 + 1, quote2 - quote1 - 1).Trim();
         }
 
         private static bool? ExtractBoolNullable(string json, string key, int start)
@@ -710,9 +858,10 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             if (idx < 0) return null;
             var colon = json.IndexOf(':', idx);
             if (colon < 0) return null;
-            var span = json.Substring(colon + 1).TrimStart();
-            if (span.StartsWith("true")) return true;
-            if (span.StartsWith("false")) return false;
+            var p = colon + 1;
+            while (p < json.Length && (json[p] == ' ' || json[p] == '\n')) p++;
+            if (p + 4 <= json.Length && json.Substring(p, 4) == "true") return true;
+            if (p + 5 <= json.Length && json.Substring(p, 5) == "false") return false;
             return null;
         }
 
@@ -722,9 +871,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             if (idx < 0) return null;
             var colon = json.IndexOf(':', idx);
             if (colon < 0) return null;
-            int p = colon + 1;
+            var p = colon + 1;
             while (p < json.Length && (json[p] == ' ' || json[p] == '\n')) p++;
-            int q = p;
+            var q = p;
             while (q < json.Length && (char.IsDigit(json[q]) || json[q] == '-')) q++;
             if (int.TryParse(json.Substring(p, q - p), out int v)) return v;
             return null;
@@ -736,9 +885,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             if (idx < 0) return null;
             var colon = json.IndexOf(':', idx);
             if (colon < 0) return null;
-            int p = colon + 1;
+            var p = colon + 1;
             while (p < json.Length && (json[p] == ' ' || json[p] == '\n')) p++;
-            int q = p;
+            var q = p;
             while (q < json.Length && ("0123456789+-.eE".IndexOf(json[q]) >= 0)) q++;
             if (double.TryParse(json.Substring(p, q - p), System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out double v))
@@ -746,487 +895,43 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             return null;
         }
 
-        private static void ParseVoices(string json, out List<VoiceMeta> metas)
+        private static int FindMatchingBrace(string json, int openIdx)
         {
-            metas = new List<VoiceMeta>(64);
-            if (string.IsNullOrEmpty(json))
+            var depth = 1;
+            for (var i = openIdx + 1; i < json.Length; i++)
             {
-                Array.Empty<string>();
-                return;
-            }
-
-            int i = 0;
-            while (i < json.Length)
-            {
-                var vidIdx = json.IndexOf("\"voice_id\"", i, StringComparison.Ordinal);
-                if (vidIdx < 0) break;
-
-                var voiceId = ExtractStringValue(json, vidIdx);
-                i = vidIdx + 9;
-
-                // name (optional)
-                var nameIdx = json.IndexOf("\"name\"", i, StringComparison.Ordinal);
-                var name = (nameIdx >= 0) ? ExtractStringValue(json, nameIdx) : null;
-
-                // description (optional)
-                var descIdx = json.IndexOf("\"description\"", i, StringComparison.Ordinal);
-                var desc = (descIdx >= 0) ? ExtractStringValue(json, descIdx) : null;
-
-                // labels (optional object)
-                var labelsIdx = json.IndexOf("\"labels\"", i, StringComparison.Ordinal);
-                string labelsFlat = null;
-                if (labelsIdx >= 0)
+                switch (json[i])
                 {
-                    int braceStart = json.IndexOf('{', labelsIdx);
-                    if (braceStart > 0)
+                    case '{':
+                        depth++;
+                        break;
+                    case '}':
                     {
-                        int braceEnd = FindMatchingBrace(json, braceStart);
-                        if (braceEnd > braceStart)
-                        {
-                            var inner = json.Substring(braceStart + 1, braceEnd - braceStart - 1);
-                            labelsFlat = FlattenLabels(inner);
-                        }
+                        depth--;
+                        if (depth == 0) return i;
+                        break;
                     }
-                }
-
-                // preview_url (optional)
-                var prevIdx = json.IndexOf("\"preview_url\"", i, StringComparison.Ordinal);
-                var preview = (prevIdx >= 0) ? ExtractStringValue(json, prevIdx) : null;
-
-                if (!string.IsNullOrEmpty(voiceId))
-                {
-                    metas.Add(new VoiceMeta
-                    {
-                        voiceId = voiceId,
-                        name = name,
-                        labels = labelsFlat,
-                        description = desc,
-                        previewUrl = preview
-                    });
-                }
-            }
-
-            BuildVoiceDisplay(metas);
-        }
-
-        private static string[] BuildVoiceDisplay(List<VoiceMeta> metas)
-        {
-            var arr = new string[metas.Count];
-            for (int k = 0; k < metas.Count; k++)
-            {
-                var m = metas[k];
-                if (IsCustom(m.voiceId))
-                {
-                    arr[k] = "Custom…";
-                }
-                else
-                {
-                    var title = string.IsNullOrEmpty(m.name) ? m.voiceId : $"{m.name} ({m.voiceId})";
-                    arr[k] = title;
-                }
-            }
-
-            return arr;
-        }
-
-        private static string ExtractStringValue(string json, int keyIdx)
-        {
-            int colon = json.IndexOf(':', keyIdx);
-            if (colon < 0) return null;
-            int q1 = json.IndexOf('"', colon + 1);
-            if (q1 < 0) return null;
-            int q2 = json.IndexOf('"', q1 + 1);
-            if (q2 < 0) return null;
-            return json.Substring(q1 + 1, q2 - q1 - 1);
-        }
-
-        private static int FindMatchingBrace(string s, int openIdx)
-        {
-            int depth = 0;
-            for (int j = openIdx; j < s.Length; j++)
-            {
-                if (s[j] == '{') depth++;
-                else if (s[j] == '}')
-                {
-                    depth--;
-                    if (depth == 0) return j;
                 }
             }
 
             return -1;
         }
 
-        private static string FlattenLabels(string inner)
+        private void OnDisable()
         {
-            var cleaned = inner.Replace("\"", "").Trim();
-            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", "");
-            cleaned = cleaned.Replace(":", "=");
-            return cleaned;
+            CleanupValidationRequest();
         }
 
-        [Serializable]
-        private class Wrapper
+        protected override void OnTestConnection()
         {
-            public string[] items;
-        }
-
-        private static void SaveListToPrefs(string key, string[] items)
-        {
-            try
-            {
-                var w = new Wrapper { items = items ?? Array.Empty<string>() };
-                var json = JsonUtility.ToJson(w);
-                EditorPrefs.SetString(key, json);
-            }
-            catch
-            {
-                // ignored
-            }
-        }
-
-        private static string[] LoadListFromPrefs(string key, string[] fallback)
-        {
-            try
-            {
-                var json = EditorPrefs.GetString(key, "");
-                if (string.IsNullOrEmpty(json)) return fallback;
-                return JsonUtility.FromJson<Wrapper>(json)?.items ?? fallback;
-            }
-            catch
-            {
-                return fallback;
-            }
-        }
-
-        private static void SaveVoicesPackedToPrefs(string key, List<VoiceMeta> list)
-        {
-            try
-            {
-                var packed = new string[list.Count];
-                for (int i = 0; i < list.Count; i++)
-                    packed[i] = list[i].Pack();
-                SaveListToPrefs(key, packed);
-            }
-            catch
-            {
-                // ignored
-            }
-        }
-
-        private static void LoadVoicesPackedFromPrefs(string key, List<VoiceMeta> defaults, out List<VoiceMeta> metas,
-            out string[] displays)
-        {
-            var packed = LoadListFromPrefs(key, null);
-            if (packed == null || packed.Length == 0)
-            {
-                metas = new List<VoiceMeta>(defaults);
-            }
-            else
-            {
-                metas = new List<VoiceMeta>(packed.Length);
-                foreach (var p in packed)
-                {
-                    var m = VoiceMeta.Unpack(p);
-                    if (m != null) metas.Add(m);
-                }
-
-                if (metas.Count == 0) metas = new List<VoiceMeta>(defaults);
-            }
-
-            displays = BuildVoiceDisplay(metas);
-        }
-
-        private static void SaveModelsPackedToPrefs(string key, List<ElModelMeta> list)
-        {
-            try
-            {
-                var packed = new string[list.Count];
-                for (int i = 0; i < list.Count; i++)
-                    packed[i] = list[i].Pack();
-                SaveListToPrefs(key, packed);
-            }
-            catch
-            {
-            }
-        }
-
-        private static void LoadModelsPackedFromPrefs(string key, out List<ElModelMeta> metas)
-        {
-            metas = new List<ElModelMeta>();
-            var packed = LoadListFromPrefs(key, null);
-            if (packed == null || packed.Length == 0) return;
-
-            foreach (var p in packed)
-            {
-                var m = ElModelMeta.Unpack(p);
-                if (m != null) metas.Add(m);
-            }
-        }
-
-        private static void InfoRow(string label, string value)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.Label(label, GUILayout.Width(EditorGUIUtility.labelWidth - 4));
-                EditorGUILayout.SelectableLabel(value ?? "—", GUILayout.Height(EditorGUIUtility.singleLineHeight));
-            }
-        }
-
-        private static bool IsCustom(string s) =>
-            !string.IsNullOrEmpty(s) && s.Equals("Custom…", StringComparison.Ordinal);
-
-        private static bool IsCustomIndex(string[] arr, int idx) =>
-            arr != null && idx >= 0 && idx < arr.Length && IsCustom(arr[idx]);
-
-        private static int IndexOfOrCustom(string[] arr, string value)
-        {
-            if (arr == null || arr.Length == 0) return -1;
-            if (!string.IsNullOrEmpty(value))
-            {
-                for (int i = 0; i < arr.Length; i++)
-                    if (arr[i] == value)
-                        return i;
-            }
-
-            for (int i = 0; i < arr.Length; i++)
-                if (IsCustom(arr[i]))
-                    return i;
-            return 0;
-        }
-
-        private static int IndexOfOrCustomId(string[] displays, string id)
-        {
-            if (displays == null || displays.Length == 0) return -1;
-            if (!string.IsNullOrEmpty(id))
-            {
-                for (int i = 0; i < displays.Length; i++)
-                {
-                    if (displays[i] == id) return i;
-                    if (displays[i].EndsWith($"({id})", StringComparison.Ordinal)) return i;
-                }
-            }
-
-            for (int i = 0; i < displays.Length; i++)
-                if (IsCustom(displays[i]))
-                    return i;
-            return 0;
-        }
-
-        private VoiceMeta GetSelectedVoiceMeta()
-        {
-            if (_voiceMeta == null || _voiceMeta.Count == 0) return null;
-            var idx = Mathf.Clamp(_voiceIndex, 0, _voiceMeta.Count - 1);
-            return _voiceMeta[idx];
-        }
-
-        private static void SafeProp(SerializedProperty prop, string label)
-        {
-            if (prop == null)
-            {
-                EditorGUILayout.HelpBox($"Missing '{label}' property on provider.", MessageType.Warning);
-            }
-            else
-            {
-                EditorGUILayout.PropertyField(prop, new GUIContent(label));
-            }
-        }
-
-        private static void SafeProp(SerializedProperty prop, GUIContent label)
-        {
-            if (prop == null)
-            {
-                EditorGUILayout.HelpBox($"Missing '{label.text}' property on provider.", MessageType.Warning);
-            }
-            else
-            {
-                EditorGUILayout.PropertyField(prop, label);
-            }
-        }
-
-        private static void EnsureCustomSuffix(List<string> list)
-        {
-            if (list == null) return;
-            if (list.Count == 0 || list[^1] != "Custom…")
-            {
-                list.Add("Custom…");
-            }
-        }
-
-        private static void AddIfMissing(List<string> list, string value)
-        {
-            if (list == null || string.IsNullOrEmpty(value)) return;
-            if (list.Contains(value))
+            var provider = target as ElevenLabsProvider;
+            if (provider is not IUsesCredential credentialProvider)
             {
                 return;
             }
 
-            // Insert before "Custom…" if present, otherwise append
-            var customIdx = list.IndexOf("Custom…");
-            if (customIdx >= 0) list.Insert(customIdx, value);
-            else list.Add(value);
-        }
-
-        private static string[] EnsureContainsModel(string[] arr, string modelName)
-        {
-            if (string.IsNullOrEmpty(modelName)) return arr ?? Array.Empty<string>();
-            if (arr == null || arr.Length == 0)
-                return new[] { modelName, "Custom…" };
-
-            // already present?
-            foreach (var t in arr)
-                if (t == modelName)
-                {
-                    return arr;
-                }
-
-            // Insert before Custom… if present
-            var list = new List<string>(arr);
-            int customIdx = list.IndexOf("Custom…");
-            if (customIdx >= 0) list.Insert(customIdx, modelName);
-            else list.Add(modelName);
-            return list.ToArray();
-        }
-
-        [Serializable]
-        private class VoiceMeta
-        {
-            public string voiceId;
-            public string name;
-            public string labels; // flattened "k=v,k2=v2"
-            public string description;
-            public string previewUrl;
-
-            public string Pack()
-            {
-                return Escape(voiceId) + "|" + Escape(name) + "|" + Escape(labels) + "|" + Escape(description) + "|" +
-                       Escape(previewUrl);
-            }
-
-            public static VoiceMeta Unpack(string s)
-            {
-                if (string.IsNullOrEmpty(s)) return null;
-                var parts = s.Split(new[] { '|' }, 5);
-                if (parts.Length < 5) return null;
-                return new VoiceMeta
-                {
-                    voiceId = Unescape(parts[0]),
-                    name = Unescape(parts[1]),
-                    labels = Unescape(parts[2]),
-                    description = Unescape(parts[3]),
-                    previewUrl = Unescape(parts[4])
-                };
-            }
-
-            private static string Escape(string v) => string.IsNullOrEmpty(v) ? "" : v.Replace("|", "%7C");
-            private static string Unescape(string v) => string.IsNullOrEmpty(v) ? "" : v.Replace("%7C", "|");
-        }
-
-        [Serializable]
-        private class ElModelMeta
-        {
-            public string model_id;
-            public string name;
-            public bool? can_be_finetuned;
-            public bool? can_do_text_to_speech;
-            public bool? can_do_voice_conversion;
-            public bool? can_use_style;
-            public bool? can_use_speaker_boost;
-            public bool? serves_pro_voices;
-            public double? token_cost_factor;
-            public string description;
-            public bool? requires_alpha_access;
-            public int? max_characters_request_free_user;
-            public int? max_characters_request_subscribed_user;
-            public int? maximum_text_length_per_request;
-            public List<string> languages;
-            public string concurrency_group;
-
-            public string Pack()
-            {
-                // Pipe-delimited, languages as ';' list
-                var langs = (languages == null || languages.Count == 0) ? "" : string.Join(";", languages);
-                return E(model_id) + "|" + E(name) + "|" + E(B(can_be_finetuned)) + "|" + E(B(can_do_text_to_speech)) +
-                       "|" +
-                       E(B(can_do_voice_conversion)) + "|" + E(B(can_use_style)) + "|" + E(B(can_use_speaker_boost)) +
-                       "|" +
-                       E(B(serves_pro_voices)) + "|" + E(D(token_cost_factor)) + "|" + E(description) + "|" +
-                       E(B(requires_alpha_access)) + "|" + E(I(max_characters_request_free_user)) + "|" +
-                       E(I(max_characters_request_subscribed_user)) + "|" + E(I(maximum_text_length_per_request)) +
-                       "|" +
-                       E(langs) + "|" + E(concurrency_group);
-            }
-
-            public static ElModelMeta Unpack(string s)
-            {
-                if (string.IsNullOrEmpty(s)) return null;
-                var p = s.Split(new[] { '|' }, 16);
-                if (p.Length < 16) return null;
-                var langs = U(p[14]);
-                var langList = string.IsNullOrEmpty(langs) ? new List<string>() : new List<string>(langs.Split(';'));
-                return new ElModelMeta
-                {
-                    model_id = U(p[0]),
-                    name = U(p[1]),
-                    can_be_finetuned = UB(p[2]),
-                    can_do_text_to_speech = UB(p[3]),
-                    can_do_voice_conversion = UB(p[4]),
-                    can_use_style = UB(p[5]),
-                    can_use_speaker_boost = UB(p[6]),
-                    serves_pro_voices = UB(p[7]),
-                    token_cost_factor = UD(p[8]),
-                    description = U(p[9]),
-                    requires_alpha_access = UB(p[10]),
-                    max_characters_request_free_user = UI(p[11]),
-                    max_characters_request_subscribed_user = UI(p[12]),
-                    maximum_text_length_per_request = UI(p[13]),
-                    languages = langList,
-                    concurrency_group = U(p[15])
-                };
-            }
-
-            private static string E(string v) => string.IsNullOrEmpty(v) ? "" : v.Replace("|", "%7C");
-            private static string U(string v) => string.IsNullOrEmpty(v) ? "" : v.Replace("%7C", "|");
-            private static string B(bool? v) => v.HasValue ? (v.Value ? "1" : "0") : "";
-            private static bool? UB(string v) => string.IsNullOrEmpty(v) ? (bool?)null : v == "1";
-            private static string I(int? v) => v.HasValue ? v.Value.ToString() : "";
-            private static int? UI(string v) => int.TryParse(v, out var n) ? n : (int?)null;
-
-            private static string D(double? v) => v.HasValue
-                ? v.Value.ToString("0.########", System.Globalization.CultureInfo.InvariantCulture)
-                : "";
-
-            private static double? UD(string v) => double.TryParse(v, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var d)
-                ? d
-                : (double?)null;
-        }
-
-        private ElModelMeta FindModelMeta(string id)
-        {
-            if (string.IsNullOrEmpty(id) || _modelMeta == null || _modelMeta.Count == 0) return null;
-            for (int k = 0; k < _modelMeta.Count; k++)
-                if (string.Equals(_modelMeta[k].model_id, id, StringComparison.Ordinal))
-                    return _modelMeta[k];
-            return null;
-        }
-
-        private static void DrawApiKeyRow(SerializedProperty apiProp, string label, string getKeyUrl,
-            float buttonWidth = 95f)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.PropertyField(apiProp, new GUIContent(label));
-                GUILayout.Space(6);
-
-                var val = apiProp?.stringValue?.Trim();
-                if (string.IsNullOrEmpty(val) && !string.IsNullOrEmpty(getKeyUrl))
-                {
-                    if (GUILayout.Button(new GUIContent("Get Key…", $"Open {getKeyUrl}"), GUILayout.Width(buttonWidth)))
-                    {
-                        Application.OpenURL(getKeyUrl);
-                    }
-                }
-            }
+            var config = credentialProvider.GetTestConfig();
+            TestConnection(config.Endpoint, config.Model, config.ProviderId);
         }
     }
 }

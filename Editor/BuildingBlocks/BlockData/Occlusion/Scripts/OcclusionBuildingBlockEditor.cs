@@ -18,6 +18,10 @@
  * limitations under the License.
  */
 
+#if (XR_OCULUS_4_2_0_OR_NEWER || OPEN_XR_META_2_1_OR_NEWER)
+#define OCCLUSION_PLUGIN_READY
+#endif
+
 using UnityEditor;
 using UnityEngine;
 using Meta.XR.Guides.Editor;
@@ -36,18 +40,18 @@ namespace Meta.XR.BuildingBlocks.Editor
             new Icon(Styles.Contents.ErrorIcon, Color.white, "<b>Unsupported Unity Editor. Requires 2022.3.1 or 2023.2.</b>").Draw();
 #endif // UNITY_2022_3_OR_NEWER
 
-#if !XR_OCULUS_4_2_0_OR_NEWER
-            new Icon(Styles.Contents.ErrorIcon, Color.white, "<b>DepthAPI package is missing. Requires com.unity.xr.oculus of version 4.2.0.</b>").Draw();
-#endif // XR_OCULUS_4_2_0_OR_NEWER
+#if !OCCLUSION_PLUGIN_READY
+            new Icon(Styles.Contents.ErrorIcon, Color.white, "<b>DepthAPI package is missing. Requires com.unity.xr.oculus (4.2.0) or com.unity.xr.meta-openxr (2.1.0).</b>").Draw();
+#endif // OCCLUSION_PLUGIN_READY
 
-#if UNITY_2022_3_OR_NEWER && XR_OCULUS_4_2_0_OR_NEWER
-            new Icon(Styles.Contents.InfoIcon, Color.white, "<b>Dynamic Occlusion block made some critical changes in project.</b>").Draw();
+#if UNITY_2022_3_OR_NEWER && OCCLUSION_PLUGIN_READY
+            new Icon(Styles.Contents.InfoIcon, Color.white,
+                "<b>Dynamic Occlusion block made some critical changes in project.</b>").Draw();
             if (GUILayout.Button("See the changes"))
             {
                 OcclusionBlockSetupInfo.Show(true);
             }
-#endif // UNITY_2022_3_OR_NEWER && XR_OCULUS_4_2_0_OR_NEWER
-
+#endif // UNITY_2022_3_OR_NEWER && OCCLUSION_PLUGIN_READY
             EditorGUILayout.EndVertical();
         }
     }

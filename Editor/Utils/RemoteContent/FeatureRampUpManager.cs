@@ -101,9 +101,13 @@ namespace Meta.XR.Editor.RemoteContent
         private static void SendEvent()
         {
             var keysString = RampKeysCache.ToFormattedString();
+            var guid = Guid.NewGuid().ToString();
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.StartRampKeys)
                 .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FeatureRampUpValues, keysString)
+                .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigration, "1")
+                .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationEventID, guid)
                 .Send();
+
         }
 
         private static async Task<bool> Reload(bool forceRedownload)
@@ -191,7 +195,6 @@ namespace Meta.XR.Editor.RemoteContent
             InitSession.Set(false);
 
             return true;
-
         }
 
         private static FeatureRampUpResult ParseJsonData(string jsonData)

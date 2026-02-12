@@ -66,6 +66,7 @@ namespace Meta.XR.Telemetry
             var guid = AssetDatabase.AssetPathToGUID(scene.path);
             if (string.IsNullOrEmpty(guid)) return;
             var featuresInScene = await FeatureManager.GetFeaturesInScene(scene);
+            var guidID = Guid.NewGuid().ToString();
 
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.FeaturesInScene)
                             .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.Guid,
@@ -76,6 +77,8 @@ namespace Meta.XR.Telemetry
                                             featuresInScene)
                             .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.EnabledSettings,
                                             FeatureManager.GetFeatureStatusInSettings())
+                            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigration, "1")
+                            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationEventID, guidID)
                             .Send();
         }
     }

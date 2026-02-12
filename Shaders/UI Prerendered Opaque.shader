@@ -18,7 +18,7 @@ Shader "UI/Prerendered Opaque"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile _ WITH_CLIP
-            #pragma multi_compile _ EXPENSIVE
+            #pragma multi_compile _ SUPERSAMPLE
             #pragma multi_compile _ ALPHA_TO_MASK
             #pragma multi_compile _ OVERLAP_MASK
 
@@ -71,16 +71,16 @@ Shader "UI/Prerendered Opaque"
                     min(
                         tex2D(_MainTex, i.texcoord + dx - dy),
                         tex2D(_MainTex, i.texcoord - dx - dy)));
-                #elif EXPENSIVE
+                #elif SUPERSAMPLE
                 // perform 4x multitap sample
                 float2 dx = 0.25 * ddx(i.texcoord);
                 float2 dy = 0.25 * ddy(i.texcoord);
                 // sample four points inside the pixel
                 fixed4 col = 0.25 * (
-                    tex2D(_MainTex, i.texcoord + dx + dy) +
-                    tex2D(_MainTex, i.texcoord - dx + dy) +
-                    tex2D(_MainTex, i.texcoord + dx - dy) +
-                    tex2D(_MainTex, i.texcoord - dx - dy));
+                    tex2Dbias(_MainTex, float4(i.texcoord + dx + dy, 0, -1)) +
+                    tex2Dbias(_MainTex, float4(i.texcoord - dx + dy, 0, -1)) +
+                    tex2Dbias(_MainTex, float4(i.texcoord + dx - dy, 0, -1)) +
+                    tex2Dbias(_MainTex, float4(i.texcoord - dx - dy, 0, -1)));
                 #else
                 fixed4 col = tex2D(_MainTex, i.texcoord);
                 #endif

@@ -10,7 +10,7 @@ ANY KIND, either express or implied. See the License for the specific language g
 permissions and limitations under the License.
 ************************************************************************************/
 
-Shader "Custom/PolylineUnlit" {
+Shader "Custom/ImmersiveDebugger/PolylineUnlit" {
 
     Properties { }
 
@@ -21,6 +21,9 @@ Shader "Custom/PolylineUnlit" {
 
         Pass
         {
+            ZTest Always  // Always render, ignore depth
+            ZWrite Off    // Don't write to depth buffer
+
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag

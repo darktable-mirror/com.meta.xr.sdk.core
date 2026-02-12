@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-#if FUSION_WEAVER && FUSION2 && PHOTON_FUSION_PHYSICS_ADDON_DEFINED
+#if FUSION_WEAVER && FUSION2 && PHOTON_FUSION_PHYSICS_ADDON_DEFINED && !FUSION_2_1_OR_NEWER
 using System.Linq;
 using Fusion;
 using Fusion.Addons.Physics;
@@ -64,4 +64,4 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
             b.InstallationRoutineCheckpoint.InstallationRoutineId == BlockDataIds.NetworkManagerFusionInstallationRoutine);
     }
 }
-#endif // FUSION_WEAVER && FUSION2 && PHOTON_FUSION_PHYSICS_ADDON_DEFINED
+#endif // FUSION_WEAVER && FUSION2 && PHOTON_FUSION_PHYSICS_ADDON_DEFINED && !FUSION_2_1_OR_NEWER

@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Globalization;
 using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -244,6 +245,7 @@ internal struct OVRTelemetryMarker : IDisposable
     private static bool IsBatchMode => _isBatchMode ??= Application.isBatchMode;
 
     private const string TelemetryEnabledKey = "OVRTelemetry.TelemetryEnabled";
+    internal const string EventIdentifierAnnotationKey = "qpl_falco_double_logging_event_identifier";
 
     private bool GetOVRTelemetryConsent()
     {

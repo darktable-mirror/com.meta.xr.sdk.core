@@ -24,6 +24,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 
 namespace Assets.Oculus.VR.Editor
@@ -356,10 +357,10 @@ namespace Assets.Oculus.VR.Editor
             set { Instance.targetPlatform = value; }
         }
 
-        public static bool RunOvrLint
+        public static bool RunProjectSetupTool
         {
-            get { return Instance.runOvrLint; }
-            set { Instance.runOvrLint = value; }
+            get { return Instance.runProjectSetupTool; }
+            set { Instance.runProjectSetupTool = value; }
         }
 
         public static bool UploadDebugSymbols
@@ -439,7 +440,8 @@ namespace Assets.Oculus.VR.Editor
         private OVRPlatformTool.TargetPlatform targetPlatform = OVRPlatformTool.TargetPlatform.None;
 
         [SerializeField]
-        private bool runOvrLint = true;
+        [FormerlySerializedAs("runOvrLint")]
+        private bool runProjectSetupTool = true;
 
         public static bool TryInitialize()
         {

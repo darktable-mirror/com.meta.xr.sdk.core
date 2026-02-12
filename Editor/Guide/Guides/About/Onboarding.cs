@@ -28,6 +28,7 @@ using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.Utils;
+using Meta.XR.Simulator.Editor;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
@@ -288,7 +289,7 @@ namespace Meta.XR.Guides.Editor.About
                 "Show me the relevant starting resources and tools to get started on the right foot");
 
         public readonly RemoteString WelcomeVeteranToXRTitle =
-            new(nameof(WelcomeVeteranToXRTitle), "I’m experienced to XR");
+            new(nameof(WelcomeVeteranToXRTitle), "I have some experience with XR");
 
         public readonly RemoteString WelcomeVeteranToXRContent =
             new(nameof(WelcomeVeteranToXRContent),
@@ -509,12 +510,11 @@ namespace Meta.XR.Guides.Editor.About
         }
 
 
-#if USING_META_XR_SIMULATOR
         private void RefreshXrSimulatorStatus()
         {
             if (_xrSimStatus == null) return;
 
-            var activated = Meta.XR.Simulator.Editor.Enabler.Activated;
+            var activated = Meta.XR.Simulator.Editor.Utils.XRSimUtils.IsSimulatorActivated();
             var status = activated
                 ? UIStyles.ContentStatusType.Success
                 : UIStyles.ContentStatusType.Disabled; // Using the new Disabled status type
@@ -526,8 +526,6 @@ namespace Meta.XR.Guides.Editor.About
             _xrSimStatus.SetLabel(message);
             _xrSimStatus.SetStatus(status);
         }
-#endif
-
 
         private void RefreshImmersiveDebuggerStatus()
         {
@@ -586,9 +584,7 @@ namespace Meta.XR.Guides.Editor.About
 
             _leftPanelTexture = GetPageImage(_currentPage);
 
-#if USING_META_XR_SIMULATOR
             RefreshXrSimulatorStatus();
-#endif
             RefreshImmersiveDebuggerStatus();
 
             EditorGUILayout.BeginHorizontal();
@@ -750,7 +746,7 @@ namespace Meta.XR.Guides.Editor.About
             {
                 // Going past the last page - close first, then open Meta XR Tools menu with delay
                 _window.Close();
-                EditorApplication.delayCall += () => StatusIcon.ShowDropdown();
+                EditorApplication.delayCall += () => Dropdown.ShowDropdown();
                 return;
             }
 
@@ -938,7 +934,7 @@ namespace Meta.XR.Guides.Editor.About
             var titleLabel = new Label(title, GUIStyles.DynamicCardTitle)
             { FetchDynamicColor = card.FetchDynamicColor };
             var titleGroup = new GroupedItem(new List<IUserInterfaceItem> { titleLabel },
-                Styles.GUIStyles.DynamicCardTitleGroup, UIItemPlacementType.Horizontal);
+                Styles.GUIStyles.DynamicCardTitleGroup);
             if (dynamicContent != null)
             {
                 titleGroup.Items.Add(dynamicContent);
@@ -1232,7 +1228,7 @@ namespace Meta.XR.Guides.Editor.About
         {
             // Building Blocks Card
             _bbStatus = new BulletedLabel(BuildingBlocksStatus, Styles.GUIStyles.DynamicCardDynamicContent,
-                UIStyles.ContentStatusType.Success)
+                UIStyles.ContentStatusType.Success, GUILayout.Width(160))
             {
                 HorizontalStyle = XR.Editor.UserInterface.Styles.GUIStyles.BulletedLabelHorizontal
             };
@@ -1282,13 +1278,20 @@ namespace Meta.XR.Guides.Editor.About
             var actionXrSim = new ActionLinkDescription()
             {
                 Id = CardIdXrSim,
-#if USING_META_XR_SIMULATOR
-                Action = () => { Meta.XR.Simulator.Editor.Enabler.ActivateSimulator(false); },
-                Content = new GUIContent(MetaXRSimulatorEnable),
-#else
-                Action = () => Application.OpenURL(UrlInstallXrSimulator),
-                Content = new GUIContent(MetaXRSimulatorInstall),
-#endif
+                Action = () =>
+                {
+                    if (Meta.XR.Simulator.Editor.XRSimInstallationDetector.IsXRSim2Installed())
+                    {
+                        Meta.XR.Simulator.Editor.Utils.XRSimUtils.ActivateSimulator(true, Origin.Onboarding);
+                    }
+                    else
+                    {
+                        Application.OpenURL(UrlInstallXrSimulator);
+                    }
+                },
+                Content = Meta.XR.Simulator.Editor.XRSimInstallationDetector.IsXRSim2Installed() ?
+                    new GUIContent(MetaXRSimulatorEnable)
+                    : new GUIContent(MetaXRSimulatorInstall),
                 OriginData = this,
                 Origin = Origins.GuidedSetup,
                 Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardAction,

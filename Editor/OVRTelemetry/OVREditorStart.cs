@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Samples.Editor;
 using UnityEditor;
@@ -49,10 +50,14 @@ internal class OVREditorStart
 
         if (InitSession.Value)
         {
+            var guid = Guid.NewGuid().ToString();
+            //qpl
             OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.Start)
                 .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.UsesProSkin, EditorGUIUtility.isProSkin)
                 .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.Samples,
                     SampleMetadataTelemetry.GetSamplesListJson())
+                .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigration, "1")
+                .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationEventID, guid)
                 .Send();
             OVRPlugin.SendEvent("editor_start");
         }

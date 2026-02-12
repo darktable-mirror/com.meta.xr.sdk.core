@@ -79,7 +79,6 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public override void OnInspectorGUI()
         {
-
             _block = target as BuildingBlock;
             _blockData = _block.GetBlockData();
 
@@ -138,14 +137,14 @@ namespace Meta.XR.BuildingBlocks.Editor
                         ActionData = _blockData,
                         Origin = Origins.BlockInspector,
                         OriginData = _blockData
-
                     }.Draw();
                 });
             }
 
         }
 
-        private void ShowModifiableComponentsWithAttributes(IEnumerable<BlocksContentManager.BlockModifiableProperty> modifiableProperties)
+        private void ShowModifiableComponentsWithAttributes(
+            IEnumerable<BlocksContentManager.BlockModifiableProperty> modifiableProperties)
         {
             foreach (var blockDataModifiableProperty in modifiableProperties)
             {
@@ -159,30 +158,30 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                     EditorGUILayout.BeginHorizontal();
                     Action action = () =>
+                    {
+                        // Below delay is needed otherwise the the highligher can interupt layouts
+                        // If the target is on other windows, then we can remove "Inspector" and put it into sitevar, but it is not needed for now.
+                        EditorApplication.delayCall += () =>
                         {
-                            // Below delay is needed otherwise the the highligher can interupt layouts
-                            // If the target is on other windows, then we can remove "Inspector" and put it into sitevar, but it is not needed for now.
-                            EditorApplication.delayCall += () =>
+                            //If the highlightIdentifier starts with a `/` then we assume it is a local path to a gameobject.
+                            //In this case we use the PingObject to highlight the gameobject in the hierarchy window.
+                            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(highlightIdentifier, @"^/(.*)");
+                            if (match.Success)
                             {
-                                //If the highlightIdentifier starts with a `/` then we assume it is a local path to a gameobject.
-                                //In this case we use the PingObject to highlight the gameobject in the hierarchy window.
-                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(highlightIdentifier, @"^/(.*)");
-                                if (match.Success)
+                                UnityEngine.Transform child = _block.transform.Find(match.Groups[1].Value);
+                                if (child != null)
                                 {
-                                    UnityEngine.Transform child = _block.transform.Find(match.Groups[1].Value);
-                                    if (child != null)
-                                    {
-                                        EditorGUIUtility.PingObject(child.gameObject);
-                                    }
+                                    EditorGUIUtility.PingObject(child.gameObject);
                                 }
-                                //Otherwise we assume it is a field in a local component.
-                                //In this case we use the Highlighter to highlight it in the Inspector Window.
-                                else if (Highlighter.Highlight("Inspector", highlightIdentifier))
-                                {
-                                    highlightStartTime = (float)EditorApplication.timeSinceStartup;
-                                }
-                            };
+                            }
+                            //Otherwise we assume it is a field in a local component.
+                            //In this case we use the Highlighter to highlight it in the Inspector Window.
+                            else if (Highlighter.Highlight("Inspector", highlightIdentifier))
+                            {
+                                highlightStartTime = (float)EditorApplication.timeSinceStartup;
+                            }
                         };
+                    };
                     var tooltip = $"Click to customize '{displayName}'";
                     new ActionLinkDescription()
                     {
@@ -210,7 +209,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                         Styles.GUIStyles.InfoStyleProperty);
                     EditorGUILayout.EndVertical();
                 }
-
             }
 
             RemoveHighlightIfNeeded();
@@ -253,10 +251,13 @@ namespace Meta.XR.BuildingBlocks.Editor
             UIHelpers.DrawBlockName(_blockData, Origins.BlockInspector, _blockData,
                 containerStyle: Styles.GUIStyles.LargeLinkButtonContainer,
                 labelStyle: Styles.GUIStyles.LargeLabelStyleWhite,
-                iconStyle: Styles.GUIStyles.LargeLinkIconStyle);
+                iconStyle: Styles.GUIStyles.LargeLinkIconStyle,
+                addInfoIcon: true,
+                pushContentLeft: false);
 
             // Tags
-            Meta.XR.Editor.Tags.CommonUIHelpers.DrawList(_blockData.id + "_editor", _blockData.Tags, Tag.TagListType.Description);
+            Meta.XR.Editor.Tags.CommonUIHelpers.DrawList(_blockData.id + "_editor", _blockData.Tags,
+                Tag.TagListType.Description);
 
             // Description
             EditorGUILayout.LabelField(_blockData.Description, Styles.GUIStyles.InfoStyle);

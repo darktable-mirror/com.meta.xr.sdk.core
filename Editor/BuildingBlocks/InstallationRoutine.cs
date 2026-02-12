@@ -64,7 +64,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal bool GetUsesPrefab => UsesPrefab;
 
         [SerializeField] internal GameObject prefab;
-        protected GameObject Prefab => prefab;
+        internal GameObject Prefab => prefab;
 
         [SerializeField] internal List<string> packageDependencies;
         public IEnumerable<string> PackageDependencies => packageDependencies;

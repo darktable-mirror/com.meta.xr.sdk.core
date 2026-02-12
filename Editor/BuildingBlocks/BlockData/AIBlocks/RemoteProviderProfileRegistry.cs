@@ -56,6 +56,14 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
             public bool splitOverFrames;
             public ulong classLabelsContentId;
 
+            // OnDevice LLM tokenizer files
+            public ulong vocabFileContentId;
+            public ulong mergesFileContentId;
+            public ulong tokenizerConfigFileContentId;
+
+            // UnityInferenceEngine mode (ObjectDetection, Chat, ImageSegmentation)
+            public string unityInferenceMode;
+
             // Vision
             public bool supportsVision;
             public bool inlineRemoteImages;
@@ -134,7 +142,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         private static async Task Fetch()
         {
             var result = await UserInterface.RemoteJsonContent<ProviderProfileDefinitions>.Create(
-                "provider_profile_definitions.json", 24030454696583743);
+                "provider_profile_definitions.json", 25224796250502694);
 
             if (!result.IsSuccess)
             {

@@ -23,6 +23,7 @@ using UnityEditor;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Meta.XR.Telemetry;
 using UnityEngine;
 
 internal class OVRConfigurationTaskFixer : OVRConfigurationTaskProcessor
@@ -91,6 +92,8 @@ internal class OVRConfigurationTaskFixer : OVRConfigurationTaskProcessor
         }
         catch (Exception ex)
         {
+            IssueTracker.TrackError(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-async-fix-failed",
+                $"Failed to execute async fix for task \"{task.Message.GetValue(BuildTargetGroup)}\": {ex.Message}", enableDebugLog: false);
             Debug.LogError($"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to execute async fix for task \"{task.Message.GetValue(BuildTargetGroup)}\": {ex.Message}");
         }
         finally
@@ -111,6 +114,8 @@ internal class OVRConfigurationTaskFixer : OVRConfigurationTaskProcessor
         {
             if (_currentAsyncTask.IsFaulted)
             {
+                IssueTracker.TrackError(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-async-task-faulted",
+                    $"Async task failed: {_currentAsyncTask.Exception?.GetBaseException()?.Message}", enableDebugLog: false);
                 Debug.LogError($"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Async task failed: {_currentAsyncTask.Exception?.GetBaseException()?.Message}");
             }
             _currentAsyncTask = null;
@@ -136,6 +141,8 @@ internal class OVRConfigurationTaskFixer : OVRConfigurationTaskProcessor
 
         if (_counter <= 0)
         {
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-loop-detected",
+                "Fixing Tasks has exited after too many iterations. There might be some contradictory rules leading to a loop", enableDebugLog: false);
             Debug.LogWarning("[Oculus Settings] Fixing Tasks has exited after too many iterations. " +
                              "(There might be some contradictory rules leading to a loop)");
             return;

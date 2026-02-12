@@ -27,7 +27,7 @@ Shader "URP/UI/Prerendered Opaque"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #pragma multi_compile _ WITH_CLIP
-            #pragma multi_compile _ EXPENSIVE
+            #pragma multi_compile _ SUPERSAMPLE
             #pragma multi_compile _ ALPHA_TO_MASK
 
             #define ALPHA_SQUARED 0
@@ -48,7 +48,7 @@ Shader "URP/UI/Prerendered Opaque"
             #pragma fragment mv_frag
             #pragma multi_compile_instancing
             #pragma multi_compile _ WITH_CLIP
-            #pragma multi_compile _ EXPENSIVE
+            #pragma multi_compile _ SUPERSAMPLE
             #pragma multi_compile _ ALPHA_TO_MASK
 
             #define ALPHA_SQUARED 0
@@ -69,7 +69,7 @@ Shader "URP/UI/Prerendered Opaque"
             #pragma fragment mv_frag
             #pragma multi_compile_instancing
             #pragma multi_compile _ WITH_CLIP
-            #pragma multi_compile _ EXPENSIVE
+            #pragma multi_compile _ SUPERSAMPLE
             #pragma multi_compile _ ALPHA_TO_MASK
 
             #define ALPHA_SQUARED 0

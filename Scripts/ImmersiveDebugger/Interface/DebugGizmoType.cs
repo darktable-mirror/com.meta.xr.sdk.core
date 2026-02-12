@@ -25,13 +25,13 @@ namespace Meta.XR.ImmersiveDebugger
     {
         None = 0,
         /// <summary>
-        /// Accepting type: Pose<br/>
-        /// Drawing an Axis from a Pose data.
+        /// Accepting type: Pose, Transform<br/>
+        /// Drawing an Axis from a Pose or Transform data.
         /// </summary>
         Axis = 1,
         /// <summary>
-        /// Accepting type: Vector3<br/>
-        /// Drawing a Point from a Vector3 data.
+        /// Accepting type: Vector3, Transform<br/>
+        /// Drawing a Point from a Vector3 data or Transform's position data.
         /// </summary>
         Point,
         /// <summary>

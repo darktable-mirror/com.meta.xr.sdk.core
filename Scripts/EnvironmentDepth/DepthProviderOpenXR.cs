@@ -30,7 +30,6 @@ using UnityEngine.XR.ARSubsystems;
 using UnityEngine.XR.OpenXR;
 using UnityEngine.XR.OpenXR.API;
 using UnityEngine.XR.OpenXR.Features.Meta;
-using UnityEngine.XR.OpenXR.NativeTypes;
 using Object = UnityEngine.Object;
 
 namespace Meta.XR.EnvironmentDepth
@@ -100,11 +99,11 @@ namespace Meta.XR.EnvironmentDepth
             if (_occlusionSubsystem.isHandRemovalSupported == Supported.Supported)
             {
                 var setHandRemovalResult = _occlusionSubsystem.TrySetHandRemovalEnabled(isEnabled);
-                if (setHandRemovalResult != XrResult.Success)
+                if (setHandRemovalResult != UnityEngine.XR.OpenXR.NativeTypes.XrResult.Success)
                 {
                     Debug.LogWarning($"MetaOpenXROcclusionSubsystem.TrySetHandRemovalEnabled() failed with result: {setHandRemovalResult}");
                 }
-            }
+                }
             else
             {
                 Debug.LogWarning("Hand Removal is not supported.");

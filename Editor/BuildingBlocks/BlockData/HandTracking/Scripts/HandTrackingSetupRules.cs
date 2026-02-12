@@ -59,30 +59,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 fixMessage: $"Enable Hand Tracking must be enabled in OVRManager"
             );
 
-            OVRProjectSetup.AddTask(
-                level: OVRProjectSetup.TaskLevel.Required,
-                group: OVRProjectSetup.TaskGroup.Compatibility,
-                isDone: _ =>
-                {
-                    if (!HandTrackingBuildingBlockExists())
-                    {
-                        return true;
-                    }
-
-                    var projectConfig = OVRProjectConfig.CachedProjectConfig;
-                    return projectConfig.handTrackingVersion == OVRProjectConfig.HandTrackingVersion.V2;
-
-                },
-                message: $"Hand Tracking V2 is required when using the Hand Tracking {Utils.BlockPublicName}",
-                fix: _ =>
-                {
-                    var projectConfig = OVRProjectConfig.CachedProjectConfig;
-                    projectConfig.handTrackingVersion = OVRProjectConfig.HandTrackingVersion.V2;
-                    OVRProjectConfig.CommitProjectConfig(projectConfig);
-                },
-                fixMessage: $"Select Hand Tracking V2"
-            );
-
             // Rule to assist in deprecation of legacy hand input mapping
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Recommended,

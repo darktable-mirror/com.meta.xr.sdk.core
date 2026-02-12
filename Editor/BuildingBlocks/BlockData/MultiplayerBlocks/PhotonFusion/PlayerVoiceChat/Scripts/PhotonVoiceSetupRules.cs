@@ -18,7 +18,11 @@
  * limitations under the License.
  */
 
-#if FUSION_WEAVER && FUSION2 && PHOTON_VOICE_DEFINED
+#if FUSION2 || FUSION_2_1
+#define FUSION_COMPATIBLE_VERSION
+#endif
+
+#if FUSION_WEAVER && FUSION_COMPATIBLE_VERSION && PHOTON_VOICE_DEFINED
 using Fusion.Photon.Realtime;
 using System.Linq;
 using UnityEditor;
@@ -58,4 +62,4 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
                 );
     }
 }
-#endif // FUSION_WEAVER && FUSION2 && PHOTON_VOICE_DEFINED
+#endif // FUSION_WEAVER && FUSION_COMPATIBLE_VERSION && PHOTON_VOICE_DEFINED

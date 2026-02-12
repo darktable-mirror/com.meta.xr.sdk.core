@@ -32,6 +32,7 @@ using System.IO;
 using System.Xml;
 using System.Diagnostics;
 using System.Threading;
+using Meta.XR.Telemetry;
 using Oculus.VR.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -88,7 +89,7 @@ public class OVRGradleGeneration
 
 #if UNITY_ANDROID
     public const string prefName = "OVRAutoIncrementVersionCode_Enabled";
-    private const string menuItemAutoIncVersion = "Meta/Tools/Auto Increment Version Code";
+    private const string menuItemAutoIncVersion = "Meta/Options/Auto Increment Version Code";
     static bool autoIncrementVersion = false;
 #endif
 
@@ -171,7 +172,8 @@ public class OVRGradleGeneration
                 if (metaXRFeature != null && metaXRFeature.enabled)
                     UnityEngine.Debug.LogFormat("[Meta] Native plugin included in build because of enabled MetaXRFeature: {0}", importer.assetPath);
                 else
-                    UnityEngine.Debug.LogWarning("MetaXRFeature is not enabled in OpenXR Settings. Oculus Integration scripts will not be functional.");
+                    IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-gradle-metaxr-feature-not-enabled",
+                        "MetaXRFeature is not enabled in OpenXR Settings. Oculus Integration scripts will not be functional.");
                 importer.SetIncludeInBuildDelegate(path => metaXRFeature != null && metaXRFeature.enabled);
             }
 
@@ -204,9 +206,26 @@ public class OVRGradleGeneration
         if (EditorBuildSettings.TryGetConfigObject<OculusSettings>("Unity.XR.Oculus.Settings", out settings)
             && settings.SymmetricProjection && !symmetricWarningShown)
         {
-            symmetricWarningShown = true;
-            UnityEngine.Debug.LogWarning(
-                "Symmetric Projection is enabled in the Oculus XR Settings. To ensure best GPU performance, make sure at least FFR 1 is being used.");
+            bool ffrEnabled = false;
+#if OCULUS_XR_PLUGIN_3_2_1_OR_NEWER
+            switch (settings.FoveatedRenderingMethod)
+            {
+                case OculusSettings.FoveationMethod.FixedFoveatedRendering:
+                case OculusSettings.FoveationMethod.EyeTrackedFoveatedRendering:
+#if OCULUS_XR_PLUGIN_4_3_0_OR_NEWER && UNITY_2023_2_OR_NEWER && URP_16_OR_NEWER
+                case OculusSettings.FoveationMethod.FixedFoveatedRenderingUsingUnityAPIForURP:
+                case OculusSettings.FoveationMethod.EyeTrackedFoveatedRenderingUsingUnityAPIForURP:
+#endif
+                    ffrEnabled = true;
+                    break;
+            }
+#endif
+            if (!ffrEnabled)
+            {
+                symmetricWarningShown = true;
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-gradle-symmetric-projection-without-ffr-v2",
+                    "Symmetric Projection is enabled in the Oculus XR Settings. To ensure best GPU performance, make sure at least FFR 1 is being used.");
+            }
         }
 #endif
 
@@ -251,7 +270,8 @@ public class OVRGradleGeneration
         EditorBuildSettings.TryGetConfigObject("Unity.XR.Oculus.Settings", out OculusSettings deviceSettings);
         if (deviceSettings.TargetQuest)
         {
-            UnityEngine.Debug.LogWarning("Quest 1 is no longer supported as a target device as of v51. Please uncheck Quest 1 as a target device, or downgrade to v50.");
+            IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-gradle-quest1-no-longer-supported",
+                "Quest 1 is no longer supported as a target device as of v51. Please uncheck Quest 1 as a target device, or downgrade to v50.");
         }
 #endif
 #else
@@ -298,7 +318,7 @@ public class OVRGradleGeneration
         {
             if (PlayerSettings.virtualRealitySplashScreen != null)
             {
-                UnityEngine.Debug.LogWarning(
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-gradle-vr-splash-screen-active",
                     "Virtual Reality Splash Screen (in Player Settings) is active. It would be displayed after the system splash screen, before the first game frame be rendered.");
             }
 
@@ -325,6 +345,8 @@ public class OVRGradleGeneration
             }
             catch (Exception e)
             {
+                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-gradle-copy-splash-screen-failed",
+                    $"Failed to copy splash screen from {sourcePath} to {targetPath}: {e.Message}");
                 throw new BuildFailedException(e.Message);
             }
         }
@@ -377,7 +399,7 @@ public class OVRGradleGeneration
                 }
                 catch (Exception e)
                 {
-                    UnityEngine.Debug.LogError(e.Message);
+                    IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-gradle-security-config-copy-failed", e);
                 }
             }
         }
@@ -588,7 +610,11 @@ public class OVRGradleGeneration
 
 #if UNITY_OPENXR_PLUGIN_1_14_0_OR_NEWER
 #if UNITY_6000_1_OR_NEWER
+#if UNITY_OPENXR_PLUGIN_1_15_0_OR_NEWER
+                OVRPlugin.SendEvent("xr_multiview_per_view_viewports", OVRTelemetry.GetTelemetrySettingString(settings.multiviewRenderRegionsOptimizationMode != OpenXRSettings.MultiviewRenderRegionsOptimizationMode.None));
+#else
                 OVRPlugin.SendEvent("xr_multiview_per_view_viewports", OVRTelemetry.GetTelemetrySettingString(settings.optimizeMultiviewRenderRegions));
+#endif
 #endif
                 OVRPlugin.SendEvent("xr_auto_color_submission_mode", OVRTelemetry.GetTelemetrySettingString(settings.autoColorSubmissionMode));
 

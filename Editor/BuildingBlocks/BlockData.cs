@@ -27,6 +27,7 @@ using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UPST.Notifications;
 using Meta.XR.Editor.Utils;
 using Meta.XR.Guides.Editor;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditorInternal;
@@ -165,7 +166,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             {
                 if (e is not InstallationCancelledException)
                 {
-                    Debug.LogError($"Error installing Building Block {BlockName}: {e.Message} \n {e.StackTrace}");
+                    IssueTracker.TrackError(IssueTracker.SDK.BuildingBlocks, $"block-install-error-{BlockName}", e);
                 }
 
                 installException = e;

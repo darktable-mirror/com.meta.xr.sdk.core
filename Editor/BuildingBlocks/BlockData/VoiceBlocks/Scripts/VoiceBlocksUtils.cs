@@ -23,6 +23,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using System.Threading.Tasks;
 using Meta.WitAi.Data;
@@ -55,7 +56,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 await Task.Delay(200);
             }
 
-            Debug.LogWarning("Timed out while waiting for WitConfiguration to be created.");
+            IssueTracker.TrackWarning(IssueTracker.SDK.BuildingBlocks, "wit-configuration-timeout",
+                "Timed out while waiting for WitConfiguration to be created.");
         }
 
         public static bool HasClientAccessToken() {

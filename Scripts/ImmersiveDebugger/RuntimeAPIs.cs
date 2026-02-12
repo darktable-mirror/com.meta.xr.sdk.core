@@ -36,6 +36,7 @@ namespace Meta.XR.ImmersiveDebugger
     /// These APIs provide a way to add inspectors for components at runtime without using DebugMember attributes.
     /// This is useful for debugging components that are created dynamically or for adding inspectors
     /// to components that you don't have source access to.
+    /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     public static class RuntimeAPIs
     {
@@ -52,6 +53,41 @@ namespace Meta.XR.ImmersiveDebugger
         /// <param name="members">Optional comma-separated list of member names to inspect. If empty, all public members will be included.</param>
         /// <returns>A RuntimeAPIOperationResult containing detailed operation result with message information for AI agents</returns>
         public static RuntimeAPIOperationResult AddInspector(string category, string gameObjectName, string componentClassName, string members = "")
+        {
+            var debugMemberWithCategory = new DebugMember
+            {
+                Category = category
+            };
+            return AddInspectorWithDebugMemberConfig(debugMemberWithCategory, gameObjectName, componentClassName, members);
+        }
+
+        /// <summary>
+        /// Adds a dedicated inspector for a specific component on a game object.
+        /// This will find the game object from scene, then find the component instance and create InstanceHandle,
+        /// register in InstanceCache, and register inspector based on the Type and InstanceHandle.
+        /// It will retrieve the members of this type based on filter. If Members filter is not supplied,
+        /// it will automatically register all the public members within this class.
+        /// </summary>
+        /// <param name="category">The category name for organizing the inspector</param>
+        /// <param name="gizmoType">The type of the gizmo - e.g. Axis, Box </param>
+        /// <param name="color">The color of the gizmo - e.g. white, red, #ff0000ff </param>
+        /// <param name="gameObjectName">The name of the GameObject to find in the scene</param>
+        /// <param name="componentClassName">The class name of the component to inspect</param>
+        /// <param name="member">The member name to be inspected and visualized by the gizmo, only one member and needs to be valid on the object</param>
+        /// <returns>A RuntimeAPIOperationResult containing detailed operation result with message information for AI agents</returns>
+        public static RuntimeAPIOperationResult AddInspectorItemWithGizmo(string category, string gizmoType, string color, string gameObjectName, string componentClassName, string member)
+        {
+            var debugMemberWithGizmo = new DebugMember
+            {
+                Category = category,
+                GizmoType = ParseGizmoType(gizmoType),
+                Color = ParseColor(color),
+                ShowGizmoByDefault = true,
+            };
+            return AddInspectorWithDebugMemberConfig(debugMemberWithGizmo, gameObjectName, componentClassName, member);
+        }
+
+        private static RuntimeAPIOperationResult AddInspectorWithDebugMemberConfig(DebugMember debugMember, string gameObjectName, string componentClassName, string members = "")
         {
             try
             {
@@ -107,7 +143,7 @@ namespace Meta.XR.ImmersiveDebugger
 
                 var inspectorCategory = new Category
                 {
-                    Id = string.IsNullOrEmpty(category) ? "Runtime" : category
+                    Id = string.IsNullOrEmpty(debugMember.Category) ? "Runtime" : debugMember.Category
                 };
 
                 var uiPanel = DebugManager.Instance.UiPanel;
@@ -127,7 +163,7 @@ namespace Meta.XR.ImmersiveDebugger
                         "Failed to register inspector",
                         $"The UI Panel could not create an inspector for component '{componentClassName}' on GameObject '{gameObjectName}'");
                 }
-                var memberCount = RegisterMembersForInspector(inspector, componentType, members, instanceHandle, category);
+                var memberCount = RegisterMembersForInspector(inspector, componentType, members, instanceHandle, debugMember);
 
                 // Force UI to focus on this category to ensure the newly added inspector is visible
                 if (uiPanel is InspectorPanel inspectorPanel)
@@ -148,11 +184,12 @@ namespace Meta.XR.ImmersiveDebugger
                     $"Exception details: {ex.GetType().Name} - {ex.StackTrace}");
             }
         }
+
         /// <summary>
         /// Registers members for the inspector based on the provided filter
         /// </summary>
         /// <returns>The number of members successfully registered</returns>
-        private static int RegisterMembersForInspector(IInspector inspector, Type componentType, string membersFilter, InstanceHandle instanceHandle, string category)
+        private static int RegisterMembersForInspector(IInspector inspector, Type componentType, string membersFilter, InstanceHandle instanceHandle, DebugMember debugMemberAttribute)
         {
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Static |
                                      BindingFlags.Public | BindingFlags.NonPublic |
@@ -173,12 +210,7 @@ namespace Meta.XR.ImmersiveDebugger
                 // Skip if not compatible with debug inspector
                 if (!member.IsCompatibleWithDebugInspector()) continue;
 
-                // Create a default DebugMember attribute for runtime registration
-                var debugMemberAttribute = new DebugMember
-                {
-                    Category = category,
-                    Tweakable = IsTweakableMember(member)
-                };
+                debugMemberAttribute.Tweakable = IsTweakableMember(member);
 
                 try
                 {
@@ -196,6 +228,55 @@ namespace Meta.XR.ImmersiveDebugger
             }
 
             return registeredCount;
+        }
+
+        private static DebugGizmoType ParseGizmoType(string gizmoType)
+        {
+            switch (gizmoType)
+            {
+                case "Axis":
+                    return DebugGizmoType.Axis;
+                case "Point":
+                    return DebugGizmoType.Point;
+                case "Line":
+                    return DebugGizmoType.Line;
+                case "Lines":
+                    return DebugGizmoType.Lines;
+                case "Plane":
+                    return DebugGizmoType.Plane;
+                case "Cube":
+                    return DebugGizmoType.Cube;
+                case "TopCenterBox":
+                    return DebugGizmoType.TopCenterBox;
+                case "Box":
+                    return DebugGizmoType.Box;
+                default:
+                    return DebugGizmoType.None;
+            }
+        }
+
+        private static Color ParseColor(string colorName)
+        {
+            switch (colorName.ToLower())
+            {
+                case "red": return Color.red;
+                case "green": return Color.green;
+                case "blue": return Color.blue;
+                case "yellow": return Color.yellow;
+                case "cyan": return Color.cyan;
+                case "magenta": return Color.magenta;
+                case "white": return Color.white;
+                case "black": return Color.black;
+                case "gray": case "grey": return Color.gray;
+                default:
+                    // Try to parse as hex color
+                    if (colorName.StartsWith("#") && ColorUtility.TryParseHtmlString(colorName, out Color hexColor))
+                    {
+                        return hexColor;
+                    }
+                    // Default to red if parsing fails
+                    return Color.red;
+            }
         }
 
         /// <summary>

@@ -72,6 +72,9 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
                 voiceObject.AddComponent<VoiceNetworkObject>();
                 voiceObject.AddComponent<NetworkTransform>();
                 var networkObject = voiceObject.AddComponent<NetworkObject>();
+#if FUSION_2_1_OR_NEWER
+                networkObject.ObjectInterest = NetworkObjectInterestModes.AreaOfInterest;
+#else
                 // unfortunately ObjectInterest field is not public
                 var objectInterestField = typeof(NetworkObject).GetField("ObjectInterest",
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -81,6 +84,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
                 {
                     objectInterestField.SetValue(networkObject, (int)areaOfInterestEnum.GetValue(null));
                 }
+#endif // FUSION_2_1_OR_NEWER
                 return voiceObject;
             });
         }

@@ -26,6 +26,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -129,11 +130,14 @@ namespace Oculus.VR.Editor
             SetIsRestartPending(true);
             if (userAgreedToRestart)
             {
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovrplugin-restart-accepted-v2",
+                    "Restarting: Editor restart accepted by user via prompt.");
                 RestartUnityEditor();
             }
             else
             {
-                UnityEngine.Debug.LogWarning("OVRPlugin not updated. Restart the editor to update.");
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovrplugin-restart-declined-v2",
+                    "OVRPlugin not updated. User declined to restart the editor. Restart required to complete update.");
             }
         }
 
@@ -170,7 +174,8 @@ namespace Oculus.VR.Editor
         {
             if (Application.isBatchMode)
             {
-                UnityEngine.Debug.LogWarning("Restarting editor is not supported in batch mode");
+                IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovrplugin-restart-batch-mode-not-supported",
+                    "Restarting editor is not supported in batch mode. Manual restart required to complete OVRPlugin update.");
                 return;
             }
 

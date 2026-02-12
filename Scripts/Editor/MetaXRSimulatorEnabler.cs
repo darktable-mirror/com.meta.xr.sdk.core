@@ -34,10 +34,10 @@ using UnityEngine;
 using UnityEditor;
 
 // TODO: rename to MetaXRSimulatorDownloader after UPM migration
-public class MetaXRSimulatorEnabler : MonoBehaviour
+public class MetaXRSimulatorEnabler
 {
 #if !USING_META_XR_SIMULATOR
-    const string kDownloadSimulator = "Meta/Download Meta XR Simulator";
+    const string kDownloadSimulator = "Meta/Meta XR Simulator/Download";
 
     [MenuItem(kDownloadSimulator, false, 10000)]
     private static void DownloadSimulator()

@@ -20,6 +20,7 @@
 
 
 using System;
+using Meta.XR.Telemetry;
 using Oculus.VR.Editor;
 using UnityEngine;
 using UnityEditor;
@@ -35,10 +36,14 @@ public class OVRProjectConfigEditor : Editor
         DrawProjectConfigInspector(projectConfig);
     }
 
-    public static void DrawTargetDeviceInspector(OVRProjectConfig projectConfig)
+    public static void DrawTargetDeviceInspector(OVRProjectConfig projectConfig, bool drawLabel = true)
     {
         // Target Devices
-        EditorGUILayout.LabelField("Target Devices", EditorStyles.boldLabel);
+        if (drawLabel)
+        {
+            EditorGUILayout.LabelField("Target Devices", EditorStyles.boldLabel);
+        }
+
         bool useOculusXRSettings = false;
 
 #if PRIORITIZE_OCULUS_XR_SETTINGS
@@ -89,7 +94,7 @@ public class OVRProjectConfigEditor : Editor
         }
     }
 
-    internal enum eProjectConfigTab
+    internal enum ProjectConfigTab
     {
         General = 0,
         BuildSettings,
@@ -97,13 +102,30 @@ public class OVRProjectConfigEditor : Editor
         Experimental,
     }
 
-    internal static eProjectConfigTab selectedTab = 0;
+    internal enum HighlightLabel
+    {
+        ProjectConfig,
+        HandTrackingSupport,
+        BodyTrackingSupport,
+        FaceTrackingSupport,
+        InsightPassthroughSupport,
+        ExperimentalSupport,
+    }
+
+    internal static ProjectConfigTab selectedTab = 0;
     static string[] projectConfigTabStrs = null;
 
-    public static void DrawProjectConfigInspector(OVRProjectConfig projectConfig)
+    public static void DrawProjectConfigInspector(OVRProjectConfig projectConfig, bool drawBoxAndLabel = true)
     {
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-        EditorGUILayout.LabelField("Quest Features", EditorStyles.boldLabel);
+        if (drawBoxAndLabel)
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("Quest Features", EditorStyles.boldLabel);
+        }
+        else
+        {
+            EditorGUILayout.BeginVertical();
+        }
 
         if (EditorUserBuildSettings.activeBuildTarget != UnityEditor.BuildTarget.Android)
         {
@@ -114,19 +136,19 @@ public class OVRProjectConfigEditor : Editor
 
         if (projectConfigTabStrs == null)
         {
-            projectConfigTabStrs = Enum.GetNames(typeof(eProjectConfigTab));
+            projectConfigTabStrs = Enum.GetNames(typeof(ProjectConfigTab));
             for (int i = 0; i < projectConfigTabStrs.Length; ++i)
                 projectConfigTabStrs[i] = ObjectNames.NicifyVariableName(projectConfigTabStrs[i]);
         }
 
         selectedTab =
-            (eProjectConfigTab)GUILayout.SelectionGrid((int)selectedTab, projectConfigTabStrs, 3, GUI.skin.button);
+            (ProjectConfigTab)GUILayout.SelectionGrid((int)selectedTab, projectConfigTabStrs, 3, GUI.skin.button);
         EditorGUILayout.Space(5);
         bool hasModified = false;
 
         switch (selectedTab)
         {
-            case eProjectConfigTab.General:
+            case ProjectConfigTab.General:
 
                 // Show overlay support option
                 using (new EditorGUI.DisabledScope(true))
@@ -139,14 +161,12 @@ public class OVRProjectConfigEditor : Editor
                 // Hand Tracking Support
                 OVREditorUtil.SetupEnumField(projectConfig, "Hand Tracking Support",
                     ref projectConfig.handTrackingSupport, ref hasModified);
+                Highlighter.HighlightIdentifier(GUILayoutUtility.GetLastRect(), HighlightLabel.HandTrackingSupport.ToString());
 
                 OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Hand Tracking Frequency",
                         "Note that a higher tracking frequency will reserve some performance headroom from the application's budget."),
                     ref projectConfig.handTrackingFrequency, ref hasModified,
                     "https://developers.meta.com/horizon/documentation/unity/fast-motion-mode");
-
-                OVREditorUtil.SetupEnumField(projectConfig, "Hand Tracking Version",
-                    ref projectConfig.handTrackingVersion, ref hasModified);
 
                 // Enable Render Model Support
                 bool renderModelSupportAvailable = OVRPluginInfo.IsOVRPluginOpenXRActivated();
@@ -163,13 +183,15 @@ public class OVRProjectConfigEditor : Editor
                 {
                     if (projectConfig.trackedKeyboardSupport != OVRProjectConfig.TrackedKeyboardSupport.None)
                     {
-                        Debug.LogWarning("Tracked Keyboard support disabled. Requires Render Model Support");
+                        IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-project-config-tracked-keyboard-disabled",
+                            "Tracked Keyboard support disabled because Render Model Support is disabled. Requires Render Model Support.");
                         projectConfig.trackedKeyboardSupport = OVRProjectConfig.TrackedKeyboardSupport.None;
                     }
 
                     if (projectConfig.virtualKeyboardSupport != OVRProjectConfig.FeatureSupport.None)
                     {
-                        Debug.LogWarning("Virtual Keyboard support disabled. Requires Render Model Support");
+                        IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-project-config-virtual-keyboard-disabled",
+                            "Virtual Keyboard support disabled because Render Model Support is disabled. Requires Render Model Support.");
                         projectConfig.virtualKeyboardSupport = OVRProjectConfig.FeatureSupport.None;
                     }
                 }
@@ -265,6 +287,7 @@ public class OVRProjectConfigEditor : Editor
                 OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Passthrough Support",
                         "Allows the application to use passthrough functionality. This option must be enabled at build time, otherwise initializing passthrough and creating passthrough layers in application scenes will fail."),
                     ref projectConfig._insightPassthroughSupport, ref hasModified);
+                Highlighter.HighlightIdentifier(GUILayoutUtility.GetLastRect(), HighlightLabel.InsightPassthroughSupport.ToString());
                 if (hasModified && projectConfig._insightPassthroughSupport != OVRProjectConfig.FeatureSupport.None)
                 {
                     // Enable contextual passthrough for MR apps
@@ -290,10 +313,12 @@ public class OVRProjectConfigEditor : Editor
                 // Body Tracking Support
                 OVREditorUtil.SetupEnumField(projectConfig, "Body Tracking Support",
                     ref projectConfig.bodyTrackingSupport, ref hasModified);
+                Highlighter.HighlightIdentifier(GUILayoutUtility.GetLastRect(), HighlightLabel.BodyTrackingSupport.ToString());
 
                 // Face Tracking Support
                 OVREditorUtil.SetupEnumField(projectConfig, "Face Tracking Support",
                     ref projectConfig.faceTrackingSupport, ref hasModified);
+                Highlighter.HighlightIdentifier(GUILayoutUtility.GetLastRect(), HighlightLabel.FaceTrackingSupport.ToString());
 
                 // Eye Tracking Support
                 OVREditorUtil.SetupEnumField(projectConfig, "Eye Tracking Support",
@@ -409,12 +434,12 @@ public class OVRProjectConfigEditor : Editor
 
                 // Processor favor (cpu/gpu level trading)
                 OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Processor Favor",
-                        "If selected, will increase the frequency of one processor at the expense of decreasing the frequency of the other on supported devices"),
-                    ref projectConfig._processorFavor, ref hasModified);
+                        "Quest 3 family only. If selected, will increase the frequency of one processor at the expense of decreasing the frequency of the other."),
+                    ref projectConfig._processorFavor, ref hasModified, "https://developers.meta.com/horizon/documentation/unity/po-quest-boost/#trading-between-cpu-and-gpu-levels-meta-quest-3-only");
 
                 break;
 
-            case eProjectConfigTab.BuildSettings:
+            case ProjectConfigTab.BuildSettings:
 
                 var usingSRP = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
                 if (usingSRP && projectConfig.skipUnneededShaders)
@@ -459,7 +484,7 @@ public class OVRProjectConfigEditor : Editor
                 }
                 break;
 
-            case eProjectConfigTab.Security:
+            case ProjectConfigTab.Security:
 
                 OVREditorUtil.SetupBoolField(projectConfig, "Disable Backups", ref projectConfig.disableBackups,
                     ref hasModified,
@@ -476,17 +501,19 @@ public class OVRProjectConfigEditor : Editor
 
                 break;
 
-            case eProjectConfigTab.Experimental:
+            case ProjectConfigTab.Experimental:
 
                 // Experimental Features Enabled
                 OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Experimental Features Enabled",
                         "If checked, this application can use experimental features. Note that such features are for developer use only. This option must be disabled when submitting to the Oculus Store."),
                     ref projectConfig.experimentalFeaturesEnabled, ref hasModified);
+                Highlighter.HighlightIdentifier(GUILayoutUtility.GetLastRect(), HighlightLabel.ExperimentalSupport.ToString());
 
                 break;
         }
 
         EditorGUILayout.EndVertical();
+        Highlighter.HighlightIdentifier(GUILayoutUtility.GetLastRect(), HighlightLabel.ProjectConfig.ToString());
 
         // apply any pending changes to project config
         if (hasModified)

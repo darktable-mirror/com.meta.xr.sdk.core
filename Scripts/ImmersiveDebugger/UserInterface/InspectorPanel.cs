@@ -63,6 +63,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Toggle _categoriesIcon;
         private Flex _categoryDiv;
 
+        // Throttle hierarchy refresh (minimal cadence control)
+        private readonly int _refreshEveryN = 10;
+        private int _refreshTick;
+
         public ImageStyle CategoryBackgroundStyle
         {
             set
@@ -77,9 +81,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             base.Setup(owner);
 
-#pragma warning disable CS0618 // Type or member is obsolete
+#if UNITY_2022_1_OR_NEWER
+            _debugInterface = FindFirstObjectByType<DebugInterface>();
+#else
             _debugInterface = FindObjectOfType<DebugInterface>();
-#pragma warning restore CS0618 // Type or member is obsolete
+#endif
 
             var div = Append<Flex>("div");
             div.LayoutStyle = Style.Load<LayoutStyle>("InspectorDivFlex");
@@ -107,7 +113,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 Style.Load<ImageStyle>("InspectorModeIcon"),
                 SelectCategoryMode);
 
-            // Test button
+            // Title
             _selectedModeTitle = _buttonsAnchor.Append<Label>("title");
             _selectedModeTitle.LayoutStyle = Style.Load<LayoutStyle>("InspectorModeTitle");
             _selectedModeTitle.TextStyle = Style.Load<TextStyle>("MemberTitle");
@@ -122,6 +128,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _hierarchyScrollView.LayoutStyle = Style.Load<LayoutStyle>("CategoriesScrollView");
             HierarchyFlex.LayoutStyle = Style.Load<LayoutStyle>("InspectorCategoryFlex");
 
+            // Main scroll view
             _scrollView = div.Append<ScrollView>("main");
             _scrollView.LayoutStyle = Style.Load<LayoutStyle>("PanelScrollView");
             Flex.LayoutStyle = Style.Load<LayoutStyle>("InspectorMainFlex");
@@ -146,25 +153,66 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private void SelectCategoryMode()
         {
             _selectedModeTitle.Content = "Custom Inspectors";
-            _categoryDiv.Forget(_hierarchyScrollView);
-            _categoryDiv.Remember(_categoryScrollView);
-            _categoriesIcon.State = true;
-            _hierarchyIcon.State = false;
+            if (_categoryDiv)
+            {
+                if (_hierarchyScrollView)
+                {
+                    _categoryDiv.Forget(_hierarchyScrollView);
+                }
+
+                if (_categoryScrollView)
+                {
+                    _categoryDiv.Remember(_categoryScrollView);
+                }
+            }
+
+            if (_categoriesIcon)
+            {
+                _categoriesIcon.State = true;
+            }
+
+            if (_hierarchyIcon)
+            {
+                _hierarchyIcon.State = false;
+            }
         }
 
         private void SelectHierarchyMode()
         {
             _selectedModeTitle.Content = "Hierarchy View";
-            _categoryDiv.Forget(_categoryScrollView);
-            _categoryDiv.Remember(_hierarchyScrollView);
-            _hierarchyIcon.State = true;
-            _categoriesIcon.State = false;
+            if (_categoryDiv != null)
+            {
+                if (_categoryScrollView != null)
+                {
+                    _categoryDiv.Forget(_categoryScrollView);
+                }
+
+                if (_hierarchyScrollView != null)
+                {
+                    _categoryDiv.Remember(_hierarchyScrollView);
+                }
+            }
+
+            if (_hierarchyIcon != null)
+            {
+                _hierarchyIcon.State = true;
+            }
+
+            if (_categoriesIcon != null)
+            {
+                _categoriesIcon.State = false;
+            }
         }
 
         protected override void OnTransparencyChanged()
         {
             base.OnTransparencyChanged();
-            _categoryBackground.Color = Transparent ? _categoryBackgroundImageStyle.colorOff : _categoryBackgroundImageStyle.color;
+            if (_categoryBackground && _categoryBackgroundImageStyle)
+            {
+                _categoryBackground.Color = Transparent
+                    ? _categoryBackgroundImageStyle.colorOff
+                    : _categoryBackgroundImageStyle.color;
+            }
         }
 
         public IInspector RegisterInspector(InstanceHandle instanceHandle, Category category)
@@ -176,17 +224,27 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 // In this case, we want to still create the hierarchy item button if needed,
                 // but we actually won't register an inspector.
                 var button = GetHierarchyItemButton(category.Item, true);
-                button.Counter++;
+                if (button)
+                {
+                    button.Counter++;
+                }
+
                 return null;
             }
 
             var inspector = GetInspectorInternal(instanceHandle, category, true, out var registry);
             if (inspector != null) return inspector;
 
-            var previousScroll = _scrollView.Progress;
+            var previousScroll = _scrollView ? _scrollView.Progress : 1f;
 
             var instance = instanceHandle.Instance;
             var inspectorName = instance != null ? instance.name : instanceHandle.Type.Name;
+
+            if (!_scrollView)
+            {
+                return null;
+            }
+
             inspector = Flex.Append<Inspector>(inspectorName);
             inspector.LayoutStyle = Style.Load<LayoutStyle>("Inspector");
             inspector.InstanceHandle = instanceHandle;
@@ -197,15 +255,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             if (category.Item != null)
             {
-                // In case of a hierarchy component, we prefer to fold it
                 inspector.Foldout.State = false;
 
-                // Hierarchy behaviour
                 var button = GetHierarchyItemButton(category.Item, true);
+                if (!button)
+                {
+                    return inspector;
+                }
+
                 button.Counter++;
 
-                // If this inspector should not be seen right now
-                if (!_hierarchyScrollView.Visibility || _selectedItem != button)
+                if (!_hierarchyScrollView || !_hierarchyScrollView.Visibility || _selectedItem != button)
                 {
                     Flex.Forget(inspector);
                 }
@@ -213,10 +273,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             else
             {
                 var button = GetCategoryButton(category, true);
+                if (!button)
+                {
+                    return inspector;
+                }
+
                 button.Counter++;
 
-                // If this inspector should not be seen right now
-                if (!_categoryScrollView.Visibility || _selectedCategory != button)
+                if ((!_categoryScrollView || !_categoryScrollView.Visibility) || _selectedCategory != button)
                 {
                     Flex.Forget(inspector);
                 }
@@ -231,10 +295,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             {
                 foreach (var (otherCategory, categoryRegistry) in _registries)
                 {
-                    if (!categoryRegistry.TryGetValue(instanceHandle.Type, out var typeRegistry)) continue;
-                    if (!typeRegistry.TryGetValue(instanceHandle, out var inspector)) continue;
+                    if (!categoryRegistry.TryGetValue(instanceHandle.Type, out var typeRegistry))
+                    {
+                        continue;
+                    }
 
-                    typeRegistry.Remove(instanceHandle);
+                    if (!typeRegistry.Remove(instanceHandle, out var inspector))
+                    {
+                        continue;
+                    }
 
                     RemoveInspector(otherCategory, inspector);
                 }
@@ -251,24 +320,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                     return;
                 }
 
-                var inspector = GetInspectorInternal(instanceHandle, category, false, out var registry); ;
-                if (inspector == null) return;
+                var inspector = GetInspectorInternal(instanceHandle, category, false, out var registry);
+                if (!inspector)
+                {
+                    return;
+                }
 
-                // Unregister the inspector
                 registry?.Remove(instanceHandle);
-
                 RemoveInspector(category, inspector);
             }
         }
 
         private void RemoveInspector(Category category, Inspector inspector)
         {
-            var previousScroll = _scrollView.Progress;
+            var previousScroll = _scrollView ? _scrollView.Progress : 1f;
 
-            // Destroy the inspector
-            Flex.Remove(inspector, true);
-
-            _scrollView.Progress = previousScroll;
+            if (_scrollView)
+            {
+                Flex.Remove(inspector, true);
+                _scrollView.Progress = previousScroll;
+            }
 
             if (category.Item != null)
             {
@@ -276,9 +347,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
             else
             {
-                // Category Behaviour
-                var button = GetCategoryButton(category, false);
-                if (button != null)
+                var button = GetCategoryButton(category);
+                if (button)
                 {
                     button.Counter--;
                 }
@@ -288,12 +358,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         public IInspector GetInspector(InstanceHandle instanceHandle, Category category)
             => GetInspectorInternal(instanceHandle, category, false, out _);
 
-        public Inspector GetInspectorInternal(InstanceHandle instanceHandle, Category category, bool createRegistries, out Dictionary<InstanceHandle, Inspector> registry)
+        private Inspector GetInspectorInternal(InstanceHandle instanceHandle, Category category, bool createRegistries,
+            out Dictionary<InstanceHandle, Inspector> registry)
         {
-            Inspector inspector = null;
-
-            Dictionary<Type, Dictionary<InstanceHandle, Inspector>> categoryRegistry;
-            if (!_registries.TryGetValue(category, out categoryRegistry) && createRegistries)
+            if (!_registries.TryGetValue(category, out var categoryRegistry) && createRegistries)
             {
                 categoryRegistry = new Dictionary<Type, Dictionary<InstanceHandle, Inspector>>();
                 _registries.Add(category, categoryRegistry);
@@ -314,18 +382,25 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 }
                 else
                 {
-                    return inspector;
+                    return null;
                 }
             }
 
-            registry.TryGetValue(instanceHandle, out inspector);
+            registry.TryGetValue(instanceHandle, out var inspector);
             return inspector;
         }
 
         internal CategoryButton GetCategoryButton(Category category, bool create = false)
         {
-            // Search for it if already created
-            if (_categories.TryGetValue(category, out var button) || !create) return button;
+            if (_categories.TryGetValue(category, out var button) || !create)
+            {
+                return button;
+            }
+
+            if (!_categoryScrollView)
+            {
+                return null;
+            }
 
             button = CategoryFlex.Append<CategoryButton>(category.Id);
             button.LayoutStyle = Style.Instantiate<LayoutStyle>("CategoryButton");
@@ -333,7 +408,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             button.Callback = () => SelectCategoryButton(button);
             _categories.Add(category, button);
 
-            if (_selectedCategory == null)
+            if (!_selectedCategory)
             {
                 SelectCategoryButton(button);
             }
@@ -343,95 +418,147 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private Controller ComputeIdealPreviousItem(Item item)
         {
-            if (item.Parent is null or SceneRegistry) return null;
+            if (item == null)
+            {
+                return null;
+            }
+
+            if (item.Parent is null or SceneRegistry)
+            {
+                return null;
+            }
 
             var parent = GetHierarchyItemButton(item.Parent, true);
+            if (!_hierarchyScrollView)
+            {
+                return null;
+            }
 
             Controller idealPreviousItem = null;
             foreach (var child in HierarchyFlex.Children)
             {
-                if (child is HierarchyItemButton childButton)
+                if (child is not HierarchyItemButton childButton)
                 {
-                    if (childButton.Item.Parent == item.Parent || childButton == parent)
-                    {
-                        idealPreviousItem = childButton;
-                    }
-                    else
-                    {
-                        if (idealPreviousItem != null)
-                        {
-                            break;
-                        }
-                    }
+                    continue;
+                }
+
+                if (childButton.Item.Parent == item.Parent || childButton == parent)
+                {
+                    idealPreviousItem = childButton;
+                }
+                else if (idealPreviousItem)
+                {
+                    break;
                 }
             }
+
             return idealPreviousItem;
         }
 
         private HierarchyItemButton GetHierarchyItemButton(Item item, bool create = false)
         {
-            // Search for it if already created
-            if (_items.TryGetValue(item, out var button) || !create) return button;
+            if (item == null || _items == null)
+            {
+                return null;
+            }
+
+            if (_items.TryGetValue(item, out var button) || !create)
+            {
+                return button;
+            }
+
+            if (!_hierarchyScrollView)
+            {
+                return null;
+            }
 
             var idealPreviousItem = ComputeIdealPreviousItem(item);
-            button = idealPreviousItem != null ?
-                HierarchyFlex.InsertAfter<HierarchyItemButton>(item.Label, idealPreviousItem)
+            button = idealPreviousItem
+                ? HierarchyFlex.InsertAfter<HierarchyItemButton>(item.Label, idealPreviousItem)
                 : HierarchyFlex.Append<HierarchyItemButton>(item.Label);
-            button.LayoutStyle = Style.Instantiate<LayoutStyle>("HierarchyItemButton");
+
+            button.LayoutStyle = Style.Instantiate<LayoutStyle>(nameof(HierarchyItemButton));
             button.Item = item;
             button.LayoutStyle.SetIndent((item.Depth - 1) * 10);
             button.LayoutStyle.SetWidth(button.LayoutStyle.size.x - item.Depth * 10);
             button.Label.Callback = () => SelectHierarchyItemButton(button);
             button.Foldout.Callback = () => ToggleFoldItem(button);
-            _items.Add(item, button);
+            _items[item] = button;
             return button;
         }
 
         private void TryRemoveHierarchyItemButton(Item item)
         {
-            var button = GetHierarchyItemButton(item, false);
-            if (button == null) return;
+            if (item == null || _items == null)
+            {
+                return;
+            }
+
+            if (!_items.TryGetValue(item, out var button) || !button)
+            {
+                return;
+            }
 
             button.Counter--;
-            if (button.Counter != 0) return;
+            if (button.Counter != 0)
+            {
+                return;
+            }
 
-            _items.Remove(item);
-            HierarchyFlex.Remove(button, true);
+            if (_items.Remove(item, out var btn) && _hierarchyScrollView)
+            {
+                HierarchyFlex.Remove(btn, true);
+            }
         }
 
         internal void SelectCategoryButton(CategoryButton categoryButton)
         {
-            if (_selectedCategory == categoryButton) return;
+            if (_selectedCategory == categoryButton)
+            {
+                return;
+            }
 
             SelectHierarchyItemButton(null);
 
-            Flex.ForgetAll();
+            if (_scrollView)
+            {
+                Flex.ForgetAll();
+            }
 
-            if (_selectedCategory != null)
+            if (_selectedCategory)
             {
                 _selectedCategory.State = false;
             }
 
             _selectedCategory = categoryButton;
 
-            if (_selectedCategory != null)
+            if (_selectedCategory)
             {
                 _selectedCategory.State = true;
-
                 SelectCategory(categoryButton.Category);
             }
 
-            _scrollView.Progress = 1.0f;
+            if (_scrollView)
+            {
+                _scrollView.Progress = 1.0f;
+            }
         }
 
         private void SelectCategory(Category category)
         {
-            if (!_registries.TryGetValue(category, out var categoryRegistry)) return;
+            if (!_registries.TryGetValue(category, out var categoryRegistry))
+            {
+                return;
+            }
+
             foreach (var typeRegistry in categoryRegistry)
             {
                 foreach (var inspector in typeRegistry.Value)
                 {
-                    Flex.Remember(inspector.Value);
+                    if (_scrollView)
+                    {
+                        Flex.Remember(inspector.Value);
+                    }
 
                     if (_debugInterface)
                     {
@@ -441,7 +568,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        private void ToggleFoldItem(HierarchyItemButton button)
+        private static void ToggleFoldItem(HierarchyItemButton button)
         {
             if (button == null) return;
 
@@ -455,14 +582,20 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        private void FoldItem(HierarchyItemButton button)
+        private static void FoldItem(HierarchyItemButton button)
         {
-            button.Foldout.State = false;
+            if (button)
+            {
+                button.Foldout.State = false;
+            }
         }
 
-        private void UnfoldItem(HierarchyItemButton button)
+        private static void UnfoldItem(HierarchyItemButton button)
         {
-            button.Foldout.State = true;
+            if (button)
+            {
+                button.Foldout.State = true;
+            }
         }
 
         private void SelectHierarchyItemButton(HierarchyItemButton button)
@@ -475,31 +608,44 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             SelectCategoryButton(null);
 
-            Flex.ForgetAll();
+            if (_scrollView)
+            {
+                Flex.ForgetAll();
+            }
 
-            if (_selectedItem != null)
+            if (_selectedItem)
             {
                 _selectedItem.Item?.ClearContent();
-
                 _selectedItem.Label.State = false;
             }
 
             _selectedItem = button;
 
-            if (_selectedItem != null)
+            if (_selectedItem)
             {
                 _selectedItem.Label.State = true;
 
-                SelectItem(_selectedItem.Item);
+                if (_selectedItem.Item != null)
+                {
+                    SelectItem(_selectedItem.Item);
+                }
 
                 UnfoldItem(button);
             }
 
-            _scrollView.Progress = 1.0f;
+            if (_scrollView)
+            {
+                _scrollView.Progress = 1.0f;
+            }
         }
 
         private void SelectItem(Item item)
         {
+            if (item == null)
+            {
+                return;
+            }
+
             item.BuildContent();
 
             SelectCategory(item.Category);
@@ -507,15 +653,50 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private void Update()
         {
-            if (_hierarchyIcon.State)
+            if (_hierarchyIcon && _hierarchyIcon.State)
             {
-                Hierarchy.Manager.Instance?.Refresh();
+                _refreshTick++;
+                if ((_refreshTick % _refreshEveryN) == 0)
+                {
+                    Hierarchy.Manager.Instance?.Refresh();
+                }
             }
 
             if (_lerpCompleted) return;
             _currentPosition = Utils.LerpPosition(_currentPosition, _targetPosition, _lerpSpeed);
             _lerpCompleted = _currentPosition == _targetPosition;
             SphericalCoordinates = _currentPosition;
+        }
+
+        protected void OnDestroy()
+        {
+            if (_items != null)
+            {
+                foreach (var kv in _items)
+                {
+                    var b = kv.Value;
+                    if (!b)
+                    {
+                        continue;
+                    }
+
+                    b.Label.Callback = null;
+                    b.Foldout.Callback = null;
+                }
+            }
+
+            if (_categories != null)
+            {
+                foreach (var kv in _categories)
+                {
+                    var c = kv.Value;
+                    if (c != null) c.Callback = null;
+                }
+            }
+
+            _items?.Clear();
+            _registries?.Clear();
+            _categories?.Clear();
         }
     }
 }

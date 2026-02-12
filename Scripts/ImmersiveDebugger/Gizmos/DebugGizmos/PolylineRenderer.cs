@@ -78,7 +78,7 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
 
             if (material == null)
             {
-                material = new Material(Shader.Find("Custom/PolylineUnlit"));
+                material = new Material(Shader.Find("Custom/ImmersiveDebugger/PolylineUnlit"));
             }
 
             _material = new Material(material);
@@ -286,4 +286,3 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
         }
     }
 }
-

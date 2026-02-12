@@ -49,4 +49,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.EnvironmentDepth")]
 [assembly: InternalsVisibleTo("Meta.XR.MetaWand.Editor")]
 [assembly: InternalsVisibleTo("Meta.MCPBridge")]
+[assembly: InternalsVisibleTo("Meta.XR.MRUtilityKit.Tests")]
+
 

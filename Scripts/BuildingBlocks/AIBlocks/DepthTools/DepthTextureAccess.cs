@@ -41,9 +41,24 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     [RequireComponent(typeof(EnvironmentDepthManager))]
     public class DepthTextureAccess : MonoBehaviour
     {
-        public const int TextureSize = 320;
-        private const int NumEyes = 2;
 
+        /// <summary>
+        /// Edge-aligned square size (in pixels) of the downsampled depth texture
+        /// used for CPU readback and intersection tests.
+        /// This is dynamically determined from the depth texture at runtime.
+        /// </summary>
+        /// <remarks>
+        /// Only access this property after <see cref="IsInitialized"/> is true to ensure
+        /// the texture size has been properly determined from the actual depth texture.
+        /// </remarks>
+        public int TextureSize { get; private set; } = 320;
+
+        /// <summary>
+        /// Indicates whether the depth texture has been initialized and TextureSize has been set.
+        /// </summary>
+        public bool IsInitialized { get; private set; }
+
+        private const int NumEyes = 2;
         private static readonly int CopiedDepthTextureId = Shader.PropertyToID("_CopiedDepthTexture");
         private static readonly int EnvironmentDepthTextureId = Shader.PropertyToID("_EnvironmentDepthTexture");
         private static readonly int EnvironmentDepthTextureSizeId = Shader.PropertyToID("_EnvironmentDepthTextureSize");
@@ -58,20 +73,31 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         {
             public NativeArray<float> DepthTexturePixels; // packed L then R; len = 320*320*2
             public Matrix4x4[] ViewProjectionMatrix; // [0]=L, [1]=R
+            public Pose CameraPose; // Camera pose at the time depth was captured
         }
 
+        /// <summary>
+        /// Invoked when a new depth frame has been copied to CPU memory.
+        /// Supplies a <see cref="DepthFrameData"/> struct with depth values
+        /// and view/projection data for consumers such as
+        /// <see cref="ObjectDetectionVisualizer"/>.
+        /// </summary>
         public Action<DepthFrameData> OnDepthTextureUpdateCPU;
 
         private EnvironmentDepthManager _edm;
         private XRDisplaySubsystem _xrDisplay;
         private ComputeShader _computeShader;
         private ComputeBuffer _computeBuffer;
+
         private NativeArray<float> _depthTexturePixels;
         private NativeArray<float> _gpuRequestBuffer;
         private AsyncGPUReadbackRequest? _currentGpuReadbackRequest;
-
-        // Matrices published by EnvironmentDepthManager
         private readonly Matrix4x4[] _matrixVp = new Matrix4x4[NumEyes];
+        private Pose _cachedCameraPose;
+
+#if MRUK_INSTALLED
+        private PassthroughCameraAccess _cameraAccess;
+#endif
 
         private bool _isCameraRigCached;
 #if XROCULUS_INSTALLED
@@ -82,8 +108,12 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         private enum Backend
         {
             Unknown,
+#if XROCULUS_INSTALLED
             OculusXR,
+#endif
+#if META_OPENXR_INSTALLED
             OpenXRMeta
+#endif
         }
 
         private Backend _backend = Backend.Unknown;
@@ -98,7 +128,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 return;
             }
 
-            // XRDisplaySubsystem
             var displays = new List<XRDisplaySubsystem>(1);
             SubsystemManager.GetSubsystems(displays);
             _xrDisplay = displays.FirstOrDefault();
@@ -110,10 +139,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _computeShader = Resources.Load<ComputeShader>(shaderName);
             Assert.IsNotNull(_computeShader, $"Compute shader '{shaderName}' not found under Resources/.");
 
-            var numPixels = TextureSize * TextureSize * NumEyes;
-            _computeBuffer = new ComputeBuffer(numPixels, sizeof(float));
-            _depthTexturePixels = new NativeArray<float>(numPixels, Allocator.Persistent);
-            _gpuRequestBuffer = new NativeArray<float>(numPixels, Allocator.Persistent);
+#if MRUK_INSTALLED
+            _cameraAccess = FindAnyObjectByType<PassthroughCameraAccess>();
+#endif
         }
 
         private void OnDestroy()
@@ -135,7 +163,16 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
         }
 
-        private void Update()
+        /// <summary>
+        /// Triggers a depth sample immediately. Called by inference agents
+        /// to synchronize depth sampling with inference runs.
+        /// </summary>
+        public void RequestDepthSample()
+        {
+            SampleDepth();
+        }
+
+        private void SampleDepth()
         {
             if (!(_edm.enabled && _edm.IsDepthAvailable))
             {
@@ -147,11 +184,34 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 return;
             }
 
+#if MRUK_INSTALLED
+            if (_cameraAccess)
+            {
+                _cachedCameraPose = _cameraAccess.GetCameraPose();
+            }
+#endif
+
+            if (!_depthTexturePixels.IsCreated || TextureSize != depthTexture.width)
+            {
+                if (_depthTexturePixels.IsCreated)
+                {
+                    _computeBuffer?.Dispose();
+                    _depthTexturePixels.Dispose();
+                    _gpuRequestBuffer.Dispose();
+                }
+
+                TextureSize = depthTexture.width;
+                var numPixels = TextureSize * TextureSize * NumEyes;
+                _computeBuffer = new ComputeBuffer(numPixels, sizeof(float));
+                _depthTexturePixels = new NativeArray<float>(numPixels, Allocator.Persistent);
+                _gpuRequestBuffer = new NativeArray<float>(numPixels, Allocator.Persistent);
+                IsInitialized = true;
+            }
+
             _computeShader.SetTexture(0, EnvironmentDepthTextureId, depthTexture);
             _computeShader.SetFloat(EnvironmentDepthTextureSizeId, depthTexture.width);
             Assert.AreEqual(depthTexture.width, depthTexture.height, "Environment depth RT expected square");
 
-            // Get z-buffer params and reprojection matrices that EnvironmentDepthManager already sets
             var zParams = Shader.GetGlobalVector(EnvironmentDepthZBufferParamsId);
             _computeShader.SetVector(EnvironmentDepthZBufferParamsId, zParams);
             var reprojectionMatrix = Shader.GetGlobalMatrixArray(EnvironmentDepthReprojId);
@@ -184,14 +244,14 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                     OnDepthTextureUpdateCPU?.Invoke(new DepthFrameData
                     {
                         DepthTexturePixels = _depthTexturePixels,
-                        ViewProjectionMatrix = _matrixVp
+                        ViewProjectionMatrix = _matrixVp,
+                        CameraPose = _cachedCameraPose
                     });
 
                     _currentGpuReadbackRequest = null;
                 });
         }
 
-        // Backend detection
         private static Backend DetectBackend()
         {
 #if META_OPENXR_INSTALLED
@@ -210,11 +270,13 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             return Backend.Unknown;
         }
 
-        // Fetch texture only
         private bool TryFetchDepthTexture(out RenderTexture depthTexture)
         {
             depthTexture = null;
-            if (_xrDisplay == null || !_xrDisplay.running) return false;
+            if (_xrDisplay == null || !_xrDisplay.running)
+            {
+                return false;
+            }
 
             switch (_backend)
             {
@@ -226,6 +288,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 case Backend.OpenXRMeta:
                     return TryFetchOpenXR(out depthTexture);
 #endif
+                case Backend.Unknown:
                 default:
                     return false;
             }
@@ -247,7 +310,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 #if META_OPENXR_INSTALLED
         private static bool TryFetchOpenXR(out RenderTexture depthTexture)
         {
-            // Use the texture EnvironmentDepthManager publishes globally.
             depthTexture = Shader.GetGlobalTexture(EnvironmentDepthTextureId) as RenderTexture;
             return depthTexture && depthTexture.IsCreated();
         }

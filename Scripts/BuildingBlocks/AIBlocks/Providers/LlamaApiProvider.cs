@@ -28,18 +28,42 @@ using System;
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
     [CreateAssetMenu(menuName = "Meta/AI/Provider Assets/Cloud/Llama API Provider")]
-    public sealed class LlamaApiProvider : AIProviderBase, IChatTask
+    public sealed class LlamaApiProvider : AIProviderBase, IUsesCredential, IChatTask
     {
+        [Tooltip("Project-wide API key for Llama API. Ignored when 'Override API Key' is OFF (uses CredentialStorage).")]
         [SerializeField] internal string apiKey;
+
+        [Tooltip("If ON, use this asset's API key instead of CredentialStorage.")]
+        [SerializeField] internal bool overrideApiKey;
+
         [Tooltip("Full chat completions endpoint, e.g. https://api.llama.com/v1/chat/completions")]
         [SerializeField] internal string endpointUrl = "https://api.llama.com/v1/chat/completions";
+
+        [Tooltip("Model identifier to use (e.g., 'Llama-3.1-70B-Instruct' or your hosted variant).")]
         [SerializeField] internal string model = "Llama-4-Maverick-17B-128E-Instruct-FP8";
+
+        [Tooltip("If ON, package image inputs for multimodal models; turn OFF for text-only models.")]
         [SerializeField] internal bool supportsVision = true;
+
+        /// <summary>
+        /// Indicates whether this provider prepares and sends image inputs for supported multimodal models.
+        /// Disable for pure-text models to reduce request overhead and validation checks.
+        /// </summary>
+        /// <remarks>
+        /// See <see cref="IChatTask"/> and your model's capabilities on the provider dashboard.
+        /// </remarks>
         public bool SupportsVision => supportsVision;
 
+        [Tooltip("Sampling temperature. Higher = more random (0–2).")]
         [Range(0f, 2f)] public float temperature = 0.6f;
+
+        [Tooltip("Nucleus sampling cap; keep probability mass under this threshold (0–1).")]
         [Range(0f, 1f)] public float topP = 0.9f;
+
+        [Tooltip("Discourage repetition (>1 penalizes repeats, <1 encourages them).")]
         [Range(0f, 1f)] public float repetitionPenalty = 1.0f;
+
+        [Tooltip("Hard cap on new tokens produced per response.")]
         public int maxCompletionTokens = 512;
 
         [Tooltip("When ON, any http(s) image URL is fetched locally and sent inline as base64 to avoid remote fetch failures.")]
@@ -52,6 +76,18 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         [SerializeField] internal int maxInlineBytes = 25 * 1024 * 1024;
 
         protected override InferenceType DefaultSupportedTypes => InferenceType.Cloud;
+        string IUsesCredential.ProviderId => "LlamaApi";
+        bool IUsesCredential.OverrideApiKey { get => overrideApiKey; set => overrideApiKey = value; }
+
+        ProviderTestConfig IUsesCredential.GetTestConfig()
+        {
+            return new ProviderTestConfig
+            {
+                Endpoint = endpointUrl,
+                Model = model,
+                ProviderId = ((IUsesCredential)this).ProviderId
+            };
+        }
 
         [Serializable]
         private class ImageUrl
@@ -86,7 +122,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             public int max_completion_tokens;
         }
 
-        // Shape 1 (your logs): { completion_message: { content: { type, text } } }
         [Serializable]
         private class CompletionContent
         {
@@ -109,7 +144,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             public CompletionMessage completion_message;
         }
 
-        // Shape 2: choices[].message.content is an ARRAY of parts
         [Serializable]
         private class MessageParts
         {
@@ -129,7 +163,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             public List<ChoiceParts> choices;
         }
 
-        // Shape 3: choices[].message.content is a STRING
         [Serializable]
         private class MessageText
         {
@@ -149,33 +182,22 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             public List<ChoiceText> choices;
         }
 
+        /// <summary>
+        /// Sends a chat request to Llama-API and extracts the assistant text, handling vision inputs
+        /// when enabled. Applies safe defaults for temperature and max tokens unless overridden.
+        /// </summary>
+        /// <param name="req">User message and optional images; validated against provider capabilities.</param>
+        /// <param name="stream">Optional partial output callback; final text is still returned.</param>
+        /// <param name="ct">Cancellation token for image prep and HTTP.</param>
+        /// <returns><see cref="ChatResponse"/> with assistant text and provider metadata.</returns>
+        /// <remarks>
+        /// See <see cref="IChatTask"/>. API docs: https://llama.developer.meta.com/docs/overview/
+        /// </remarks>
         public async Task<ChatResponse> ChatAsync(ChatRequest req, IProgress<ChatDelta> stream = null, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("Llama API key missing in LlamaApiProvider.");
-            if (string.IsNullOrWhiteSpace(endpointUrl))
-                throw new InvalidOperationException("Endpoint URL missing in LlamaApiProvider.");
+            ValidateConfiguration(apiKey, endpointUrl);
 
-            var prepared = req;
-            if (SupportsVision && req?.images != null && req.images.Count > 0)
-            {
-                prepared = new ChatRequest(req.text, new List<ImageInput>(req.images.Count));
-                foreach (var img in req.images)
-                {
-                    var p = img;
-
-                    if (inlineRemoteImages)
-                    {
-                        p = await PrepareImageInlineAsync(p, ct); // turn http(s) into bytes -> data URL later
-                    }
-                    else if (resolveRemoteRedirects)
-                    {
-                        p = await ResolveRedirectAsync(p, ct); // keep URL, but resolve to final concrete URL
-                    }
-
-                    prepared.images.Add(p);
-                }
-            }
+            var prepared = await PrepareRequestImagesAsync(req, SupportsVision, inlineRemoteImages, resolveRemoteRedirects, maxInlineBytes, ct);
 
             var body = BuildBody(prepared);
             var json = JsonUtility.ToJson(body, false);
@@ -229,42 +251,10 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             };
         }
 
-        private static string ToImageUrl(ImageInput img)
-        {
-            if (!string.IsNullOrEmpty(img.url)) return img.url;
-
-            if (img.bytes is not { Length: > 0 })
-            {
-                throw new ArgumentException("ImageInput had neither Url nor Bytes.");
-            }
-
-            var mime = string.IsNullOrEmpty(img.mimeType) ? "image/jpeg" : img.mimeType;
-            return $"data:{mime};base64,{Convert.ToBase64String(img.bytes)}";
-
-        }
-
-        // Inline: download bytes & send as data URL later
-        private async Task<ImageInput> PrepareImageInlineAsync(ImageInput img, CancellationToken ct)
-        {
-            if (string.IsNullOrEmpty(img.url)) return img; // guard
-            var bytes = await ImageInputUtils.DownloadBytesAsync(img.url, maxInlineBytes, ct);
-            if (bytes == null) return img;
-
-            var mime = ImageInputUtils.GuessMime(bytes, null, img.url);
-            return new ImageInput { bytes = bytes, mimeType = mime };
-        }
-
-        // URLs only: resolve to a concrete URL (don’t download)
-        private async Task<ImageInput> ResolveRedirectAsync(ImageInput img, CancellationToken ct)
-        {
-            if (string.IsNullOrEmpty(img.url)) return img; // guard
-            var finalUrl = await ImageInputUtils.ResolveRedirectAsync(img.url, ct);
-            return new ImageInput { url = finalUrl, mimeType = img.mimeType };
-        }
+        private static string ToImageUrl(ImageInput img) => ImageInputToDataUri(img, "image/jpeg");
 
         private static string ExtractAssistant(string rawJson)
         {
-            // Shape 1: completion_message.content.text
             try
             {
                 var cmpl = JsonUtility.FromJson<ChatResponseCompletion>(rawJson);
@@ -273,14 +263,13 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
             catch { /* continue */ }
 
-            // Shape 2: choices[].message.content is an ARRAY of parts
             try
             {
                 var parts = JsonUtility.FromJson<ChatResponseParts>(rawJson);
-                if (parts?.choices != null && parts.choices.Count > 0)
+                if (parts?.choices is { Count: > 0 })
                 {
                     var msg = parts.choices[0].message;
-                    if (msg?.content != null && msg.content.Count > 0)
+                    if (msg?.content is { Count: > 0 })
                     {
                         var sb = new StringBuilder();
                         foreach (var c in msg.content)
@@ -296,11 +285,10 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
             catch { /* continue */ }
 
-            // Shape 3: choices[].message.content is a STRING
             try
             {
                 var text = JsonUtility.FromJson<ChatResponseText>(rawJson);
-                if (text?.choices != null && text.choices.Count > 0)
+                if (text?.choices is { Count: > 0 })
                 {
                     var s = text.choices[0].message?.content ?? "";
                     if (!string.IsNullOrEmpty(s)) return s;
