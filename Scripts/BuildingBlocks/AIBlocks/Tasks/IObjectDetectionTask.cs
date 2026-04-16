@@ -25,7 +25,7 @@ using UnityEngine;
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
     /// <summary>
-    /// Interface for object detection providers supporting both cloud (JSON) and on-device (binary) execution.
+    /// Interface for object detection providers supporting both cloud (JSON) and on-device execution.
     /// </summary>
     public interface IObjectDetectionTask
     {
@@ -44,7 +44,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         /// </summary>
         /// <param name="src">Source RenderTexture containing the image to analyze.</param>
         /// <param name="ct">Cancellation token for aborting the operation.</param>
-        /// <returns>Binary-encoded detection results for efficient downstream processing.</returns>
-        Task<byte[]> DetectAsync(RenderTexture src, CancellationToken ct = default);
+        /// <returns>Array of predictions containing bounding boxes, scores, and class labels.</returns>
+        Task<AIProviderBase.ObjectDetectionPrediction[]> DetectAsync(RenderTexture src, CancellationToken ct = default);
     }
 }

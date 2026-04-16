@@ -26,3 +26,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("MetaXrSimulator.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.MetaWand.Editor")]
 [assembly: InternalsVisibleTo("meta.xr.mrutilitykit.tests")]
+

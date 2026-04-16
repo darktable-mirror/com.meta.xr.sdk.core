@@ -20,6 +20,7 @@
 
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface.RLDS
 {
@@ -33,6 +34,9 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         private readonly ButtonStyle _buttonStyle;
         private readonly GUIStyle _textStyle;
         private readonly ActionLinkDescription _action;
+        private readonly Props.ButtonVariant _variant;
+        private readonly Props.ButtonSize _size;
+        private UnityEngine.UIElements.Button _button;
 
         public Button(ActionLinkDescription action, ButtonStyle buttonStyle, int fixedWidth = 0)
         {
@@ -71,7 +75,13 @@ namespace Meta.XR.Editor.UserInterface.RLDS
             _textStyle.active.textColor = _buttonStyle.TextColorHover;
             _textStyle.padding = new RectOffset(RLDS.Styles.Spacing.Space3XS, RLDS.Styles.Spacing.Space3XS,
                 RLDS.Styles.Spacing.Space3XS, RLDS.Styles.Spacing.Space3XS);
-            ;
+        }
+
+        public Button(ActionLinkDescription action, Props.ButtonVariant variant, Props.ButtonSize size)
+        {
+            _action = action;
+            _variant = variant;
+            _size = size;
         }
 
         public void Draw()
@@ -96,6 +106,42 @@ namespace Meta.XR.Editor.UserInterface.RLDS
             EditorGUILayout.EndVertical();
             EditorGUI.EndDisabledGroup();
         }
+
+        /// <summary>
+        /// Creates a UIToolkit Button element with RLDS styling applied.
+        /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
+        /// </summary>
+        /// <returns>A UnityEngine.UIElements.Button configured with RLDS styling</returns>
+        public VisualElement Get()
+        {
+            if (_button != null)
+            {
+                return _button;
+            }
+
+            _button = new UnityEngine.UIElements.Button(() => _action.Action?.Invoke())
+            {
+                text = _action.Content.text
+            };
+
+            var cssClass = GetRLDSStyleClass();
+            _button.AddToClassList(cssClass);
+
+            if (Disable)
+            {
+                _button.SetEnabled(false);
+            }
+
+            return _button;
+        }
+
+        /// <summary>
+        /// Maps the ButtonStyle to the appropriate RLDS CSS class name.
+        /// Determines the button variant (Primary, Secondary, Tertiary, OnMedia) and size (Large, Small, XSmall)
+        /// based on the current ButtonStyle properties.
+        /// </summary>
+        /// <returns>The RLDS CSS class name (e.g., "rlds-button-primary", "rlds-button-secondary-small")</returns>
+        private string GetRLDSStyleClass() => RLDSUtils.GetButtonStyleClass(_variant, _size);
 
         private void DrawBorder(Rect contentRect, int borderWidth, int cornerRadius, Color borderColor)
         {

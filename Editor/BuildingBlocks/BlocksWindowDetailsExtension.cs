@@ -52,6 +52,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         private readonly Stack<BlockData> _backHistory = new();
         private static bool _variantInitialized;
         private static VariantsSelection _variantsSelection;
+        private static bool? _hasVariantsToShowCache;
 
         private static VariantsSelection VariantsSelection
         {
@@ -222,6 +223,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             if (blockData is not InterfaceBlockData)
                 return;
 
+            _hasVariantsToShowCache ??= VariantsSelection.Any(variant => variant.NeedsChoice(VariantsSelection, out _));
+            if (!_hasVariantsToShowCache.Value)
+                return;
+
             EditorGUILayout.BeginVertical(Styles.GUIStyles.SetupSection);
             EditorGUILayout.LabelField("Variants", Styles.GUIStyles.OffWhiteLargeLabel);
             const string variantsDescription =
@@ -361,9 +366,10 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void ShowBottomButtons(BlockData block)
         {
-            var canBeAdded = block.IsInteractable;
+            var blockCache = block?.GetCache();
+            var canBeAdded = blockCache?.IsInteractable ?? false;
             var canBeAddedOnObjects = Selection.objects.Any() && block.CanBeAddedOverGameObject;
-            var numberInScene = block != null ? block.ComputeNumberOfBlocksInScene() : 0;
+            var numberInScene = blockCache?.NumberOfBlocksInScene ?? 0;
             var canBeSelected = numberInScene > 0;
             var selectText = numberInScene > 1 ? "Select Blocks" : "Select Block";
 
@@ -589,6 +595,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             _repainter.RequestRepaint();
+
+            // Reset variant caches so they are recomputed for the new panel opening
+            _variantInitialized = false;
+            _hasVariantsToShowCache = null;
 
             // Open target view
             SwitchToPage(Page.Details, origin, originData, targetData);

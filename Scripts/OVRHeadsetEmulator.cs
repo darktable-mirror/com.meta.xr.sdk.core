@@ -214,7 +214,9 @@ public class OVRHeadsetEmulator : MonoBehaviour
 
             if (!hasSentEvent)
             {
-                OVRPlugin.SendEvent("headset_emulator", "activated");
+                var evt = new OVRPlugin.UnifiedEventData("headset_emulator");
+                evt.SetMetadata("status", "activated");
+                evt.Send();
                 hasSentEvent = true;
             }
         }

@@ -22,6 +22,8 @@ MonoBehaviour:
   bottomRightMargin: {x: 0, y: 0}
   spacing: 6
   masks: 0
-  adaptHeight: 1
+  adaptHeight: 0
   autoFitChildren: 0
   isOverlayCanvas: 0
+  ignoreFlexLayout: 0
+  adaptiveHeightPadding: {x: 0, y: 0}

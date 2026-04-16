@@ -457,6 +457,8 @@ namespace Meta.XR.Editor.PlayCompanion
         {
             VisualElement element;
 
+            var tooltip = item.Tooltip;
+
             if (item.IsButton)
             {
                 var button = new EditorToolbarButton
@@ -472,7 +474,7 @@ namespace Meta.XR.Editor.PlayCompanion
                         marginLeft = 0,
                         paddingLeft = 0
                     },
-                    tooltip = item.Tooltip
+                    tooltip = tooltip
                 };
                 button.clicked += () => item.OnSelect?.Invoke();
                 element = button;
@@ -492,7 +494,7 @@ namespace Meta.XR.Editor.PlayCompanion
                         marginLeft = 0,
                         paddingLeft = 0
                     },
-                    tooltip = item.Tooltip
+                    tooltip = tooltip
                 };
                 toggle.RegisterValueChangedCallback(evt =>
                 {
@@ -511,6 +513,7 @@ namespace Meta.XR.Editor.PlayCompanion
             element.AddToClassList(UnityEditorToolbarElementClass);
             element.AddToClassList(StripElementClass);
             element.style.marginRight = 2;
+
 
             Insert(element);
 

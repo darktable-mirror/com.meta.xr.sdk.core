@@ -19,6 +19,7 @@
  */
 
 using System.Collections.Generic;
+using System.Linq;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
 using UnityEditor;
@@ -30,6 +31,7 @@ namespace Meta.XR.Editor.PlayCompanion
     internal static class Manager
     {
         private static readonly List<Item> Items = new List<Item>();
+        private static readonly HashSet<Item> SelectedItems = new HashSet<Item>();
 
         public static readonly CustomBool Enabled =
             new UserBool()
@@ -54,7 +56,6 @@ namespace Meta.XR.Editor.PlayCompanion
         }
 
         public static IReadOnlyList<Item> RegisteredItems => Items;
-        public static Item SelectedItem { get; private set; }
 
         public static void RegisterItem(Item item)
         {
@@ -67,29 +68,51 @@ namespace Meta.XR.Editor.PlayCompanion
         public static void UnregisterItem(Item item)
         {
             Items.Remove(item);
+            SelectedItems.Remove(item);
+        }
+
+        public static bool IsSelected(Item item)
+        {
+            return SelectedItems.Contains(item);
         }
 
         public static void Select(Item item, bool automated = false)
         {
             if (!automated && EditorApplication.isPlayingOrWillChangePlaymode) return;
-            if (SelectedItem == item) return;
+            if (item == null) return;
+            if (SelectedItems.Contains(item)) return;
 
-            if (!automated || item != null)
-            {
-                SelectedItem?.OnUnselect?.Invoke();
-            }
-
-            SelectedItem = item;
+            SelectedItems.Add(item);
 
             if (!automated)
             {
-                SelectedItem?.OnSelect?.Invoke();
+                item.OnSelect?.Invoke();
+            }
+        }
+
+        public static void Unselect(Item item, bool automated = false)
+        {
+            if (item == null) return;
+            if (!SelectedItems.Contains(item)) return;
+
+            SelectedItems.Remove(item);
+
+            if (!automated)
+            {
+                item.OnUnselect?.Invoke();
             }
         }
 
         public static void Toggle(Item item)
         {
-            Select(SelectedItem == item ? null : item);
+            if (IsSelected(item))
+            {
+                Unselect(item);
+            }
+            else
+            {
+                Select(item);
+            }
         }
 
         private static void Update()
@@ -108,7 +131,7 @@ namespace Meta.XR.Editor.PlayCompanion
 
                 if (item.ShouldBeUnselected?.Invoke() ?? false)
                 {
-                    Select(null, true);
+                    Unselect(item, true);
                 }
             }
         }
@@ -118,17 +141,26 @@ namespace Meta.XR.Editor.PlayCompanion
             switch (stateChange)
             {
                 case PlayModeStateChange.ExitingEditMode:
-                    SelectedItem?.OnEnteringPlayMode?.Invoke();
+                    foreach (var item in SelectedItems.ToList())
+                    {
+                        item.OnEnteringPlayMode?.Invoke();
+                    }
                     break;
                 case PlayModeStateChange.ExitingPlayMode:
-                    SelectedItem?.OnExitingPlayMode?.Invoke();
+                    foreach (var item in SelectedItems.ToList())
+                    {
+                        item.OnExitingPlayMode?.Invoke();
+                    }
                     break;
             }
         }
 
         private static void OnEditorQuitting()
         {
-            SelectedItem?.OnEditorQuitting?.Invoke();
+            foreach (var item in SelectedItems.ToList())
+            {
+                item.OnEditorQuitting?.Invoke();
+            }
         }
 
         private static void SetupMenu()
@@ -139,7 +171,7 @@ namespace Meta.XR.Editor.PlayCompanion
                 Name = "Default Play Mode",
                 Icon = Styles.Contents.DefaultPlayModeIcon,
                 Color = UserInterface.Styles.Colors.LightGray,
-                ShouldBeSelected = () => Manager.SelectedItem == null,
+                ShouldBeSelected = () => SelectedItems.Count == 0,
                 Show = false
             };
             Manager.RegisterItem(defaultItem);

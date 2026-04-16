@@ -80,8 +80,8 @@ namespace Meta.XR.Guides.Editor.About
 
             _window.DrawCustomHeaderTitle = DrawCustomHeaderTitle;
             _window.DrawCustomNotice = DrawCustomNotice;
-            _window.AddAdditionalTelemetryAnnotations = marker =>
-                marker.AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasNewVersionAvailable,
+            _window.AddAdditionalUnifiedEventMetadata = unifiedEvent =>
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasNewVersionAvailable,
                     About.Version < About.LatestVersion);
         }
 

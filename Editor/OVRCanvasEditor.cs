@@ -118,7 +118,9 @@ public class OVRCanvasEditor : Editor
                                 onUpgrade?.Invoke(overlay);
                                 EditorUtility.SetDirty(overlay);
                                 Debug.Log($"Added {nameof(OVROverlayCanvas)} to {canvas.gameObject}", overlay);
-                                OVRPlugin.SendEvent("canvas_upgrade_clicked", telemetryParam);
+                                var evt = new OVRPlugin.UnifiedEventData("canvas_upgrade_clicked");
+                                evt.SetMetadata("component_type", telemetryParam);
+                                evt.Send();
                             }
                         }
 

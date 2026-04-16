@@ -180,6 +180,10 @@ public class OVRHand : MonoBehaviour,
     /// True when this hand is the same type (left/right) as the user's dominant hand.
     /// </summary>
     public bool IsDominantHand { get; private set; }
+    /// <summary>
+    /// Experimental: True when this hand pose is generated from inferred data instead of direct camera source data.
+    /// </summary>
+    public bool PoseSourceInferred { get; private set; }
 
     private void InitializePointerPose()
     {
@@ -220,6 +224,9 @@ public class OVRHand : MonoBehaviour,
             RayHelper.gameObject.SetActive(false);
         }
 
+        bool result = false;
+        OVRPlugin.GetHandPoseSourceInferred(-1, (OVRPlugin.Hand)HandType, out result);
+        PoseSourceInferred = result;
 
     }
 

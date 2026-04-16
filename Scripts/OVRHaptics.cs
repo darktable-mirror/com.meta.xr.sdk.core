@@ -29,6 +29,7 @@ using System.Runtime.InteropServices;
 /// Plays tactile effects on a tracked VR controller.
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-haptics-apis/")]
+[Obsolete("OVRHaptics has been deprecated. Use System Haptics for default interactions, or the Haptics SDK instead.")]
 public static class OVRHaptics
 {
     public readonly static OVRHapticsChannel[] Channels;

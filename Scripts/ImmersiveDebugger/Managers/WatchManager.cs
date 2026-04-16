@@ -65,21 +65,56 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             WatchesDict[type] = membersList;
             ManagerUtils.RebuildInspectorForType(_uiPanel, _instanceCache, type, membersList, (memberController, member, attribute, instance) =>
             {
-                var watch = memberController.GetWatch();
-                if (!watch?.Matches(member, instance) ?? true)
+                var memberType = member.GetDataType();
+
+                // Check if this member's type has its own DebugMember-annotated members (nested class)
+                if (ManagerUtils.HasNestedDebugMembers(memberType))
                 {
-                    if (member.IsTypeEqual(typeof(Texture2D)))
+                    // For nested class, register each nested member as a watch
+                    RegisterNestedMembersAsWatches(memberController, member, memberType, instance);
+                }
+                else
+                {
+                    // Standard watch registration
+                    var watch = memberController.GetWatch();
+                    if (!watch?.Matches(member, instance) ?? true)
                     {
-                        memberController.RegisterTexture(WatchUtils.Create(member, instance, attribute) as WatchTexture);
-                    }
-                    else
-                    {
-                        memberController.RegisterWatch(WatchUtils.Create(member, instance, attribute));
+                        if (member.IsTypeEqual(typeof(Texture2D)))
+                        {
+                            memberController.RegisterTexture(WatchUtils.Create(member, instance, attribute) as WatchTexture);
+                        }
+                        else
+                        {
+                            memberController.RegisterWatch(WatchUtils.Create(member, instance, attribute));
+                        }
                     }
                 }
             });
         }
 
+        /// <summary>
+        /// Registers nested class members as watches inside a foldout.
+        /// Only handles watch registration - other managers handle their own hooks.
+        /// </summary>
+        private void RegisterNestedMembersAsWatches(IMember parentMemberController, MemberInfo parentMember, Type nestedType, InstanceHandle instance)
+        {
+            foreach (var (nestedMember, nestedAttribute) in ManagerUtils.GetNestedDebugMembers(nestedType))
+            {
+                // Only register fields/properties as watches
+                if (!IsMemberValidForWatch(nestedMember))
+                {
+                    continue;
+                }
+
+                var childMemberController = ManagerUtils.GetOrCreateNestedMemberController(parentMemberController, nestedMember, nestedAttribute);
+                if (childMemberController != null)
+                {
+                    // Register watch only - TweakManager handles tweaks separately
+                    var nestedWatch = NestedWatchUtils.CreateNested(parentMember, nestedMember, instance, nestedAttribute);
+                    childMemberController.RegisterWatch(nestedWatch);
+                }
+            }
+        }
 
         internal static bool IsMemberValidForWatch(MemberInfo member)
         {

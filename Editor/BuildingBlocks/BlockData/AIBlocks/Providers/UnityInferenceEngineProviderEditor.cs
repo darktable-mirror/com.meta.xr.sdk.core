@@ -20,6 +20,8 @@
 
 #if UNITY_INFERENCE_INSTALLED
 using System.IO;
+using Unity.InferenceEngine;
+using FF = Unity.InferenceEngine.Functional;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,6 +30,13 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     [CustomEditor(typeof(UnityInferenceEngineProvider))]
     public class UnityInferenceEngineProviderEditor : UnityEditor.Editor
     {
+        private enum ModelQuantizationType
+        {
+            None,
+            Float16,
+            Uint8
+        }
+
         private SerializedProperty _modeProp;
         private SerializedProperty _useStreamingAssetProp;
         private SerializedProperty _streamingAssetModelProp;
@@ -43,8 +52,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         private SerializedProperty _inputWidthProp;
         private SerializedProperty _inputHeightProp;
 
-        private SerializedProperty _nmsShaderProp;
-        private SerializedProperty _maxDetectionsProp;
         private SerializedProperty _scoreThresholdProp;
 
         private SerializedProperty _llmConfigProp;
@@ -52,6 +59,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         private string[] _availableClassLabels;
         private bool[] _selectedLabelFlags;
         private int[] _sortedIndices;
+
+        private bool _showQuantization;
+        private ModelQuantizationType _quantizationType = ModelQuantizationType.Uint8;
+        private ModelAsset _modelToQuantize;
+        private bool _convertOutputs = true;
 
         private void OnEnable()
         {
@@ -75,8 +87,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _inputWidthProp = serializedObject.FindProperty(nameof(UnityInferenceEngineProvider.inputWidth));
             _inputHeightProp = serializedObject.FindProperty(nameof(UnityInferenceEngineProvider.inputHeight));
 
-            _nmsShaderProp = serializedObject.FindProperty(nameof(UnityInferenceEngineProvider.nmsShader));
-            _maxDetectionsProp = serializedObject.FindProperty(nameof(UnityInferenceEngineProvider.maxDetections));
             _scoreThresholdProp = serializedObject.FindProperty(nameof(UnityInferenceEngineProvider.scoreThreshold));
             _llmConfigProp = serializedObject.FindProperty(nameof(UnityInferenceEngineProvider.llmConfig));
 
@@ -154,14 +164,14 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 EditorGUI.indentLevel--;
             }
 
-            if (mode == UnityInferenceProviderMode.ObjectDetection ||
-                mode == UnityInferenceProviderMode.ImageSegmentation)
+            switch (mode)
             {
-                DrawVisionModelSettings();
-            }
-            else if (mode == UnityInferenceProviderMode.Chat)
-            {
-                DrawChatSettings();
+                case UnityInferenceProviderMode.ObjectDetection or UnityInferenceProviderMode.ImageSegmentation:
+                    DrawVisionModelSettings();
+                    break;
+                case UnityInferenceProviderMode.Chat:
+                    DrawChatSettings();
+                    break;
             }
 
             serializedObject.ApplyModifiedProperties();
@@ -182,6 +192,8 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
             DrawClassLabelFilter();
 
+            EditorGUILayout.PropertyField(_scoreThresholdProp, new GUIContent("Score Threshold"));
+
             EditorGUILayout.PropertyField(_splitOverFramesProp, new GUIContent("Split Over Frames"));
             using (new EditorGUI.DisabledScope(!_splitOverFramesProp.boolValue))
             {
@@ -193,11 +205,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             EditorGUILayout.PropertyField(_inputWidthProp, new GUIContent("Input Width"));
             EditorGUILayout.PropertyField(_inputHeightProp, new GUIContent("Input Height"));
 
-            EditorGUILayout.Space(8);
-            EditorGUILayout.LabelField("Post Processing (NMS)", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_nmsShaderProp, new GUIContent("NMS Compute Shader"));
-            EditorGUILayout.PropertyField(_maxDetectionsProp, new GUIContent("Max Detections"));
-            EditorGUILayout.PropertyField(_scoreThresholdProp, new GUIContent("Score Threshold"));
+            DrawQuantizationSection();
         }
 
         private void DrawChatSettings()
@@ -377,6 +385,220 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private void DrawQuantizationSection()
+        {
+            EditorGUILayout.Space(12);
+            _showQuantization = EditorGUILayout.Foldout(_showQuantization, "YOLO-style Model Optimization", true, EditorStyles.foldoutHeader);
+
+            if (!_showQuantization)
+            {
+                return;
+            }
+
+            if (!_modelToQuantize && !_useStreamingAssetProp.boolValue)
+            {
+                var assignedModel = _modelFileProp.objectReferenceValue as ModelAsset;
+                if (assignedModel)
+                {
+                    _modelToQuantize = assignedModel;
+                }
+            }
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.Space(5);
+
+            EditorGUILayout.LabelField(
+                "Optimize your YOLO-style ONNX model for use with AI Blocks. " +
+                "Convert outputs transforms raw YOLO format (1 output) to the optimized 3-output format (boxes, " +
+                "class IDs, scores) and YOLO-seg to the optimized 4-output format (boxes, class IDs, scores, mask).",
+                EditorStyles.wordWrappedMiniLabel);
+
+            EditorGUILayout.Space(10);
+
+            _modelToQuantize = (ModelAsset)EditorGUILayout.ObjectField(
+                new GUIContent("Model", "The ONNX or Sentis model to optimize."),
+                _modelToQuantize,
+                typeof(ModelAsset),
+                false);
+
+            EditorGUILayout.Space(8);
+
+            _quantizationType = (ModelQuantizationType)EditorGUILayout.EnumPopup(
+                new GUIContent("Quantization",
+                    "Reduce model size. None = no change, Float16 = 16-bit, Uint8 = 8-bit (smallest)."),
+                _quantizationType);
+
+            EditorGUILayout.Space(4);
+
+            EditorGUILayout.LabelField(
+                "• None: Keep original precision\n" +
+                "• Float16: 16-bit, ~50% smaller, good accuracy\n" +
+                "• Uint8: 8-bit, ~75% smaller, may impact accuracy",
+                EditorStyles.wordWrappedMiniLabel);
+
+            EditorGUILayout.Space(4);
+
+            _convertOutputs = EditorGUILayout.Toggle(
+                new GUIContent("Convert Outputs",
+                    "Convert raw YOLO output (single tensor) to 3 separate outputs (boxes, class IDs, scores), " +
+                    "and YOLO-Seg output to 4 separate ouputs (boxes, class IDs, scores, mask)."),
+                _convertOutputs);
+
+            EditorGUILayout.Space(10);
+
+            var canOptimize = _modelToQuantize && (_convertOutputs || _quantizationType != ModelQuantizationType.None);
+            EditorGUI.BeginDisabledGroup(!canOptimize);
+            if (GUILayout.Button("Optimize and Save Model", GUILayout.Height(28)))
+            {
+                OptimizeModel();
+            }
+            EditorGUI.EndDisabledGroup();
+
+            if (_modelToQuantize && !_convertOutputs && _quantizationType == ModelQuantizationType.None)
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.HelpBox("Enable 'Convert Outputs' or select a quantization type.", MessageType.Info);
+            }
+
+            EditorGUILayout.Space(5);
+            EditorGUILayout.EndVertical();
+        }
+
+        private void OptimizeModel()
+        {
+            if (!_modelToQuantize)
+            {
+                EditorUtility.DisplayDialog("Error", "Please assign a model to optimize.", "OK");
+                return;
+            }
+
+            try
+            {
+                Model finalModel;
+                var mode = (UnityInferenceProviderMode)_modeProp.enumValueIndex;
+
+                if (_convertOutputs)
+                {
+                    var model = ModelLoader.Load(_modelToQuantize);
+                    var graph = new FunctionalGraph();
+                    var input = graph.AddInputs(model);
+
+                    if (mode == UnityInferenceProviderMode.ImageSegmentation)
+                    {
+                        // Segmentation: 2 inputs → 4 outputs (boxes, scores, maskCoeffs, maskPrototypes)
+                        var outs = FF.Forward(model, input);
+
+                        if (outs.Length < 2)
+                        {
+                            EditorUtility.DisplayDialog("Error",
+                                $"Segmentation model needs 2 outputs, got {outs.Length}.", "OK");
+                            return;
+                        }
+
+                        var boxOut = outs[0];
+                        var maskOut = outs[1];
+
+                        // Assume 80 classes (COCO), mask coefficients are the rest after 4 box coords + classes
+                        const int numClasses = 80;
+
+                        var allData = boxOut[0].Transpose(0, 1); // (numBoxes, 4+numClasses+maskChannels)
+                        var boxes = allData[.., ..4];
+                        var scores = allData[.., 4..(4 + numClasses)];
+                        var maskCoeffs = allData[.., (4 + numClasses)..];
+                        var maskPrototypes = maskOut[0];
+
+                        // Convert center format to corner format
+                        var c2C = FF.Constant(new TensorShape(4, 4), new[]
+                        {
+                            1, 0, 1, 0,
+                            0, 1, 0, 1,
+                            -0.5f, 0, 0.5f, 0,
+                            0, -0.5f, 0, 0.5f
+                        });
+                        var boxesCorner = FF.MatMul(boxes, c2C);
+
+                        finalModel = graph.Compile(boxesCorner, scores, maskCoeffs, maskPrototypes);
+                    }
+                    else
+                    {
+                        // Object Detection: 1 input → 3 outputs (boxes, ids, scores)
+                        var raw = FF.Forward(model, input)[0]; // shape (1, 4+numClasses, numBoxes)
+
+                        var boxes = raw[0, 0..4, ..].Transpose(0, 1);
+                        var cls = raw[0, 4.., ..].Transpose(0, 1);
+                        var sc = FF.ReduceMax(cls, 1);
+                        var ids = FF.ArgMax(cls, 1);
+
+                        var c2C = FF.Constant(new TensorShape(4, 4), new[]
+                        {
+                            1, 0, 1, 0,
+                            0, 1, 0, 1,
+                            -0.5f, 0, 0.5f, 0,
+                            0, -0.5f, 0, 0.5f
+                        });
+                        var corners = FF.MatMul(boxes, c2C);
+
+                        finalModel = graph.Compile(corners, ids, sc);
+                    }
+                }
+                else
+                {
+                    finalModel = ModelLoader.Load(_modelToQuantize);
+                }
+
+                // Apply quantization if selected
+                if (_quantizationType != ModelQuantizationType.None)
+                {
+                    var quantType = _quantizationType == ModelQuantizationType.Float16
+                        ? QuantizationType.Float16
+                        : QuantizationType.Uint8;
+
+                    ModelQuantizer.QuantizeWeights(quantType, ref finalModel);
+                }
+
+                // Generate output filename
+                var originalPath = AssetDatabase.GetAssetPath(_modelToQuantize);
+                var directory = Path.GetDirectoryName(originalPath);
+                var originalName = Path.GetFileNameWithoutExtension(originalPath);
+
+                var suffix = "";
+                if (_convertOutputs)
+                {
+                    suffix += "_converted";
+                }
+                if (_quantizationType == ModelQuantizationType.Float16)
+                {
+                    suffix += "_fp16";
+                }
+                else if (_quantizationType == ModelQuantizationType.Uint8)
+                {
+                    suffix += "_uint8";
+                }
+
+                var newFileName = $"{originalName}{suffix}.sentis";
+                var newPath = Path.Combine(directory, newFileName).Replace("\\", "/");
+
+                ModelWriter.Save(newPath, finalModel);
+                AssetDatabase.Refresh();
+
+                var modeStr = mode == UnityInferenceProviderMode.ImageSegmentation
+                    ? "segmentation (4 outputs)"
+                    : "detection (3 outputs)";
+
+                var message = $"Optimized model saved to:\n{newPath}";
+                if (_convertOutputs)
+                {
+                    message += $"\n\nConverted for {modeStr}";
+                }
+                EditorUtility.DisplayDialog("Success", message, "OK");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[UnityInferenceEngineProvider] Failed to optimize model: {e.Message}");
+                EditorUtility.DisplayDialog("Error", $"Failed to optimize model:\n{e.Message}", "OK");
+            }
         }
     }
 }

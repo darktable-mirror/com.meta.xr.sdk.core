@@ -73,8 +73,12 @@ namespace Meta.XR.MetaWand.Editor
             public static readonly TextureContent CubeFilledMiniIcon =
                 TextureContent.CreateContent("cube_filled_mini.png", Icons);
 
-            public static readonly TextureContent CubeFilledIcon =
-                TextureContent.CreateContent("cube_filled.png", Icons);
+            public static readonly TextureContent CubeFilledIcon = TextureContent.CreateContent("cube_filled.png", Icons);
+
+            public static readonly TextureContent ThumbsUpFilledIcon = TextureContent.CreateContent("hand-thumbs-up-Filled.png", Icons);
+            public static readonly TextureContent ThumbsUpOutlinedIcon = TextureContent.CreateContent("hand-thumbs-up-Outline.png", Icons);
+            public static readonly TextureContent ThumbsDownFilledIcon = TextureContent.CreateContent("hand-thumbs-down-Filled.png", Icons);
+            public static readonly TextureContent ThumbsDownOutlinedIcon = TextureContent.CreateContent("hand-thumbs-down-Outline.png", Icons);
 
             public static readonly TextureContent AssetLibraryBanner =
                 TextureContent.CreateContent("mal_banner.png", Textures);
@@ -89,6 +93,7 @@ namespace Meta.XR.MetaWand.Editor
             public static readonly Color DarkBackground = XR.Editor.UserInterface.Utils.HexToColor("#383838");
             public static readonly Color DarkerBackground = XR.Editor.UserInterface.Utils.HexToColor("#303030");
             public static readonly Color BorderColor = XR.Editor.UserInterface.Utils.HexToColor("#0D0D0D");
+            public static readonly Color PositiveColor = XR.Editor.UserInterface.Utils.HexToColor("#54de6b");
             public static readonly Color RowHover = XR.Editor.UserInterface.Utils.HexToColorWithAlpha("#2F60C1", 0.85f);
 
             public static readonly Color SemiTransparentBlack =
@@ -97,6 +102,11 @@ namespace Meta.XR.MetaWand.Editor
             public static Color TransparentBlack(float alpha)
             {
                 return XR.Editor.UserInterface.Utils.HexToColorWithAlpha("#000000", alpha);
+            }
+
+            public static Color TransparentWhite(float alpha)
+            {
+                return XR.Editor.UserInterface.Utils.HexToColorWithAlpha("#ffffff", alpha);
             }
         }
 
@@ -323,6 +333,29 @@ namespace Meta.XR.MetaWand.Editor
                 {
                     FontWeight = FontWeight.Light,
                     FontSize = 11,
+                    LineHeight = 16,
+                    LetterSpacing = 0f,
+                    Italic = false,
+                    UseOpticalSize80 = true
+                }
+            };
+
+            public readonly ButtonStyle MediumButton = new()
+            {
+                Height = Constants.ButtonHeight,
+                HorizontalPadding = XR.Editor.UserInterface.RLDS.Styles.ButtonSize.XSmall.HorizontalPadding,
+                VerticalPadding = XR.Editor.UserInterface.RLDS.Styles.ButtonSize.XSmall.VerticalPadding,
+                BackgroundColorNormal = XR.Editor.UserInterface.Utils.HexToColor("#585858"),
+                BackgroundColorHover = XR.Editor.UserInterface.Utils.HexToColor("#676767"),
+                BackgroundColorDisabled = XR.Editor.UserInterface.RLDS.Styles.Colors.ButtonDisableBackground,
+                TextColorNormal = XR.Editor.UserInterface.RLDS.Styles.Colors.TextUISecondary,
+                TextColorHover = XR.Editor.UserInterface.RLDS.Styles.Colors.TextUISecondary,
+                TextColorDisabled = XR.Editor.UserInterface.RLDS.Styles.Colors.TextUIDisabled,
+                CornerRadius = XR.Editor.UserInterface.RLDS.Styles.Radius.RadiusXS,
+                TextStyle = new TextStyle
+                {
+                    FontWeight = FontWeight.Light,
+                    FontSize = 12,
                     LineHeight = 16,
                     LetterSpacing = 0f,
                     Italic = false,

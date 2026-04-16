@@ -101,12 +101,16 @@ internal class OVRConfigurationTaskSourceCode
             OpenAssetDelegate?.Invoke(_object, Line);
         }
 
-        OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.GoToSource)
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, _task.Uid.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
-                BuildTargetGroup.Unknown.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, Valid ? "true" : "false")
-            .Send();
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.ProjectSetup.FalcoEventName.GoToSource)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Pst
+        };
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, _task.Uid.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
+            BuildTargetGroup.Unknown.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, Valid ? "true" : "false");
+        unifiedEvent.Send();
 
         return Valid;
     }

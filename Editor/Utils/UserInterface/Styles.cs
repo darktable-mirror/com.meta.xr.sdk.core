@@ -55,6 +55,7 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly Color Meta120 = Meta * 1.2f;
             public static readonly Color MetaMultiplierForButton = new Color(0.284f, 1.353f, 2.765f);
             public static readonly Color Yellow = HexToColor("#ffd74e");
+            public static readonly Color AI = HexToColor("#9f8fef");
             public static readonly Color SelectedWhite = HexToColor("#f0f0f0");
             public static readonly Color UnselectedWhite = HexToColor("#c4c4c4");
             public static readonly Color StandardWhite = HexToColor("#c4c4c4");
@@ -81,6 +82,9 @@ namespace Meta.XR.Editor.UserInterface
 
         public class GUIStylesContainer
         {
+            // In batch mode, EditorStyles are not initialized and accessing them throws NullReferenceException
+            private static readonly bool IsBatchMode = Application.isBatchMode;
+
             public class ColorStates
             {
                 public Color Normal;
@@ -93,19 +97,26 @@ namespace Meta.XR.Editor.UserInterface
                 }
             }
 
-            public readonly GUIStyle BoldLabel = new GUIStyle(EditorStyles.boldLabel);
+            public readonly GUIStyle BoldLabel = !IsBatchMode && EditorStyles.boldLabel != null ? new GUIStyle(EditorStyles.boldLabel) : new GUIStyle();
 
-            public readonly GUIStyle BoldLabelHover = new GUIStyle(EditorStyles.boldLabel)
+            public readonly GUIStyle BoldLabelHover = !IsBatchMode && EditorStyles.boldLabel != null ? new GUIStyle(EditorStyles.boldLabel)
             {
                 normal = { textColor = Color.white }
-            };
+            } : new GUIStyle() { normal = { textColor = Color.white } };
 
-            public readonly GUIStyle RichTextStyle = new(EditorStyles.wordWrappedLabel)
+            public readonly GUIStyle RichTextStyle = !IsBatchMode && EditorStyles.wordWrappedLabel != null ? new(EditorStyles.wordWrappedLabel)
             {
                 richText = true
-            };
+            } : new GUIStyle() { richText = true };
 
-            public readonly GUIStyle TitleStyle = new(EditorStyles.boldLabel)
+            public readonly GUIStyle TitleStyle = !IsBatchMode && EditorStyles.boldLabel != null ? new(EditorStyles.boldLabel)
+            {
+                fontSize = 18,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                margin = new RectOffset(0, 0, 0, 10)
+            } : new GUIStyle()
             {
                 fontSize = 18,
                 fontStyle = FontStyle.Bold,
@@ -114,7 +125,14 @@ namespace Meta.XR.Editor.UserInterface
                 margin = new RectOffset(0, 0, 0, 10)
             };
 
-            public readonly GUIStyle SubtitleStyle = new(EditorStyles.label)
+            public readonly GUIStyle SubtitleStyle = !IsBatchMode && EditorStyles.label != null ? new(EditorStyles.label)
+            {
+                fontSize = 16,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                richText = true,
+                margin = new RectOffset(0, 0, 0, 8)
+            } : new GUIStyle()
             {
                 fontSize = 16,
                 fontStyle = FontStyle.Bold,
@@ -146,7 +164,16 @@ namespace Meta.XR.Editor.UserInterface
                 fixedHeight = 18,
             };
 
-            public readonly GUIStyle MiniButton = new GUIStyle(EditorStyles.miniButton)
+            public readonly GUIStyle MiniButton = !IsBatchMode && EditorStyles.miniButton != null ? new GUIStyle(EditorStyles.miniButton)
+            {
+                clipping = TextClipping.Overflow,
+                fixedHeight = Constants.MiniIconHeight,
+                fixedWidth = Constants.MiniIconHeight,
+                margin = new RectOffset(Constants.MiniPadding, Constants.MiniPadding, Constants.MiniPadding,
+                    Constants.MiniPadding),
+                padding = new RectOffset(Constants.MiniPadding, Constants.MiniPadding, Constants.MiniPadding,
+                    Constants.MiniPadding)
+            } : new GUIStyle()
             {
                 clipping = TextClipping.Overflow,
                 fixedHeight = Constants.MiniIconHeight,
@@ -157,7 +184,17 @@ namespace Meta.XR.Editor.UserInterface
                     Constants.MiniPadding)
             };
 
-            public readonly GUIStyle ThinButtonLarge = new GUIStyle(EditorStyles.miniButton)
+            public readonly GUIStyle ThinButtonLarge = !IsBatchMode && EditorStyles.miniButton != null ? new GUIStyle(EditorStyles.miniButton)
+            {
+                clipping = TextClipping.Overflow,
+                fixedHeight = 20,
+                fixedWidth = 152,
+                margin = new RectOffset(Constants.MiniPadding, Constants.MiniPadding, Constants.MiniPadding,
+                    Constants.MiniPadding),
+                padding = new RectOffset(Constants.DoubleMargin, Constants.DoubleMargin, Constants.Padding,
+                    Constants.Padding),
+                alignment = TextAnchor.MiddleCenter
+            } : new GUIStyle()
             {
                 clipping = TextClipping.Overflow,
                 fixedHeight = 20,
@@ -169,7 +206,14 @@ namespace Meta.XR.Editor.UserInterface
                 alignment = TextAnchor.MiddleCenter
             };
 
-            public readonly GUIStyle LargeButton = new GUIStyle(EditorStyles.miniButton)
+            public readonly GUIStyle LargeButton = !IsBatchMode && EditorStyles.miniButton != null ? new GUIStyle(EditorStyles.miniButton)
+            {
+                clipping = TextClipping.Overflow,
+                fixedHeight = Constants.LargeButtonHeight,
+                margin = new RectOffset(Constants.MiniPadding, Constants.MiniPadding, Constants.MiniPadding,
+                    Constants.MiniPadding),
+                padding = new RectOffset(Constants.Padding, Constants.Padding, Constants.Padding, Constants.Padding)
+            } : new GUIStyle()
             {
                 clipping = TextClipping.Overflow,
                 fixedHeight = Constants.LargeButtonHeight,
@@ -178,7 +222,19 @@ namespace Meta.XR.Editor.UserInterface
                 padding = new RectOffset(Constants.Padding, Constants.Padding, Constants.Padding, Constants.Padding)
             };
 
-            public readonly GUIStyle Header = new GUIStyle(EditorStyles.miniLabel)
+            public readonly GUIStyle Header = !IsBatchMode && EditorStyles.miniLabel != null ? new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 12,
+                fixedHeight = Constants.LargeMargin + Constants.Margin * 2,
+                padding = new RectOffset(Constants.Margin, Constants.Margin, Constants.Margin, Constants.Margin),
+                margin = new RectOffset(0, 0, 0, 0),
+
+                wordWrap = true,
+                normal =
+                {
+                    background = Colors.DarkGray.ToTexture()
+                }
+            } : new GUIStyle()
             {
                 fontSize = 12,
                 fixedHeight = Constants.LargeMargin + Constants.Margin * 2,
@@ -200,7 +256,21 @@ namespace Meta.XR.Editor.UserInterface
                 alignment = TextAnchor.MiddleCenter
             };
 
-            public readonly GUIStyle HeaderLabel = new GUIStyle(EditorStyles.boldLabel)
+            public readonly GUIStyle HeaderLabel = !IsBatchMode && EditorStyles.boldLabel != null ? new GUIStyle(EditorStyles.boldLabel)
+            {
+                stretchHeight = true,
+                fixedHeight = Constants.LargeMargin,
+                fontSize = 16,
+                normal =
+                {
+                    textColor = Color.white
+                },
+                hover =
+                {
+                    textColor = Color.white
+                },
+                alignment = TextAnchor.MiddleLeft
+            } : new GUIStyle()
             {
                 stretchHeight = true,
                 fixedHeight = Constants.LargeMargin,
@@ -221,7 +291,18 @@ namespace Meta.XR.Editor.UserInterface
                 margin = new RectOffset(0, 0, Constants.LargeMargin, 0)
             };
 
-            public readonly GUIStyle InspectorHeaderLabel = new GUIStyle(EditorStyles.boldLabel)
+            public readonly GUIStyle InspectorHeaderLabel = !IsBatchMode && EditorStyles.boldLabel != null ? new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 12,
+                normal =
+                {
+                    textColor = Color.white
+                },
+                hover =
+                {
+                    textColor = Color.white
+                }
+            } : new GUIStyle()
             {
                 fontSize = 12,
                 normal =
@@ -270,13 +351,31 @@ namespace Meta.XR.Editor.UserInterface
                 alignment = TextAnchor.MiddleCenter
             };
 
-            public readonly GUIStyle FoldoutLeft = new GUIStyle(EditorStyles.foldout)
+            public readonly GUIStyle FoldoutLeft = !IsBatchMode && EditorStyles.foldout != null ? new GUIStyle(EditorStyles.foldout)
+            {
+                stretchWidth = false,
+                stretchHeight = false
+            } : new GUIStyle()
             {
                 stretchWidth = false,
                 stretchHeight = false
             };
 
-            public readonly GUIStyle FoldoutHeader = new GUIStyle(EditorStyles.foldout)
+            public readonly GUIStyle FoldoutHeader = !IsBatchMode && EditorStyles.foldout != null ? new GUIStyle(EditorStyles.foldout)
+            {
+                stretchWidth = false,
+                stretchHeight = false,
+                fontSize = 12,
+                fontStyle = FontStyle.Bold,
+                normal =
+                {
+                    textColor = Color.white
+                },
+                hover =
+                {
+                    textColor = Color.white
+                }
+            } : new GUIStyle()
             {
                 stretchWidth = false,
                 stretchHeight = false,
@@ -292,7 +391,23 @@ namespace Meta.XR.Editor.UserInterface
                 }
             };
 
-            public readonly GUIStyle NonFoldoutHeader = new GUIStyle(EditorStyles.boldLabel)
+            public readonly GUIStyle NonFoldoutHeader = !IsBatchMode && EditorStyles.boldLabel != null ? new GUIStyle(EditorStyles.boldLabel)
+            {
+                stretchWidth = false,
+                stretchHeight = false,
+                fontSize = 12,
+                fontStyle = FontStyle.Bold,
+                padding = new RectOffset(Constants.FoldoutMargin, 0, 0, 0),
+
+                normal =
+                {
+                    textColor = Color.white
+                },
+                hover =
+                {
+                    textColor = Color.white
+                }
+            } : new GUIStyle()
             {
                 stretchWidth = false,
                 stretchHeight = false,
@@ -310,7 +425,12 @@ namespace Meta.XR.Editor.UserInterface
                 }
             };
 
-            public readonly GUIStyle ContentBox = new GUIStyle(EditorStyles.helpBox)
+            public readonly GUIStyle ContentBox = !IsBatchMode && EditorStyles.helpBox != null ? new GUIStyle(EditorStyles.helpBox)
+            {
+                margin = new RectOffset(0, Constants.Margin, Constants.Margin, Constants.Margin),
+                padding = new RectOffset(Constants.Margin, Constants.Margin, Constants.Margin, Constants.Margin),
+                stretchHeight = false
+            } : new GUIStyle()
             {
                 margin = new RectOffset(0, Constants.Margin, Constants.Margin, Constants.Margin),
                 padding = new RectOffset(Constants.Margin, Constants.Margin, Constants.Margin, Constants.Margin),
@@ -358,7 +478,14 @@ namespace Meta.XR.Editor.UserInterface
                 alignment = TextAnchor.MiddleCenter
             };
 
-            public readonly GUIStyle IconStyle = new GUIStyle(EditorStyles.label)
+            public readonly GUIStyle IconStyle = !IsBatchMode && EditorStyles.label != null ? new GUIStyle(EditorStyles.label)
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                fixedHeight = Constants.SmallIconSize,
+                fixedWidth = Constants.SmallIconSize,
+                stretchWidth = false,
+            } : new GUIStyle()
             {
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(0, 0, 0, 0),
@@ -367,7 +494,15 @@ namespace Meta.XR.Editor.UserInterface
                 stretchWidth = false,
             };
 
-            public readonly GUIStyle StatusLabelStyle = new GUIStyle(EditorStyles.boldLabel)
+            public readonly GUIStyle StatusLabelStyle = !IsBatchMode && EditorStyles.boldLabel != null ? new GUIStyle(EditorStyles.boldLabel)
+            {
+                margin = new RectOffset(Constants.Padding, Constants.Padding, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                alignment = TextAnchor.MiddleLeft,
+                stretchWidth = true,
+                fixedHeight = Constants.SmallIconSize,
+                wordWrap = false
+            } : new GUIStyle()
             {
                 margin = new RectOffset(Constants.Padding, Constants.Padding, 0, 0),
                 padding = new RectOffset(0, 0, 0, 0),
@@ -419,7 +554,14 @@ namespace Meta.XR.Editor.UserInterface
                 fontSize = 14
             };
 
-            public readonly GUIStyle LinkLabelStyle = new(EditorStyles.linkLabel)
+            public readonly GUIStyle LinkLabelStyle = !IsBatchMode && EditorStyles.linkLabel != null ? new(EditorStyles.linkLabel)
+            {
+                margin = new RectOffset(Constants.Padding, Constants.Padding, Constants.MiniPadding, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                fontSize = 12,
+                alignment = TextAnchor.UpperLeft,
+                richText = true
+            } : new GUIStyle()
             {
                 margin = new RectOffset(Constants.Padding, Constants.Padding, Constants.MiniPadding, 0),
                 padding = new RectOffset(0, 0, 0, 0),
@@ -428,7 +570,14 @@ namespace Meta.XR.Editor.UserInterface
                 richText = true
             };
 
-            public readonly GUIStyle BoldLinkLabelStyle = new(EditorStyles.linkLabel)
+            public readonly GUIStyle BoldLinkLabelStyle = !IsBatchMode && EditorStyles.linkLabel != null ? new(EditorStyles.linkLabel)
+            {
+                margin = new RectOffset(Constants.Padding, Constants.Padding, Constants.MiniPadding, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                fontSize = 12,
+                alignment = TextAnchor.UpperLeft,
+                fontStyle = FontStyle.Bold
+            } : new GUIStyle()
             {
                 margin = new RectOffset(Constants.Padding, Constants.Padding, Constants.MiniPadding, 0),
                 padding = new RectOffset(0, 0, 0, 0),
@@ -437,7 +586,13 @@ namespace Meta.XR.Editor.UserInterface
                 fontStyle = FontStyle.Bold
             };
 
-            public readonly GUIStyle DocumentationLinkStyle = new GUIStyle(EditorStyles.linkLabel)
+            public readonly GUIStyle DocumentationLinkStyle = !IsBatchMode && EditorStyles.linkLabel != null ? new GUIStyle(EditorStyles.linkLabel)
+            {
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(3, 0, 0, 0),
+                fixedHeight = 14,
+                richText = true
+            } : new GUIStyle()
             {
                 padding = new RectOffset(0, 0, 0, 0),
                 margin = new RectOffset(3, 0, 0, 0),
@@ -496,14 +651,28 @@ namespace Meta.XR.Editor.UserInterface
                 stretchHeight = false,
             };
 
-            public readonly GUIStyle IconUIItemStyle = new GUIStyle(EditorStyles.label)
+            public readonly GUIStyle IconUIItemStyle = !IsBatchMode && EditorStyles.label != null ? new GUIStyle(EditorStyles.label)
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                stretchWidth = false,
+            } : new GUIStyle()
             {
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(0, 0, 0, 0),
                 stretchWidth = false,
             };
 
-            public readonly GUIStyle PageIndicatorIcon = new GUIStyle(EditorStyles.label)
+            public readonly GUIStyle PageIndicatorIcon = !IsBatchMode && EditorStyles.label != null ? new GUIStyle(EditorStyles.label)
+            {
+                fixedHeight = 10,
+                fixedWidth = 12,
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                stretchWidth = false,
+                stretchHeight = false,
+                alignment = TextAnchor.MiddleCenter,
+            } : new GUIStyle()
             {
                 fixedHeight = 10,
                 fixedWidth = 12,
@@ -567,7 +736,13 @@ namespace Meta.XR.Editor.UserInterface
                 fixedWidth = 24,
             };
 
-            public readonly GUIStyle CardAction = new(EditorStyles.label)
+            public readonly GUIStyle CardAction = !IsBatchMode && EditorStyles.label != null ? new(EditorStyles.label)
+            {
+                margin = new RectOffset(Constants.Margin, 0, 0, 0),
+                padding = new RectOffset(0, 0, 1, 0),
+                fontSize = 12,
+                normal = { textColor = Color.white }
+            } : new GUIStyle()
             {
                 margin = new RectOffset(Constants.Margin, 0, 0, 0),
                 padding = new RectOffset(0, 0, 1, 0),
@@ -575,7 +750,13 @@ namespace Meta.XR.Editor.UserInterface
                 normal = { textColor = Color.white }
             };
 
-            public readonly GUIStyle CardActionWithIcon = new(EditorStyles.label)
+            public readonly GUIStyle CardActionWithIcon = !IsBatchMode && EditorStyles.label != null ? new(EditorStyles.label)
+            {
+                margin = new RectOffset(Constants.Margin, 0, 0, 0),
+                padding = new RectOffset(0, 0, 3, 0),
+                fontSize = 12,
+                normal = { textColor = Color.white }
+            } : new GUIStyle()
             {
                 margin = new RectOffset(Constants.Margin, 0, 0, 0),
                 padding = new RectOffset(0, 0, 3, 0),
@@ -583,7 +764,12 @@ namespace Meta.XR.Editor.UserInterface
                 normal = { textColor = Color.white }
             };
 
-            public readonly GUIStyle CardActionIcon = new GUIStyle(EditorStyles.label)
+            public readonly GUIStyle CardActionIcon = !IsBatchMode && EditorStyles.label != null ? new GUIStyle(EditorStyles.label)
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                stretchWidth = false
+            } : new GUIStyle()
             {
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(0, 0, 0, 0),

@@ -161,6 +161,13 @@ namespace Meta.XR.ImmersiveDebugger
             set => rotateOverride = value;
         }
 
+        [SerializeField] private bool recenterOnToggle = true;
+        internal bool RecenterOnToggle
+        {
+            get => recenterOnToggle;
+            set => recenterOnToggle = value;
+        }
+
         [SerializeField] private bool showInfoLog = false;
         internal bool ShowInfoLog
         {

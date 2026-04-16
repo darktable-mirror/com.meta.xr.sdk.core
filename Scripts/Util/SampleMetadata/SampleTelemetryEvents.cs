@@ -31,6 +31,11 @@ namespace Meta.XR.Samples.Telemetry
             public const int Open = 163055403;
             public const int Close = 163056880;
             public const int Run = 163061602;
+
+            // Falco Event Names
+            public const string OpenFalcoEventName = "SAMPLE_OPEN";
+            public const string CloseFalcoEventName = "SAMPLE_CLOSE";
+            public const string RunFalcoEventName = "SAMPLE_RUN";
         }
 
         public static class AnnotationTypes

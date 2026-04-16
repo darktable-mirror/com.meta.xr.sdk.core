@@ -73,7 +73,7 @@ namespace Meta.XR.MetaWand.Editor
                     return _cacheFilePath;
                 }
 
-                var directory = Path.Combine(Path.GetTempPath(), "Meta", Constants.CacheDir);
+                var directory = Path.Combine(XR.Editor.UserInterface.Utils.MetaTempFilePath, Constants.CacheDir);
                 Directory.CreateDirectory(directory);
                 _cacheFilePath = Path.Combine(directory, "cache");
                 return _cacheFilePath;
@@ -82,7 +82,11 @@ namespace Meta.XR.MetaWand.Editor
 
         public static void OnFeedbackIconClicked()
         {
-            var submitFeedbackEvent = OVRTelemetry.Start(OVRTelemetryConstants.Feedback.MarkerId.SubmitFeedback);
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Feedback.FalcoEventName.SubmitFeedback)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
             try
             {
                 using Process process = new Process();
@@ -93,7 +97,7 @@ namespace Meta.XR.MetaWand.Editor
             }
             catch (Win32Exception)
             {
-                submitFeedbackEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
                 if (EditorUtility.DisplayDialog("Install Meta Quest Developer Hub",
                         "Meta Quest Developer Hub is not installed on this machine.", "Get Meta Quest Developer Hub",
                         "Cancel"))
@@ -103,7 +107,8 @@ namespace Meta.XR.MetaWand.Editor
                 }
             }
 
-            submitFeedbackEvent.AddAnnotation(OVRTelemetryConstants.Feedback.AnnotationType.ToolName, Constants.AssetLibraryPublicName).Send();
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Feedback.AnnotationType.ToolName, Constants.AssetLibraryPublicName);
+            unifiedEvent.Send();
         }
 
         public static T ReadFromCache<T>() =>
@@ -208,6 +213,56 @@ namespace Meta.XR.MetaWand.Editor
         public const int IconSize = 36;
         public const int SpinnerSize = 20;
         public const int SpinnerMiniSize = 12;
+
+        private static bool _showToast;
+        private static double _toastEndTime;
+        private static string _toastMessage = string.Empty;
+
+        public static void ShowToast(string message, double durationSeconds)
+        {
+            _toastMessage = message;
+            _showToast = true;
+            _toastEndTime = EditorApplication.timeSinceStartup + durationSeconds;
+        }
+
+        public static void DrawToast(EditorWindow window)
+        {
+            if (!_showToast) return;
+
+            if (EditorApplication.timeSinceStartup >= _toastEndTime)
+            {
+                _showToast = false;
+                return;
+            }
+
+            var toastStyle = new GUIStyle(EditorStyles.helpBox)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 14,
+                fontStyle = FontStyle.Normal,
+                padding = new RectOffset(Spacing.SpaceLG, Spacing.SpaceLG, Spacing.SpaceMD, Spacing.SpaceMD),
+                richText = true,
+                normal =
+                {
+                    textColor = Styles.Colors.PositiveColor,
+                    background = Styles.Colors.TransparentBlack(0).ToTexture()
+                },
+                border = new RectOffset(1, 1, 1, 1)
+            };
+
+            var toastContent = new GUIContent(_toastMessage);
+            var toastSize = toastStyle.CalcSize(toastContent);
+            var toastRect = new Rect(
+                (window.position.width - toastSize.x) / 2,
+                window.position.height * 0.5f - toastSize.y - 20,
+                toastSize.x,
+                toastSize.y
+            );
+
+            GUI.DrawTexture(toastRect, Styles.Colors.DarkerBackground.ToTexture(), ScaleMode.ScaleAndCrop, false, 1, GUI.color, 0, 8);
+            GUI.DrawTexture(toastRect, Styles.Colors.BorderColor.ToTexture(), ScaleMode.ScaleAndCrop, false, 1, GUI.color, 1, 8);
+            GUI.Box(toastRect, toastContent, toastStyle);
+        }
 
         public static Spinner Spinner => _spinner ??= new Spinner();
 

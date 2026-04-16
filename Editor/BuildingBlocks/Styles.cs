@@ -119,7 +119,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 TextureContent.CreateContent("ovr_icon_utilities.png", Utils.BuildingBlocksIcons);
 
             public static readonly TextureContent DefaultCollectionThumb =
-                TextureContent.CreateContent("Collections/default.png", Utils.BuildingBlocksThumbnails);
+                SolidColorTextureContent.Create(DarkGray);
 
             public static readonly TextureContent CollectionIcon =
                 TextureContent.CreateContent("bb_icon_collection.png", Utils.BuildingBlocksIcons);

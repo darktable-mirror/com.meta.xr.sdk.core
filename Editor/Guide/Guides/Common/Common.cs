@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.Id;
@@ -83,7 +84,12 @@ namespace Meta.XR.Guides.Editor
 #endif
             Selection.activeObject = PlatformSettings.Instance;
 
-            OVRTelemetry.Start(OVRTelemetryConstants.GuidedSetup.MarkerId.SetAppIdFromGuidedSetup).Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.GuidedSetup.FalcoEventName.SetAppIdFromGuidedSetup)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.Send();
             return true;
         }
 #endif // USING_META_XR_PLATFORM_SDK

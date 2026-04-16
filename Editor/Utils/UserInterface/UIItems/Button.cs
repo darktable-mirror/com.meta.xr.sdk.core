@@ -20,6 +20,7 @@
 
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -49,6 +50,11 @@ namespace Meta.XR.Editor.UserInterface
             Action.Style = Style;
             Action.Draw(_options);
             EditorGUI.EndDisabledGroup();
+        }
+
+        public VisualElement Get()
+        {
+            return new VisualElement();
         }
     }
 }

@@ -20,6 +20,7 @@
 
 #if USING_META_XR_PLATFORM_SDK
 
+using System;
 using System.Collections.Generic;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UserInterface;
@@ -74,8 +75,8 @@ namespace Meta.XR.Guides.Editor
                 _appIdValidateField.Hide = Common.ValidAppId(_appIdField.Text) || _appIdField.Text.Equals(Common.DefaultAppIdFieldText);
             };
 
-            window.AddAdditionalTelemetryAnnotations += marker =>
-                marker.AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasAppId,
+            window.AddAdditionalUnifiedEventMetadata += unifiedEvent =>
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasAppId,
                     Common.HasAppId());
         }
 
@@ -156,7 +157,12 @@ namespace Meta.XR.Guides.Editor
             {
                 _appIdSet = Common.SetAppId(_appIdField.Text);
                 UpdateAppIdStatus();
-                OVRTelemetry.Start(OVRTelemetryConstants.GuidedSetup.MarkerId.SetAppIdFromGuidedSetup).Send();
+                var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.GuidedSetup.FalcoEventName.SetAppIdFromGuidedSetup)
+                {
+                    isEssential = OVRPlugin.Bool.False,
+                    productType = OVRPlugin.ProductType.Editor
+                };
+                unifiedEvent.Send();
             });
 
             _appIdValidateField = new Icon(GuideStyles.Contents.StatusIcon, Colors.ErrorColor, "Invalid AppID.");

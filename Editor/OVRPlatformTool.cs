@@ -109,7 +109,9 @@ namespace Assets.Oculus.VR.Editor
             });
             thread.Start();
 
-            OVRPlugin.SendEvent("oculus_platform_tool", "show_window");
+            var evt = new OVRPlugin.UnifiedEventData("oculus_platform_tool");
+            evt.SetMetadata("action", "show_window");
+            evt.Send();
         }
 
         void OnGUI()
@@ -428,7 +430,9 @@ namespace Assets.Oculus.VR.Editor
             rt.center = new Vector2(EditorGUIUtility.currentViewWidth / 2 - rt.width / 2 - buttonPadding, btnYPos);
             if (GUI.Button(rt, btnTxt, GUI.skin.button))
             {
-                OVRPlugin.SendEvent("oculus_platform_tool", "upload");
+                var evt = new OVRPlugin.UnifiedEventData("oculus_platform_tool");
+                evt.SetMetadata("action", "upload");
+                evt.Send();
                 OVRPlatformTool.log = string.Empty;
                 OnUpload(OVRPlatformToolSettings.TargetPlatform);
             }
@@ -551,7 +555,9 @@ namespace Assets.Oculus.VR.Editor
                 OVRPlatformTool.log += fixCount.ToString() + " project setup fix" + (fixCount == 1 ? " was" : "es were") + " found. \n" +
                                        "Please run Meta\\Tools\\Project Setup Tool to review and fix project setup errors. \n" +
                                        "You can uncheck 'Run Project Setup Tool' to bypass project setup errors. \n";
-                OVRPlugin.SendEvent("oculus_platform_tool_lint", fixCount.ToString());
+                var lintEvt = new OVRPlugin.UnifiedEventData("oculus_platform_tool_lint");
+                lintEvt.SetMetadata("fix_count", fixCount);
+                lintEvt.Send();
             }
             else
             {
@@ -611,7 +617,9 @@ namespace Assets.Oculus.VR.Editor
             string platformUtil = toolDataPath + "/ovr-platform-util.exe";
             if (!System.IO.File.Exists(platformUtil))
             {
-                OVRPlugin.SendEvent("oculus_platform_tool", "provision_util");
+                var evt = new OVRPlugin.UnifiedEventData("oculus_platform_tool");
+                evt.SetMetadata("action", "provision_util");
+                evt.Send();
                 EditorCoroutine downloadCoroutine = EditorCoroutine.Start(ProvisionPlatformUtil(platformUtil));
                 while (!downloadCoroutine.GetCompleted())
                 {

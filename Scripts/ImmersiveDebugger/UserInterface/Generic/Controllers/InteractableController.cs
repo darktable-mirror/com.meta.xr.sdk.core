@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
     /// <summary>
@@ -61,6 +60,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             Hover = true;
         }
+
         /// <summary>
         /// The function that is called by the <see cref="PointerHandler"/> when the pointer exits from the UI component.
         /// </summary>
@@ -75,7 +75,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// </summary>
         public virtual void OnPointerClick()
         {
-
         }
 
         protected virtual void OnHoverChanged()
@@ -87,6 +86,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Hover = false;
         }
 
+#pragma warning disable CS0618
         protected void PlayHaptics(OVRHapticsClip hapticsClip)
         {
             if (hapticsClip == null) return;
@@ -103,6 +103,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                     break;
             }
         }
+#pragma warning restore CS0618
     }
 }
-

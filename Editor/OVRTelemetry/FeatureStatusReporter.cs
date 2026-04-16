@@ -66,20 +66,21 @@ namespace Meta.XR.Telemetry
             var guid = AssetDatabase.AssetPathToGUID(scene.path);
             if (string.IsNullOrEmpty(guid)) return;
             var featuresInScene = await FeatureManager.GetFeaturesInScene(scene);
-            var guidID = Guid.NewGuid().ToString();
 
-            OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.FeaturesInScene)
-                            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.Guid,
-                                            guid)
-                            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.BuildTarget,
-                                            EditorUserBuildSettings.selectedBuildTargetGroup.ToString())
-                            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.Features,
-                                            featuresInScene)
-                            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.EnabledSettings,
-                                            FeatureManager.GetFeatureStatusInSettings())
-                            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigration, "1")
-                            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationEventID, guidID)
-                            .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.FeaturesInScene)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.XRFeature
+            };
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.Guid,
+                guid);
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.BuildTarget,
+                EditorUserBuildSettings.selectedBuildTargetGroup.ToString());
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.Features,
+                featuresInScene);
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.EnabledSettings,
+                FeatureManager.GetFeatureStatusInSettings());
+            unifiedEvent.Send();
         }
     }
 }

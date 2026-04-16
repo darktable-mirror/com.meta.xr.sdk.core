@@ -159,6 +159,138 @@ namespace Meta.XR.MetaWand.Editor.API
         public static bool ContainsErrorSubCode(Error error) => error is { error_subcode: not null }
                                                                 && Constants.ErrorCodes
                                                                     .ContainsKey(error.error_subcode);
+
+        /// <summary>
+        /// Test if the client has feedback telemetry permissions
+        /// </summary>
+        /// <param name="requestId">(Optional) A unique id for request.</param>
+        /// <returns>TelemetryResult indicating success or failure</returns>
+        public async Task<TelemetryResult> ShouldDisplayFeedbackUI(string requestId = null)
+        {
+            try
+            {
+                var response = await _client.ShouldDisplayFeedbackUI(requestId);
+                if (!response.success)
+                {
+                    var hasErrorSubCode = ContainsErrorSubCode(response.error);
+                    return new TelemetryResult(
+                        success: false,
+                        action: response.action,
+                        errorMessage: hasErrorSubCode ? response.error.error_user_msg : response.error_message ?? Constants.Failure,
+                        errorSubCode: hasErrorSubCode ? response.error.error_subcode : null
+                    );
+                }
+
+                return new TelemetryResult(
+                    success: true,
+                    action: response.action
+                );
+            }
+            catch (Exception ex)
+            {
+                IssueTracker.TrackError(IssueTracker.SDK.MetaWand, "metawand-test-feedback-telemetry-failed",
+                    $"Failed to test feedback telemetry: {ex.Message}", enableDebugLog: false);
+                return new TelemetryResult(
+                    success: false,
+                    errorMessage: ex.Message
+                );
+            }
+        }
+
+        /// <summary>
+        /// Log feedback (like or dislike) for a specific asset
+        /// </summary>
+        /// <param name="assetId">The asset ID to provide feedback for</param>
+        /// <param name="feedback">The feedback action</param>
+        /// <param name="requestId">(Optional) A unique id for request.</param>
+        /// <returns>TelemetryResult indicating success or failure</returns>
+        public async Task<TelemetryResult> AssetFeedback(string assetId, AssetResultFeedback feedback, string requestId = null)
+        {
+            var action = feedback switch
+            {
+                AssetResultFeedback.Like => Constants.AssetFeedbackActionLike,
+                _ => Constants.AssetFeedbackActionDislike
+            };
+            try
+            {
+                var response = await _client.AssetFeedback(assetId, action, requestId);
+                if (!response.success)
+                {
+                    var hasErrorSubCode = ContainsErrorSubCode(response.error);
+                    return new TelemetryResult(
+                        success: false,
+                        action: response.action,
+                        errorMessage: hasErrorSubCode ? response.error.error_user_msg : response.error_message ?? Constants.Failure,
+                        errorSubCode: hasErrorSubCode ? response.error.error_subcode : null
+                    );
+                }
+
+                return new TelemetryResult(
+                    success: true,
+                    action: response.action
+                );
+            }
+            catch (Exception ex)
+            {
+                IssueTracker.TrackError(IssueTracker.SDK.MetaWand, "metawand-asset-feedback-failed",
+                    $"Failed to log asset feedback '{action}' for asset '{assetId}': {ex.Message}", enableDebugLog: false);
+                return new TelemetryResult(
+                    success: false,
+                    errorMessage: ex.Message
+                );
+            }
+        }
+
+        /// <summary>
+        /// Log feedback (like or dislike) for a search query's overall results
+        /// </summary>
+        /// <param name="targetRequestId">The request_id of the original search request</param>
+        /// <param name="originalSearchText">The query of the original search request</param>
+        /// <param name="feedback">The feedback action</param>
+        /// <param name="requestId">(Optional) A unique id for request.</param>
+        /// <returns>TelemetryResult indicating success or failure</returns>
+        public async Task<TelemetryResult> SearchFeedback(string targetRequestId, string originalSearchText, AssetResultFeedback feedback, string requestId = null)
+        {
+            var action = feedback switch
+            {
+                AssetResultFeedback.Like => Constants.SearchFeedbackActionLike,
+                _ => Constants.SearchFeedbackActionDislike
+            };
+
+            try
+            {
+                var response = await _client.SearchFeedback(targetRequestId, originalSearchText, action, requestId);
+                if (!response.success)
+                {
+                    var hasErrorSubCode = ContainsErrorSubCode(response.error);
+                    return new TelemetryResult(
+                        success: false,
+                        action: response.action,
+                        errorMessage: hasErrorSubCode ? response.error.error_user_msg : response.error_message ?? Constants.Failure,
+                        errorSubCode: hasErrorSubCode ? response.error.error_subcode : null
+                    );
+                }
+
+                return new TelemetryResult(
+                    success: true,
+                    action: response.action
+                );
+            }
+            catch (Exception ex)
+            {
+                IssueTracker.TrackError(IssueTracker.SDK.MetaWand, "metawand-search-feedback-failed",
+                    $"Failed to log search feedback '{action}' for query '{originalSearchText}': {ex.Message}", enableDebugLog: false);
+                return new TelemetryResult(
+                    success: false,
+                    errorMessage: ex.Message
+                );
+            }
+        }
+
+        public enum AssetResultFeedback
+        {
+            Like, Dislike
+        }
     }
 
 
@@ -232,5 +364,24 @@ namespace Meta.XR.MetaWand.Editor.API
     {
         public bool Success { get; }
         public string ErrorMessage { get; }
+    }
+
+    /// <summary>
+    /// Result of a telemetry test request
+    /// </summary>
+    internal readonly struct TelemetryResult : IResult
+    {
+        public bool Success { get; }
+        public string Action { get; }
+        public string ErrorMessage { get; }
+        public string ErrorSubCode { get; }
+
+        public TelemetryResult(bool success, string action = null, string errorMessage = null, string errorSubCode = null)
+        {
+            Success = success;
+            Action = action;
+            ErrorMessage = errorMessage;
+            ErrorSubCode = errorSubCode;
+        }
     }
 }

@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-using System;
 using System.Threading.Tasks;
 using Meta.XR.Editor.Features;
 using UnityEngine;
@@ -43,7 +42,7 @@ public static class OVRSceneOpen
         foreach (var scene in scenes)
         {
 #pragma warning disable CS4014
-            SendEvent(scene, OVRTelemetryConstants.Scene.MarkerId.SceneOpen);
+            SendEvent(scene, OVRTelemetryConstants.Scene.FalcoEventName.SceneOpen);
 #pragma warning restore CS4014
         }
     }
@@ -51,38 +50,37 @@ public static class OVRSceneOpen
     private static void OnSceneOpened(Scene scene, OpenSceneMode mode)
     {
 #pragma warning disable CS4014
-        SendEvent(scene, OVRTelemetryConstants.Scene.MarkerId.SceneOpen);
+        SendEvent(scene, OVRTelemetryConstants.Scene.FalcoEventName.SceneOpen);
 #pragma warning restore CS4014
     }
 
     private static void OnSceneClosed(Scene scene)
     {
 #pragma warning disable CS4014
-        SendEvent(scene, OVRTelemetryConstants.Scene.MarkerId.SceneClose);
+        SendEvent(scene, OVRTelemetryConstants.Scene.FalcoEventName.SceneClose);
 #pragma warning restore CS4014
     }
 
-    private static async Task SendEvent(Scene scene, int eventType)
+    private static async Task SendEvent(Scene scene, string eventName)
     {
-        var falco_event = eventType == OVRTelemetryConstants.Scene.MarkerId.SceneOpen ? "SCENE_OPEN" : "SCENE_CLOSE";
         var guid = AssetDatabase.AssetPathToGUID(scene.path);
         if (string.IsNullOrEmpty(guid)) return;
-        var guidID = Guid.NewGuid().ToString();
 
         var features = await FeatureManager.GetFeaturesInScene(scene);
-        OVRTelemetry.Start(eventType)
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.Guid,
-                guid)
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.BuildTarget,
-                EditorUserBuildSettings.selectedBuildTargetGroup.ToString())
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.RuntimePlatform,
-                Application.platform.ToString())
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.Features,
-                            features)
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.EnabledSettings,
-                            FeatureManager.GetFeatureStatusInSettings())
-            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigration, "1")
-            .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationEventID, guidID)
-            .Send();
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(eventName)
+        {
+            isEssential = OVRPlugin.Bool.False
+        };
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.Guid,
+            guid);
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.BuildTarget,
+            EditorUserBuildSettings.selectedBuildTargetGroup.ToString());
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.RuntimePlatform,
+            Application.platform.ToString());
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.Features,
+            features);
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.EnabledSettings,
+            FeatureManager.GetFeatureStatusInSettings());
+        unifiedEvent.Send();
     }
 }

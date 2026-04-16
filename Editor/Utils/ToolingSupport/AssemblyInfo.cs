@@ -37,6 +37,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("MetaXRSimulatorCore.Editor")]
 [assembly: InternalsVisibleTo("meta.xr.mrutilitykit.tests")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.ToolingSupport.RuntimeOptimizer")]
-
-
+[assembly: InternalsVisibleTo("meta.xr.ai.agentbridge.editor")]
 

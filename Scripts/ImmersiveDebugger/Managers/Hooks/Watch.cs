@@ -198,5 +198,66 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public override string[] Values => Array.Empty<string>();
         public override int NumberOfValues => 0;
     }
-}
 
+    /// <summary>
+    /// Watch for nested class members. Accesses values through a parent member.
+    /// </summary>
+    internal class NestedWatch<T> : Watch
+    {
+        private static string[] _buffer = new string[Watch<T>.NumberOfDisplayStrings > 0 ? Watch<T>.NumberOfDisplayStrings : 1];
+
+        public override int NumberOfValues => Watch<T>.NumberOfDisplayStrings > 0 ? Watch<T>.NumberOfDisplayStrings : 1;
+
+        private readonly Func<T> _getter;
+
+        public override string[] Values
+        {
+            get
+            {
+                var value = _getter.Invoke();
+                if (Watch<T>.ToDisplayStringsDelegate != null)
+                {
+                    Watch<T>.ToDisplayStringsDelegate.Invoke(value, ref _buffer);
+                }
+                else
+                {
+                    _buffer[0] = value != null ? value.ToString() : "";
+                }
+                return _buffer;
+            }
+        }
+
+        public override string Value => Values[0];
+
+        /// <summary>
+        /// Creates a nested watch that accesses a member through a parent object.
+        /// </summary>
+        /// <param name="parentMemberInfo">The member info for the parent field (e.g., 'data' of type NestedData)</param>
+        /// <param name="nestedMemberInfo">The member info for the nested field (e.g., 'value' inside NestedData)</param>
+        /// <param name="instanceHandle">The instance handle of the root component</param>
+        /// <param name="attribute">The debug member attribute</param>
+        public NestedWatch(MemberInfo parentMemberInfo, MemberInfo nestedMemberInfo, InstanceHandle instanceHandle, DebugMember attribute)
+            : base(nestedMemberInfo, instanceHandle, attribute)
+        {
+            _getter = () =>
+            {
+                var parentValue = parentMemberInfo.GetValue(_instance);
+                if (parentValue == null) return default;
+                return (T)nestedMemberInfo.GetValue(parentValue);
+            };
+        }
+    }
+
+    internal static class NestedWatchUtils
+    {
+        /// <summary>
+        /// Creates a nested watch for accessing a member through a parent object.
+        /// </summary>
+        public static Watch CreateNested(MemberInfo parentMemberInfo, MemberInfo nestedMemberInfo, InstanceHandle instanceHandle, DebugMember attribute)
+        {
+            var nestedType = nestedMemberInfo.GetDataType();
+            var watchType = typeof(NestedWatch<>).MakeGenericType(nestedType);
+            return Activator.CreateInstance(watchType, parentMemberInfo, nestedMemberInfo, instanceHandle, attribute) as Watch;
+        }
+    }
+}

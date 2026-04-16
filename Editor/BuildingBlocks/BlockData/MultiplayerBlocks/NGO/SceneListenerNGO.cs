@@ -52,13 +52,23 @@ namespace Meta.XR.MultiplayerBlocks.NGO.Editor
             {
                 case ObjectChangeKind.CreateGameObjectHierarchy:
                     stream.GetCreateGameObjectHierarchyEvent(i, out var createGameObjectHierarchyEvent);
+#if UNITY_6000_3_OR_NEWER
+                    ProcessGameObject(
+                        EditorUtility.EntityIdToObject(createGameObjectHierarchyEvent.instanceId) as GameObject);
+#else
                     ProcessGameObject(
                         EditorUtility.InstanceIDToObject(createGameObjectHierarchyEvent.instanceId) as GameObject);
+#endif
                     break;
                 case ObjectChangeKind.ChangeGameObjectStructure:
                     stream.GetChangeGameObjectStructureEvent(i, out var changeGameObjectStructure);
+#if UNITY_6000_3_OR_NEWER
+                    ProcessGameObject(
+                        EditorUtility.EntityIdToObject(changeGameObjectStructure.instanceId) as GameObject);
+#else
                     ProcessGameObject(
                         EditorUtility.InstanceIDToObject(changeGameObjectStructure.instanceId) as GameObject);
+#endif
                     break;
             }
         }

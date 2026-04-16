@@ -23,8 +23,18 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
-
+using UnityEngine.XR;
 using Node = UnityEngine.XR.XRNode;
+using Meta.XR;
+
+
+#if USING_INPUT_SYSTEM_PACKAGE
+#if USING_XR_HANDS
+using UnityEngine.XR.Hands;
+#endif
+using static MetaQuestActionMap;
+#endif
+
 
 /// <summary>
 /// OVRInput exposes a unified input API for multiple controller types. It is used to query virtual or
@@ -248,6 +258,7 @@ public static class OVRInput
     }
 
     [Flags]
+    [System.Obsolete("OpenVR Input Features are no longer supported.", false)]
     /// OpenVR Controller State Enum
     public enum OpenVRButton : ulong
     {
@@ -429,6 +440,8 @@ public static class OVRInput
     public static readonly float AXIS_AS_BUTTON_THRESHOLD = 0.5f;
     public static readonly float AXIS_DEADZONE_THRESHOLD = 0.2f;
     public static List<OVRControllerBase> controllers;
+    private static OVRControllerBase cachedControllerLTouch;
+    private static OVRControllerBase cachedControllerRTouch;
     public static Controller activeControllerType = Controller.None;
     public static Controller connectedControllerTypes = Controller.None;
     public static OVRPlugin.Step stepType = OVRPlugin.Step.Render;
@@ -462,26 +475,33 @@ public static class OVRInput
         }
     }
 
+#if USING_INPUT_SYSTEM_PACKAGE && USING_XR_HANDS
+    private static XRHandSubsystem xrHandSubsystem;
+#endif
+
     /// <summary>
     /// Creates an instance of OVRInput.
     /// </summary>
     static OVRInput()
     {
+        cachedControllerLTouch = new OVRControllerLTouch();
+        cachedControllerRTouch = new OVRControllerRTouch();
+
         controllers = new List<OVRControllerBase>
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
             new OVRControllerGamepadAndroid(),
             new OVRControllerTouch(),
-            new OVRControllerLTouch(),
-            new OVRControllerRTouch(),
+            cachedControllerLTouch,
+            cachedControllerRTouch,
             new OVRControllerHands(),
             new OVRControllerLHand(),
             new OVRControllerRHand(),
 #elif UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN || UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
             new OVRControllerGamepadPC(),
             new OVRControllerTouch(),
-            new OVRControllerLTouch(),
-            new OVRControllerRTouch(),
+            cachedControllerLTouch,
+            cachedControllerRTouch,
             new OVRControllerHands(),
             new OVRControllerLHand(),
             new OVRControllerRHand(),
@@ -489,7 +509,22 @@ public static class OVRInput
 #endif
         };
 
-        InitHapticInfo();
+#if USING_INPUT_SYSTEM_PACKAGE
+        Enable();
+#if USING_XR_HANDS
+        var handSubsystems = new List<XRHandSubsystem>();
+        SubsystemManager.GetSubsystems<XRHandSubsystem>(handSubsystems);
+
+        for (int i = 0; i < handSubsystems.Count; i++)
+        {
+            var subsystem = handSubsystems[i];
+            if (subsystem.running)
+            {
+                xrHandSubsystem = subsystem;
+            }
+        }
+#endif
+#endif
     }
 
     /// <summary>
@@ -503,15 +538,21 @@ public static class OVRInput
 
         if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
         {
-            UpdateXRControllerNodeIds();
-            UpdateXRControllerHaptics();
+            Debug.LogWarning("OpenVR Input Features are no longer supported");
         }
 
+#if USING_INPUT_SYSTEM_PACKAGE
+        bool controllersWereActive = false;
+#endif
         for (int i = 0; i < controllers.Count; i++)
         {
             OVRControllerBase controller = controllers[i];
 
+#if USING_INPUT_SYSTEM_PACKAGE
+            connectedControllerTypes |= controller.PollInputState();
+#else
             connectedControllerTypes |= controller.Update();
+#endif
 
             if ((connectedControllerTypes & controller.controllerType) != 0)
             {
@@ -524,6 +565,13 @@ public static class OVRInput
                     activeControllerType = controller.controllerType;
                 }
             }
+
+#if USING_INPUT_SYSTEM_PACKAGE
+            if (controller.controllerType == Controller.LTouch || controller.controllerType == Controller.RTouch)
+            {
+                controllersWereActive |= controller.WasActive();
+            }
+#endif
         }
 
         if ((activeControllerType == Controller.LTouch) || (activeControllerType == Controller.RTouch))
@@ -560,6 +608,10 @@ public static class OVRInput
             UsePluginActiveAndConnectedControllers = OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus;
         }
 
+#if USING_INPUT_SYSTEM_PACKAGE
+        connectedControllerTypes = UpdateConnectedControllers();
+        activeControllerType = UpdateActiveControllers(connectedControllerTypes, controllersWereActive);
+#else
         if (UsePluginActiveAndConnectedControllers)
         {
             Controller localActiveController = activeControllerType;
@@ -574,10 +626,7 @@ public static class OVRInput
                 activeControllerType = localActiveController;
             }
         }
-        else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-        {
-            activeControllerType = connectedControllerTypes;
-        }
+#endif
     }
 
     /// <summary>
@@ -612,19 +661,21 @@ public static class OVRInput
     /// </summary>
     public static bool GetControllerOrientationTracked(OVRInput.Controller controllerType)
     {
-        switch (controllerType)
+        return controllerType switch
         {
-            case Controller.LTouch:
-                return OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.ControllerLeft);
-            case Controller.LHand:
-                return OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.HandLeft);
-            case Controller.RTouch:
-                return OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.ControllerRight);
-            case Controller.RHand:
-                return OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.HandRight);
-            default:
-                return false;
-        }
+#if USING_INPUT_SYSTEM_PACKAGE
+            Controller.LTouch => GetAction(QuestTouchDevice + LeftHand + IsTracked).ReadValue<float>() != 0,
+            Controller.LHand => GetXrHandsIsTracked(Controller.LHand),
+            Controller.RTouch => GetAction(QuestTouchDevice + RightHand + IsTracked).ReadValue<float>() != 0,
+            Controller.RHand => GetXrHandsIsTracked(Controller.RHand),
+#else
+            Controller.LTouch => OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.ControllerLeft),
+            Controller.LHand => OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.HandLeft),
+            Controller.RTouch => OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.ControllerRight),
+            Controller.RHand => OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.HandRight),
+#endif
+            _ => false
+        };
     }
 
     /// <summary>
@@ -633,19 +684,21 @@ public static class OVRInput
     /// </summary>
     public static bool GetControllerOrientationValid(OVRInput.Controller controllerType)
     {
-        switch (controllerType)
+        return controllerType switch
         {
-            case Controller.LTouch:
-                return OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.ControllerLeft);
-            case Controller.LHand:
-                return OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.HandLeft);
-            case Controller.RTouch:
-                return OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.ControllerRight);
-            case Controller.RHand:
-                return OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.HandRight);
-            default:
-                return false;
-        }
+#if USING_INPUT_SYSTEM_PACKAGE
+            Controller.LTouch => (GetAction(QuestTouchDevice + LeftHand + TrackingState).ReadValue<int>() & (int)InputTrackingState.Rotation) != 0,
+            Controller.LHand => GetXrHandsIsValid(Controller.LHand),
+            Controller.RTouch => (GetAction(QuestTouchDevice + RightHand + TrackingState).ReadValue<int>() & (int)InputTrackingState.Rotation) != 0,
+            Controller.RHand => GetXrHandsIsValid(Controller.RHand),
+#else
+            Controller.LTouch => OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.ControllerLeft),
+            Controller.LHand => OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.HandLeft),
+            Controller.RTouch => OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.ControllerRight),
+            Controller.RHand => OVRPlugin.GetNodeOrientationValid(OVRPlugin.Node.HandRight),
+#endif
+            _ => false
+        };
     }
 
 
@@ -655,19 +708,21 @@ public static class OVRInput
     /// </summary>
     public static bool GetControllerPositionTracked(OVRInput.Controller controllerType)
     {
-        switch (controllerType)
+        return controllerType switch
         {
-            case Controller.LTouch:
-                return OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.ControllerLeft);
-            case Controller.LHand:
-                return OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.HandLeft);
-            case Controller.RTouch:
-                return OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.ControllerRight);
-            case Controller.RHand:
-                return OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.HandRight);
-            default:
-                return false;
-        }
+#if USING_INPUT_SYSTEM_PACKAGE
+            Controller.LTouch => GetAction(QuestTouchDevice + LeftHand + IsTracked).ReadValue<float>() != 0,
+            Controller.LHand => GetXrHandsIsTracked(Controller.LHand),
+            Controller.RTouch => GetAction(QuestTouchDevice + RightHand + IsTracked).ReadValue<float>() != 0,
+            Controller.RHand => GetXrHandsIsTracked(Controller.RHand),
+#else
+            Controller.LTouch => OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.ControllerLeft),
+            Controller.LHand => OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.HandLeft),
+            Controller.RTouch => OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.ControllerRight),
+            Controller.RHand => OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.HandRight),
+#endif
+            _ => false
+        };
     }
 
     /// <summary>
@@ -676,24 +731,208 @@ public static class OVRInput
     /// </summary>
     public static bool GetControllerPositionValid(OVRInput.Controller controllerType)
     {
-        switch (controllerType)
+        return controllerType switch
         {
-            case Controller.LTouch:
-                return OVRPlugin.GetNodePositionValid(OVRPlugin.Node.ControllerLeft);
-            case Controller.LHand:
-                return OVRPlugin.GetNodePositionValid(OVRPlugin.Node.HandLeft);
-            case Controller.RTouch:
-                return OVRPlugin.GetNodePositionValid(OVRPlugin.Node.ControllerRight);
-            case Controller.RHand:
-                return OVRPlugin.GetNodePositionValid(OVRPlugin.Node.HandRight);
-            default:
-                return false;
-        }
+#if USING_INPUT_SYSTEM_PACKAGE
+            Controller.LTouch => (GetAction(QuestTouchDevice + LeftHand + TrackingState).ReadValue<int>() & (int)InputTrackingState.Position) != 0,
+            Controller.LHand => GetXrHandsIsValid(Controller.LHand),
+            Controller.RTouch => (GetAction(QuestTouchDevice + RightHand + TrackingState).ReadValue<int>() & (int)InputTrackingState.Position) != 0,
+            Controller.RHand => GetXrHandsIsValid(Controller.RHand),
+#else
+            Controller.LTouch => OVRPlugin.GetNodePositionValid(OVRPlugin.Node.ControllerLeft),
+            Controller.LHand => OVRPlugin.GetNodePositionValid(OVRPlugin.Node.HandLeft),
+            Controller.RTouch => OVRPlugin.GetNodePositionValid(OVRPlugin.Node.ControllerRight),
+            Controller.RHand => OVRPlugin.GetNodePositionValid(OVRPlugin.Node.HandRight),
+#endif
+            _ => false
+        };
     }
 
-    /// <summary>
-    /// Returns a flag indicating whether or not the hand poses are controlled by controller data
-    /// </summary>
+#if USING_INPUT_SYSTEM_PACKAGE
+    private static Pose GetXrHandsPose(Controller type)
+    {
+        Pose wristPose = Pose.identity;
+#if USING_XR_HANDS
+        if (xrHandSubsystem != null)
+        {
+            if (type == Controller.LHand)
+            {
+                var wristJoint = xrHandSubsystem.leftHand.GetJoint(XRHandJointID.Wrist);
+                wristJoint.TryGetPose(out wristPose);
+            }
+            if (type == Controller.RHand)
+            {
+                var wristJoint = xrHandSubsystem.rightHand.GetJoint(XRHandJointID.Wrist);
+                wristJoint.TryGetPose(out wristPose);
+            }
+        }
+#endif
+        return wristPose;
+    }
+
+    private static bool GetXrHandsIsTracked(Controller type)
+    {
+#if USING_XR_HANDS
+        if (xrHandSubsystem != null)
+        {
+            if (type == Controller.LHand)
+                return xrHandSubsystem.leftHand.isTracked;
+            if (type == Controller.RHand)
+                return xrHandSubsystem.rightHand.isTracked;
+        }
+#endif
+        return false;
+    }
+
+    private static bool GetXrHandsIsValid(Controller type)
+    {
+#if USING_XR_HANDS
+        if (xrHandSubsystem != null)
+        {
+            if (type == Controller.LHand)
+            {
+                var wristJoint = xrHandSubsystem.leftHand.GetJoint(XRHandJointID.Wrist);
+                return (wristJoint.trackingState & XRHandJointTrackingState.Pose) != 0;
+            }
+            if (type == Controller.RHand)
+            {
+                var wristJoint = xrHandSubsystem.rightHand.GetJoint(XRHandJointID.Wrist);
+                return (wristJoint.trackingState & XRHandJointTrackingState.Pose) != 0;
+            }
+        }
+#endif
+        return false;
+    }
+
+    private static Vector3 GetXrHandsVelocity(Controller type)
+    {
+        Vector3 wristVelocity = Vector3.zero;
+#if USING_XR_HANDS
+        if (xrHandSubsystem != null)
+        {
+            if (type == Controller.LHand)
+            {
+                var wristJoint = xrHandSubsystem.leftHand.GetJoint(XRHandJointID.Wrist);
+                wristJoint.TryGetLinearVelocity(out wristVelocity);
+            }
+            if (type == Controller.RHand)
+            {
+                var wristJoint = xrHandSubsystem.rightHand.GetJoint(XRHandJointID.Wrist);
+                wristJoint.TryGetLinearVelocity(out wristVelocity);
+            }
+        }
+#endif
+        return wristVelocity;
+    }
+
+    private static Vector3 GetXrHandsAngularVel(Controller type)
+    {
+        Vector3 wristVelocity = Vector3.zero;
+#if USING_XR_HANDS
+        if (xrHandSubsystem != null)
+        {
+            if (type == Controller.LHand)
+            {
+                var wristJoint = xrHandSubsystem.leftHand.GetJoint(XRHandJointID.Wrist);
+                wristJoint.TryGetAngularVelocity(out wristVelocity);
+            }
+            if (type == Controller.RHand)
+            {
+                var wristJoint = xrHandSubsystem.rightHand.GetJoint(XRHandJointID.Wrist);
+                wristJoint.TryGetAngularVelocity(out wristVelocity);
+            }
+        }
+#endif
+        return wristVelocity;
+    }
+
+    private static Controller UpdateConnectedControllers()
+    {
+        Controller connected = Controller.None;
+
+        bool leftHandTracked = GetXrHandsIsTracked(Controller.LHand);
+        bool leftControllerTracked = GetControllerPositionTracked(Controller.LTouch);
+
+        bool rightHandTracked = GetXrHandsIsTracked(Controller.RHand);
+        bool rightControllerTracked = GetControllerPositionTracked(Controller.RTouch);
+
+        if (OVRPlugin.IsMultimodalHandsControllersSupported())
+        {
+            if (leftHandTracked)
+                connected |= Controller.LHand;
+            if (leftControllerTracked)
+                connected |= Controller.LTouch;
+
+            if (rightHandTracked)
+                connected |= Controller.RHand;
+            if (rightControllerTracked)
+                connected |= Controller.RTouch;
+        }
+        else
+        {
+            if (leftHandTracked)
+                connected |= Controller.LHand;
+            else if (leftControllerTracked)
+                connected |= Controller.LTouch;
+
+            if (rightHandTracked)
+                connected |= Controller.RHand;
+            else if (rightControllerTracked)
+                connected |= Controller.RTouch;
+        }
+
+        return connected;
+    }
+
+    private static Controller UpdateActiveControllers(Controller connectedControllers, bool controllersWereActive)
+    {
+        Controller newActive = activeControllerType;
+
+        if (OVRPlugin.IsMultimodalHandsControllersSupported())
+            controllersWereActive = true;
+        if (controllersWereActive)
+            newActive |= connectedControllers;
+
+        if (OVRPlugin.IsMultimodalHandsControllersSupported())
+        {
+            if ((newActive & Controller.LHand) != 0 && (newActive & Controller.LTouch) != 0)
+            {
+                if (cachedControllerLTouch.isInHand)
+                    newActive &= ~Controller.LHand;
+                else
+                    newActive &= ~Controller.LTouch;
+            }
+
+            if ((newActive & Controller.RHand) != 0 && (newActive & Controller.RTouch) != 0)
+            {
+                if (cachedControllerRTouch.isInHand)
+                    newActive &= ~Controller.RHand;
+                else
+                    newActive &= ~Controller.RTouch;
+            }
+        }
+        else
+        {
+            if ((newActive & Controller.Touch) != 0 && (connectedControllers & Controller.Touch) == Controller.Touch)
+            {
+                newActive = Controller.Touch;
+            }
+
+            if ((newActive & Controller.Hands) != 0 && (connectedControllers & Controller.Hands) == Controller.Hands)
+            {
+                newActive = Controller.Hands;
+            }
+        }
+        // Active controllers are devices are active and connected
+        newActive &= connectedControllers;
+
+        return newActive;
+    }
+#endif
+
+        /// <summary>
+        /// Returns a flag indicating whether or not the hand poses are controlled by controller data
+        /// </summary>
     public static bool AreHandPosesGeneratedByControllerData(OVRPlugin.Step stepId, OVRInput.Hand hand)
     {
         switch (hand)
@@ -792,6 +1031,10 @@ public static class OVRInput
         return OVRPlugin.GetNodePose(node, stepType).ToOVRPose().position;
     }
 
+#if USING_INPUT_SYSTEM_PACKAGE
+    private static Matrix4x4 _gripToVrapiOffsetInverse = Matrix4x4.TRS(new Vector3(0f, -0.03f, -0.04f), new Quaternion(-0.5f, 0.0f, 0.0f, 0.86603f), Vector3.one).inverse;
+#endif
+
     /// <summary>
     /// Gets the position of the given Controller local to its tracking space.
     /// Only supported for Oculus LTouch and RTouch controllers. Non-tracked controllers will return Vector3.zero.
@@ -800,11 +1043,21 @@ public static class OVRInput
     {
         switch (controllerType)
         {
+#if USING_INPUT_SYSTEM_PACKAGE
+            case Controller.LTouch:
+                return ((Matrix4x4.TRS(GetAction(QuestTouchDevice + LeftHand + Position).ReadValue<Vector3>(), GetAction(QuestTouchDevice + LeftHand + Rotation).ReadValue<Quaternion>(), Vector3.one))
+                        * _gripToVrapiOffsetInverse).GetPosition();
+            case Controller.LHand:
+                return GetXrHandsPose(Controller.LHand).position;
+            case Controller.RTouch:
+                return ((Matrix4x4.TRS(GetAction(QuestTouchDevice + RightHand + Position).ReadValue<Vector3>(), GetAction(QuestTouchDevice + RightHand + Rotation).ReadValue<Quaternion>(), Vector3.one))
+                        * _gripToVrapiOffsetInverse).GetPosition();
+            case Controller.RHand:
+                return GetXrHandsPose(Controller.RHand).position;
+#else
             case Controller.LTouch:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return OVRPlugin.GetNodePose(OVRPlugin.Node.ControllerLeft, stepType).ToOVRPose().position;
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[0].localPosition;
                 else
                 {
                     Vector3 retVec;
@@ -815,8 +1068,6 @@ public static class OVRInput
             case Controller.LHand:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return GetLocalHandPosition(OVRPlugin.Node.HandLeft);
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[0].localPosition;
                 else
                 {
                     Vector3 retVec;
@@ -828,8 +1079,6 @@ public static class OVRInput
             case Controller.RTouch:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return OVRPlugin.GetNodePose(OVRPlugin.Node.ControllerRight, stepType).ToOVRPose().position;
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[1].localPosition;
                 else
                 {
                     Vector3 retVec;
@@ -840,8 +1089,6 @@ public static class OVRInput
             case Controller.RHand:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return GetLocalHandPosition(OVRPlugin.Node.HandRight);
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[1].localPosition;
                 else
                 {
                     Vector3 retVec;
@@ -850,6 +1097,7 @@ public static class OVRInput
                         return retVec;
                     return Vector3.zero;
                 }
+#endif
             default:
                 return Vector3.zero;
         }
@@ -862,52 +1110,35 @@ public static class OVRInput
     public static Vector3 GetLocalControllerVelocity(OVRInput.Controller controllerType)
     {
         Vector3 velocity = Vector3.zero;
-
-        switch (controllerType)
+        return controllerType switch
         {
-            case Controller.LTouch:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
-                        NodeStatePropertyType.Velocity, OVRPlugin.Node.ControllerLeft, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            case Controller.LHand:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand, NodeStatePropertyType.Velocity,
-                        OVRPlugin.Node.HandLeft, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            case Controller.RTouch:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
-                        NodeStatePropertyType.Velocity, OVRPlugin.Node.ControllerRight, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            case Controller.RHand:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand, NodeStatePropertyType.Velocity,
-                        OVRPlugin.Node.HandRight, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            default:
-                return Vector3.zero;
-        }
+#if USING_INPUT_SYSTEM_PACKAGE
+            Controller.LTouch => GetAction(QuestTouchDevice + LeftHand + Velocity).ReadValue<Vector3>(),
+            Controller.LHand => GetXrHandsVelocity(Controller.LHand),
+            Controller.RTouch => GetAction(QuestTouchDevice + RightHand + Velocity).ReadValue<Vector3>(),
+            Controller.RHand => GetXrHandsVelocity(Controller.RHand),
+#else
+            Controller.LTouch => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
+                NodeStatePropertyType.Velocity, OVRPlugin.Node.ControllerLeft, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+            Controller.LHand => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
+                NodeStatePropertyType.Velocity,
+                OVRPlugin.Node.HandLeft, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+            Controller.RTouch => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
+                NodeStatePropertyType.Velocity, OVRPlugin.Node.ControllerRight, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+            Controller.RHand => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
+                NodeStatePropertyType.Velocity,
+                OVRPlugin.Node.HandRight, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+#endif
+            _ => Vector3.zero
+        };
     }
 
     /// <summary>
@@ -974,11 +1205,21 @@ public static class OVRInput
     {
         switch (controllerType)
         {
+#if USING_INPUT_SYSTEM_PACKAGE
+            case Controller.LTouch:
+                return ((Matrix4x4.TRS(GetAction(QuestTouchDevice + LeftHand + Position).ReadValue<Vector3>(), GetAction(QuestTouchDevice + LeftHand + Rotation).ReadValue<Quaternion>(), Vector3.one))
+                        * _gripToVrapiOffsetInverse).rotation;
+            case Controller.LHand:
+                return GetXrHandsPose(Controller.LHand).rotation;
+            case Controller.RTouch:
+                return ((Matrix4x4.TRS(GetAction(QuestTouchDevice + RightHand + Position).ReadValue<Vector3>(), GetAction(QuestTouchDevice + RightHand + Rotation).ReadValue<Quaternion>(), Vector3.one))
+                        * _gripToVrapiOffsetInverse).rotation;
+            case Controller.RHand:
+                return GetXrHandsPose(Controller.RHand).rotation;
+#else
             case Controller.LTouch:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return OVRPlugin.GetNodePose(OVRPlugin.Node.ControllerLeft, stepType).ToOVRPose().orientation;
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[0].localOrientation;
                 else
                 {
                     Quaternion retQuat;
@@ -990,8 +1231,6 @@ public static class OVRInput
             case Controller.LHand:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return OVRPlugin.GetNodePose(OVRPlugin.Node.HandLeft, stepType).ToOVRPose().orientation;
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[0].localOrientation;
                 else
                 {
                     Quaternion retQuat;
@@ -1003,8 +1242,6 @@ public static class OVRInput
             case Controller.RTouch:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return OVRPlugin.GetNodePose(OVRPlugin.Node.ControllerRight, stepType).ToOVRPose().orientation;
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[1].localOrientation;
                 else
                 {
                     Quaternion retQuat;
@@ -1016,8 +1253,6 @@ public static class OVRInput
             case Controller.RHand:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                     return OVRPlugin.GetNodePose(OVRPlugin.Node.HandRight, stepType).ToOVRPose().orientation;
-                else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-                    return openVRControllerDetails[1].localOrientation;
                 else
                 {
                     Quaternion retQuat;
@@ -1026,6 +1261,7 @@ public static class OVRInput
                         return retQuat;
                     return Quaternion.identity;
                 }
+#endif
             default:
                 return Quaternion.identity;
         }
@@ -1038,52 +1274,35 @@ public static class OVRInput
     public static Vector3 GetLocalControllerAngularVelocity(OVRInput.Controller controllerType)
     {
         Vector3 velocity = Vector3.zero;
-
-        switch (controllerType)
+        return controllerType switch
         {
-            case Controller.LTouch:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
-                        NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.ControllerLeft, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            case Controller.LHand:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
-                        NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.HandLeft, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            case Controller.RTouch:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
-                        NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.ControllerRight, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            case Controller.RHand:
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
-                        NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.HandRight, stepType, out velocity))
-                {
-                    return velocity;
-                }
-                else
-                {
-                    return Vector3.zero;
-                }
-            default:
-                return Vector3.zero;
-        }
+#if USING_INPUT_SYSTEM_PACKAGE
+            Controller.LTouch => GetAction(QuestTouchDevice + LeftHand + AngularVelocity).ReadValue<Vector3>(),
+            Controller.LHand => GetXrHandsAngularVel(Controller.LHand),
+            Controller.RTouch => GetAction(QuestTouchDevice + RightHand + AngularVelocity).ReadValue<Vector3>(),
+            Controller.RHand => GetXrHandsAngularVel(Controller.RHand),
+#else
+            Controller.LTouch => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
+                NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.ControllerLeft, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+            Controller.LHand => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
+                NodeStatePropertyType.AngularVelocity,
+                OVRPlugin.Node.HandLeft, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+            Controller.RTouch => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
+                NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.ControllerRight, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+            Controller.RHand => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
+                NodeStatePropertyType.AngularVelocity,
+                OVRPlugin.Node.HandRight, stepType, out velocity))
+                ? velocity
+                : Vector3.zero,
+#endif
+            _ => Vector3.zero
+        };
     }
 
     /// <summary>
@@ -1146,6 +1365,9 @@ public static class OVRInput
     /// Gets the current position, rotation and velocity of given Controller local to its tracking space without prediction.
     /// Only supported for Oculus LTouch and RTouch controllers, when using OpenXR backend
     /// </summary>
+#if USING_INPUT_SYSTEM_PACKAGE
+    [System.Obsolete("Deprecated. Controller state without prediction is unavailable with Unity Input System.", false)]
+#endif
     public static bool GetLocalControllerStatesWithoutPrediction(OVRInput.Controller controllerType,
         out Vector3 position, out Quaternion rotation, out Vector3 velocity, out Vector3 angularVelocity)
     {
@@ -1160,6 +1382,7 @@ public static class OVRInput
         if (OVRPlugin.nativeXrApi != OVRPlugin.XrApi.OpenXR)
             return false;
 
+#if !USING_INPUT_SYSTEM_PACKAGE
         OVRPlugin.PoseStatef poseState;
 
         switch (controllerType)
@@ -1191,7 +1414,7 @@ public static class OVRInput
             rotation = poseState.Pose.ToOVRPose().orientation;
             angularVelocity = poseState.AngularVelocity.FromFlippedZVector3f();
         }
-
+#endif
         return true;
     }
 
@@ -1899,29 +2122,7 @@ public static class OVRInput
         return activeControllerType;
     }
 
-    private static void StartVibration(float amplitude, float duration, Node controllerNode)
-    {
-        int index = (controllerNode == Node.LeftHand) ? 0 : 1;
-        hapticInfos[index].hapticsDurationPlayed = 0.0f;
-        hapticInfos[index].hapticAmplitude = amplitude;
-        hapticInfos[index].hapticsDuration = duration;
-        hapticInfos[index].playingHaptics = (amplitude != 0.0f);
-        hapticInfos[index].node = controllerNode;
-        if (amplitude <= 0.0f || duration <= 0.0f)
-        {
-            hapticInfos[index].playingHaptics = false;
-        }
-    }
-
-    private static int NUM_HAPTIC_CHANNELS = 2;
-    private static HapticInfo[] hapticInfos;
-
-    private static float OPENVR_MAX_HAPTIC_AMPLITUDE = 4000.0f;
-    private static float HAPTIC_VIBRATION_DURATION_SECONDS = 2.0f;
-    private static String OPENVR_TOUCH_NAME = "oculus_touch";
-    private static String OPENVR_VIVE_CONTROLLER_NAME = "vive_controller";
-    private static String OPENVR_WINDOWSMR_CONTROLLER_NAME = "holographic_controller";
-
+    [System.Obsolete("OpenVR Input Features are no longer supported.", false)]
     [Flags]
     /// OpenVR Controller Enum
     public enum OpenVRController : ulong
@@ -1939,6 +2140,7 @@ public static class OVRInput
     /// <remarks>
     /// In general, OpenXR should be preferred over OpenVR for new development.
     /// </remarks>
+    [System.Obsolete("OpenVR Input Features are no longer supported.", false)]
     [StructLayout(LayoutKind.Sequential)]
     public struct OpenVRControllerDetails
     {
@@ -1984,20 +2186,13 @@ public static class OVRInput
         public Quaternion localOrientation; //Orientation relative to Tracking Space
     }
 
+    [System.Obsolete("OpenVR Input Features are no longer supported.", false)]
     public static OpenVRControllerDetails[] openVRControllerDetails = new OpenVRControllerDetails[2];
-
-    private class HapticInfo
-    {
-        public bool playingHaptics;
-        public float hapticsDurationPlayed;
-        public float hapticsDuration;
-        public float hapticAmplitude;
-        public Node node;
-    }
 
     /// <summary>
     /// Sets OpenVR left and right controller poses local to tracking space
     /// </summary>
+    [System.Obsolete("OpenVR Input Features are no longer supported.", false)]
     public static void SetOpenVRLocalPose(Vector3 leftPos, Vector3 rightPos, Quaternion leftRot, Quaternion rightRot)
     {
         openVRControllerDetails[0].localPosition = leftPos;
@@ -2009,6 +2204,7 @@ public static class OVRInput
     /// <summary>
     /// Accesses OpenVR properties about a given deviceID. Especially useful for differentiating per type of OpenVR device (i.e. Oculus, Vive)
     /// </summary>
+    [System.Obsolete("OpenVR Input Features are no longer supported.", false)]
     public static string GetOpenVRStringProperty(OVR.OpenVR.ETrackedDeviceProperty prop,
         uint deviceId = OVR.OpenVR.OpenVR.k_unTrackedDeviceIndex_Hmd)
     {
@@ -2028,112 +2224,6 @@ public static class OVRInput
         }
 
         return "";
-    }
-
-    /// <summary>
-    /// Associates OpenVR device IDs with left and right motion controllers, for later haptic playback.
-    /// </summary>
-    private static void UpdateXRControllerNodeIds()
-    {
-        if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-        {
-            openVRControllerDetails[0].deviceID = OVR.OpenVR.OpenVR.k_unMaxTrackedDeviceCount;
-            openVRControllerDetails[1].deviceID = OVR.OpenVR.OpenVR.k_unMaxTrackedDeviceCount;
-
-            OVR.OpenVR.CVRSystem system = OVR.OpenVR.OpenVR.System;
-
-            if (system != null)
-            {
-                for (uint id = 0; id < OVR.OpenVR.OpenVR.k_unMaxTrackedDeviceCount; id++)
-                {
-                    OVR.OpenVR.ETrackedDeviceClass deviceClass = system.GetTrackedDeviceClass(id);
-                    if (deviceClass == OVR.OpenVR.ETrackedDeviceClass.Controller && system.IsTrackedDeviceConnected(id))
-                    {
-                        OpenVRController controllerType;
-                        String controllerName =
-                            GetOpenVRStringProperty(OVR.OpenVR.ETrackedDeviceProperty.Prop_ControllerType_String, id);
-                        if (controllerName == OPENVR_TOUCH_NAME)
-                            controllerType = OpenVRController.OculusTouch;
-                        else if (controllerName == OPENVR_VIVE_CONTROLLER_NAME)
-                            controllerType = OpenVRController.ViveController;
-                        else if (controllerName == OPENVR_WINDOWSMR_CONTROLLER_NAME)
-                            controllerType = OpenVRController.WindowsMRController;
-                        else
-                            controllerType = OpenVRController.Unknown;
-
-                        OVR.OpenVR.ETrackedControllerRole role = system.GetControllerRoleForTrackedDeviceIndex(id);
-                        if (role == OVR.OpenVR.ETrackedControllerRole.LeftHand)
-                        {
-                            system.GetControllerState(id, ref openVRControllerDetails[0].state,
-                                (uint)Marshal.SizeOf(typeof(OVR.OpenVR.VRControllerState_t)));
-                            openVRControllerDetails[0].deviceID = id;
-                            openVRControllerDetails[0].controllerType = controllerType;
-                            connectedControllerTypes |= Controller.LTouch;
-                        }
-                        else if (role == OVR.OpenVR.ETrackedControllerRole.RightHand)
-                        {
-                            system.GetControllerState(id, ref openVRControllerDetails[1].state,
-                                (uint)Marshal.SizeOf(typeof(OVR.OpenVR.VRControllerState_t)));
-                            openVRControllerDetails[1].deviceID = id;
-                            openVRControllerDetails[1].controllerType = controllerType;
-                            connectedControllerTypes |= Controller.RTouch;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Runs once a frame to update cross-platform haptic playback
-    /// </summary>
-    private static void UpdateXRControllerHaptics()
-    {
-        if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-        {
-            for (int i = 0; i < NUM_HAPTIC_CHANNELS; i++)
-            {
-                if (hapticInfos[i].playingHaptics)
-                {
-                    hapticInfos[i].hapticsDurationPlayed += Time.deltaTime;
-
-                    PlayHapticImpulse(hapticInfos[i].hapticAmplitude, hapticInfos[i].node);
-
-                    if (hapticInfos[i].hapticsDurationPlayed >= hapticInfos[i].hapticsDuration)
-                    {
-                        hapticInfos[i].playingHaptics = false;
-                    }
-                }
-            }
-        }
-    }
-
-    private static void InitHapticInfo()
-    {
-        hapticInfos = new HapticInfo[NUM_HAPTIC_CHANNELS];
-        for (int i = 0; i < NUM_HAPTIC_CHANNELS; i++)
-        {
-            hapticInfos[i] = new HapticInfo();
-        }
-    }
-
-    private static void PlayHapticImpulse(float amplitude, Node deviceNode)
-    {
-        OVR.OpenVR.CVRSystem system = OVR.OpenVR.OpenVR.System;
-        if (system != null && amplitude != 0.0f)
-        {
-            uint controllerId = (deviceNode == Node.LeftHand)
-                ? openVRControllerDetails[0].deviceID
-                : openVRControllerDetails[1].deviceID;
-
-            if (IsValidOpenVRDevice(controllerId))
-                system.TriggerHapticPulse(controllerId, 0, (char)(OPENVR_MAX_HAPTIC_AMPLITUDE * amplitude));
-        }
-    }
-
-    private static bool IsValidOpenVRDevice(uint deviceId)
-    {
-        return (deviceId >= 0 && deviceId < OVR.OpenVR.OpenVR.k_unMaxTrackedDeviceCount);
     }
 
     /// <summary>
@@ -2158,14 +2248,6 @@ public static class OVRInput
                 }
             }
         }
-        else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-        {
-            if (controllerMask == Controller.LTouch || controllerMask == Controller.RTouch)
-            {
-                Node controllerNode = (controllerMask == Controller.LTouch) ? Node.LeftHand : Node.RightHand;
-                StartVibration(amplitude, HAPTIC_VIBRATION_DURATION_SECONDS, controllerNode);
-            }
-        }
     }
 
     /// <summary>
@@ -2188,13 +2270,6 @@ public static class OVRInput
                 {
                     controller.SetControllerLocalizedVibration(hapticsLocationMask, frequency, amplitude);
                 }
-            }
-        }
-        else if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-        {
-            if ((hapticsLocationMask & HapticsLocation.Hand) != 0)
-            {
-                SetControllerVibration(frequency, amplitude, controllerMask);
             }
         }
     }
@@ -3296,22 +3371,192 @@ public static class OVRInput
             ConfigureAxis2DMap();
         }
 
-        /// <summary>
-        /// Updates this instance by reading inputs from the underlying system, reinterpreting them as specified
-        /// by the input maps (<see cref="buttonMap"/>, <see cref="touchMap"/>, etc.), and updating the information
-        /// in <see cref="currentState"/> and <see cref="previousState"/>.
-        /// </summary>
-        /// <returns>
-        /// An enum bit mask indicating whether a controller of <see cref="controllerType"/> is currently connected
-        /// </returns>
+#if USING_INPUT_SYSTEM_PACKAGE
+        public virtual Controller PollInputState()
+        {
+            OVRPlugin.ControllerState6 state = new OVRPlugin.ControllerState6();
+
+            // Default, controller is in hand
+            isInHand = true;
+
+            if (InputDevices.GetDeviceAtXRNode(XRNode.LeftHand).isValid)
+                state.ConnectedControllers |= (uint)Controller.LTouch;
+            if (InputDevices.GetDeviceAtXRNode(XRNode.RightHand).isValid)
+                state.ConnectedControllers |= (uint)Controller.RTouch;
+
+            if ((controllerType == Controller.LTouch && (state.ConnectedControllers & (uint)Controller.LTouch) == 0) ||
+                (controllerType == Controller.RTouch && (state.ConnectedControllers & (uint)Controller.RTouch) == 0))
+                isInHand = false;
+
+#if USING_XR_HANDS
+            if (GetXrHandsIsTracked(Controller.LHand))
+                state.ConnectedControllers |= (uint)Controller.LHand;
+            if (GetXrHandsIsTracked(Controller.RHand))
+                state.ConnectedControllers |= (uint)Controller.RHand;
+#endif
+
+            if (OVRPlugin.IsMultimodalHandsControllersSupported())
+            {
+#if USING_XR_SDK_OPENXR
+                if ((controllerType == Controller.LTouch && MetaXRFeature.GetInteractionProfile("/user/detached_controller_meta/left") != 0) ||
+                                        (controllerType == Controller.RTouch && MetaXRFeature.GetInteractionProfile("/user/detached_controller_meta/right") != 0))
+#endif
+                {
+                    isInHand = false;
+                }
+            }
+
+            // Buttons
+            state.Buttons = 0;
+            if (GetAction(QuestTouchDevice + ButtonA).ReadValue<float>() > 0.0f)
+                state.Buttons |= (uint)RawButton.A;
+            if (GetAction(QuestTouchDevice + ButtonB).ReadValue<float>() > 0.0f)
+                state.Buttons |= (uint)RawButton.B;
+            if (GetAction(QuestTouchDevice + ButtonX).ReadValue<float>() > 0.0f)
+                state.Buttons |= (uint)RawButton.X;
+            if (GetAction(QuestTouchDevice + ButtonY).ReadValue<float>() > 0.0f)
+                state.Buttons |= (uint)RawButton.Y;
+            if (GetAction(QuestTouchDevice + ButtonStart).ReadValue<float>() > 0.0f)
+                state.Buttons |= (uint)RawButton.Start;
+            if (GetAction(QuestTouchDevice + LeftHand + ThumbStickClick).ReadValue<float>() > 0.0f)
+                state.Buttons |= (uint)RawButton.LThumbstick;
+            if (GetAction(QuestTouchDevice + RightHand + ThumbStickClick).ReadValue<float>() > 0.0f)
+                state.Buttons |= (uint)RawButton.RThumbstick;
+
+            // Touches
+            state.Touches = 0;
+            if (GetAction(QuestTouchDevice + TouchA).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.A;
+            if (GetAction(QuestTouchDevice + TouchB).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.B;
+            if (GetAction(QuestTouchDevice + TouchX).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.X;
+            if (GetAction(QuestTouchDevice + TouchY).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.Y;
+            if (GetAction(QuestTouchDevice + RightHand + TriggerTouch).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.RIndexTrigger;
+            if (GetAction(QuestTouchDevice + RightHand + ThumbStickTouch).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.RThumbstick;
+            if (GetAction(QuestTouchDevice + RightHand + ThumbRestTouch).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.RThumbRest;
+            if (GetAction(QuestTouchDevice + LeftHand + TriggerTouch).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.LIndexTrigger;
+            if (GetAction(QuestTouchDevice + LeftHand + ThumbStickTouch).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.LThumbstick;
+            if (GetAction(QuestTouchDevice + LeftHand + ThumbRestTouch).ReadValue<float>() > 0.0f)
+                state.Touches |= (uint)RawTouch.LThumbRest;
+
+            // Near Touch
+            state.NearTouches = 0;
+            if (GetAction(QuestTouchDevice + LeftHand + NearTouchTrigger).ReadValue<float>() > 0.0f)
+                state.NearTouches |= (uint)RawNearTouch.LIndexTrigger;
+            if (GetAction(QuestTouchDevice + LeftHand + NearTouchThumb).ReadValue<float>() > 0.0f)
+                state.NearTouches |= (uint)RawNearTouch.LThumbButtons;
+            if (GetAction(QuestTouchDevice + RightHand + NearTouchTrigger).ReadValue<float>() > 0.0f)
+                state.NearTouches |= (uint)RawNearTouch.RIndexTrigger;
+            if (GetAction(QuestTouchDevice + RightHand + NearTouchThumb).ReadValue<float>() > 0.0f)
+                state.NearTouches |= (uint)RawNearTouch.RThumbButtons;
+
+            // Triggers
+            state.RHandTrigger = GetAction(QuestTouchDevice + RightHand + Grip).ReadValue<float>();
+            state.RIndexTrigger = GetAction(QuestTouchDevice + RightHand + Trigger).ReadValue<float>();
+            state.LHandTrigger = GetAction(QuestTouchDevice + LeftHand + Grip).ReadValue<float>();
+            state.LIndexTrigger = GetAction(QuestTouchDevice + LeftHand + Trigger).ReadValue<float>();
+
+            // Axis
+            state.RIndexTriggerCurl = GetAction(QuestTouchDevice + RightHand + TriggerCurl).ReadValue<float>();
+            state.RIndexTriggerSlide = GetAction(QuestTouchDevice + RightHand + TriggerSlide).ReadValue<float>();
+            state.RIndexTriggerForce = GetAction(QuestTouchDevice + RightHand + TriggerForce).ReadValue<float>();
+            state.LIndexTriggerCurl = GetAction(QuestTouchDevice + LeftHand + TriggerCurl).ReadValue<float>();
+            state.LIndexTriggerSlide = GetAction(QuestTouchDevice + LeftHand + TriggerSlide).ReadValue<float>();
+            state.LIndexTriggerForce = GetAction(QuestTouchDevice + LeftHand + TriggerForce).ReadValue<float>();
+
+            state.RThumbRestForce = GetAction(QuestTouchDevice + RightHand + ThumbRestForce).ReadValue<float>();
+            state.LThumbRestForce = GetAction(QuestTouchDevice + LeftHand + ThumbRestForce).ReadValue<float>();
+            state.RStylusForce = GetAction(QuestTouchDevice + RightHand + StylusForce).ReadValue<float>();
+            state.LStylusForce = GetAction(QuestTouchDevice + LeftHand + StylusForce).ReadValue<float>();
+
+            // Thumbsticks
+            Vector2 val = Vector2.zero;
+            val = GetAction(QuestTouchDevice + RightHand + ThumbStick).ReadValue<Vector2>();
+            state.RThumbstick.x = val.x;
+            state.RThumbstick.y = val.y;
+            val = GetAction(QuestTouchDevice + LeftHand + ThumbStick).ReadValue<Vector2>();
+            state.LThumbstick.x = val.x;
+            state.LThumbstick.y = val.y;
+
+            // Map axis threshold to button presses
+            if (state.LIndexTrigger >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.LIndexTrigger;
+            if (state.LHandTrigger >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.LHandTrigger;
+            if (state.LThumbstick.y >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.LThumbstickUp;
+            if (state.LThumbstick.y <= -AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.LThumbstickDown;
+            if (state.LThumbstick.x <= -AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.LThumbstickLeft;
+            if (state.LThumbstick.x >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.LThumbstickRight;
+
+            if (state.RIndexTrigger >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.RIndexTrigger;
+            if (state.RHandTrigger >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.RHandTrigger;
+            if (state.RThumbstick.y >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.RThumbstickUp;
+            if (state.RThumbstick.y <= -AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.RThumbstickDown;
+            if (state.RThumbstick.x <= -AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.RThumbstickLeft;
+            if (state.RThumbstick.x >= AXIS_AS_BUTTON_THRESHOLD)
+                state.Buttons |= (uint)RawButton.RThumbstickRight;
+
+            previousState = currentState;
+            currentState = state;
+
+            return ((Controller)currentState.ConnectedControllers & controllerType);
+        }
+
+        private const float ActiveInputThreshold = 0.5f;
+        public virtual bool WasActive()
+        {
+            if (currentState.Buttons != 0 || currentState.Touches != 0)
+                return true;
+
+            if (Math.Abs(currentState.LIndexTrigger) > ActiveInputThreshold || Math.Abs(currentState.RIndexTrigger) > ActiveInputThreshold)
+                return true;
+
+            if (Math.Abs(currentState.LHandTrigger) > ActiveInputThreshold || Math.Abs(currentState.RHandTrigger) > ActiveInputThreshold)
+                return true;
+
+            if (Math.Abs(currentState.LTouchpad.x) > ActiveInputThreshold || Math.Abs(currentState.RTouchpad.x) > ActiveInputThreshold ||
+                Math.Abs(currentState.LTouchpad.y) > ActiveInputThreshold || Math.Abs(currentState.RTouchpad.y) > ActiveInputThreshold)
+                return true;
+
+            if (Math.Abs(currentState.LThumbstick.x) > ActiveInputThreshold || Math.Abs(currentState.RThumbstick.x) > ActiveInputThreshold ||
+                Math.Abs(currentState.LThumbstick.y) > ActiveInputThreshold || Math.Abs(currentState.RThumbstick.y) > ActiveInputThreshold)
+                return true;
+
+            return false;
+        }
+
+        public bool isInHand;
+#endif
+
+                /// <summary>
+                /// Updates this instance by reading inputs from the underlying system, reinterpreting them as specified
+                /// by the input maps (<see cref="buttonMap"/>, <see cref="touchMap"/>, etc.), and updating the information
+                /// in <see cref="currentState"/> and <see cref="previousState"/>.
+                /// </summary>
+                /// <returns>
+                /// An enum bit mask indicating whether a controller of <see cref="controllerType"/> is currently connected
+                /// </returns>
         public virtual Controller Update()
         {
             OVRPlugin.ControllerState6 state;
 
-            if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR && ((controllerType & Controller.Touch) != 0))
-                state = GetOpenVRControllerState(controllerType);
-            else
-                state = OVRPlugin.GetControllerState6((uint)controllerType);
+            state = OVRPlugin.GetControllerState6((uint)controllerType);
 
             if (state.LIndexTrigger >= AXIS_AS_BUTTON_THRESHOLD)
                 state.Buttons |= (uint)RawButton.LIndexTrigger;
@@ -3383,81 +3628,6 @@ public static class OVRInput
             {
                 buttons |= (uint)RawButton.Start;
             }
-        }
-
-        private OVRPlugin.ControllerState6 GetOpenVRControllerState(Controller controllerType)
-        {
-            OVRPlugin.ControllerState6 state = new OVRPlugin.ControllerState6();
-
-            if ((controllerType & Controller.LTouch) == Controller.LTouch &&
-                IsValidOpenVRDevice(openVRControllerDetails[0].deviceID))
-            {
-                OVR.OpenVR.VRControllerState_t leftControllerState = openVRControllerDetails[0].state;
-                if ((leftControllerState.ulButtonPressed & ((ulong)OpenVRButton.Two)) == (ulong)OpenVRButton.Two)
-                    state.Buttons |= (uint)RawButton.Y;
-                if ((leftControllerState.ulButtonPressed & ((ulong)OpenVRButton.Thumbstick)) ==
-                    (ulong)OpenVRButton.Thumbstick)
-                    state.Buttons |= (uint)RawButton.LThumbstick;
-
-                state.LIndexTrigger = leftControllerState.rAxis1.x;
-
-                if (openVRControllerDetails[0].controllerType == OpenVRController.OculusTouch ||
-                    openVRControllerDetails[0].controllerType == OpenVRController.ViveController)
-                {
-                    state.LThumbstick.x = leftControllerState.rAxis0.x;
-                    state.LThumbstick.y = leftControllerState.rAxis0.y;
-                }
-                else if (openVRControllerDetails[0].controllerType == OpenVRController.WindowsMRController)
-                {
-                    state.LThumbstick.x = leftControllerState.rAxis2.x;
-                    state.LThumbstick.y = leftControllerState.rAxis2.y;
-                }
-
-                if (openVRControllerDetails[0].controllerType == OpenVRController.OculusTouch)
-                    state.LHandTrigger = leftControllerState.rAxis2.x;
-                else if (openVRControllerDetails[0].controllerType == OpenVRController.ViveController ||
-                         openVRControllerDetails[0].controllerType == OpenVRController.WindowsMRController)
-                    state.LHandTrigger = ((leftControllerState.ulButtonPressed & ((ulong)OpenVRButton.Grip)) ==
-                                          ((ulong)OpenVRButton.Grip))
-                        ? 1
-                        : 0;
-            }
-
-            if ((controllerType & Controller.RTouch) == Controller.RTouch &&
-                IsValidOpenVRDevice(openVRControllerDetails[1].deviceID))
-            {
-                OVR.OpenVR.VRControllerState_t rightControllerState = openVRControllerDetails[1].state;
-                if ((rightControllerState.ulButtonPressed & ((ulong)OpenVRButton.Two)) == (ulong)OpenVRButton.Two)
-                    state.Buttons |= (uint)RawButton.B;
-                if ((rightControllerState.ulButtonPressed & ((ulong)OpenVRButton.Thumbstick)) ==
-                    (ulong)OpenVRButton.Thumbstick)
-                    state.Buttons |= (uint)RawButton.RThumbstick;
-
-                state.RIndexTrigger = rightControllerState.rAxis1.x;
-
-                if (openVRControllerDetails[1].controllerType == OpenVRController.OculusTouch ||
-                    openVRControllerDetails[1].controllerType == OpenVRController.ViveController)
-                {
-                    state.RThumbstick.x = rightControllerState.rAxis0.x;
-                    state.RThumbstick.y = rightControllerState.rAxis0.y;
-                }
-                else if (openVRControllerDetails[1].controllerType == OpenVRController.WindowsMRController)
-                {
-                    state.RThumbstick.x = rightControllerState.rAxis2.x;
-                    state.RThumbstick.y = rightControllerState.rAxis2.y;
-                }
-
-                if (openVRControllerDetails[1].controllerType == OpenVRController.OculusTouch)
-                    state.RHandTrigger = rightControllerState.rAxis2.x;
-                else if (openVRControllerDetails[1].controllerType == OpenVRController.ViveController ||
-                         openVRControllerDetails[1].controllerType == OpenVRController.WindowsMRController)
-                    state.RHandTrigger = ((rightControllerState.ulButtonPressed & ((ulong)OpenVRButton.Grip)) ==
-                                          ((ulong)OpenVRButton.Grip))
-                        ? 1
-                        : 0;
-            }
-
-            return state;
         }
 
         /// <summary>

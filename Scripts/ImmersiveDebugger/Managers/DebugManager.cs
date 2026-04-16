@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using Meta.XR.ImmersiveDebugger.UserInterface;
 using Meta.XR.ImmersiveDebugger.Utils;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -53,9 +54,11 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         private const float RetrievalIntervalInSec = 1.0f;
         private float _lastRetrievedTime;
         private readonly OVRSampledEventSender _frameUpdateRecorder = new(
-            Telemetry.MarkerId.FrameUpdate,
             0.1f,
-            marker => marker.AddPlayModeOrigin()
+            Telemetry.FalcoEventName.FrameUpdate,
+            true,
+            OVRPlugin.ProductType.ImmersiveDebugger,
+            eventData => eventData.AddPlayModeOrigin()
             );
 
         public IDebugUIPanel UiPanel { get; private set; }
@@ -65,6 +68,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             Instance = this;
             InstanceCache.OnCacheChangedForTypeEvent += ProcessLoadedTypeBySubManagers;
             InstanceCache.OnInstanceRemoved += UnregisterInspector;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
         private void Start()
@@ -103,6 +107,12 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         private void OnDestroy()
         {
             AssemblyParser.Unregister(InstanceCache.RegisterClassTypes);
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        }
+
+        private void OnSceneUnloaded(Scene scene)
+        {
+            ShouldRetrieveInstances = true;
         }
 
         private void Update()

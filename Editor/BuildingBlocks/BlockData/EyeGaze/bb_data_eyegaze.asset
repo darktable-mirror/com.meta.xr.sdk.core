@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 97dca17360f5b2a42ba159835181cd60, type: 3}
   m_Name: bb_data_eyegaze
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: f92445a7-db19-452c-8d3d-96820f6c8972
   version: 1
   blockName: Eye Gaze
@@ -23,7 +23,8 @@ MonoBehaviour:
     - name: Core
     - name: Quest Pro Only
     - name: Tracking
-  thumbnail: {fileID: 2800000, guid: 3aba4c4778b69ce4397e3883bbfb9c65, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 33004525982527510
   order: -6
   prefab: {fileID: 381618635065875269, guid: cd20efabdb0a60745a5015c0d733df31, type: 3}
   externalBlockDependencies: []

@@ -81,7 +81,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             base.OnVisibilityChanged();
             if (Visibility && _proxyCameraRig.Refresh())
             {
-                UpdateTransform(true, true);
+                var shouldRecenter = RuntimeSettings.Instance.RecenterOnToggle;
+                UpdateTransform(shouldRecenter, shouldRecenter);
             }
         }
 

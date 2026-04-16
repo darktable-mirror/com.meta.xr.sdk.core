@@ -37,7 +37,9 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _hapticsClip = null;
         }
 
+#pragma warning disable CS0618
         private static OVRHapticsClip _hapticsClip;
+
         private static OVRHapticsClip HapticsClip
         {
             get
@@ -50,6 +52,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 return _hapticsClip ??= new OVRHapticsClip(new byte[5] { 10, 20, 40, 60, 40 }, 5);
             }
         }
+#pragma warning restore CS0618
 
         protected Canvas _canvas;
         private CanvasScaler _canvasScaler;
@@ -61,6 +64,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         protected ImageStyle _backgroundStyle;
 
         private Vector3 _sphericalCoordinates = new Vector3(1, 0, 0);
+
         /// <summary>
         /// The spherical coordinates of the panel. As the panel is using the cylinder overlay shape
         /// for a curved panel effect, this coordinates would be converted to actual position of the panel on the overlay canvas.
@@ -71,10 +75,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             set
             {
                 _sphericalCoordinates = value;
-                var position = SphericalToCartesian(_sphericalCoordinates.x, _sphericalCoordinates.y, _sphericalCoordinates.z);
+                var position = SphericalToCartesian(_sphericalCoordinates.x, _sphericalCoordinates.y,
+                    _sphericalCoordinates.z);
                 SetPosition(position);
             }
         }
+
         internal Interface Interface => (Owner as Interface);
 
 
@@ -110,7 +116,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Initialised = true;
         }
 
-        protected void SetExpectedPixelsPerUnit(float pixelsPerUnit, float dynamicPixelsPerUnit, float referencePixelsPerUnit)
+        protected void SetExpectedPixelsPerUnit(float pixelsPerUnit, float dynamicPixelsPerUnit,
+            float referencePixelsPerUnit)
         {
             PixelsPerUnit = pixelsPerUnit;
             _canvasScaler.dynamicPixelsPerUnit = dynamicPixelsPerUnit;

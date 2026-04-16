@@ -19,8 +19,10 @@
  */
 
 using System.Collections.Generic;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -31,6 +33,7 @@ namespace Meta.XR.Editor.UserInterface
         private readonly Dictionary<string, ChatItem> _chatItemsMap = new();
         private readonly GUILayoutOption[] _options;
         private readonly GUIStyle _style;
+        private UnityEngine.UIElements.ScrollView _scrollView;
 
         public ChatBox(GUIStyle style = null, params GUILayoutOption[] options)
         {
@@ -89,5 +92,68 @@ namespace Meta.XR.Editor.UserInterface
         }
 
         public bool Hide { get; set; }
+
+        public VisualElement Get()
+        {
+            if (_scrollView != null)
+                return _scrollView;
+
+            _scrollView = new UnityEngine.UIElements.ScrollView(ScrollViewMode.Vertical);
+            _scrollView.AddToClassList(Props.Flexbox.Column);
+
+            _scrollView.style.paddingBottom = RLDS.Styles.Spacing.SpaceMD;
+            _scrollView.style.paddingLeft = RLDS.Styles.Spacing.SpaceMD;
+            _scrollView.style.paddingRight = RLDS.Styles.Spacing.SpaceMD;
+            _scrollView.style.paddingTop = RLDS.Styles.Spacing.SpaceMD;
+
+            var contentContainer = new VisualElement();
+            contentContainer.AddToClassList(Props.Flexbox.Column);
+            contentContainer.style.flexGrow = 1;
+
+            foreach (var chatItem in _chatItems)
+            {
+                var itemElement = chatItem.Get();
+                if (itemElement != null)
+                {
+                    contentContainer.Add(itemElement);
+
+                    var spacer = new AddSpace(RLDS.Styles.Spacing.SpaceSM);
+                    contentContainer.Add(spacer.Get());
+                }
+            }
+
+            _scrollView.Add(contentContainer);
+
+            return _scrollView;
+        }
+
+        /// <summary>
+        /// Refresh <see cref="ChatItem"/> component(s) in chat box
+        /// </summary>
+        public void Refresh()
+        {
+            if (_scrollView == null)
+                return;
+
+            _scrollView.Clear();
+
+            var contentContainer = new VisualElement();
+            contentContainer.AddToClassList(Props.Flexbox.Column);
+            contentContainer.style.flexGrow = 1;
+
+            foreach (var chatItem in _chatItems)
+            {
+                var itemElement = chatItem.Get();
+                if (itemElement != null)
+                {
+                    contentContainer.Add(itemElement);
+
+                    var spacer = new AddSpace(RLDS.Styles.Spacing.SpaceSM);
+                    contentContainer.Add(spacer.Get());
+                }
+            }
+
+            _scrollView.Add(contentContainer);
+        }
     }
 }

@@ -22,7 +22,9 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
@@ -213,6 +215,8 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         }
 
         private static Texture2D _cachedEncodeTex;
+        private static Texture2D _cachedAsyncTex;
+        private static RenderTexture _downscaleRT;
 
         /// <summary>
         /// Resets static caches on domain reload to prevent memory leaks.
@@ -225,6 +229,17 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 Destroy(_cachedEncodeTex);
                 _cachedEncodeTex = null;
             }
+            if (_cachedAsyncTex != null)
+            {
+                Destroy(_cachedAsyncTex);
+                _cachedAsyncTex = null;
+            }
+            if (_downscaleRT != null)
+            {
+                _downscaleRT.Release();
+                Destroy(_downscaleRT);
+                _downscaleRT = null;
+            }
         }
 
         /// <summary>
@@ -235,6 +250,10 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         /// <strong>Thread Safety:</strong> This method is NOT thread-safe. It should only be called from the main Unity thread
         /// as it accesses Unity's rendering APIs and uses a shared static texture cache.
         /// </para>
+        /// <para>
+        /// <strong>Performance Note:</strong> This method uses synchronous GPU readback which blocks the main thread.
+        /// For better performance, consider using <see cref="EncodeTextureToJpegAsync"/> which uses async GPU readback.
+        /// </para>
         /// </summary>
         /// <param name="src">Source texture to encode.</param>
         /// <param name="quality">JPEG quality (1-100). Default is 75.</param>
@@ -243,9 +262,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         {
             if (!src) throw new ArgumentNullException(nameof(src), "Source texture cannot be null.");
 
-            const int defaultQuality = 75;
             quality = Mathf.Clamp(quality, 1, 100);
-            if (quality == 0) quality = defaultQuality;
 
             if (_cachedEncodeTex == null || _cachedEncodeTex.width != src.width || _cachedEncodeTex.height != src.height)
             {
@@ -275,10 +292,105 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         }
 
         /// <summary>
+        /// Encodes a texture to JPEG format using asynchronous GPU readback.
+        /// This method does NOT block the main thread while reading GPU data.
+        /// Introduces 1-2 frame latency but provides smoother frame times.
+        /// Reuses cached Texture2D to minimize GC allocations.
+        /// </summary>
+        /// <param name="src">Source texture to encode.</param>
+        /// <param name="maxResolution">Maximum width/height. Image will be downscaled if larger, preserving aspect ratio. Use 0 for no downscaling.</param>
+        /// <returns>Task that completes with JPEG byte array, or null if capture fails.</returns>
+        internal static Task<byte[]> EncodeTextureToJpegAsync(Texture src, int maxResolution = 0)
+        {
+            if (!src) throw new ArgumentNullException(nameof(src), "Source texture cannot be null.");
+
+            // Calculate target dimensions with optional downscaling
+            int width = src.width;
+            int height = src.height;
+
+            if (maxResolution > 0 && (width > maxResolution || height > maxResolution))
+            {
+                float scale = Mathf.Min((float)maxResolution / width, (float)maxResolution / height);
+                width = Mathf.Max(1, Mathf.RoundToInt(width * scale));
+                height = Mathf.Max(1, Mathf.RoundToInt(height * scale));
+            }
+
+            var tcs = new TaskCompletionSource<byte[]>();
+
+            // Use downscale RT if we need to resize, otherwise use temporary RT
+            RenderTexture rt;
+            if (width != src.width || height != src.height)
+            {
+                // Reuse downscale RT if same size
+                if (_downscaleRT == null || _downscaleRT.width != width || _downscaleRT.height != height)
+                {
+                    if (_downscaleRT != null)
+                    {
+                        _downscaleRT.Release();
+                        Destroy(_downscaleRT);
+                    }
+                    _downscaleRT = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
+                    _downscaleRT.Create();
+                }
+                rt = _downscaleRT;
+                Graphics.Blit(src, rt);
+            }
+            else
+            {
+                rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
+                Graphics.Blit(src, rt);
+            }
+
+            var isTemporaryRT = (rt != _downscaleRT);
+            var capturedWidth = width;
+            var capturedHeight = height;
+
+            AsyncGPUReadback.Request(rt, 0, TextureFormat.RGBA32, request =>
+            {
+                if (isTemporaryRT)
+                {
+                    RenderTexture.ReleaseTemporary(rt);
+                }
+
+                if (request.hasError)
+                {
+                    tcs.TrySetResult(null);
+                    return;
+                }
+
+                try
+                {
+                    // Reuse cached texture to avoid GC allocations
+                    if (_cachedAsyncTex == null || _cachedAsyncTex.width != capturedWidth || _cachedAsyncTex.height != capturedHeight)
+                    {
+                        if (_cachedAsyncTex != null)
+                        {
+                            Destroy(_cachedAsyncTex);
+                        }
+                        _cachedAsyncTex = new Texture2D(capturedWidth, capturedHeight, TextureFormat.RGBA32, false);
+                    }
+
+                    _cachedAsyncTex.LoadRawTextureData(request.GetData<byte>());
+                    _cachedAsyncTex.Apply(false, false);
+
+                    var jpg = _cachedAsyncTex.EncodeToJPG();
+                    tcs.TrySetResult(jpg);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[AIProviderBase] Async JPEG encoding failed: {ex.Message}");
+                    tcs.TrySetResult(null);
+                }
+            });
+
+            return tcs.Task;
+        }
+
+        /// <summary>
         /// Shared prediction structure for object detection results.
         /// </summary>
         [Serializable]
-        protected internal class ObjectDetectionPrediction
+        public class ObjectDetectionPrediction
         {
             public float score;
             public string label;

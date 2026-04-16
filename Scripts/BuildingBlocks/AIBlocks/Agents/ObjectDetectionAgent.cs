@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-using System.Buffers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine.Events;
@@ -81,9 +80,6 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     /// </remarks>
     public class ObjectDetectionAgent : MonoBehaviour
     {
-        private const int DefaultBatchCapacity = 32;
-        private const int DefaultJpegQuality = 70;
-
         [Header("Provider")]
         [Tooltip("Provider asset that implements IObjectDetectionTask.")]
         [SerializeField] internal AIProviderBase providerAsset;
@@ -93,6 +89,20 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         [Tooltip("Run detection every N frames to reduce computational load. Set to 0 to disable automatic inference (manual triggering only). Higher values = better performance but less frequent updates.")]
         [SerializeField, Range(0, 120)] private int detectEveryNFrames = 1;
+
+        [Tooltip("Maximum resolution (width or height) for captured images before sending to inference. Lower values reduce GC allocations and improve performance. Set to 0 for no downscaling. Recommended: 640 for fast inference, 1280 for higher accuracy.")]
+        [SerializeField] private int captureMaxResolution = 640;
+
+        /// <summary>
+        /// Gets or sets the maximum capture resolution for inference.
+        /// </summary>
+        public int CaptureMaxResolution
+        {
+            get => captureMaxResolution;
+            set => captureMaxResolution = value;
+        }
+
+        private const int DefaultBatchCapacity = 32;
 
 #if MRUK_INSTALLED
         /// <summary>
@@ -186,24 +196,44 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 _depth?.RequestDepthSample();
 
                 var src = _cam.GetTexture();
+                var originalWidth = src.width;
+                var originalHeight = src.height;
                 AIProviderBase.ObjectDetectionPrediction[] predictions = null;
+                float scaleX = 1f;
+                float scaleY = 1f;
 
                 if (_unityProvider)
                 {
 #if UNITY_INFERENCE_INSTALLED
-                    var bin = await _unityProvider.DetectAsync(src);
-                    if (bin == null || bin.Length == 0)
+                    predictions = await _unityProvider.DetectAsync(src);
+                    if (predictions == null || predictions.Length == 0)
                     {
                         return;
                     }
-                    predictions = AIProviderBase.DecodeBinaryDetections(bin);
 #else
                     throw new InvalidOperationException("[ObjectDetectionAgent] Unity Inference Engine package is not installed but UnityInferenceEngineProvider is being used.");
 #endif
                 }
                 else
                 {
-                    var bytes = AIProviderBase.EncodeTextureToJpeg(src, DefaultJpegQuality);
+                    var encodedWidth = originalWidth;
+                    var encodedHeight = originalHeight;
+                    if (captureMaxResolution > 0 && (originalWidth > captureMaxResolution || originalHeight > captureMaxResolution))
+                    {
+                        float downscale = Mathf.Min((float)captureMaxResolution / originalWidth, (float)captureMaxResolution / originalHeight);
+                        encodedWidth = Mathf.Max(1, Mathf.RoundToInt(originalWidth * downscale));
+                        encodedHeight = Mathf.Max(1, Mathf.RoundToInt(originalHeight * downscale));
+                    }
+
+                    scaleX = (float)originalWidth / encodedWidth;
+                    scaleY = (float)originalHeight / encodedHeight;
+
+                    var bytes = await AIProviderBase.EncodeTextureToJpegAsync(src, captureMaxResolution);
+                    if (bytes == null)
+                    {
+                        return;
+                    }
+
                     var json = await _detector.DetectAsync(bytes);
                     if (!string.IsNullOrEmpty(json))
                     {
@@ -220,10 +250,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 foreach (var p in predictions)
                 {
                     if (p.score < minConfidence || p.box == null || p.box.Length < 4) continue;
+
                     _batch.Add(new BoxData
                     {
-                        position = new Vector3(p.box[0], p.box[1], 0),
-                        scale = new Vector3(p.box[2], p.box[3], 0),
+                        position = new Vector3(p.box[0] * scaleX, p.box[1] * scaleY, 0),
+                        scale = new Vector3(p.box[2] * scaleX, p.box[3] * scaleY, 0),
                         rotation = Quaternion.identity,
                         label = $"{p.label} {p.score:0.00}"
                     });

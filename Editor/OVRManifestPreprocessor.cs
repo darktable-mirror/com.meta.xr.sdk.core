@@ -68,7 +68,9 @@ public class OVRManifestPreprocessor : EditorWindow
     public static void OpenAndroidManifestToolWindow()
     {
         GetWindow(typeof(OVRManifestPreprocessor));
-        OVRPlugin.SendEvent("manifest_processor", "activated");
+        var evt = new OVRPlugin.UnifiedEventData("manifest_processor");
+        evt.SetMetadata("status", "activated");
+        evt.Send();
     }
 
     private void OnGUI()
@@ -209,6 +211,19 @@ public class OVRManifestPreprocessor : EditorWindow
     public static void UpdateAndroidManifest()
     {
         UpdateAndroidManifestInternal(silentMode: false);
+    }
+
+    public static bool IsManifestOutdated(out List<string> differenceFromShip)
+    {
+        if (!DoesAndroidManifestExist())
+        {
+            differenceFromShip = null;
+            return true;
+        }
+
+        differenceFromShip = new List<string>();
+        GetManifestDiff(StoreCompatibleSrcFilePathAbsolute, BuildManifestFilePathAbsolute, differenceFromShip);
+        return differenceFromShip.Count > 0;
     }
 
     private static void UpdateAndroidManifestInternal(bool silentMode)
@@ -932,24 +947,6 @@ public class OVRManifestPreprocessor : EditorWindow
             OVRPermissionsRequester.GetPermissionId(OVRPermissionsRequester.Permission.EyeTracking),
             eyeTrackingEntryNeeded,
             modifyIfFound);
-
-        //============================================================================
-        // Virtual Keyboard
-        var virtualKeyboardSupport = OVRProjectConfig.CachedProjectConfig.virtualKeyboardSupport;
-        bool virtualKeyboardEntryNeeded = OVRDeviceSelector.isTargetDeviceQuestFamily &&
-                                          (virtualKeyboardSupport != OVRProjectConfig.FeatureSupport.None);
-
-        AddOrRemoveTag(doc,
-            androidNamespaceURI,
-            "/manifest",
-            "uses-feature",
-            "com.oculus.feature.VIRTUAL_KEYBOARD",
-            virtualKeyboardEntryNeeded,
-            (virtualKeyboardSupport == OVRProjectConfig.FeatureSupport.Required)
-                ? true
-                : modifyIfFound, // If Required, we should override the current entry
-            prefix: "",
-            "required", (virtualKeyboardSupport == OVRProjectConfig.FeatureSupport.Required) ? "true" : "false");
 
         //============================================================================
         // Scene

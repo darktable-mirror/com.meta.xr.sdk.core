@@ -97,7 +97,8 @@ namespace Meta.XR.Editor.UPST.Notifications
 
             yield return new AddSpace(flexibleSpace: true);
 
-            var buttonLayout = new[] { GUILayout.Height(20f), GUILayout.Width(80f) };
+            var moreDetailsButtonLayout = new[] { GUILayout.Height(20f), GUILayout.Width(100f) };
+            var fixButtonLayout = new[] { GUILayout.Height(20f), GUILayout.Width(80f) };
             var highlightedButtonColor = Styles.Colors.LightMeta;
 
             yield return new Button(
@@ -110,9 +111,9 @@ namespace Meta.XR.Editor.UPST.Notifications
                         notificationData.CloseNotification();
                     }
                 },
-                buttonLayout);
+                moreDetailsButtonLayout);
 
-            var canFix = notificationData.TaskList.Any(task => task.FixAction != null);
+            var canFix = notificationData.TaskList.Any(task => task.FixAction != null || task.AsyncFixAction != null);
 
             if (canFix)
             {
@@ -122,22 +123,19 @@ namespace Meta.XR.Editor.UPST.Notifications
                         Content = new GUIContent(notificationData.TaskList.Count == 1 ? "Fix" : "Fix All"),
                         Action = () => FixAvailableTasks(notificationData),
                         BackgroundColor = highlightedButtonColor
-                    }, buttonLayout
+                    }, fixButtonLayout
                 );
             }
         }
 
         private static void FixAvailableTasks(UPSTNotificationData notificationData)
         {
-            foreach (var task in notificationData.TaskList)
-            {
-                if (task.FixAction == null)
-                {
-                    continue;
-                }
+            var tasksToFix = new HashSet<OVRConfigurationTask>(notificationData.TaskList);
 
-                task.Fix(notificationData.BuildTargetGroup);
-            }
+            OVRProjectSetup.FixTasks(
+                notificationData.BuildTargetGroup,
+                tasks => tasks.Where(task => tasksToFix.Contains(task)).ToList(),
+                blocking: false);
 
             notificationData.CloseNotification();
         }

@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using Meta.XR.Samples.Telemetry;
 using UnityEngine;
 
@@ -72,7 +73,7 @@ namespace Meta.XR.Samples
         {
             if (Application.isPlaying)
             {
-                SendEvent(SampleTelemetryEvents.EventTypes.Run);
+                SendRunEvent();
             }
             else
             {
@@ -80,29 +81,54 @@ namespace Meta.XR.Samples
                 if (!_scriptReloaded)
 #endif
                 {
-                    SendEvent(SampleTelemetryEvents.EventTypes.Open);
+                    SendOpenEvent();
                 }
             }
         }
 
         public void OnEditorShutdown()
         {
-            SendEvent(SampleTelemetryEvents.EventTypes.Close);
+            SendCloseEvent();
         }
 
-        private void SendEvent(int eventType)
+        private void SendOpenEvent()
+        {
+            SendEvent(SampleTelemetryEvents.EventTypes.Open,
+                SampleTelemetryEvents.EventTypes.OpenFalcoEventName,
+                OVRPlugin.ProductType.Editor);
+        }
+
+        private void SendCloseEvent()
+        {
+            SendEvent(SampleTelemetryEvents.EventTypes.Close,
+                SampleTelemetryEvents.EventTypes.CloseFalcoEventName,
+                OVRPlugin.ProductType.Editor);
+        }
+
+        private void SendRunEvent()
+        {
+            SendEvent(SampleTelemetryEvents.EventTypes.Run,
+                SampleTelemetryEvents.EventTypes.RunFalcoEventName,
+                OVRPlugin.ProductType.Editor);
+        }
+
+        private void SendEvent(int eventType, string falcoEventName, OVRPlugin.ProductType productType)
         {
             var timeSpent = Time.realtimeSinceStartup - _timestampOpen;
-            OVRTelemetry.Start(eventType)
-                .AddAnnotation(SampleTelemetryEvents.AnnotationTypes.Sample, gameObject.scene.name)
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(falcoEventName)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = productType
+            };
+            unifiedEvent.SetMetadata(SampleTelemetryEvents.AnnotationTypes.Sample, gameObject.scene.name);
 #if UNITY_EDITOR
-                .AddAnnotation(SampleTelemetryEvents.AnnotationTypes.BuildTarget, EditorUserBuildSettings.selectedBuildTargetGroup.ToString())
+            unifiedEvent.SetMetadata(SampleTelemetryEvents.AnnotationTypes.BuildTarget, EditorUserBuildSettings.selectedBuildTargetGroup.ToString());
 #endif
-                .AddAnnotation(SampleTelemetryEvents.AnnotationTypes.RuntimePlatform, Application.platform.ToString())
-                .AddAnnotation(SampleTelemetryEvents.AnnotationTypes.InEditor, Application.isEditor.ToString())
-                .AddAnnotation(SampleTelemetryEvents.AnnotationTypes.TimeSinceEditorStart, Time.realtimeSinceStartup.ToString("F0"))
-                .AddAnnotation(SampleTelemetryEvents.AnnotationTypes.TimeSpent, timeSpent.ToString("F0"))
-                .Send();
+            unifiedEvent.SetMetadata(SampleTelemetryEvents.AnnotationTypes.RuntimePlatform, Application.platform.ToString());
+            unifiedEvent.SetMetadata(SampleTelemetryEvents.AnnotationTypes.InEditor, Application.isEditor.ToString());
+            unifiedEvent.SetMetadata(SampleTelemetryEvents.AnnotationTypes.TimeSinceEditorStart, Time.realtimeSinceStartup.ToString("F0"));
+            unifiedEvent.SetMetadata(SampleTelemetryEvents.AnnotationTypes.TimeSpent, timeSpent.ToString("F0"));
+            unifiedEvent.Send();
         }
     }
 }

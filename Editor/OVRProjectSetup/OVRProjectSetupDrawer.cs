@@ -136,10 +136,36 @@ internal class OVRProjectSetupDrawer
                 fixedHeight = SmallIconSize
             };
 
+            internal readonly GUIStyle LargeIconStyle = new GUIStyle(EditorStyles.label)
+            {
+                margin = new RectOffset(0, 8, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                fixedWidth = IconSize,
+                fixedHeight = IconSize,
+                alignment = TextAnchor.MiddleCenter
+            };
+
             internal readonly GUIStyle SubtitleHelpText = new GUIStyle(EditorStyles.miniLabel)
             {
                 margin = new RectOffset(10, 0, 0, 0),
                 wordWrap = true
+            };
+
+            internal readonly GUIStyle StatusSubtitle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                wordWrap = true,
+                fontStyle = FontStyle.Italic
+            };
+
+            internal readonly GUIStyle StatusTitle = new GUIStyle(EditorStyles.label)
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                stretchWidth = true,
+                wordWrap = false,
+                fontStyle = FontStyle.Bold
             };
 
             internal readonly GUIStyle NormalStyle = new GUIStyle(EditorStyles.label)
@@ -399,24 +425,54 @@ internal class OVRProjectSetupDrawer
         var enabled = OVRProjectSetup.Enabled.Value;
         using (new EditorGUI.DisabledScope(!enabled))
         {
-            // Summary
-            using (new EditorGUILayout.HorizontalScope())
+            var isComputing = OVRProjectSetup.ProcessorQueue.BusyWith(OVRConfigurationTaskProcessor.ProcessorType.Updater);
+
+            using (new EditorGUILayout.VerticalScope(Meta.XR.Editor.UserInterface.Styles.GUIStyles.OverviewNoticeBox))
             {
-                GUILayout.Label(SummaryLabel, Styles.GUIStyles.NormalStyle);
-                if (enabled)
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    var (icon, color) = OVRConfigurationTask.GetTaskIcon(_lastSummary?.HighestFixLevel);
-                    using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, color))
+                    if (enabled)
                     {
-                        GUILayout.Label(icon, Styles.GUIStyles.InlinedIconStyle);
+                        var buildTargetGroup = _selectedBuildTargetGroup != BuildTargetGroup.Unknown
+                            ? _selectedBuildTargetGroup
+                            : EditorUserBuildSettings.selectedBuildTargetGroup;
+                        var status = OVRProjectSetupStatus.ComputeStatus(buildTargetGroup);
+
+                        var highestLevel = isComputing ? _lastSummary?.HighestFixLevel : status.HighestFixLevel;
+                        var (icon, color) = OVRConfigurationTask.GetTaskIcon(highestLevel);
+
+                        using (new Utils.ColorScope(Utils.ColorScope.Scope.Content, color))
+                        {
+                            GUILayout.Label(icon, Styles.GUIStyles.LargeIconStyle);
+                        }
+
+                        using (new EditorGUILayout.VerticalScope())
+                        {
+                            var platform = _selectedBuildTargetGroup != BuildTargetGroup.Unknown
+                                ? _selectedBuildTargetGroup.ToString()
+                                : EditorUserBuildSettings.selectedBuildTargetGroup.ToString();
+                            var statusText = isComputing ? "Computing..." : OVRProjectSetupStatus.ComputeStatusMessage(status);
+                            GUILayout.Label($"{platform}: {statusText}", Styles.GUIStyles.StatusTitle);
+
+                            if (!isComputing)
+                            {
+                                var subtitleText = OVRProjectSetupStatus.ComputeSubtitleMessage(status);
+                                GUILayout.Label(subtitleText, Styles.GUIStyles.StatusSubtitle);
+                            }
+                            else
+                            {
+                                GUILayout.Label("Analyzing project configuration...", Styles.GUIStyles.StatusSubtitle);
+                            }
+                        }
                     }
-                    GUILayout.Label(_lastSummary?.ComputeNoticeMessage() ?? "", Styles.GUIStyles.BoldStyle);
-                }
-                else
-                {
-                    GUILayout.Label($"{OVRProjectSetupUtils.ProjectSetupToolPublicName} is disabled", Styles.GUIStyles.BoldStyle);
+                    else
+                    {
+                        GUILayout.Label($"{OVRProjectSetupUtils.ProjectSetupToolPublicName} is disabled", Styles.GUIStyles.StatusTitle);
+                    }
                 }
             }
+
+            EditorGUILayout.Space();
 
             // Checklist
             using (var buildTargetSelection = new BuildTargetSelectionScope())
@@ -544,7 +600,7 @@ internal class OVRProjectSetupDrawer
             {
                 if (fixAllButton)
                 {
-                    if (tasks.Any(task => task.FixAction != null))
+                    if (tasks.Any(task => task.FixAction != null || task.AsyncFixAction != null))
                     {
                         var content = tasks[0].Level.GetValue(buildTargetGroup) == OVRProjectSetup.TaskLevel.Required
                             ? FixAllButtonContent
@@ -624,7 +680,7 @@ internal class OVRProjectSetupDrawer
         try
         {
             OVRProjectSetup.UpdateTasks(buildTargetGroup, logMessages: OVRProjectSetup.LogMessages.Disabled,
-                blocking: true);
+                blocking: true, bypassCooldown: true);
             EditorUtility.DisplayDialog(SuccessTitle, TasksRefreshSuccessMessage, OkButton);
         }
         catch (Exception e)

@@ -104,8 +104,8 @@ namespace Meta.XR.Guides.Editor.About
         private void InitializeWindow(GuideWindow window)
         {
             _window = window;
-            _window.AddAdditionalTelemetryAnnotations = marker =>
-                marker.AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasNewVersionAvailable,
+            _window.AddAdditionalUnifiedEventMetadata = unifiedEvent =>
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasNewVersionAvailable,
                     About.Version < About.LatestVersion);
         }
 

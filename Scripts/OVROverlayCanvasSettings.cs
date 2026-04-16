@@ -93,7 +93,13 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
 
         EditorUtility.SetDirty(settings);
     }
+
+    private void OnValidate()
+    {
+        EnsureInitialized();
+    }
 #endif
+
 
     private static OVROverlayCanvasSettings GetOverlayCanvasSettings()
     {
@@ -152,7 +158,14 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
         var s = Shader.Find(shaderName);
         if (s == null)
         {
-            Debug.LogError($"Failed to find shader \"{shaderName}\"");
+#if UNITY_EDITOR
+            // Don't log error during editor startup when shaders might not be indexed yet.
+            // OnValidate will be called again later when shaders are available.
+            if (!EditorApplication.isCompiling && !EditorApplication.isUpdating)
+#endif
+            {
+                Debug.LogError($"Failed to find shader \"{shaderName}\"");
+            }
             return;
         }
         shader = s;
@@ -173,10 +186,5 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
             ref _transparentImposterShader,
             useBuiltInShaders ? kBuiltInTransparentShaderName : kUrpTransparentShaderName,
             useBuiltInShaders ? kUrpTransparentShaderName : kBuiltInTransparentShaderName);
-    }
-
-    private void OnValidate()
-    {
-        EnsureInitialized();
     }
 }

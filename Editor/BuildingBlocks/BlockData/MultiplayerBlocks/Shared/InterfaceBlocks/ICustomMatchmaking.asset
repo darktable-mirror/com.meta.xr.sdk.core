@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: ICustomMatchmaking
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: c5bea02f-8079-4142-87f9-56da5993f861
   version: 1
   blockName: Custom Matchmaking
@@ -20,7 +20,8 @@ MonoBehaviour:
   tags:
     array:
     - name: Multiplayer
-  thumbnail: {fileID: 2800000, guid: 57b03d0a194a60e439ec9b413a2148ad, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 25404303199231746
   order: 0
   prefab: {fileID: 0}
   externalBlockDependencies: []

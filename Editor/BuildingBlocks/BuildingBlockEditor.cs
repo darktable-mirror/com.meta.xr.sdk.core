@@ -143,6 +143,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         }
 
+
         private void ShowModifiableComponentsWithAttributes(
             IEnumerable<BlocksContentManager.BlockModifiableProperty> modifiableProperties)
         {

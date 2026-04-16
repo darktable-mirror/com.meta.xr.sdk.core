@@ -20,11 +20,17 @@
 
 using Meta.XR.Editor.Id;
 using UnityEngine;
+using UnityEngine.UIElements;
+using Cursor = UnityEngine.UIElements.Cursor;
 
 namespace Meta.XR.Editor.UserInterface
 {
     internal class LinkLabel : IUserInterfaceItem
     {
+        private VisualElement _visualElement;
+        private readonly string _typography;
+        private UnityEngine.UIElements.Label _uiLabel;
+
         public bool Hide { get; set; }
         public LinkDescription LinkDescription { get; }
 
@@ -47,9 +53,12 @@ namespace Meta.XR.Editor.UserInterface
             _options = options;
         }
 
-        public virtual void Draw()
-        {
-            LinkDescription.Draw();
-        }
+        public virtual void Draw() => LinkDescription.Draw();
+
+        /// <summary>
+        /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
+        /// </summary>
+        /// <returns>A VisualElement containing the styled clickable link label</returns>
+        public VisualElement Get() => new IMGUIContainer(Draw);
     }
 }

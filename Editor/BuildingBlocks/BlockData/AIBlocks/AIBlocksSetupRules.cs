@@ -49,7 +49,6 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
             RegisterInferencePackageNamespaceTask();
 #if UNITY_INFERENCE_INSTALLED
             RegisterProviderProfileContentTask();
-            RegisterUnityInferenceEngineNmsShaderTask();
 #endif // UNITY_INFERENCE_INSTALLED
             RegisterAgentProfileTask();
             RegisterProviderFieldValidationTask();
@@ -108,48 +107,6 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 asyncFix: _ => FixBlocksWithMissingContent(),
                 fixMessage: $"Install the {nameof(UnityInferenceEngineProvider)}'s runtime model and required files"
             );
-        }
-
-        private static void RegisterUnityInferenceEngineNmsShaderTask()
-        {
-            OVRProjectSetup.AddTask(
-                level: OVRProjectSetup.TaskLevel.Required,
-                group: OVRProjectSetup.TaskGroup.Features,
-                isDone: _ => AreAllUnityInferenceEngineNmsShadersAssigned(),
-                message: $"The {nameof(UnityInferenceEngineProvider)} in Object Detection mode requires an NMS Compute Shader",
-                fix: _ => AutoAssignNmsShaders(),
-                fixMessage: "Auto-assign NMS Compute Shader to Unity Inference Engine providers"
-            );
-        }
-
-        private static bool AreAllUnityInferenceEngineNmsShadersAssigned()
-        {
-            return !GetUnityInferenceEngineProvidersWithMissingNmsShader().Any();
-        }
-
-        private static IEnumerable<UnityInferenceEngineProvider> GetUnityInferenceEngineProvidersWithMissingNmsShader()
-        {
-            return GetProviderProfiles()
-                .OfType<UnityInferenceEngineProvider>()
-                .Where(profile => profile.mode == UnityInferenceProviderMode.ObjectDetection && profile.nmsShader == null);
-        }
-
-        private static void AutoAssignNmsShaders()
-        {
-            var nmsShader = Resources.Load<ComputeShader>("NMSCompute");
-            if (nmsShader == null)
-            {
-                Debug.LogWarning("[AIBlocksSetupRules] NMSCompute shader not found in Resources folder. Please assign it manually.");
-                return;
-            }
-
-            foreach (var provider in GetUnityInferenceEngineProvidersWithMissingNmsShader())
-            {
-                provider.nmsShader = nmsShader;
-                EditorUtility.SetDirty(provider);
-            }
-
-            AssetDatabase.SaveAssets();
         }
 
         private static bool IsProviderProfileContentComplete()
@@ -214,6 +171,11 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 .Where(agent => agent.providerAsset == null)
                 .Cast<Component>();
 
+            var missingImageSegmentationAgents = XR.BuildingBlocks.Editor.Utils
+                .GetBlocksWithType<ImageSegmentationAgent>()
+                .Where(agent => agent.providerAsset == null)
+                .Cast<Component>();
+
             var missingLlmAgents = XR.BuildingBlocks.Editor.Utils
                 .GetBlocksWithType<LlmAgent>()
                 .Where(agent => agent.providerAsset == null)
@@ -230,6 +192,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 .Cast<Component>();
 
             return missingObjectDetectionAgents
+                .Concat(missingImageSegmentationAgents)
                 .Concat(missingLlmAgents)
                 .Concat(missingSttAgents)
                 .Concat(missingTtsAgents);
@@ -244,7 +207,6 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 { "LlamaAPI", typeof(LlamaApiProvider) },
                 { "Ollama", typeof(OllamaProvider) },
                 { "OpenAI", typeof(OpenAIProvider) },
-                { "Replicate", typeof(ReplicateProvider) },
 #if UNITY_INFERENCE_INSTALLED
                 { "UnityInferenceEngine", typeof(UnityInferenceEngineProvider) }
 #endif // UNITY_INFERENCE_INSTALLED
@@ -253,16 +215,6 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
             if (providerTypeMap.TryGetValue(providerName, out var type))
             {
                 var provider = (AIProviderBase)ScriptableObject.CreateInstance(type);
-
-#if UNITY_INFERENCE_INSTALLED
-                if (provider is UnityInferenceEngineProvider uieProvider)
-                {
-                    if (uieProvider.nmsShader == null)
-                    {
-                        uieProvider.nmsShader = Resources.Load<ComputeShader>("NMSCompute");
-                    }
-                }
-#endif
 
                 return provider;
             }
@@ -313,6 +265,9 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
             {
                 case ObjectDetectionAgent detectionAgent:
                     detectionAgent.providerAsset = providerProfile;
+                    break;
+                case ImageSegmentationAgent segmentationAgent:
+                    segmentationAgent.providerAsset = providerProfile;
                     break;
                 case LlmAgent llmAgent:
                     llmAgent.providerAsset = providerProfile;
@@ -405,7 +360,6 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 typeof(LlamaApiProvider),
                 typeof(OllamaProvider),
                 typeof(OpenAIProvider),
-                typeof(ReplicateProvider),
 #if UNITY_INFERENCE_INSTALLED
                 typeof(UnityInferenceEngineProvider)
 #endif
@@ -478,6 +432,10 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 {
                     interfaceType = typeof(IObjectDetectionTask);
                 }
+                else if (prefabContents.GetComponent<ImageSegmentationAgent>() != null)
+                {
+                    interfaceType = typeof(IImageSegmentationTask);
+                }
                 else if (prefabContents.GetComponent<LlmAgent>() != null)
                 {
                     interfaceType = typeof(IChatTask);
@@ -529,15 +487,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                     nameof(LlamaApiProvider.model)
                 },
                 OllamaProvider => new[] { nameof(OllamaProvider.host), nameof(OllamaProvider.model) },
-                OpenAIProvider => new[]
-                    { nameof(OpenAIProvider.apiKey), nameof(OpenAIProvider.model), nameof(OpenAIProvider.apiRoot) },
-                ReplicateProvider => new[] { nameof(ReplicateProvider.apiKey), nameof(ReplicateProvider.modelId) },
-#if UNITY_INFERENCE_INSTALLED
-                UnityInferenceEngineProvider uie when uie.mode == UnityInferenceProviderMode.ObjectDetection => new[]
-                {
-                    nameof(UnityInferenceEngineProvider.nmsShader)
-                },
-#endif
+                OpenAIProvider => new[] { nameof(OpenAIProvider.apiKey), nameof(OpenAIProvider.model), nameof(OpenAIProvider.apiRoot) },
                 _ => Enumerable.Empty<string>()
             };
 
@@ -658,6 +608,10 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 .GetBlocksWithType<ObjectDetectionAgent>()
                 .Select(agent => agent.providerAsset);
 
+            var imageSegmentationProfiles = XR.BuildingBlocks.Editor.Utils
+                .GetBlocksWithType<ImageSegmentationAgent>()
+                .Select(agent => agent.providerAsset);
+
             var llmProfiles = XR.BuildingBlocks.Editor.Utils
                 .GetBlocksWithType<LlmAgent>()
                 .Select(agent => agent.providerAsset);
@@ -671,6 +625,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 .Select(agent => agent.providerAsset);
 
             return objectDetectionProfiles
+                .Concat(imageSegmentationProfiles)
                 .Concat(llmProfiles)
                 .Concat(sttProfiles)
                 .Concat(ttsProfiles);
@@ -739,11 +694,6 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                     openAIProvider.ttsOutputFormat = data.ttsFormat;
                     openAIProvider.ttsSpeed = data.speed;
                     openAIProvider.ttsInstructions = data.instructions;
-                    break;
-                case ReplicateProvider replicateProvider:
-                    replicateProvider.modelId = data.model;
-                    replicateProvider.supportsVision = data.supportsVision;
-                    replicateProvider.maxInlineBytes = data.maxInlineBytes;
                     break;
 #if UNITY_INFERENCE_INSTALLED
                 case UnityInferenceEngineProvider unityInferenceEngineProvider:

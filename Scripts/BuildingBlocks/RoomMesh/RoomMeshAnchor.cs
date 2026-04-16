@@ -136,7 +136,11 @@ public class RoomMeshAnchor : MonoBehaviour
         {
             var job = new BakeMeshJob
             {
+#if UNITY_6000_3_OR_NEWER
+                MeshID = _mesh.GetEntityId(),
+#else
                 MeshID = _mesh.GetInstanceID(),
+#endif
                 Convex = collider.convex
             }.Schedule();
             while (!IsJobDone(job))
@@ -272,7 +276,11 @@ public class RoomMeshAnchor : MonoBehaviour
     // to the collider.
     private struct BakeMeshJob : IJob
     {
+#if UNITY_6000_3_OR_NEWER
+        public UnityEngine.EntityId MeshID;
+#else
         public int MeshID;
+#endif
         public bool Convex;
 
         public void Execute() => Physics.BakeMesh(MeshID, Convex);

@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -101,38 +102,40 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
             var prepared = await PrepareRequestImagesAsync(req, SupportsVision, inlineRemoteImages, resolveRemoteRedirects, maxInlineBytes, ct);
 
-            var body = BuildChatPayload(modelId, prepared);
+            var useStreaming = stream != null;
+            var body = BuildChatPayload(modelId, prepared, useStreaming);
             var http = new HttpTransport(apiKey);
-            var raw = await http.PostJsonAsync(endpoint, body);
 
-            var text = ExtractAssistantText(raw);
-            stream?.Report(new ChatDelta(text ?? string.Empty));
-            return new ChatResponse(text ?? string.Empty, raw);
+            if (useStreaming)
+            {
+                var fullText = new StringBuilder();
+                var raw = await http.PostJsonStreamAsync(endpoint, body, new Progress<string>(chunk =>
+                {
+                    var tokens = StreamingParser.ParseSse(chunk, jsonData =>
+                    {
+                        var resp = StreamingParser.ParseJson<HFStreamResponse>(jsonData);
+                        return resp?.choices is { Length: > 0 } ? resp.choices[0]?.delta?.content : null;
+                    });
+
+                    foreach (var token in tokens)
+                    {
+                        fullText.Append(token);
+                        stream.Report(new ChatDelta(token));
+                    }
+                }), null, ct);
+
+                StreamingParser.ClearBuffers(0);
+                return new ChatResponse(fullText.ToString(), raw);
+            }
+            else
+            {
+                var raw = await http.PostJsonAsync(endpoint, body);
+                var text = ExtractAssistantText(raw);
+                return new ChatResponse(text ?? string.Empty, raw);
+            }
         }
 
-        /// <summary>
-        /// Runs object detection using a Hugging Face model and returns structured detections.
-        /// Handles tensor or JSON outputs depending on the model’s task definition.
-        /// </summary>
-        /// <param name="imageJpgOrPng">Encoded image data (e.g., JPG/PNG). Must be non-empty.</param>
-        /// <param name="ct">Cancellation token to abort pre-processing or HTTP.</param>
-        /// <returns>Normalized detection set (boxes, scores, class ids) for downstream visualization.</returns>
-        /// <remarks>
-        /// See <see cref="IObjectDetectionTask"/>. HF Tasks: https://huggingface.co/docs/inference-providers/tasks/object-detection
-        /// </remarks>
-        public async Task<string> DetectAsync(byte[] imageJpgOrPng, CancellationToken ct = default)
-        {
-            ValidateConfiguration(apiKey, model: modelId);
-            if (imageJpgOrPng == null || imageJpgOrPng.Length == 0) throw new ArgumentException("DetectAsync: empty image.");
-
-            var url = RawVisionEndpoint(modelId);
-            var http = new HttpTransport(apiKey);
-            var raw = await http.PostBinaryAsync(url, imageJpgOrPng, "image/jpeg");
-
-            return TransformDetections(raw);
-        }
-
-        private static string BuildChatPayload(string modelIdIn, ChatRequest req)
+        private static string BuildChatPayload(string modelIdIn, ChatRequest req, bool useStreaming = false)
         {
             var sb = new StringBuilder(256);
             sb.Append("{\"model\":\"").Append(modelIdIn)
@@ -150,8 +153,26 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 }
             }
 
-            sb.Append("]}],\"stream\":false}");
+            sb.Append("]}],\"stream\":").Append(useStreaming ? "true" : "false").Append("}");
             return sb.ToString();
+        }
+
+        [Serializable]
+        private class HFStreamDelta
+        {
+            public string content;
+        }
+
+        [Serializable]
+        private class HFStreamChoice
+        {
+            public HFStreamDelta delta;
+        }
+
+        [Serializable]
+        private class HFStreamResponse
+        {
+            public HFStreamChoice[] choices;
         }
 
         [Serializable] private class Msg { public string content; }
@@ -242,18 +263,50 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         }
 
         /// <summary>
+        /// Runs object detection using a Hugging Face model and returns structured detections.
+        /// Handles tensor or JSON outputs depending on the model's task definition.
+        /// </summary>
+        /// <param name="imageJpgOrPng">Encoded image data (e.g., JPG/PNG). Must be non-empty.</param>
+        /// <param name="ct">Cancellation token for HTTP.</param>
+        /// <returns>JSON-formatted detection array: [{"score":float, "label":string, "box":[xmin,ymin,xmax,ymax]}]</returns>
+        public async Task<string> DetectAsync(byte[] imageJpgOrPng, CancellationToken ct = default)
+        {
+            ValidateConfiguration(apiKey, endpoint, modelId);
+            if (imageJpgOrPng == null || imageJpgOrPng.Length == 0)
+            {
+                throw new ArgumentException("Image data is null or empty.", nameof(imageJpgOrPng));
+            }
+
+            var http = new HttpTransport(apiKey);
+            var rawJson = await http.PostBinaryAsync(endpoint, imageJpgOrPng, "image/jpeg");
+            return TransformDetections(rawJson);
+        }
+
+        /// <summary>
         /// Performs object detection on a RenderTexture by encoding it to JPEG and calling the byte[] overload.
         /// This provides compatibility with the IObjectDetectionTask interface while adapting to cloud providers.
         /// </summary>
         /// <param name="src">Source RenderTexture to analyze.</param>
         /// <param name="ct">Cancellation token for aborting the operation.</param>
-        /// <returns>UTF-8 encoded JSON string as byte array containing detection results.</returns>
-        public async Task<byte[]> DetectAsync(RenderTexture src, CancellationToken ct = default)
+        /// <returns>Array of predictions containing bounding boxes, scores, and class labels.</returns>
+        public async Task<AIProviderBase.ObjectDetectionPrediction[]> DetectAsync(RenderTexture src, CancellationToken ct = default)
         {
             if (!src) throw new ArgumentNullException(nameof(src));
+
             var jpg = EncodeTextureToJpeg(src);
             var json = await DetectAsync(jpg, ct);
-            return Encoding.UTF8.GetBytes(json ?? "[]");
+
+            if (string.IsNullOrEmpty(json))
+            {
+                return Array.Empty<AIProviderBase.ObjectDetectionPrediction>();
+            }
+
+            if (TryParseDetectionJson(json, out var predictions))
+            {
+                return predictions;
+            }
+
+            return Array.Empty<AIProviderBase.ObjectDetectionPrediction>();
         }
     }
 }

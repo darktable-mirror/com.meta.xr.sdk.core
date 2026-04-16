@@ -1424,7 +1424,14 @@ public partial class OVRSpatialAnchor : MonoBehaviour
                     // Fire callback if there are any new ones
                     if (unboundAnchorStartingIndex.HasValue)
                     {
-                        resultsHandler(unboundAnchors, unboundAnchorStartingIndex.Value);
+                        try
+                        {
+                            resultsHandler(unboundAnchors, unboundAnchorStartingIndex.Value);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                        }
                     }
                 });
 

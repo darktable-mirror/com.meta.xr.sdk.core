@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: IPlayerNameTag
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: 97a7e1ae-ac65-4ee6-9167-10b3b94782f6
   version: 1
   blockName: Player Name Tag
@@ -22,7 +22,8 @@ MonoBehaviour:
     - name: Multiplayer
     - name: UI
     - name: Prototyping
-  thumbnail: {fileID: 2800000, guid: db24c53695d934b4c8d3b67e240cc7cd, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 26335994379337379
   order: 0
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
@@ -31,7 +32,7 @@ MonoBehaviour:
   - 1d8db162-54f6-43df-b4ef-b499df1f6769
   - 40089589-8290-4ae3-a056-d9ca1ccaa35a
   - e47682b9-c270-40b1-b16d-90b627a5ce1b
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies:
   - com.meta.xr.sdk.platform
   isSingleton: 1

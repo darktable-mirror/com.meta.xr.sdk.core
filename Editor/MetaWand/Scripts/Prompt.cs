@@ -71,7 +71,10 @@ namespace Meta.XR.MetaWand.Editor
             for (var i = 0; i < Constants.SearchResultQueryCount; i++)
             {
                 var preGenKey = GetKey(i, true);
-                var contentPlaceholder = new ContentPlaceholder(Utils.GeneratorType.Mesh, showLodsSelector, preGenKey);
+                var contentPlaceholder = new ContentPlaceholder(Utils.GeneratorType.Mesh, showLodsSelector, preGenKey)
+                {
+                    ShowFeedbackButtons = AssetLibraryWindow.ShowFeedbackButtons
+                };
                 ContentPlaceholdersPreGenAssets.Add(contentPlaceholder);
                 _promptHandlers.Add(preGenKey, new PromptHandler(_apiManager, this, contentPlaceholder, true));
             }
@@ -90,7 +93,10 @@ namespace Meta.XR.MetaWand.Editor
             foreach (var asset in data.Assets)
             {
                 var key = GetKey(index++, asset.IsPreGen);
-                var contentPlaceholder = new ContentPlaceholder(GeneratorType, showLodsSelector, key);
+                var contentPlaceholder = new ContentPlaceholder(GeneratorType, showLodsSelector, key)
+                {
+                    ShowFeedbackButtons = AssetLibraryWindow.ShowFeedbackButtons
+                };
                 var promptHandler = new PromptHandler(_apiManager, this, contentPlaceholder, true);
 
                 ContentPlaceholdersPreGenAssets.Add(contentPlaceholder);
@@ -145,7 +151,7 @@ namespace Meta.XR.MetaWand.Editor
                 var promptHandler = _promptHandlers[key];
                 if (_showLodsSelector && (assets[i].asset_metas == null || assets[i].asset_metas.First().all_polycounts.Length < numberOfLods))
                 {
-                    ContentPlaceholdersPreGenAssets.RemoveAt(i);
+                    ContentPlaceholdersPreGenAssets.Remove(promptHandler.ContentPlaceholder);
                     _promptHandlers.Remove(key);
                     continue;
                 }
@@ -179,6 +185,7 @@ namespace Meta.XR.MetaWand.Editor
         private readonly MetaWandApiManager _apiManager;
         public Prompt Prompt { get; }
         private readonly ContentPlaceholder _contentPlaceholder;
+        internal ContentPlaceholder ContentPlaceholder => _contentPlaceholder;
         private Texture2D _previewImage;
         private bool _isPlaying;
 
@@ -201,6 +208,8 @@ namespace Meta.XR.MetaWand.Editor
             _contentPlaceholder = contentPlaceholder;
             _contentPlaceholder.OnAddToSceneButton += OnAddToSceneButton;
             _contentPlaceholder.OnErrorButton += OnErrorButton;
+            _contentPlaceholder.OnFeedbackThumbsUp += () => OnAssetFeedback(MetaWandApiManager.AssetResultFeedback.Like);
+            _contentPlaceholder.OnFeedbackThumbsDown += () => OnAssetFeedback(MetaWandApiManager.AssetResultFeedback.Dislike);
             _contentPlaceholder.SetPromptHandler(this);
             _assetHasLods = assetHasLods;
         }
@@ -227,7 +236,15 @@ namespace Meta.XR.MetaWand.Editor
 
             if (_assetHasLods)
             {
-                await FetchAndDownload(Asset.AssetId, Asset.Lods[_contentPlaceholder.SelectedLod]);
+                if (_contentPlaceholder.SelectedLod == 0)
+                {
+                    await FetchAndDownloadLodGroup(Asset.AssetId);
+                }
+                else
+                {
+                    var lodIndex = _contentPlaceholder.SelectedLod - 1;
+                    await FetchAndDownload(Asset.AssetId, Asset.Lods[lodIndex]);
+                }
             }
 
             _ = PrefabUtility.InstantiatePrefab(_savedPrefab) as GameObject;
@@ -275,6 +292,75 @@ namespace Meta.XR.MetaWand.Editor
             _contentPlaceholder.SetState(ContentState.Generated);
 
             await DownloadAsset();
+        }
+
+        private async Task FetchAndDownloadLodGroup(string assetId)
+        {
+            if (_contentPlaceholder.GetState() is ContentState.Downloading or ContentState.Requesting)
+            {
+                return;
+            }
+
+            var lodIndices = new[] { 1, 2, 3 };
+            var savedPrefabs = new List<GameObject>();
+
+            foreach (var lodIndex in lodIndices)
+            {
+                _contentPlaceholder.SelectedLodOverride = lodIndex + 1;
+                await FetchAndDownload(assetId, Asset.Lods[lodIndex]);
+
+                if (_contentPlaceholder.GetState() == ContentState.Error)
+                {
+                    _contentPlaceholder.SelectedLodOverride = null;
+                    return;
+                }
+
+                if (_savedPrefab != null)
+                {
+                    savedPrefabs.Add(_savedPrefab);
+                }
+            }
+
+            _contentPlaceholder.SelectedLodOverride = null;
+
+            if (savedPrefabs.Count == lodIndices.Length)
+            {
+                CreateLodGroupFromPrefabs(savedPrefabs);
+            }
+
+            _contentPlaceholder.SetState(ContentState.Downloaded, "", _previewImage);
+        }
+
+        private void CreateLodGroupFromPrefabs(List<GameObject> lodPrefabs)
+        {
+            var subDirName = Asset.AssetId;
+            var lodGroupObj = new GameObject(subDirName + "_LODGroup");
+            var lodGroup = lodGroupObj.AddComponent<LODGroup>();
+            var lods = new LOD[lodPrefabs.Count];
+            var lodScreenPercentages = new[] { 0.5f, 0.2f, 0.05f };
+
+            for (int i = 0; i < lodPrefabs.Count; i++)
+            {
+                var lodInstance = Object.Instantiate(lodPrefabs[i], lodGroupObj.transform);
+                lodInstance.name = "LOD" + i;
+
+                var renderer = lodInstance.GetComponentInChildren<Renderer>();
+                lods[i] = new LOD(lodScreenPercentages[i], renderer != null ? new[] { renderer } : Array.Empty<Renderer>());
+            }
+
+            lodGroup.SetLODs(lods);
+            lodGroup.RecalculateBounds();
+
+            var prefabPath = Path.Combine(_pathToPrefabs, subDirName, subDirName + "_LODGroup.prefab");
+            _savedPrefab = PrefabUtility.SaveAsPrefabAsset(lodGroupObj, prefabPath);
+            _asset.PrefabGuid = AssetDatabase.AssetPathToGUID(prefabPath);
+
+            Object.DestroyImmediate(lodGroupObj);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            var prefabGuid = AssetDatabase.AssetPathToGUID(prefabPath);
+            MetaAssetRegistry.RegisterAsset(prefabGuid, Asset.AssetId, "LODGroupPrefab", _asset.IsPreGen, Prompt.Id);
         }
 
 
@@ -376,10 +462,19 @@ namespace Meta.XR.MetaWand.Editor
 
         private string BuildDownloadCacheId()
         {
-            return _assetHasLods
-                ? Asset.AssetId + "_lod_" + GetLodString(_contentPlaceholder.SelectedLod)
-                : "genai_image_cache";
+            if (!_assetHasLods)
+            {
+                return "genai_image_cache";
+            }
 
+            var effectiveSelectedLod = _contentPlaceholder.SelectedLodOverride ?? _contentPlaceholder.SelectedLod;
+            if (effectiveSelectedLod == 0)
+            {
+                return Asset.AssetId + "_lod_group";
+            }
+
+            var lodIndex = effectiveSelectedLod - 1;
+            return Asset.AssetId + "_lod_" + GetLodString(lodIndex);
         }
 
         private async Task<byte[]> Download(string url, string assetId)
@@ -446,8 +541,10 @@ namespace Meta.XR.MetaWand.Editor
             if (_assetHasLods) CreateLodDirectories();
 
             var subDirName = Asset.AssetId;
+            var effectiveSelectedLod = _contentPlaceholder.SelectedLodOverride ?? _contentPlaceholder.SelectedLod;
+            var lodIndex = effectiveSelectedLod - 1;
             var assetName = _assetHasLods
-                ? subDirName + "_" + GetLodString(_contentPlaceholder.SelectedLod)
+                ? subDirName + "_" + GetLodString(lodIndex)
                 : Asset.AssetId;
             var fbxPath = _assetHasLods
                 ? Path.Combine(_pathToPrefabs, subDirName, assetName + ".fbx")
@@ -621,5 +718,19 @@ namespace Meta.XR.MetaWand.Editor
         }
 
         #endregion // File management
+
+        #region Asset Feedback
+
+        private const string FeedbackToastMessage = "Thanks for your feedback!";
+        private const float FeedbackToastDuration = 2.0f;
+
+        private async void OnAssetFeedback(MetaWandApiManager.AssetResultFeedback feedback)
+        {
+            if (string.IsNullOrEmpty(Asset.AssetId)) return;
+            Utils.ShowToast(FeedbackToastMessage, FeedbackToastDuration);
+            await _apiManager.AssetFeedback(Asset.AssetId, feedback, Prompt.Id);
+        }
+
+        #endregion // Asset Feedback
     }
 }

@@ -29,15 +29,16 @@ namespace Meta.XR.Editor.Rules
     {
         static AndroidCompatibility()
         {
-            // [Required] Generate Android Manifest
+            // [Optional] Sync Android Manifest
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Optional,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
                 platform: BuildTargetGroup.Android,
-                isDone: _ => OVRManifestPreprocessor.DoesAndroidManifestExist(),
-                message: "An Android Manifest file is required",
-                fix: _ => OVRManifestPreprocessor.GenerateManifestForSubmission(),
-                fixMessage: "Generates a default Manifest file"
+                isDone: (targetGroup) => !OVRManifestPreprocessor.IsManifestOutdated(out _),
+                message: "Your current settings do not match the Android Manifest file",
+                fix: _ => OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(false),
+                fixMessage: $"Creates or Updates the Android Manifest file to match the current settings",
+                tags: OVRProjectSetup.TaskTags.HeavyProcessing
             );
 
             // [Required] Android minimum level API

@@ -42,6 +42,21 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         [TextArea(3, 10)]
         [SerializeField] private string systemPrompt;
 
+        [Tooltip("Enable token-by-token streaming. When enabled, responses are delivered progressively via the onStreamingDelta event as the LLM generates them.")]
+        [SerializeField] private bool enableStreaming = true;
+
+        [Tooltip("Maximum resolution (width or height) for captured passthrough images before sending to the LLM. Lower values reduce memory usage and may improve response times. Set to 0 for no downscaling.")]
+        [SerializeField] private int captureMaxResolution;
+
+        /// <summary>
+        /// Gets or sets the maximum capture resolution for inference.
+        /// </summary>
+        public int CaptureMaxResolution
+        {
+            get => captureMaxResolution;
+            set => captureMaxResolution = value;
+        }
+
         [Tooltip("True if the assigned provider supports multimodal input (text + images).")]
         public bool ProviderSupportsVision => _chatTask is { SupportsVision: true };
 
@@ -64,6 +79,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         [Tooltip("Invoked when a text response is received from the provider.")]
         public StringEvent onResponseReceived;
+
+        [Tooltip("Invoked for each token/chunk received during streaming. Sends the accumulated text so far (not just the delta).")]
+        public StringEvent onStreamingDelta;
 
         [Tooltip("Invoked when a passthrough or debug image is captured and ready to be sent.")]
         public Texture2DEvent onImageCaptured = new();
@@ -158,7 +176,32 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 }
 
                 var req = new ChatRequest(fullPrompt, images);
-                var res = await _chatTask.ChatAsync(req);
+
+                IProgress<ChatDelta> streamProgress = null;
+                var accumulatedText = string.Empty;
+                var syncContext = System.Threading.SynchronizationContext.Current;
+
+                if (enableStreaming)
+                {
+                    streamProgress = new Progress<ChatDelta>(delta =>
+                    {
+                        if (syncContext != null)
+                        {
+                            syncContext.Post(_ =>
+                            {
+                                accumulatedText += delta.textFragment;
+                                onStreamingDelta?.Invoke(accumulatedText);
+                            }, null);
+                        }
+                        else
+                        {
+                            accumulatedText += delta.textFragment;
+                            onStreamingDelta?.Invoke(accumulatedText);
+                        }
+                    });
+                }
+
+                var res = await _chatTask.ChatAsync(req, streamProgress);
 
                 HandleSuccess(res?.text ?? string.Empty);
             }
@@ -195,7 +238,17 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         private Texture2D CaptureCameraFrame()
         {
             var src = _cam.GetTexture();
-            var rt = RenderTexture.GetTemporary(src.width, src.height, 0, RenderTextureFormat.ARGB32);
+
+            int width = src.width;
+            int height = src.height;
+            if (captureMaxResolution > 0 && (width > captureMaxResolution || height > captureMaxResolution))
+            {
+                float scale = Mathf.Min((float)captureMaxResolution / width, (float)captureMaxResolution / height);
+                width = Mathf.Max(1, Mathf.RoundToInt(width * scale));
+                height = Mathf.Max(1, Mathf.RoundToInt(height * scale));
+            }
+
+            var rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
             Graphics.Blit(src, rt);
             RenderTexture.active = rt;
 

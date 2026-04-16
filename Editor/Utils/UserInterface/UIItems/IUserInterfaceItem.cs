@@ -20,6 +20,7 @@
 
 using System;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -30,6 +31,13 @@ namespace Meta.XR.Editor.UserInterface
     {
         public void Draw();
         public bool Hide { get; set; }
+
+        /// <summary>
+        /// Creates a UIToolkit VisualElement representation of this UI item.
+        /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
+        /// </summary>
+        /// <returns>A VisualElement containing the UI item</returns>
+        public VisualElement Get();
     }
 
     internal interface IDynamicColorItem

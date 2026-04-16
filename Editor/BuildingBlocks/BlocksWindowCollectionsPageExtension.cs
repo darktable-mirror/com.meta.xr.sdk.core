@@ -103,6 +103,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private bool _disabledCollectionPage;
         private static IReadOnlyList<Tag> _collectionTags;
+        private static Dictionary<Tag, int> _collectionBlockCounts;
 
         private static bool ValidCollections => _collectionTags != null && _collectionTags.Any() &&
                                                 _collectionTags.Contains(CustomTagBehaviors
@@ -122,7 +123,25 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static void RefreshCollectionTags()
         {
             _collectionTags = BlocksContentManager.RemoteCollectionTags.ToList();
+            RefreshCollectionBlockCounts();
             ReturnToCollections(); // Refreshes the variables to set to current page
+        }
+
+        private static void RefreshCollectionBlockCounts()
+        {
+            _collectionBlockCounts = new Dictionary<Tag, int>();
+            if (_collectionTags == null) return;
+
+            foreach (var tag in _collectionTags)
+            {
+                if (tag == CustomTagBehaviors.AllBuildingBlocksCollection) continue;
+
+                var collectionTagBehavior = TagBehavior.Registry[tag] as CollectionTagBehavior;
+                if (collectionTagBehavior != null)
+                {
+                    _collectionBlockCounts[tag] = BlocksContentManager.GetCollection(collectionTagBehavior).Count();
+                }
+            }
         }
 
         private Tween PageTransitionTween => Tween.Fetch(Utils.ToolDescriptor, UpdatePageTransition);
@@ -244,7 +263,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             var showAll = tag == CustomTagBehaviors.AllBuildingBlocksCollection;
             var blockCount = showAll
                 ? _blockList.Count
-                : BlocksContentManager.GetCollection(collectionTagBehavior)?.Count ?? 0;
+                : (_collectionBlockCounts != null && _collectionBlockCounts.TryGetValue(tag, out var cachedCount) ? cachedCount : 0);
             var subLabelText = showAll ? $"{blockCount} blocks" : $"{blockCount} recommended blocks";
             GUILayout.Label(subLabelText, Styles.GUIStyles.CollectionAreaStatusStyle);
             EditorGUILayout.Space();
@@ -346,24 +365,32 @@ namespace Meta.XR.BuildingBlocks.Editor
             // Transitioning from detail page to grid
             if (CurrentTargetPage == Page.Details && targetPage == Page.Grid)
             {
-                OVRTelemetry.Start(MarkerId.PageClose)
-                    .AddAnnotation(AnnotationType.Origin, origin.ToString())
-                    .AddAnnotation(AnnotationType.OriginData, originData.Id)
-                    .AddAnnotation(AnnotationType.Action, Origins.BlockDetails.ToString())
-                    .AddAnnotation(AnnotationType.ActionData, _selectedBlock?.Id)
-                    .AddAnnotation(AnnotationType.ActionType, GetType().Name)
-                    .Send();
+                var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageClose)
+                {
+                    isEssential = OVRPlugin.Bool.False,
+                    productType = OVRPlugin.ProductType.Editor
+                };
+                unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
+                unifiedEvent.SetMetadata(AnnotationType.OriginData, originData.Id);
+                unifiedEvent.SetMetadata(AnnotationType.Action, Origins.BlockDetails.ToString());
+                unifiedEvent.SetMetadata(AnnotationType.ActionData, _selectedBlock?.Id);
+                unifiedEvent.SetMetadata(AnnotationType.ActionType, GetType().Name);
+                unifiedEvent.Send();
             }
 
             // Transitioning from collections page to grid
             if (CurrentTargetPage == Page.Collections && targetPage == Page.Grid)
             {
-                OVRTelemetry.Start(MarkerId.PageOpen)
-                    .AddAnnotation(AnnotationType.Origin, origin.ToString())
-                    .AddAnnotation(AnnotationType.Action, Origins.BlockGrid.ToString())
-                    .AddAnnotation(AnnotationType.ActionData, string.Empty)
-                    .AddAnnotation(AnnotationType.ActionType, GetType().Name)
-                    .Send();
+                var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageOpen)
+                {
+                    isEssential = OVRPlugin.Bool.True,
+                    productType = OVRPlugin.ProductType.Editor
+                };
+                unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
+                unifiedEvent.SetMetadata(AnnotationType.Action, Origins.BlockGrid.ToString());
+                unifiedEvent.SetMetadata(AnnotationType.ActionData, string.Empty);
+                unifiedEvent.SetMetadata(AnnotationType.ActionType, GetType().Name);
+                unifiedEvent.Send();
             }
         }
 
@@ -376,13 +403,17 @@ namespace Meta.XR.BuildingBlocks.Editor
             _selectedBlock = blockData;
             _variantInitialized = false;
 
-            OVRTelemetry.Start(MarkerId.PageOpen)
-                .AddAnnotation(AnnotationType.Origin, origin.ToString())
-                .AddAnnotation(AnnotationType.OriginData, originData.Id)
-                .AddAnnotation(AnnotationType.Action, Origins.BlockDetails.ToString())
-                .AddAnnotation(AnnotationType.ActionData, _selectedBlock.Id)
-                .AddAnnotation(AnnotationType.ActionType, GetType().Name)
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageOpen)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
+            unifiedEvent.SetMetadata(AnnotationType.OriginData, originData.Id);
+            unifiedEvent.SetMetadata(AnnotationType.Action, Origins.BlockDetails.ToString());
+            unifiedEvent.SetMetadata(AnnotationType.ActionData, _selectedBlock.Id);
+            unifiedEvent.SetMetadata(AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.Send();
         }
 
         private void TriggerPageTransition(Page targetPage, bool instant)

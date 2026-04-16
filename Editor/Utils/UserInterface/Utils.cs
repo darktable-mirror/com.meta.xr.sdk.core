@@ -21,6 +21,7 @@
 using Meta.XR.Editor.Reflection;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -55,6 +56,8 @@ namespace Meta.XR.Editor.UserInterface
             return (uint)UnityEditor.MPE.ProcessService.level != (uint)UnityEditor.MPE.ProcessLevel.Slave;
 #endif
         }
+
+        public static readonly string MetaTempFilePath = Path.Combine(Path.GetTempPath(), "Meta");
 
         // Helper function to create a texture with a given color
         private static Texture2D MakeTexture(int width, int height, Color col)

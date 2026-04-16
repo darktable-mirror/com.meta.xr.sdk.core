@@ -187,13 +187,6 @@ public class OVRProjectConfigEditor : Editor
                             "Tracked Keyboard support disabled because Render Model Support is disabled. Requires Render Model Support.");
                         projectConfig.trackedKeyboardSupport = OVRProjectConfig.TrackedKeyboardSupport.None;
                     }
-
-                    if (projectConfig.virtualKeyboardSupport != OVRProjectConfig.FeatureSupport.None)
-                    {
-                        IssueTracker.TrackWarning(IssueTracker.SDK.Core, "ovr-project-config-virtual-keyboard-disabled",
-                            "Virtual Keyboard support disabled because Render Model Support is disabled. Requires Render Model Support.");
-                        projectConfig.virtualKeyboardSupport = OVRProjectConfig.FeatureSupport.None;
-                    }
                 }
 
                 EditorGUI.EndDisabledGroup();
@@ -215,28 +208,6 @@ public class OVRProjectConfigEditor : Editor
                     OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Tracked Keyboard Support",
                             "Show user's physical keyboard in correct position in VR."),
                         ref projectConfig.trackedKeyboardSupport, ref hasModified, "https://developers.meta.com/horizon/documentation/unity/tk-overview");
-                }
-
-                // Virtual Keyboard Support
-                bool virtualKeyboardSupportAvailable = OVRPluginInfo.IsOVRPluginOpenXRActivated();
-                using (new EditorGUI.DisabledGroupScope(!virtualKeyboardSupportAvailable))
-                {
-                    if (!virtualKeyboardSupportAvailable)
-                    {
-                        projectConfig.virtualKeyboardSupport = OVRProjectConfig.FeatureSupport.None;
-                    }
-
-                    OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Virtual Keyboard Support",
-                            "Provides a consistent typing experience across Meta Quest VR applications."),
-                        ref projectConfig.virtualKeyboardSupport, ref hasModified, "https://developers.meta.com/horizon/documentation/unity/VK-unity-overview");
-
-                    if (projectConfig.requiresSystemKeyboard
-                        && projectConfig.virtualKeyboardSupport != OVRProjectConfig.FeatureSupport.None)
-                    {
-                        EditorGUILayout.HelpBox(
-                            "Using the System Keyboard with Virtual Keyboard is not recommended.",
-                            MessageType.Warning);
-                    }
                 }
 
                 // Anchor Support - linked to Shared Spatial Anchors and Scene
@@ -329,11 +300,6 @@ public class OVRProjectConfigEditor : Editor
                     projectConfig.renderModelSupport = OVRProjectConfig.RenderModelSupport.Enabled;
                 }
 
-                if (hasModified && projectConfig.virtualKeyboardSupport != OVRProjectConfig.FeatureSupport.None)
-                {
-                    projectConfig.renderModelSupport = OVRProjectConfig.RenderModelSupport.Enabled;
-                }
-
                 if (!OVRPluginInfo.IsOVRPluginOpenXRActivated())
                 {
                     EditorGUILayout.HelpBox(
@@ -346,14 +312,6 @@ public class OVRProjectConfigEditor : Editor
                 {
                     EditorGUILayout.HelpBox(
                         "Render model support is required to load keyboard models from the runtime.",
-                        MessageType.Error);
-                }
-
-                if (projectConfig.virtualKeyboardSupport != OVRProjectConfig.FeatureSupport.None &&
-                    projectConfig.renderModelSupport == OVRProjectConfig.RenderModelSupport.Disabled)
-                {
-                    EditorGUILayout.HelpBox(
-                        "Render model support is required to load virtual keyboard models from the runtime.",
                         MessageType.Error);
                 }
 

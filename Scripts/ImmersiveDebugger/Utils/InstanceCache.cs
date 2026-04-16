@@ -53,6 +53,12 @@ namespace Meta.XR.ImmersiveDebugger.Utils
 
         private List<InstanceHandle> FetchObjectsHandlesOfType(Type classType)
         {
+            // Skip types that are not derived from UnityEngine.Object
+            if (!typeof(UnityEngine.Object).IsAssignableFrom(classType))
+            {
+                return new List<InstanceHandle>();
+            }
+
             var objects = Object.FindObjectsByType(classType, FindObjectsSortMode.None);
             var objectHandles = objects.Select(obj => new InstanceHandle(classType, obj)).ToList();
             return objectHandles;
@@ -109,7 +115,8 @@ namespace Meta.XR.ImmersiveDebugger.Utils
                 {
                     if (!instances[i].Valid)
                     {
-                        OnInstanceRemoved?.Invoke(instances[i]);
+                        var removedInstance = instances[i];
+                        OnInstanceRemoved?.Invoke(removedInstance);
 
                         instances.RemoveAt(i);
                         instancesChanged = true;
@@ -144,4 +151,3 @@ namespace Meta.XR.ImmersiveDebugger.Utils
         }
     }
 }
-

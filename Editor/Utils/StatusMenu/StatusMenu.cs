@@ -81,6 +81,12 @@ namespace Meta.XR.Editor.StatusMenu
                 return;
             }
 
+            if (float.IsNaN(source.x) || float.IsNaN(source.y) ||
+                float.IsNaN(source.width) || float.IsNaN(source.height))
+            {
+                return;
+            }
+
             _instance = CreateInstance<StatusMenu>();
             _instance.ShowAsDropDown(source,
                 new Vector2(Styles.Constants.Width, _instance.ComputeHeight()));

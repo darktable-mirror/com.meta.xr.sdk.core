@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: IObjectDetection
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: 6fe30b32-9c96-40d7-bf3b-17df4f960bf4
   version: 1
   blockName: Object Detection
@@ -22,17 +22,17 @@ MonoBehaviour:
     array:
     - name: Internal
     - name: AI
-  thumbnail: {fileID: 2800000, guid: b6ca6d636988e1b429bfbd7c703402dc, type: 3}
-  remoteThumbnailContentId: 0
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 32813121845002208
   order: 0
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies:
   - 0792d3af-c7d9-4f9c-a6f0-fd580a051e48
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies: []
   isSingleton: 1
-  usageInstructions: 
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  usageInstructions:
+  featureDocumentationName:
+  featureDocumentationUrl:

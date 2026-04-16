@@ -48,20 +48,27 @@ namespace Meta.XR.Simulator.Editor
 
         internal static async Task<bool> DownloadXRSimulator(string downloadUrl)
         {
-            var marker = new OVRTelemetryMarker(XRSimTelemetryConstants.MarkerId.BinariesInstalled);
-            marker.AddAnnotation(XRSimTelemetryConstants.AnnotationType.XRSimVersion, "2");
+            var falcoEvent = new OVRPlugin.UnifiedEventData
+            {
+                eventName = XRSimTelemetryConstants.FalcoEventName.BinariesInstalled,
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.XrSim
+            };
+            falcoEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.XRSimVersion, "2");
 
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             return await DownloadXRSimInstaller(downloadUrl, () =>
             {
                 EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
                 OnInstalled?.Invoke();
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Success);
+                falcoEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+                falcoEvent.Send();
             }, errorMessage =>
             {
                 EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
                 Utils.LogUtils.DisplayDialogOrError(Name, errorMessage, true);
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                falcoEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                falcoEvent.Send();
             });
         }
 
@@ -78,13 +85,20 @@ namespace Meta.XR.Simulator.Editor
 
         private static async Task<bool> DownloadXRSimInstaller(string downloadUrl, Action onSuccess, Action<string> onError)
         {
+            var downloadedInstallerPath = "";
 #if UNITY_EDITOR_WIN
-            var downloadedInstallerPath =
+            downloadedInstallerPath =
                             Path.Combine(XRSimConstants.DownloadFolderPath, $"meta_xr_simulator.msi");
 #elif UNITY_EDITOR_OSX
-            var downloadedInstallerPath =
+            downloadedInstallerPath =
                             Path.Combine(XRSimConstants.DownloadFolderPath, $"meta_xr_simulator.dmg");
 #endif
+            if (string.IsNullOrEmpty(downloadedInstallerPath))
+            {
+                onError?.Invoke("Meta XR Simulator is not supported on this platform.");
+                return false;
+            }
+
             if (!await DownloadInstaller(downloadedInstallerPath, downloadUrl, errorMessage =>
                 {
                     onError?.Invoke(errorMessage);

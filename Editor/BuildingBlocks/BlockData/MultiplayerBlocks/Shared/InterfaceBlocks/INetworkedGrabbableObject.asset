@@ -22,7 +22,8 @@ MonoBehaviour:
     - name: ISDK
     - name: Experimental
     - name: Multiplayer
-  thumbnail: {fileID: 2800000, guid: 1d14abf370e5143499c5282b269fdc5d, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 25256955803977151
   order: 0
   prefab: {fileID: 0}
   externalBlockDependencies: []

@@ -21,8 +21,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -119,6 +121,29 @@ namespace Meta.XR.Editor.UserInterface
             {
                 EditorGUILayout.EndVertical();
             }
+        }
+
+        public VisualElement Get()
+        {
+            if (_hasDuplicateRadioButtonId)
+            {
+                return new VisualElement();
+            }
+
+            var container = new VisualElement();
+            container.AddToClassList(Props.Radio.Group);
+
+            container.style.flexDirection = _placementType == Utils.UIItemPlacementType.Horizontal
+                ? FlexDirection.Row
+                : FlexDirection.Column;
+
+            foreach (var radioButton in _buttons.Where(item => !item.Hide))
+            {
+                var radioButtonElement = radioButton.Get();
+                container.Add(radioButtonElement);
+            }
+
+            return container;
         }
     }
 }

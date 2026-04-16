@@ -22,7 +22,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Meta.XR.Editor.UserInterface.RLDS;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -40,6 +43,158 @@ namespace Meta.XR.Editor.UserInterface
             return SplitMarkdownInLines(markdownText)
                 .Select(ParseMarkdownLine)
                 .SelectMany(GetGuideItemsForMarkdownContent);
+        }
+
+        /// <summary>
+        /// Parses markdown text and returns a <see cref="GroupedItem"/> containing all UI elements.
+        /// Supports: headlines (#, ##, ###), bold text (**text**), code blocks (```...```),
+        /// bullet points (- ), and omits note symbols (>).
+        /// </summary>
+        /// <param name="markdownText">The markdown text to parse</param>
+        /// <returns>A GroupedItem containing all parsed UI elements</returns>
+        public static GroupedItem ParseMarkdownToUserInterfaceItems(string markdownText)
+        {
+            var items = new List<IUserInterfaceItem>();
+
+            if (string.IsNullOrEmpty(markdownText))
+            {
+                return new GroupedItem(items, Utils.UIItemPlacementType.Vertical);
+            }
+
+            var segments = ExtractCodeBlocksAndText(markdownText);
+
+            foreach (var segment in segments)
+            {
+                if (segment.IsCodeBlock)
+                {
+                    items.Add(CreateCodeBlockItem(segment.Content, segment.Language));
+                }
+                else
+                {
+                    var textItems = ParseTextSegment(segment.Content);
+                    items.AddRange(textItems);
+                }
+            }
+
+            return new GroupedItem(items, Utils.UIItemPlacementType.Vertical);
+        }
+
+        private struct MarkdownSegment
+        {
+            public string Content { get; set; }
+            public bool IsCodeBlock { get; set; }
+            public string Language { get; set; }
+        }
+
+        private static List<MarkdownSegment> ExtractCodeBlocksAndText(string markdown)
+        {
+            var segments = new List<MarkdownSegment>();
+            var codeBlockPattern = @"```(\w*)\r?\n([\s\S]*?)```";
+            var matches = Regex.Matches(markdown, codeBlockPattern);
+
+            var lastIndex = 0;
+            foreach (Match match in matches)
+            {
+                if (match.Index > lastIndex)
+                {
+                    var textBefore = markdown.Substring(lastIndex, match.Index - lastIndex);
+                    if (!string.IsNullOrWhiteSpace(textBefore))
+                    {
+                        segments.Add(new MarkdownSegment
+                        {
+                            Content = textBefore,
+                            IsCodeBlock = false,
+                            Language = null
+                        });
+                    }
+                }
+
+                segments.Add(new MarkdownSegment
+                {
+                    Content = match.Groups[2].Value.TrimEnd('\r', '\n'),
+                    IsCodeBlock = true,
+                    Language = match.Groups[1].Value
+                });
+
+                lastIndex = match.Index + match.Length;
+            }
+
+            if (lastIndex < markdown.Length)
+            {
+                var remainingText = markdown.Substring(lastIndex);
+                if (!string.IsNullOrWhiteSpace(remainingText))
+                {
+                    segments.Add(new MarkdownSegment
+                    {
+                        Content = remainingText,
+                        IsCodeBlock = false,
+                        Language = null
+                    });
+                }
+            }
+
+            return segments;
+        }
+
+        private static IUserInterfaceItem CreateCodeBlockItem(string code, string language)
+        {
+            return new CodeBlockItem(code, language);
+        }
+
+        private static List<IUserInterfaceItem> ParseTextSegment(string text)
+        {
+            var items = new List<IUserInterfaceItem>();
+            var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();
+
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    items.Add(new AddSpace(RLDS.Styles.Spacing.SpaceXS));
+                    continue;
+                }
+
+                if (line.StartsWith(">"))
+                {
+                    line = line.Substring(1).TrimStart();
+                }
+
+                line = ConvertMarkdownToUnityRichText(line);
+
+                if (line.StartsWith("### "))
+                {
+                    var headingText = line.Substring(4).Trim();
+                    items.Add(new Label(headingText, Props.Typography.Heading4));
+                }
+                else if (line.StartsWith("## "))
+                {
+                    var headingText = line.Substring(3).Trim();
+                    items.Add(new Label(headingText, Props.Typography.Heading3));
+                }
+                else if (line.StartsWith("# "))
+                {
+                    var headingText = line.Substring(2).Trim();
+                    items.Add(new Label(headingText, Props.Typography.Heading2));
+                }
+                else if (line.StartsWith("-- "))
+                {
+                    var bulletText = "    ◦ " + line.Substring(3);
+                    items.Add(new Label(bulletText, Props.Typography.Body1Text));
+                }
+                else if (line.StartsWith("- "))
+                {
+                    var bulletText = "• " + line.Substring(2);
+                    items.Add(new Label(bulletText, Props.Typography.Body1Text));
+                }
+                else
+                {
+                    items.Add(new Label(line, Props.Typography.Body1Text));
+                }
+            }
+
+            return items;
         }
 
         private struct Link
@@ -81,6 +236,15 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
+        private static string CapitalizeFirstLetter(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return input;
+            }
+            return char.ToUpper(input[0]) + input.Substring(1);
+        }
+
         private static MarkdownContent ParseMarkdownLine(string line)
         {
             var isTitle = false;
@@ -110,7 +274,7 @@ namespace Meta.XR.Editor.UserInterface
                 var trailingDot = match.Groups[3].Value;
                 var link = new Link
                 {
-                    Content = match.Groups[1].Value + trailingDot,
+                    Content = CapitalizeFirstLetter(match.Groups[1].Value) + trailingDot,
                     Url = match.Groups[2].Value
                 };
                 links.Add(link);
@@ -180,5 +344,106 @@ namespace Meta.XR.Editor.UserInterface
 
             return lines;
         }
+    }
+
+    /// <summary>
+    /// A UI item that displays a code block with monospace font and bordered box styling.
+    /// </summary>
+    internal class CodeBlockItem : IUserInterfaceItem
+    {
+        private readonly string _code;
+        private readonly string _language;
+        private VisualElement _visualElement;
+        private const int ToastDisplayDurationMs = 2000;
+
+        public bool Hide { get; set; }
+
+        public CodeBlockItem(string code, string language = null)
+        {
+            _code = code;
+            _language = language;
+        }
+
+        public void Draw()
+        {
+        }
+
+        public VisualElement Get()
+        {
+            if (_visualElement != null)
+            {
+                return _visualElement;
+            }
+
+            _visualElement = new VisualElement();
+
+            if (!string.IsNullOrEmpty(_language))
+            {
+                var languageLabel = new UnityEngine.UIElements.Label(_language);
+                languageLabel.AddToClassList(Props.CodeBlock.Language);
+                _visualElement.Add(languageLabel);
+            }
+
+            var codeContainer = new VisualElement();
+            codeContainer.AddToClassList(Props.CodeBlock.Container);
+            codeContainer.style.position = Position.Relative;
+
+            var codeLabel = new UnityEngine.UIElements.Label(_code);
+            codeLabel.AddToClassList(Props.CodeBlock.Label);
+
+            // Try to load Inconsolata font, fall back to system monospace fonts
+            var monoFont = Resources.Load<Font>("Inconsolata");
+            if (monoFont != null)
+            {
+                codeLabel.style.unityFontDefinition = new StyleFontDefinition(monoFont);
+            }
+            else
+            {
+                // Fallback to system monospace font (Consolas on Windows, Menlo on Mac)
+                codeLabel.style.unityFont = Font.CreateDynamicFontFromOSFont(
+                    new[] { "Consolas", "Menlo", "Monaco", "Courier New" }, 12);
+            }
+
+            // Create toast notification (hidden by default)
+            var toast = new UnityEngine.UIElements.Label("Code copied!");
+            toast.AddToClassList(Props.Toast.Root);
+
+            // Create copy button (hidden by default, shown on hover)
+            var copyButton = new UnityEngine.UIElements.Button();
+            copyButton.clicked += () =>
+            {
+                GUIUtility.systemCopyBuffer = _code;
+
+                // Show toast and hide after 2 seconds
+                toast.style.display = DisplayStyle.Flex;
+                copyButton.style.display = DisplayStyle.None;
+                toast.schedule.Execute(() =>
+                {
+                    toast.style.display = DisplayStyle.None;
+                }).ExecuteLater(ToastDisplayDurationMs);
+            };
+            copyButton.AddToClassList(Props.IconButton.Root);
+            copyButton.AddToClassList(Props.IconButton.Absolute);
+            copyButton.style.backgroundImage = new StyleBackground(Background.FromTexture2D(UIStyles.Contents.CopyIcon.Image as Texture2D));
+            copyButton.tooltip = "Copy code";
+
+            // Show/hide copy button on hover
+            codeContainer.RegisterCallback<MouseEnterEvent>(evt =>
+            {
+                copyButton.style.display = DisplayStyle.Flex;
+            });
+            codeContainer.RegisterCallback<MouseLeaveEvent>(evt =>
+            {
+                copyButton.style.display = DisplayStyle.None;
+            });
+
+            codeContainer.Add(codeLabel);
+            codeContainer.Add(copyButton);
+            codeContainer.Add(toast);
+            _visualElement.Add(codeContainer);
+
+            return _visualElement;
+        }
+
     }
 }

@@ -105,13 +105,17 @@ namespace Meta.XR.Editor.ToolingSupport
 
         private void OnOpened()
         {
-            OVRTelemetry.Start(Telemetry.MarkerId.PageOpen)
-                .AddAnnotation(Telemetry.AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString())
-                .AddAnnotation(Telemetry.AnnotationType.OriginData, (string)null)
-                .AddAnnotation(Telemetry.AnnotationType.Action, SelfOrigin.ToString())
-                .AddAnnotation(Telemetry.AnnotationType.ActionData, _tool.Id)
-                .AddAnnotation(Telemetry.AnnotationType.ActionType, GetType().Name)
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.PageOpen)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString());
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.OriginData, (string)null);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, SelfOrigin.ToString());
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, _tool.Id);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.Send();
 
             _expectedSettingProvider = this;
             _hasBeenVisible = false;
@@ -120,13 +124,17 @@ namespace Meta.XR.Editor.ToolingSupport
 
         private void OnClosed()
         {
-            OVRTelemetry.Start(Telemetry.MarkerId.PageClose)
-                .AddAnnotation(Telemetry.AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString())
-                .AddAnnotation(Telemetry.AnnotationType.OriginData, (string)null)
-                .AddAnnotation(Telemetry.AnnotationType.Action, SelfOrigin.ToString())
-                .AddAnnotation(Telemetry.AnnotationType.ActionData, _tool.Id)
-                .AddAnnotation(Telemetry.AnnotationType.ActionType, GetType().Name)
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.PageClose)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString());
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.OriginData, (string)null);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, SelfOrigin.ToString());
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, _tool.Id);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.Send();
 
             _lastOrigin = null;
             _hasBeenVisible = false;

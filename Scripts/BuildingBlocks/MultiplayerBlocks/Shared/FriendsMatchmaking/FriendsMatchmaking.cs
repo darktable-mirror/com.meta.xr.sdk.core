@@ -99,7 +99,6 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
         [SerializeField] private UnityEvent<CustomMatchmaking.RoomOperationResult> onMatchRequestFound;
         [SerializeField] private UnityEvent<Message<LaunchInvitePanelFlowResult>> onInvitationsSent;
-        [SerializeField] private UnityEvent<Message<GroupPresenceLeaveIntent>> onLeaveIntentReceived;
 
         private CustomMatchmaking _customMatchmaking;
         private const string DebugCategory = "Friends Matchmaking";
@@ -289,7 +288,6 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         {
             GroupPresence.SetJoinIntentReceivedNotificationCallback(OnJoinIntentReceived);
             GroupPresence.SetInvitationsSentNotificationCallback(OnInvitationsSent);
-            GroupPresence.SetLeaveIntentReceivedNotificationCallback(OnLeaveIntentNotification);
         }
 
         protected virtual async void OnJoinIntentReceived(Message<GroupPresenceJoinIntent> message)
@@ -309,11 +307,6 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         private void OnInvitationsSent(Message<LaunchInvitePanelFlowResult> message)
         {
             onInvitationsSent?.Invoke(message);
-        }
-
-        private void OnLeaveIntentNotification(Message<GroupPresenceLeaveIntent> message)
-        {
-            onLeaveIntentReceived?.Invoke(message);
         }
 
         protected virtual GroupPresenceOptions GetGroupPresenceOptions(string roomId, string roomPassword = null)

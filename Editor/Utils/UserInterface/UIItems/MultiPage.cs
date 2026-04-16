@@ -233,9 +233,13 @@ namespace Meta.XR.Editor.UserInterface
         {
             if (CurrentPage != null)
             {
-                var closeMarker = OVRTelemetry.Start(XR.Editor.UserInterface.Telemetry.MarkerId.PageClose);
-                closeMarker = AddTelemetryAnnotations(closeMarker);
-                closeMarker.Send();
+                var closeEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageClose)
+                {
+                    isEssential = OVRPlugin.Bool.False,
+                    productType = OVRPlugin.ProductType.Editor
+                };
+                closeEvent = AddTelemetryAnnotationsForFalco(closeEvent);
+                closeEvent.Send();
             }
 
             OnPageChangeBegin?.Invoke(index);
@@ -256,26 +260,34 @@ namespace Meta.XR.Editor.UserInterface
 
             if (CurrentPage != null)
             {
-                var openMarker = OVRTelemetry.Start(XR.Editor.UserInterface.Telemetry.MarkerId.PageOpen);
-                openMarker = AddTelemetryAnnotations(openMarker);
-                openMarker.Send();
+                var openEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageOpen)
+                {
+                    isEssential = OVRPlugin.Bool.True,
+                    productType = OVRPlugin.ProductType.Editor
+                };
+                openEvent = AddTelemetryAnnotationsForFalco(openEvent);
+                openEvent.Send();
             }
         }
 
-        private OVRTelemetryMarker AddTelemetryAnnotations(OVRTelemetryMarker marker)
+        private OVRPlugin.UnifiedEventData AddTelemetryAnnotationsForFalco(OVRPlugin.UnifiedEventData eventData)
         {
-            marker = marker
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.Origin, Origins.GuidedSetup.ToString())
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.OriginData, Owner?.Id)
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.Action, Origins.GuidedSetup.ToString())
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionData, CurrentPage?.Id)
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionType, GetType().Name);
-            return marker;
+            eventData.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.Origin, Origins.GuidedSetup.ToString());
+            eventData.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.OriginData, Owner?.Id);
+            eventData.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.Action, Origins.GuidedSetup.ToString());
+            eventData.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionData, CurrentPage?.Id);
+            eventData.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionType, GetType().Name);
+            return eventData;
         }
 
         public void JumpToPage(string pageId) => JumpToPage(Pages.FindIndex(p => p.PageId == pageId));
 
         public bool Hide { get; set; }
+
+        public UnityEngine.UIElements.VisualElement Get()
+        {
+            return new UnityEngine.UIElements.VisualElement();
+        }
 
         internal struct MultiPageOptions
         {

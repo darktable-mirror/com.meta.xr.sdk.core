@@ -54,7 +54,12 @@ public class OVRSceneModelLoader : MonoBehaviour
     /// </summary>
     protected virtual void Start()
     {
-        OVRTelemetry.SendEvent(OVRTelemetryConstants.Scene.MarkerId.UseDefaultSceneModelLoader);
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Scene.FalcoEventName.UseDefaultSceneModelLoader)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Editor
+        };
+        unifiedEvent.Send();
 
         SceneManager = GetComponent<OVRSceneManager>();
 

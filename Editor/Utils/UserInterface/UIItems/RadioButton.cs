@@ -19,8 +19,10 @@
  */
 
 using System;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -82,6 +84,31 @@ namespace Meta.XR.Editor.UserInterface
 
                 EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
             }
+        }
+
+        public VisualElement Get()
+        {
+            var container = new VisualElement();
+            container.AddToClassList(Props.Radio.Item);
+
+            var radioButton = new UnityEngine.UIElements.RadioButton
+            {
+                text = _label,
+                value = State
+            };
+
+            radioButton.RegisterValueChangedCallback(evt =>
+            {
+                if (!State && evt.newValue)
+                {
+                    State = true;
+                    OnSelect?.Invoke(Id);
+                }
+            });
+
+            container.Add(radioButton);
+
+            return container;
         }
 
         public bool ToggleState() => State = !State;

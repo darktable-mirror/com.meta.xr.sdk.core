@@ -124,7 +124,7 @@ public static class SystemHaptics
             var eventData = new OVRPlugin.UnifiedEventData("systemhaptics_play_pattern")
             {
                 isEssential = OVRPlugin.Bool.True,
-                productType = "core_sdk",
+                productType = OVRPlugin.ProductType.CoreSdk,
                 project_name = "systemhaptics"
             };
             eventData.Send();

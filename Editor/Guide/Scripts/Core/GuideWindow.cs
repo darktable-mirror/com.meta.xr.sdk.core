@@ -23,11 +23,16 @@ using System.Collections.Generic;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using static Meta.XR.Editor.UserInterface.Utils;
+using Button = Meta.XR.Editor.UserInterface.Button;
+using ScrollView = UnityEngine.UIElements.ScrollView;
+using Styles = Meta.XR.Editor.UserInterface.Styles;
 
 namespace Meta.XR.Guides.Editor
 {
@@ -48,7 +53,10 @@ namespace Meta.XR.Guides.Editor
         public Action DrawBefore;
         public Action DrawHeader;
         public Action DrawAfter;
-        public Func<OVRTelemetryMarker, OVRTelemetryMarker> AddAdditionalTelemetryAnnotations;
+        public Action<OVRPlugin.UnifiedEventData> AddAdditionalUnifiedEventMetadata;
+
+        public VisualElement RootContainer => rootVisualElement;
+        public VisualElement ItemContainer { get; private set; }
 
         private CustomBool _dontShowAgain;
 
@@ -62,6 +70,7 @@ namespace Meta.XR.Guides.Editor
         };
 
         private Button _closeButton;
+        private Meta.XR.Editor.UserInterface.RLDS.Button _closeButtonRlds;
 
         public Button CloseButton => _closeButton ??= new Button(new ActionLinkDescription()
         {
@@ -72,6 +81,16 @@ namespace Meta.XR.Guides.Editor
             OriginData = this,
             Id = "CloseButton"
         }, GUILayout.MinWidth(192.0f));
+
+        public Meta.XR.Editor.UserInterface.RLDS.Button CloseButtonRLDS => _closeButtonRlds ??= new(new ActionLinkDescription
+        {
+            Content = new GUIContent("Close"),
+            Action = Close,
+            ActionData = this,
+            Origin = Origins.GuidedSetup,
+            OriginData = this,
+            Id = "CloseButton"
+        }, Props.ButtonVariant.Primary, Props.ButtonSize.XSmall);
 
         [SerializeField] private GuideOptions _guideOptions;
         [SerializeField] private string _populatorId;
@@ -93,6 +112,7 @@ namespace Meta.XR.Guides.Editor
             public int HeaderHeight;
             public int BottomMargin;
             public bool ShowAsUtility;
+            public bool UseUIToolkit;
 
             public GuideOptions(GuideOptions options)
             {
@@ -108,6 +128,7 @@ namespace Meta.XR.Guides.Editor
                 HeaderHeight = options.HeaderHeight;
                 BottomMargin = options.BottomMargin;
                 ShowAsUtility = options.ShowAsUtility;
+                UseUIToolkit = options.UseUIToolkit;
             }
         }
 
@@ -123,7 +144,8 @@ namespace Meta.XR.Guides.Editor
             MaxWindowHeight = GuideStyles.Constants.DefaultHeight,
             HeaderHeight = GuideStyles.Constants.DefaultHeaderHeight,
             BottomMargin = LargeMargin - Margin,
-            ShowAsUtility = false
+            ShowAsUtility = false,
+            UseUIToolkit = false
         };
 
         public void Setup(string title, string description, IIdentified populator, GuideOptions guideOptions)
@@ -154,7 +176,7 @@ namespace Meta.XR.Guides.Editor
                 OnOpen(origin);
                 if (_guideOptions.ShowAsUtility)
                 {
-                    base.ShowUtility();
+                    ShowUtility();
                 }
                 else
                 {
@@ -163,7 +185,7 @@ namespace Meta.XR.Guides.Editor
 
                 if (docked)
                 {
-                    base.ShowTab();
+                    ShowTab();
                 }
                 else
                 {
@@ -179,32 +201,115 @@ namespace Meta.XR.Guides.Editor
             }
         }
 
-        void Awake()
+        private void Awake()
         {
             Guide.NotifyWindowAwake(_populatorId, this);
         }
 
-        internal void OnGUI()
+        private void OnEnable()
+        {
+            // Restore titleContent from serialized _title field.
+            // titleContent is not serialized by Unity, so we need to restore it manually
+            // after deserialization (e.g., after domain reload or panel maximize/restore).
+            if (!string.IsNullOrEmpty(_title))
+            {
+                titleContent = new GUIContent(_title);
+            }
+        }
+
+
+        private void InitGuideItems(bool forceUpdate = false)
         {
             // Initialization, only once
+            if (Items != null && !forceUpdate)
+            {
+                return;
+            }
+
+            // Search for the bespoke initialization method and call it
+            GuideProcessor.InitializeWindow(_populatorId, this);
+
+            // Further initialize
+            DrawHeader ??= DrawDefaultHeader;
+
+            // Search for the bespoke items
+            Items = GuideProcessor.GetItems(_populatorId);
+
+            // If initialization failed, give up and close
             if (Items == null)
             {
-                // Search for the bespoke initialization method and call it
-                GuideProcessor.InitializeWindow(_populatorId, this);
-
-                // Further initialize
-                DrawHeader ??= DrawDefaultHeader;
-
-                // Search for the bespoke items
-                Items = GuideProcessor.GetItems(_populatorId);
-
-                // If initialization failed, give up and close
-                if (Items == null)
-                {
-                    Close();
-                    return;
-                }
+                Close();
+                return;
             }
+        }
+
+        private void CreateGUI()
+        {
+            if (!_guideOptions.UseUIToolkit)
+            {
+                return;
+            }
+
+            var lightMode = !EditorGUIUtility.isProSkin;
+            var root = rootVisualElement;
+            var styleSheet = RLDSUtils.LoadStyleSheet(lightMode);
+            if (styleSheet != null)
+            {
+                root.styleSheets.Add(styleSheet);
+            }
+            root.AddToClassList(Props.Surface.Primary);
+
+            // At this point Unity.EditorStyles is not initialized yet, hence delay execution.
+            root.schedule.Execute(() =>
+            {
+                InitGuideItems();
+
+                DrawBefore?.Invoke();
+
+                var scrollview = new ScrollView(ScrollViewMode.Vertical);
+                scrollview.AddToClassList(Props.Utilities.NoMargin);
+                root.Add(scrollview);
+
+                if (DrawHeader == DrawDefaultHeader)
+                {
+                    root.Add(new IMGUIContainer(DrawHeader));
+                }
+                else
+                {
+                    DrawHeader?.Invoke();
+                }
+
+                ItemContainer = new VisualElement();
+                ItemContainer.AddToClassList(Props.Flexbox.Grow1);
+                ItemContainer.AddToClassList(Props.Utilities.MarginTopXS);
+                ItemContainer.AddToClassList(Props.Utilities.Padding2xMD);
+                root.Add(ItemContainer);
+
+                foreach (var item in Items)
+                {
+                    if (item == null || item.Hide) continue;
+                    ItemContainer.Add(item.Get());
+                }
+
+                // Footer
+                ItemContainer.Add(new AddSpace(true).Get());
+                ItemContainer.Add(DrawFootersVisualElement());
+
+                DrawAfter?.Invoke();
+            });
+
+        }
+
+        internal void OnGUI()
+        {
+            UpdateMinimumSize();
+
+            if (_guideOptions.UseUIToolkit)
+            {
+                return;
+            }
+
+            InitGuideItems();
 
             DrawBefore?.Invoke();
 
@@ -240,8 +345,6 @@ namespace Meta.XR.Guides.Editor
 
             // Draw After
             DrawAfter?.Invoke();
-
-            UpdateMinimumSize();
 
             OnWindowDraw?.Invoke();
         }
@@ -285,36 +388,39 @@ namespace Meta.XR.Guides.Editor
 
         private void OnClose()
         {
-            var marker = OVRTelemetry.Start(XR.Editor.UserInterface.Telemetry.MarkerId.PageClose);
-            marker = AddTelemetryAnnotations(marker, Origins.Self);
-            marker.Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageClose)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            AddFalcoTelemetryMetadata(unifiedEvent, Origins.Self);
+            unifiedEvent.Send();
 
             Meta.XR.Editor.Notifications.Notification.Manager.ReleaseSnooze(this);
         }
 
         private void OnOpen(Origins origin)
         {
-            var marker = OVRTelemetry.Start(XR.Editor.UserInterface.Telemetry.MarkerId.PageOpen);
-            marker = AddTelemetryAnnotations(marker, origin);
-            marker.Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageOpen)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            AddFalcoTelemetryMetadata(unifiedEvent, origin);
+            unifiedEvent.Send();
 
             Meta.XR.Editor.Notifications.Notification.Manager.RequestSnooze(this);
         }
 
-        private OVRTelemetryMarker AddTelemetryAnnotations(OVRTelemetryMarker marker, Origins origin)
+        private void AddFalcoTelemetryMetadata(OVRPlugin.UnifiedEventData unifiedEvent, Origins origin)
         {
-            marker = marker
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.Origin, origin.ToString())
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.Action, Origins.GuidedSetup.ToString())
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionData, Id)
-                .AddAnnotation(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.Origin, origin.ToString());
+            unifiedEvent.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.Action, Origins.GuidedSetup.ToString());
+            unifiedEvent.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionData, Id);
+            unifiedEvent.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.ActionType, GetType().Name);
 
-            if (AddAdditionalTelemetryAnnotations != null)
-            {
-                marker = AddAdditionalTelemetryAnnotations(marker);
-            }
-
-            return marker;
+            // Allow additional metadata to be added by callers
+            AddAdditionalUnifiedEventMetadata?.Invoke(unifiedEvent);
         }
 
         internal void DrawDefaultHeader()
@@ -389,17 +495,7 @@ namespace Meta.XR.Guides.Editor
             EditorGUILayout.BeginHorizontal();
             if (_guideOptions.ShowDontShowAgainOption)
             {
-                DontShowAgain.DrawForGUI(new CustomBool.DrawOptions()
-                {
-                    origin = Origins.Self,
-                    originData = this,
-                    callback = null,
-                    OnLeft = true,
-                    Inverted = _guideOptions.InvertDontShowAgain,
-                    Content = string.IsNullOrEmpty(_guideOptions.OverrideDontShowAgainContent?.text)
-                        ? DontShowAgain.Content
-                        : _guideOptions.OverrideDontShowAgainContent,
-                });
+                DontShowAgainGUI();
             }
 
             GUILayout.FlexibleSpace();
@@ -411,6 +507,42 @@ namespace Meta.XR.Guides.Editor
 
             EditorGUILayout.EndHorizontal();
             XRGuideEndVertical();
+        }
+
+        private void DontShowAgainGUI()
+        {
+            DontShowAgain.DrawForGUI(new CustomBool.DrawOptions()
+            {
+                origin = Origins.Self,
+                originData = this,
+                callback = null,
+                OnLeft = true,
+                Inverted = _guideOptions.InvertDontShowAgain,
+                Content = string.IsNullOrEmpty(_guideOptions.OverrideDontShowAgainContent?.text)
+                    ? DontShowAgain.Content
+                    : _guideOptions.OverrideDontShowAgainContent,
+            });
+        }
+
+        private VisualElement DrawFootersVisualElement()
+        {
+            var container = new VisualElement();
+            container.AddToClassList(Props.Utilities.MarginTopXS);
+            container.AddToClassList(Props.Flexbox.Row);
+            container.AddToClassList(Props.Flexbox.AlignCenter);
+
+            if (_guideOptions.ShowDontShowAgainOption)
+            {
+                container.Add(new IMGUIContainer(DontShowAgainGUI));
+            }
+
+            container.Add(new AddSpace(true).Get());
+            if (_guideOptions.ShowCloseButton)
+            {
+                container.Add(CloseButtonRLDS.Get());
+            }
+
+            return container;
         }
 
         /// <summary>

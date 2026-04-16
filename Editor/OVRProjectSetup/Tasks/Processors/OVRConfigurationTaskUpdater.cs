@@ -27,6 +27,7 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
 {
     public override int AllocatedTimeInMs => 10;
     private readonly OVRConfigurationTaskUpdaterSummary _summary;
+    private readonly bool _bypassCooldown;
 
     private static Dictionary<(OVRConfigurationTask, BuildTargetGroup), DateTime> _lastTimeOutOfCooldown =
         new Dictionary<(OVRConfigurationTask, BuildTargetGroup), DateTime>();
@@ -48,10 +49,12 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
         Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> filter,
         OVRProjectSetup.LogMessages logMessages,
         bool blocking,
-        Action<OVRConfigurationTaskProcessor> onCompleted)
+        Action<OVRConfigurationTaskProcessor> onCompleted,
+        bool bypassCooldown = false)
         : base(registry, buildTargetGroup, filter, logMessages, blocking, onCompleted)
     {
         _summary = new OVRConfigurationTaskUpdaterSummary(BuildTargetGroup);
+        _bypassCooldown = bypassCooldown;
     }
 
     protected override void PrepareTasks()
@@ -62,6 +65,11 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
 
     protected override bool IsTaskInCooldown(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
     {
+        if (_bypassCooldown)
+        {
+            return false;
+        }
+
         if (!task.Tags.HasFlag(OVRProjectSetup.TaskTags.HeavyProcessing))
         {
             return false;

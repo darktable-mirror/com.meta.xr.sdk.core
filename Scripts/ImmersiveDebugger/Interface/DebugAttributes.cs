@@ -58,6 +58,25 @@ namespace Meta.XR.ImmersiveDebugger
     /// Annotate field, property, functions with this will show in Immersive Debugger panel in runtime.
     /// Without additional parameters specified, by default we're watching fields/properties,
     /// and provide a button to call function without parameter.
+    ///
+    /// Supports nested classes: If a field/property has [DebugMember] and its type is a class with its own
+    /// [DebugMember] members, it will appear as a foldout in the Inspector Panel. When expanded, the nested
+    /// class's debug members are shown as children. For example:
+    /// <code>
+    /// public class MyComponent : MonoBehaviour
+    /// {
+    ///     [DebugMember]
+    ///     public NestedData data = new NestedData();
+    ///
+    ///     [Serializable]
+    ///     public class NestedData
+    ///     {
+    ///         [DebugMember]
+    ///         public float value = 5.0f;
+    ///     }
+    /// }
+    /// </code>
+    ///
     /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Enum)]

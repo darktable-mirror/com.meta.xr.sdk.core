@@ -24,7 +24,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -368,45 +367,21 @@ public class OVROverlayCanvas : OVRRayTransformer
 #if UNITY_EDITOR
         if (Application.IsPlaying(this))
         {
-            OVRPlugin.SendEvent("canvas_initialized", ToSimpleJson(new
-            {
-                manualRedraw,
-                renderInterval,
-                superSample,
-                opacity,
-                shape,
-                overlapMask,
-                compositionMode,
-                maxTextureSize,
-                mipmapMode = _mipmapMode,
-                dynamicResolution = _dynamicResolution,
-                redrawResolutionThreshold = _redrawResolutionThreshold,
-            }));
+            var evt = new OVRPlugin.UnifiedEventData("canvas_initialized");
+            evt.SetMetadata("manual_redraw", manualRedraw);
+            evt.SetMetadata("render_interval", renderInterval);
+            evt.SetMetadata("super_sample", superSample);
+            evt.SetMetadata("opacity", opacity.ToString());
+            evt.SetMetadata("shape", shape.ToString());
+            evt.SetMetadata("overlap_mask", overlapMask);
+            evt.SetMetadata("composition_mode", compositionMode.ToString());
+            evt.SetMetadata("max_texture_size", maxTextureSize);
+            evt.SetMetadata("mipmap_mode", _mipmapMode.ToString());
+            evt.SetMetadata("dynamic_resolution", _dynamicResolution);
+            evt.SetMetadata("redraw_resolution_threshold", _redrawResolutionThreshold);
+            evt.Send();
         }
 #endif
-    }
-
-    private static string ToSimpleJson<T>(T value)
-    {
-        var type = value?.GetType();
-        if (type?.IsValueType ?? true)
-        {
-            return value switch
-            {
-                bool b => b ? "true" : "false",
-                Enum or string => $"\"{value}\"",
-                _ => value?.ToString(),
-            };
-        }
-
-        var props = value.GetType().GetProperties();
-        if (props.Length == 0)
-        {
-            return "{}";
-        }
-
-        var members = props.Select(p => $"\"{p.Name}\":{ToSimpleJson(p.GetValue(value))}");
-        return $"{{{string.Join(",", members)}}}";
     }
 
     public void UpdateOverlaySettings()

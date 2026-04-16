@@ -482,10 +482,14 @@ partial struct OVRAnchor
                 using (var markerTypes = configuration.ToMarkerTypes(Allocator.Temp))
 #pragma warning restore 0618
                 {
-                    OVRTelemetry.Start((int)Telemetry.MarkerId.ConfigureTracker)
-                        .AddAnnotation(Telemetry.Annotation.DynamicObjectClasses, classes.AsReadOnlySpan())
-                        .AddAnnotation(Telemetry.Annotation.MarkerTypes, markerTypes.AsReadOnlySpan())
-                        .Send();
+                    var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.ConfigureTracker)
+                    {
+                        isEssential = OVRPlugin.Bool.False,
+                        productType = OVRPlugin.ProductType.Editor
+                    };
+                    unifiedEvent.SetMetadata(Telemetry.Annotation.DynamicObjectClasses, classes.AsReadOnlySpan());
+                    unifiedEvent.SetMetadata(Telemetry.Annotation.MarkerTypes, markerTypes.AsReadOnlySpan());
+                    unifiedEvent.Send();
                 }
             }
 #endif

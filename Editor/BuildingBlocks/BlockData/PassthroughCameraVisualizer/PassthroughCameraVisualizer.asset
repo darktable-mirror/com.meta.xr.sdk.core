@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 35843214b4c082b48a6f44ccefbe0185, type: 3}
   m_Name: PassthroughCameraVisualizer
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: 15e72970-0a71-4798-8064-2eb968d0ff69
   version: 1
   blockName: Passthrough Camera Visualizer
@@ -21,15 +21,15 @@ MonoBehaviour:
     array:
     - name: Passthrough
     - name: AI
-  thumbnail: {fileID: 2800000, guid: 5910d1cecce5f3f4a99b72631827a115, type: 3}
-  remoteThumbnailContentId: 0
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 25919767230963549
   order: 0
   prefab: {fileID: 6660669315433655825, guid: 9614149e305d24c49898858975550173, type: 3}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies:
   - e47682b9-c270-40b1-b16d-90b627a5ce1b
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies:
   - com.meta.xr.mrutilitykit
   isSingleton: 0
@@ -38,5 +38,5 @@ MonoBehaviour:
     select the desired eye and assign a unique material. Assign this same material
     to your mesh and at runtime the PassthroughCameraAccess component will display
     the selected eye on that mesh.
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  featureDocumentationName:
+  featureDocumentationUrl:

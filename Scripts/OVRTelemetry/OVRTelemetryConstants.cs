@@ -31,6 +31,11 @@ internal static class OVRTelemetryConstants
             public const int Init = 163069401;
         }
 
+        public static class FalcoEventName
+        {
+            public const string Init = "OCULUS_UNITY_OVRMANAGER_INIT";
+        }
+
         public static class AnnotationTypes
         {
             public const string ProjectName = "ProjectName";
@@ -40,6 +45,7 @@ internal static class OVRTelemetryConstants
             public const string ProcessorType = "ProcessorType";
             public const string FeatureRampUpValues = "FeatureRampUpValues";
             public const string FalcoMigration = "FalcoMigration";
+            public const string FalcoMigrationCentral = "FalcoMigrationCentral";
             public const string FalcoMigrationEventID = "FalcoMigrationEventID";
         }
 
@@ -66,8 +72,13 @@ internal static class OVRTelemetryConstants
         public static class FalcoEventName
         {
             public const string Start = "EDITOR_START";
+            public const string Build = "EDITOR_BUILD";
             public const string StartRampKeys = "EDITOR_START_RAMP_KEYS";
             public const string FeaturesInScene = "COMPONENTS_STATUS";
+            public const string ComponentAdd = "COMPONENT_ADDED";
+            public const string SceneActivity = "SCENE_ACTIVITY";
+            public const string SceneInactivity = "SCENE_INACTIVTY";
+            public const string EditorShutdown = "EDITOR_SHUTDOWN";
         }
 
         public static class AnnotationType
@@ -98,6 +109,16 @@ internal static class OVRTelemetryConstants
             public const int VariantsWindowOpen = 163068476;
         }
 
+        public static class FalcoEventName
+        {
+            public const string InstallBlockData = "SBB_INSTALL_BLOCK_DATA";
+            public const string OpenSceneWithBlock = "SBB_OPEN_SCENE_WITH_BLOCK";
+            public const string OpenWindow = "SBB_OPEN";
+            public const string AddBlock = "SBB_ADD_BLOCK";
+            public const string RunBlock = "SBB_RUN_BLOCK";
+            public const string UpdateBlock = "SBB_UPDATE_BLOCK";
+        }
+
         public static class AnnotationType
         {
             public const string BlockId = "BlockId";
@@ -125,6 +146,11 @@ internal static class OVRTelemetryConstants
             public const int SetAppIdFromGuidedSetup = 163061548;
         }
 
+        public static class FalcoEventName
+        {
+            public const string SetAppIdFromGuidedSetup = "GST_APPID_SET";
+        }
+
         public static class AnnotationType
         {
             public const string HasAppId = "app_id_exist";
@@ -147,6 +173,8 @@ internal static class OVRTelemetryConstants
         {
             public const string SceneOpen = "SCENE_OPEN";
             public const string SceneClose = "SCENE_CLOSE";
+            public const string UseOVRSceneManager = "OCULUS_UNITY_SDK_SCENE_USEOVRSCENEMANAGER";
+            public const string UseDefaultSceneModelLoader = "OCULUS_UNITY_SDK_SCENE_USEOVRSCENEMODELLOADER";
         }
 
         public static class AnnotationType
@@ -174,6 +202,11 @@ internal static class OVRTelemetryConstants
         {
             public const string ToolName = "ToolName";
         }
+
+        public static class FalcoEventName
+        {
+            public const string SubmitFeedback = "SUBMIT_FEEDBACK";
+        }
     }
 
     public static class Utils
@@ -184,11 +217,24 @@ internal static class OVRTelemetryConstants
             public const int DownloadContent = 163067281;
         }
 
+        public static class FalcoEventName
+        {
+            public const string DownloadContent = "BB_DOWNLOAD_CONTENT";
+        }
+
         public static class AnnotationType
         {
             public const string ErrorMessage = "error_message";
             public const string StatusCode = "status_code";
             public const string ContentType = "content_type";
+        }
+    }
+
+    public static class ProjectSetup
+    {
+        public static class FalcoEventName
+        {
+            public const string GoToSource = "UPST_GOTOSOURCE";
         }
     }
 
@@ -200,6 +246,13 @@ internal static class OVRTelemetryConstants
             public const int RenderThreadingMode = 163060994;
             public const int RenderingPath = 163068301;
             public const int XrPluginType = 163069107;
+        }
+
+        public static class FalcoEventName
+        {
+            public const string RenderThreadingMode = "OCULUS_UNITY_RENDER_THREADING_MODE";
+            public const string RenderingPath = "OCULUS_UNITY_RENDERING_PATH";
+            public const string XrPluginType = "OCULUS_UNITY_XR_PLUGIN";
         }
 
         public static class AnnotationType

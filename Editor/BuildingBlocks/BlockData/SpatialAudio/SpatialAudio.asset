@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2bbfcccc4c3a20146ba719198d58ab0e, type: 3}
   m_Name: SpatialAudio
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: 6737262b-4fab-4779-a38b-fe74012fa505
   version: 1
   blockName: Spatial Audio
@@ -19,13 +19,14 @@ MonoBehaviour:
   tags:
     array:
     - name: Audio
-  thumbnail: {fileID: 2800000, guid: ece7f22ca0181924187420a1fcc92263, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 25769202376047024
   order: 0
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies: []
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies:
   - com.meta.xr.sdk.audio
   isSingleton: 0

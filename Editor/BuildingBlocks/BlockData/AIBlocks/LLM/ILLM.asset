@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: ILLM
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: ef19cfd3-3bb7-4107-9044-33fecdb8a359
   version: 1
   blockName: Large Language Models
@@ -21,15 +21,15 @@ MonoBehaviour:
   tags:
     array:
     - name: AI
-  thumbnail: {fileID: 2800000, guid: 8e3a7d812db44d94588f4941b987d9eb, type: 3}
-  remoteThumbnailContentId: 0
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 25925789727018923
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies: []
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies: []
   isSingleton: 1
-  usageInstructions: 
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  usageInstructions:
+  featureDocumentationName:
+  featureDocumentationUrl:

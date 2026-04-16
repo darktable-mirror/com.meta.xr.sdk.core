@@ -44,7 +44,11 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
         private Color _gizmoColor;
 
         private List<GizmoRenderer> _renderers = new List<GizmoRenderer>();
+#if UNITY_6000_5_OR_NEWER
+        private HashSet<EntityId> _enabledInstances = new HashSet<EntityId>();
+#else
         private HashSet<int> _enabledInstances = new HashSet<int>();
+#endif
 
         public void Setup(Type classType, MemberInfo memberInfo, DebugGizmoType gizmoType, Color gizmoColor, InstanceCache instanceCache)
         {
@@ -67,7 +71,11 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
             if (_isStatic && _renderers.Count != 0)
             {
                 _renderers[0].UpdateDataSource(_memberInfo.GetValue(null));
+#if UNITY_6000_5_OR_NEWER
+                _renderers[0].enabled = _enabledInstances.Contains(EntityId.None);
+#else
                 _renderers[0].enabled = _enabledInstances.Contains(0);
+#endif
             }
             else
             {
@@ -115,13 +123,21 @@ namespace Meta.XR.ImmersiveDebugger.Gizmo
 
         public bool GetState(Object instance)
         {
+#if UNITY_6000_5_OR_NEWER
+            var id = instance != null ? instance.GetEntityId() : EntityId.None;
+#else
             var id = instance != null ? instance.GetInstanceID() : 0;
+#endif
             return _enabledInstances.Contains(id);
         }
 
         public void SetState(Object instance, bool state)
         {
+#if UNITY_6000_5_OR_NEWER
+            var id = instance != null ? instance.GetEntityId() : EntityId.None;
+#else
             var id = instance != null ? instance.GetInstanceID() : 0;
+#endif
             if (state)
             {
                 _enabledInstances.Add(id);

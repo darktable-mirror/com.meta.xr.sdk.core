@@ -98,6 +98,9 @@ namespace Meta.XR.Editor.RemoteContent
                     return null;
                 }
 
+                if (OVRPlugin.wrapperVersion.Minor >= 200)
+                    return OVRPlugin.wrapperVersion.Minor;
+
                 return OVRPlugin.wrapperVersion.Minor - 32;
             }
         }
@@ -204,7 +207,11 @@ namespace Meta.XR.Editor.RemoteContent
 
         private async Task<DownloadResult<byte[]>> DownloadContent(IScopedProgressDisplayer scopedProgressDisplayer)
         {
-            using var marker = new OVRTelemetryMarker(OVRTelemetryConstants.Utils.MarkerId.DownloadContent);
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Utils.FalcoEventName.DownloadContent)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.BuildingBlocks
+            };
             try
             {
                 var path = BuildRequestPath();
@@ -229,13 +236,15 @@ namespace Meta.XR.Editor.RemoteContent
                     new ProgressReportingStream(memoryStream, totalBytes, scopedProgressDisplayer);
                 await contentStream.CopyToAsync(progressStream, 81920);
 
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Success);
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+                unifiedEvent.Send();
                 return DownloadResult<byte[]>.Success(memoryStream.ToArray(), fileName);
             }
             catch (Exception ex)
             {
-                marker.AddAnnotation(OVRTelemetryConstants.Utils.AnnotationType.ErrorMessage, ex.Message);
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.Utils.AnnotationType.ErrorMessage, ex.Message);
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.Send();
                 return DownloadResult<byte[]>.Failure(ex.Message);
             }
         }
@@ -333,6 +342,13 @@ namespace Meta.XR.Editor.RemoteContent
 
     internal class RemoteJsonContentDownloader : RemoteContentDownloader<RemoteJsonContentDownloader>
     {
+
+        public RemoteJsonContentDownloader(string url)
+            : base("", url)
+        {
+            WithoutCache();
+        }
+
         public RemoteJsonContentDownloader(string cacheFile, string url)
             : base(cacheFile, url)
         {
@@ -362,6 +378,16 @@ namespace Meta.XR.Editor.RemoteContent
             }
 
             var content = await File.ReadAllTextAsync(CacheFilePath);
+
+            // Validate that cached content is not empty or whitespace
+            // This can happen if the cache file was corrupted during a domain reload
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                // Clear the corrupted cache so next fetch will re-download
+                ClearCache();
+                throw new InvalidOperationException("Cached content is empty or corrupted");
+            }
+
             return (TContent)(object)content;
         }
 

@@ -22,18 +22,25 @@ using System;
 
 internal class OVRSampledEventSender
 {
-    private OVRTelemetryMarker _marker;
     private bool _shouldSend;
     private readonly float _recordChance;
-    private readonly int _markerId;
-    private readonly Func<OVRTelemetryMarker, OVRTelemetryMarker> _addAnnotationsFunc;
+    private readonly string _falcoEventName;
+    private readonly bool _isEssential;
+    private readonly OVRPlugin.ProductType _productType;
+    private readonly Func<OVRPlugin.UnifiedEventData, OVRPlugin.UnifiedEventData> _addMetadataFunc;
+    private OVRPlugin.UnifiedEventData _unifiedEventData;
 
-    public OVRSampledEventSender(int markerId, float recordRecordChance,
-        Func<OVRTelemetryMarker, OVRTelemetryMarker> addAnnotationsFunc = null)
+    public OVRSampledEventSender(float recordRecordChance,
+        string falcoEventName = null,
+        bool isEssential = false,
+        OVRPlugin.ProductType productType = OVRPlugin.ProductType.None,
+        Func<OVRPlugin.UnifiedEventData, OVRPlugin.UnifiedEventData> addMetadataFunc = null)
     {
-        _markerId = markerId;
         _recordChance = recordRecordChance;
-        _addAnnotationsFunc = addAnnotationsFunc;
+        _falcoEventName = falcoEventName;
+        _isEssential = isEssential;
+        _productType = productType;
+        _addMetadataFunc = addMetadataFunc;
     }
 
     public void Send()
@@ -43,7 +50,10 @@ internal class OVRSampledEventSender
             return;
         }
 
-        _marker.Send();
+        if (!string.IsNullOrEmpty(_falcoEventName))
+        {
+            _unifiedEventData.Send();
+        }
         _shouldSend = false;
     }
 
@@ -54,10 +64,18 @@ internal class OVRSampledEventSender
             return;
         }
 
-        _marker = OVRTelemetry.Start(_markerId);
-        if (_addAnnotationsFunc != null)
+        if (!string.IsNullOrEmpty(_falcoEventName))
         {
-            _marker = _addAnnotationsFunc.Invoke(_marker);
+            _unifiedEventData = new OVRPlugin.UnifiedEventData(_falcoEventName)
+            {
+                isEssential = _isEssential ? OVRPlugin.Bool.True : OVRPlugin.Bool.False,
+                productType = _productType
+            };
+
+            if (_addMetadataFunc != null)
+            {
+                _unifiedEventData = _addMetadataFunc.Invoke(_unifiedEventData);
+            }
         }
 
         _shouldSend = true;

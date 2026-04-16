@@ -109,11 +109,14 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     }
 
     public static readonly int minSdkVersion = 60;
+    public static readonly int finalSdkVersion = 85;
+    public static readonly int version2Start = 200;
     public static readonly int[] skippedSdkVersions = { 70, 73, 75, 80 };
-    public static int currentSdkVersion = (OVRPlugin.wrapperVersion == null || OVRPlugin.wrapperVersion == new Version(0, 0, 0)) ? minSdkVersion : OVRPlugin.wrapperVersion.Minor - 32;
-    public static int[] horizonOsSdkVersions = Enumerable.Range(minSdkVersion, currentSdkVersion - minSdkVersion + 1)
-    .Except(skippedSdkVersions)
-    .ToArray();
+    public static int currentSdkVersion = (OVRPlugin.wrapperVersion == null || OVRPlugin.wrapperVersion == new Version(0, 0, 0)) ? minSdkVersion : OVRPlugin.wrapperVersion.Minor;
+    public static int[] horizonOsSdkVersions = Enumerable.Range(minSdkVersion, finalSdkVersion - minSdkVersion + 1)
+        .Concat(Enumerable.Range(version2Start, currentSdkVersion - version2Start + 1))
+        .Except(skippedSdkVersions)
+        .ToArray();
 
     public List<DeviceType> targetDeviceTypes = new()
         { DeviceType.Quest, DeviceType.Quest2, DeviceType.QuestPro, DeviceType.Quest3, DeviceType.Quest3S };
@@ -131,7 +134,6 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public FeatureSupport bodyTrackingSupport = FeatureSupport.None;
     public FeatureSupport faceTrackingSupport = FeatureSupport.None;
     public FeatureSupport eyeTrackingSupport = FeatureSupport.None;
-    public FeatureSupport virtualKeyboardSupport = FeatureSupport.None;
     public FeatureSupport colocationSessionSupport = FeatureSupport.None;
     public FeatureSupport sceneSupport = FeatureSupport.None;
     public FeatureSupport boundaryVisibilitySupport = FeatureSupport.None;
@@ -308,7 +310,6 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
                 projectConfig.bodyTrackingSupport = FeatureSupport.None;
                 projectConfig.faceTrackingSupport = FeatureSupport.None;
                 projectConfig.eyeTrackingSupport = FeatureSupport.None;
-                projectConfig.virtualKeyboardSupport = FeatureSupport.None;
                 projectConfig.colocationSessionSupport = FeatureSupport.None;
                 projectConfig.sceneSupport = FeatureSupport.None;
                 projectConfig.boundaryVisibilitySupport = FeatureSupport.None;

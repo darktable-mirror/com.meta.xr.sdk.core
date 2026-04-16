@@ -128,7 +128,9 @@ public class OVRBundleTool : EditorWindow
         InitializePanel();
 
         OVRPlugin.SetDeveloperMode(OVRPlugin.Bool.True);
-        OVRPlugin.SendEvent("oculus_bundle_tool", "show_window");
+        var evt = new OVRPlugin.UnifiedEventData("oculus_bundle_tool");
+        evt.SetMetadata("action", "show_window");
+        evt.Send();
     }
 
     public void OnEnable()

@@ -45,14 +45,35 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         static CustomHierarchyIcon()
         {
-            EditorApplication.hierarchyWindowItemOnGUI -= HierarchyItemOnGUI;
-            EditorApplication.hierarchyWindowItemOnGUI += HierarchyItemOnGUI;
+#if UNITY_6000_5_OR_NEWER
+            EditorApplication.hierarchyWindowItemByEntityIdOnGUI -= HierarchyItemOnGuiEntityID;
+            EditorApplication.hierarchyWindowItemByEntityIdOnGUI += HierarchyItemOnGuiEntityID;
+#else
+            EditorApplication.hierarchyWindowItemOnGUI -= HierarchyItemOnGUIInstanceID;
+            EditorApplication.hierarchyWindowItemOnGUI += HierarchyItemOnGUIInstanceID;
+#endif
         }
 
-        private static void HierarchyItemOnGUI(int instanceID, Rect selectionRect)
+#if UNITY_6000_5_OR_NEWER
+        private static void HierarchyItemOnGuiEntityID(EntityId entityId, Rect selectionRect)
         {
+            var gameObject = EditorUtility.EntityIdToObject(entityId) as GameObject;
+            HierarchyItemOnGUI(gameObject, selectionRect);
+        }
+#else
+        private static void HierarchyItemOnGUIInstanceID(int instanceID, Rect selectionRect)
+        {
+#if UNITY_6000_3_OR_NEWER
+            var gameObject = EditorUtility.EntityIdToObject(instanceID) as GameObject;
+#else
             var gameObject = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
+#endif
+            HierarchyItemOnGUI(gameObject, selectionRect);
+        }
+#endif
 
+        private static void HierarchyItemOnGUI(GameObject gameObject, Rect selectionRect)
+        {
             if (gameObject == null)
                 return;
 

@@ -94,21 +94,28 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private void OnStateChanged(bool state)
         {
             _foldout.Icon = Resources.Load<Texture2D>(state ? "Textures/caret_down_icon" : "Textures/caret_right_icon");
+            if (_item == null) return;
+
             if (state)
             {
-                Item.BuildChildren();
+                _item.BuildChildren();
             }
             else
             {
-                Item.ClearChildren();
+                _item.ClearChildren();
             }
         }
 
         private void Update()
         {
-            if (!Item.Valid)
+            if (_item == null)
             {
-                Item.Clear();
+                return;
+            }
+
+            if (!_item.Valid)
+            {
+                _item.Clear();
                 return;
             }
 
@@ -116,17 +123,18 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             if (_foldout.State)
             {
-                // Check if children have changed
-                if (Item.ComputeNeedsRefresh())
+                if (_item.ComputeNeedsRefresh())
                 {
-                    Item.BuildChildren();
+                    _item.BuildChildren();
                 }
             }
         }
 
         private void UpdateGameObjectState(bool force = false)
         {
-            if (Item.Owner is GameObject go)
+            if (_item == null) return;
+
+            if (_item.Owner is GameObject go)
             {
                 UpdateGameObjectState(go.activeSelf, force);
             }

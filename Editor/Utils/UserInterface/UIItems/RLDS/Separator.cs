@@ -20,6 +20,7 @@
 
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface.RLDS
 {
@@ -55,6 +56,15 @@ namespace Meta.XR.Editor.UserInterface.RLDS
             var dropShadow = shadowColor.ToTexture();
             rect.y += 1.5f;
             GUI.DrawTexture(rect, dropShadow, ScaleMode.StretchToFill, true);
+        }
+
+        public VisualElement Get()
+        {
+            var divider = new VisualElement();
+            divider.AddToClassList(Props.Divider.Base);
+            divider.style.marginTop = Styles.Spacing.SpaceMD;
+            divider.style.marginBottom = Styles.Spacing.SpaceMD;
+            return divider;
         }
 
         public bool Hide { get; set; }

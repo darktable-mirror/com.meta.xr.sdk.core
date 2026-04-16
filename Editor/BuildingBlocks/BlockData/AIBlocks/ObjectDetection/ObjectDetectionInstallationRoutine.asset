@@ -18,8 +18,12 @@ MonoBehaviour:
   description: 
   prefab: {fileID: 490905663961890433, guid: dbbfb66c80f0f3846a0be259389b2c78, type: 3}
   packageDependencies:
-  - com.unity.ai.inference@>=2.2.1
+  - com.unity.ai.inference@2.3.0
   selectedGuidedSetupIndex: 0
   guidedSetupName: 
-  inferenceType: 1
-  modelProvider: Replicate
+  providerAssetSelection: Create a new provider asset
+  inferenceType: 4
+  modelProvider: UnityInferenceEngine
+  includeVisualization: 0
+  includePassthrough: 0
+  includeDebuggingTools: 0

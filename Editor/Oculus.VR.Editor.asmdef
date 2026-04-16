@@ -6,6 +6,7 @@
         "Unity.XR.Oculus",
         "Unity.XR.OpenXR",
         "Unity.XR.OpenXR.Editor",
+        "Unity.XR.OpenXR.Features.MetaQuestSupport",
         "Unity.XR.Management",
         "Unity.XR.Management.Editor",
         "Unity.RenderPipelines.Universal.Runtime",
@@ -24,7 +25,8 @@
         "Unity.TextMeshPro",
         "Meta.XR.Guides.Editor",
         "Meta.XR.Editor.RemoteContent",
-        "Meta.XR.Editor.EditorCoroutine"
+        "Meta.XR.Editor.EditorCoroutine",
+        "Meta.XR.AskAI.Editor"
     ],
     "includePlatforms": [
         "Editor"
@@ -160,6 +162,11 @@
             "name": "com.unity.textmeshpro",
             "expression": "",
             "define": "UNITY_TEXTMESHPRO"
+        },
+        {
+            "name": "com.meta.xr.ai.agentbridge",
+            "expression": "",
+            "define": "USING_AGENT_BRIDGE"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

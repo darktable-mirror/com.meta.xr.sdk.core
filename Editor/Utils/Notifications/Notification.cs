@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -82,14 +83,16 @@ namespace Meta.XR.Editor.Notifications
                 if (notification == null) return;
                 if (Notifications.Contains(notification)) return;
 
-                // We're still considering Open and Close telemetry to be linked to the request of showing the notification
-                // independently of its actual stacking/queuing
-                OVRTelemetry.Start(MarkerId.PageOpen)
-                    .AddAnnotation(AnnotationType.Origin, origin.ToString())
-                    .AddAnnotation(AnnotationType.Action, Origins.Notification.ToString())
-                    .AddAnnotation(AnnotationType.ActionData, notification.Id)
-                    .AddAnnotation(AnnotationType.ActionType, notification.GetType().Name)
-                    .Send();
+                var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageOpen)
+                {
+                    isEssential = OVRPlugin.Bool.True,
+                    productType = OVRPlugin.ProductType.Editor
+                };
+                unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
+                unifiedEvent.SetMetadata(AnnotationType.Action, Origins.Notification.ToString());
+                unifiedEvent.SetMetadata(AnnotationType.ActionData, notification.Id);
+                unifiedEvent.SetMetadata(AnnotationType.ActionType, notification.GetType().Name);
+                unifiedEvent.Send();
 
                 Notifications.Add(notification);
 
@@ -101,14 +104,16 @@ namespace Meta.XR.Editor.Notifications
                 if (notification == null) return;
                 if (!Notifications.Contains(notification)) return;
 
-                // We're still considering Open and Close telemetry to be linked to the request of showing the notification
-                // independently of its actual stacking/queuing
-                OVRTelemetry.Start(MarkerId.PageClose)
-                    .AddAnnotation(AnnotationType.Origin, origin.ToString())
-                    .AddAnnotation(AnnotationType.Action, Origins.Notification.ToString())
-                    .AddAnnotation(AnnotationType.ActionData, notification.Id)
-                    .AddAnnotation(AnnotationType.ActionType, notification.GetType().Name)
-                    .Send();
+                var unifiedEventClose = new OVRPlugin.UnifiedEventData(FalcoEventName.PageClose)
+                {
+                    isEssential = OVRPlugin.Bool.False,
+                    productType = OVRPlugin.ProductType.Editor
+                };
+                unifiedEventClose.SetMetadata(AnnotationType.Origin, origin.ToString());
+                unifiedEventClose.SetMetadata(AnnotationType.Action, Origins.Notification.ToString());
+                unifiedEventClose.SetMetadata(AnnotationType.ActionData, notification.Id);
+                unifiedEventClose.SetMetadata(AnnotationType.ActionType, notification.GetType().Name);
+                unifiedEventClose.Send();
 
                 // Hide if not hidden already
                 notification.Hide();

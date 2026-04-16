@@ -11,7 +11,8 @@
         "Unity.XR.OpenXR.Features.MetaQuestSupport",
         "Unity.XR.Oculus",
         "Unity.TextMeshPro",
-        "Unity.XR.Hands"
+        "Unity.XR.Hands",
+        "Unity.XR.CompositionLayers"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -140,6 +141,11 @@
             "name": "com.unity.render-pipelines.universal",
             "expression": "17.0.0",
             "define": "URP_17_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.compositionlayers",
+            "expression": "",
+            "define": "USING_XR_COMPOSITION_LAYERS"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

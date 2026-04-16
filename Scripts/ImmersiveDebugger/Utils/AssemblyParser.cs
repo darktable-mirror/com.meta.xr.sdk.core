@@ -153,7 +153,8 @@ namespace Meta.XR.ImmersiveDebugger.Utils
                 else
                 {
                     var types = assembly.GetTypes().Where(
-                        t => t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Any(
+                        t => typeof(UnityEngine.Object).IsAssignableFrom(t) &&  // Must be a Unity Object
+                             t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Any(
                             m => m.GetCustomAttribute<DebugMember>() != null));
                     foreach (Type type in types)
                     {
@@ -182,4 +183,3 @@ namespace Meta.XR.ImmersiveDebugger.Utils
         }
     }
 }
-

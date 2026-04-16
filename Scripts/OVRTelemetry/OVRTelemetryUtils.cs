@@ -20,6 +20,8 @@
 
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 internal static partial class OVRTelemetry
@@ -48,6 +50,41 @@ internal static partial class OVRTelemetry
     public static OVRTelemetryMarker AddPlayModeOrigin(this OVRTelemetryMarker marker)
     {
         return marker.AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, GetPlayModeOrigin());
+    }
+
+    public static OVRPlugin.UnifiedEventData AddPlayModeOrigin(this OVRPlugin.UnifiedEventData eventData)
+    {
+        eventData.SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, GetPlayModeOrigin());
+        return eventData;
+    }
+
+    public static unsafe bool SetMetadata<T>(this OVRPlugin.UnifiedEventData unifiedEvent, string key, ReadOnlySpan<T> values) where T : unmanaged, Enum
+    {
+        // If the underlying type is already a long or ulong, we can just cast it.
+        var underlyingType = Enum.GetUnderlyingType(typeof(T));
+        if (underlyingType == typeof(long) || underlyingType == typeof(ulong))
+        {
+            fixed (T* valuesPtr = values)
+            {
+                return unifiedEvent.SetMetadata(key, (long*)valuesPtr, values.Length);
+            }
+        }
+
+        // Otherwise, we need to make a copy.
+        var longs = new NativeArray<long>(values.Length, Allocator.Temp);
+        try
+        {
+            for (var i = 0; i < values.Length; i++)
+            {
+                longs[i] = UnsafeUtility.EnumToInt(values[i]);
+            }
+
+            return unifiedEvent.SetMetadata(key, (long*)longs.GetUnsafeReadOnlyPtr(), longs.Length);
+        }
+        finally
+        {
+            longs.Dispose();
+        }
     }
 
     public static string GetTelemetrySettingString(bool value) => value ? "enabled" : "disabled";

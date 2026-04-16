@@ -27,7 +27,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     /// <summary>
     /// This is a <see cref="MonoBehaviour"/> used for generic Button UI element.
     /// Normally serves as the base component for more specific functioned buttons in Immersive Debugger.
-    /// Contains logic for handling events with <see cref="Callback"/> and a standard pattern of haptics (<see cref="HapticsClip"/> is played upon hovering).
+    /// Contains logic for handling events with <see cref="Callback"/> and a standard pattern of haptics.
     /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
     public class Button : InteractableController
@@ -38,6 +38,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _hapticsClip = null;
         }
 
+#pragma warning disable CS0618
         private static OVRHapticsClip _hapticsClip;
         private static OVRHapticsClip HapticsClip
         {
@@ -51,6 +52,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
                 return _hapticsClip ??= new OVRHapticsClip(new byte[5] { 128, 255, 255, 128, 255 }, 5);
             }
         }
+#pragma warning restore CS0618
 
         /// <summary>
         /// The callback that is invoked upon clicking the button UI (from the overriden <see cref="OnPointerClick"/> function).
@@ -78,4 +80,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         }
     }
 }
-

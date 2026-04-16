@@ -26,12 +26,37 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 {
     internal class ActionHook : Hook
     {
-        internal System.Action Delegate { get; private set; }
+        internal System.Action Delegate { get; set; }
 
         internal ActionHook(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute)
         {
             Delegate = () => (memberInfo as MethodInfo)?.Invoke(_instance, null);
         }
     }
-}
 
+    /// <summary>
+    /// ActionHook for nested class methods. Invokes the method on the nested object obtained through the parent member.
+    /// </summary>
+    internal class NestedActionHook : ActionHook
+    {
+        /// <summary>
+        /// Creates a nested action hook that invokes a method on a nested object.
+        /// </summary>
+        /// <param name="parentMemberInfo">The member info for the parent field (e.g., 'data' of type NestedData)</param>
+        /// <param name="nestedMethodInfo">The method info for the nested method (e.g., 'Method()' inside NestedData)</param>
+        /// <param name="instanceHandle">The instance handle of the root component</param>
+        /// <param name="attribute">The debug member attribute</param>
+        internal NestedActionHook(MemberInfo parentMemberInfo, MethodInfo nestedMethodInfo, InstanceHandle instanceHandle, DebugMember attribute)
+            : base(nestedMethodInfo, instanceHandle, attribute)
+        {
+            Delegate = () =>
+            {
+                var parentValue = parentMemberInfo.GetValue(_instance);
+                if (parentValue != null)
+                {
+                    nestedMethodInfo.Invoke(parentValue, null);
+                }
+            };
+        }
+    }
+}

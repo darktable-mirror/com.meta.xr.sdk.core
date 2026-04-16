@@ -58,16 +58,23 @@ namespace Meta.XR.MetaWand.Editor
         private int _startY;
         private readonly Utils.GeneratorType _generator;
         private readonly bool _showLodsSelector;
+        private FeedbackState _feedbackState = FeedbackState.None;
+        public Action OnFeedbackThumbsUp { get; set; }
+        public Action OnFeedbackThumbsDown { get; set; }
+        public bool ShowFeedbackButtons { get; set; }
 
         private readonly string[] _lodSizeSelection =
         {
+            Constants.ModelLodGroupPrefab,
             Constants.ModelLod0,
             Constants.ModelLod1,
             Constants.ModelLod2,
             Constants.ModelLod3
         };
 
-        public int SelectedLod { get; private set; } = 1;
+        public int SelectedLod { get; private set; } = 0;
+
+        public int? SelectedLodOverride { get; set; }
 
         public ContentPlaceholder(Utils.GeneratorType generatorType, bool showLodsSelector, string id = null)
         {
@@ -139,6 +146,8 @@ namespace Meta.XR.MetaWand.Editor
                 return;
             }
 
+            DrawFeedbackButtons();
+
             if (previewState == Editor.PreviewState.Error)
             {
                 EditorGUILayout.HelpBox(
@@ -208,6 +217,64 @@ namespace Meta.XR.MetaWand.Editor
                 Action = addToSceneAction
             }, Styles.GUIStyles.TinyButton, IconSize.SizeMD).Draw();
             EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawFeedbackButtons()
+        {
+            if (!ShowFeedbackButtons) return;
+
+            var style = new GUIStyle()
+            {
+                margin = new RectOffset(Spacing.SpaceXS, Spacing.SpaceXS * 2, Spacing.Space4XS, Spacing.Space4XS)
+            };
+
+            EditorGUILayout.BeginHorizontal(style);
+            GUILayout.FlexibleSpace();
+
+            // Thumbs up button
+            var thumbsUpIcon = _feedbackState == FeedbackState.ThumbsUp
+                ? Styles.Contents.ThumbsUpFilledIcon.Image
+                : Styles.Contents.ThumbsUpOutlinedIcon.Image;
+            new Button(new ActionLinkDescription
+            {
+                Content = new GUIContent(thumbsUpIcon),
+                Action = () =>
+                {
+                    if (_feedbackState != FeedbackState.ThumbsUp)
+                    {
+                        _feedbackState = FeedbackState.ThumbsUp;
+                        OnFeedbackThumbsUp?.Invoke();
+                    }
+                }
+            }, Styles.GUIStyles.MediumButton, IconSize.SizeLG).Draw();
+
+            new AddSpace(Spacing.Space3XS).Draw();
+
+            // Thumbs down button
+            var thumbsDownIcon = _feedbackState == FeedbackState.ThumbsDown
+                ? Styles.Contents.ThumbsDownFilledIcon.Image
+                : Styles.Contents.ThumbsDownOutlinedIcon.Image;
+            new Button(new ActionLinkDescription
+            {
+                Content = new GUIContent(thumbsDownIcon),
+                Action = () =>
+                {
+                    if (_feedbackState != FeedbackState.ThumbsDown)
+                    {
+                        _feedbackState = FeedbackState.ThumbsDown;
+                        OnFeedbackThumbsDown?.Invoke();
+                    }
+                }
+            }, Styles.GUIStyles.MediumButton, IconSize.SizeLG).Draw();
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private enum FeedbackState
+        {
+            None,
+            ThumbsUp,
+            ThumbsDown
         }
 
         public void SetState(ContentState state, string overrideMessage = "", Texture image = null,

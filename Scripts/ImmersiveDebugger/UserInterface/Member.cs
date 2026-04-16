@@ -21,6 +21,7 @@
 
 using Meta.XR.ImmersiveDebugger.Manager;
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
@@ -33,6 +34,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private Flex _flex;
         private Flex _valueFlex;
         private Flex _verticalFlex;
+        private Flex _childrenFlex;
 
         private Values _values;
         private ButtonForAction _action;
@@ -41,9 +43,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private ToggleForGizmo _gizmo;
         private Background _pill;
         private ImageStyle _pillBackgroundStyle;
+        private Toggle _foldoutToggle;
+        private ImageStyle _foldoutIconStyle;
 
         private Color _defaultPillColor;
         private Color _transparentPillColor;
+
+        private readonly List<Member> _childMembers = new();
+        private bool _isFoldout;
+        private bool _pillCreated;
 
         public string Title
         {
@@ -65,7 +73,16 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 _transparentPillColor = value;
                 _transparentPillColor.a = 0.8f;
 
-                _pill.Color = Transparent ? _transparentPillColor : _defaultPillColor;
+                if (_isFoldout)
+                {
+                    // For foldouts, apply the color to the foldout icon instead
+                    UpdateFoldoutIconColor();
+                }
+                else
+                {
+                    EnsurePillCreated();
+                    _pill.Color = Transparent ? _transparentPillColor : _defaultPillColor;
+                }
             }
         }
 
@@ -73,11 +90,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             set
             {
+                EnsurePillCreated();
                 _pill.Sprite = value.sprite;
                 _pill.Color = value.color;
                 _pill.PixelDensityMultiplier = value.pixelDensityMultiplier;
             }
         }
+
+        public bool IsFoldout => _isFoldout;
 
         protected override void Setup(Controller owner)
         {
@@ -87,13 +107,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _flex = Append<Flex>("list");
             _flex.LayoutStyle = Style.Load<LayoutStyle>("MemberFlex");
 
-            // Pill
-            _pill = _flex.Append<Background>("pill");
-            _pill.LayoutStyle = Style.Load<LayoutStyle>("PillVertical");
-            _pillBackgroundStyle = Style.Load<ImageStyle>("PillInfo");
-            PillStyle = _pillBackgroundStyle;
-
-            // Label
+            // Label (pill will be created lazily and prepended before title if needed)
             _title = _flex.Append<Label>("title");
             _title.LayoutStyle = Style.Load<LayoutStyle>("MemberTitle");
             _title.TextStyle = Style.Load<TextStyle>("MemberTitle");
@@ -105,6 +119,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // Value Flex
             _valueFlex = _verticalFlex.Append<Flex>("values");
             _valueFlex.LayoutStyle = Style.Instantiate<LayoutStyle>("MemberValueFlex");
+        }
+
+        /// <summary>
+        /// Lazily creates the pill if it hasn't been created yet.
+        /// Call this before any operation that needs the pill.
+        /// </summary>
+        private void EnsurePillCreated()
+        {
+            if (_pillCreated || _isFoldout)
+            {
+                return;
+            }
+
+            _pillCreated = true;
+
+            // Prepend pill before the title
+            _pill = _flex.Prepend<Background>("pill");
+            _pill.LayoutStyle = Style.Load<LayoutStyle>("PillVertical");
+            _pillBackgroundStyle = Style.Load<ImageStyle>("PillInfo");
+            PillStyle = _pillBackgroundStyle;
         }
 
         public void RegisterDescriptor()
@@ -122,7 +156,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         protected override void OnTransparencyChanged()
         {
             base.OnTransparencyChanged();
-            _pill.Color = Transparent ? _transparentPillColor : _defaultPillColor;
+            if (_pillCreated && _pill != null)
+            {
+                _pill.Color = Transparent ? _transparentPillColor : _defaultPillColor;
+            }
         }
 
         public ActionHook GetAction()
@@ -198,20 +235,39 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public Tweak GetTweak()
         {
-            return _slider != null ? _slider.Tweak : null;
+            if (_slider != null)
+            {
+                return _slider.Tweak;
+            }
+            if (_switch != null)
+            {
+                return _switch.Tweak;
+            }
+            return null;
         }
 
         public void RegisterTweak(Tweak tweak)
         {
-            switch (tweak)
+            // Check the generic type to support both Tweak<T> and NestedTweak<T>
+            var tweakType = tweak.GetType();
+            if (tweakType.IsGenericType)
             {
-                case Tweak<float>:
-                case Tweak<int>:
-                    AddSlider(tweak);
-                    break;
-                case Tweak<bool>:
-                    AddToggle(tweak);
-                    break;
+                var genericTypeDef = tweakType.GetGenericTypeDefinition();
+                var typeArg = tweakType.GetGenericArguments()[0];
+
+                if (genericTypeDef == typeof(Tweak<>) || genericTypeDef == typeof(NestedTweak<>))
+                {
+                    if (typeArg == typeof(float) || typeArg == typeof(int))
+                    {
+                        AddSlider(tweak);
+                        return;
+                    }
+                    if (typeArg == typeof(bool))
+                    {
+                        AddToggle(tweak);
+                        return;
+                    }
+                }
             }
         }
 
@@ -241,5 +297,129 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             _slider.Tweak = tweak;
         }
+
+        /// <summary>
+        /// Converts this member into a foldout that can contain child members.
+        /// Replaces the colored pill with a clickable foldout toggle and creates a container for child members.
+        /// </summary>
+        public void SetupAsFoldout()
+        {
+            if (_isFoldout)
+            {
+                return;
+            }
+
+            _isFoldout = true;
+
+            // If the pill was already created, remove and destroy it since foldout replaces it
+            if (_pillCreated && _pill != null)
+            {
+                _flex.Remove(_pill, true);
+                _pill = null;
+            }
+
+            // Create a custom icon style with the pill color that doesn't change on state/hover
+            _foldoutIconStyle = ScriptableObject.CreateInstance<ImageStyle>();
+            _foldoutIconStyle.enabled = true;
+            _foldoutIconStyle.color = _defaultPillColor;
+            _foldoutIconStyle.colorHover = _defaultPillColor;
+            _foldoutIconStyle.colorOff = _defaultPillColor;
+
+            // Add foldout toggle before the title (Prepend puts it first in flex order)
+            _foldoutToggle = _flex.Prepend<Toggle>("foldout");
+            _foldoutToggle.LayoutStyle = Style.Load<LayoutStyle>("FoldoutCentered");
+            _foldoutToggle.Icon = Resources.Load<Texture2D>("Textures/caret_right_icon");
+            _foldoutToggle.IconStyle = _foldoutIconStyle;
+            _foldoutToggle.StateChanged = OnFoldoutStateChanged;
+            _foldoutToggle.Callback = _foldoutToggle.ToggleState;
+            _foldoutToggle.State = false;
+
+            // Make the title clickable by enabling raycast and adding a click overlay
+            _title.Text.raycastTarget = true;
+            var clickHandler = _title.GameObject.AddComponent<PointerHandler>();
+            clickHandler.Controller = _foldoutToggle;
+
+            // Create children flex container
+            _childrenFlex = Append<Flex>("children");
+            _childrenFlex.LayoutStyle = Style.Instantiate<LayoutStyle>("MemberChildrenFlex");
+
+            // Start collapsed
+            OnFoldoutStateChanged(false);
+        }
+
+        /// <summary>
+        /// Updates the foldout icon color to match the pill color.
+        /// </summary>
+        private void UpdateFoldoutIconColor()
+        {
+            if (_foldoutIconStyle != null)
+            {
+                _foldoutIconStyle.color = _defaultPillColor;
+                _foldoutIconStyle.colorHover = _defaultPillColor;
+                _foldoutIconStyle.colorOff = _defaultPillColor;
+
+                // Re-apply the style to trigger a refresh
+                if (_foldoutToggle != null)
+                {
+                    _foldoutToggle.IconStyle = _foldoutIconStyle;
+                }
+            }
+        }
+
+        private void OnFoldoutStateChanged(bool state)
+        {
+            if (_foldoutToggle != null)
+            {
+                _foldoutToggle.Icon = Resources.Load<Texture2D>(state ? "Textures/caret_down_icon" : "Textures/caret_right_icon");
+            }
+
+            if (_childrenFlex == null)
+            {
+                return;
+            }
+
+            if (state)
+            {
+                foreach (var child in _childMembers)
+                {
+                    _childrenFlex.Remember(child);
+                }
+            }
+            else
+            {
+                _childrenFlex.ForgetAll();
+            }
+        }
+
+        /// <summary>
+        /// Registers a child member inside this foldout member.
+        /// </summary>
+        public IMember RegisterChildMember(string name, DebugMember attribute)
+        {
+            if (!_isFoldout)
+            {
+                SetupAsFoldout();
+            }
+
+            var childMember = _childrenFlex.Append<Member>(name);
+            childMember.LayoutStyle = Style.Instantiate<LayoutStyle>("Member");
+            childMember.Title = string.IsNullOrEmpty(attribute.DisplayName) ? name : attribute.DisplayName;
+            childMember.PillColor = attribute.Color;
+
+            _childMembers.Add(childMember);
+
+            // If foldout is collapsed, hide the new member
+            if (_foldoutToggle != null && !_foldoutToggle.State)
+            {
+                _childrenFlex.Forget(childMember);
+            }
+
+            return childMember;
+        }
+
+        /// <summary>
+        /// Gets the list of child members if this is a foldout.
+        /// </summary>
+        public IReadOnlyList<Member> ChildMembers => _childMembers;
     }
 }

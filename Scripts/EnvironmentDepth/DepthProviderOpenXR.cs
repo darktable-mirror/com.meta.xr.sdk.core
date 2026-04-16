@@ -40,6 +40,7 @@ namespace Meta.XR.EnvironmentDepth
         private readonly MetaOpenXROcclusionSubsystem _occlusionSubsystem;
         private Dictionary<IntPtr, (uint textureId, RenderTexture renderTexture)> _depthTextures;
         private IntPtr? _prevNativeTexture;
+        private bool _loggedSwapchainError;
 
         public DepthProviderOpenXR(XRDisplaySubsystem displaySubsystem, OpenXRLoader loader)
         {
@@ -89,6 +90,7 @@ namespace Meta.XR.EnvironmentDepth
                         }
                     }
                     _depthTextures = null;
+                    _loggedSwapchainError = false;
                 }
             }
         }
@@ -117,7 +119,11 @@ namespace Meta.XR.EnvironmentDepth
             {
                 if (!_occlusionSubsystem.TryGetSwapchainTextureDescriptors(out var swapchainDescriptors))
                 {
-                    Debug.LogError("TryGetSwapchainTextureDescriptors() failed.");
+                if (!_loggedSwapchainError)
+                    {
+                        _loggedSwapchainError = true;
+                        Debug.LogError("TryGetSwapchainTextureDescriptors() failed.");
+                    }
                     return false;
                 }
 

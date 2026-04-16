@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 81d5758cfb47823489080981979f33be, type: 3}
   m_Name: INetworkedCharacterRetargeter
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: fda8488b-014e-4281-b04a-032b40822ec7
   version: 1
   blockName: Networked Character Retargeter
@@ -23,15 +23,15 @@ MonoBehaviour:
     - name: Multiplayer
     - name: Movement
     - name: New
-  thumbnail: {fileID: 2800000, guid: ee98f87bb0cdea64d96df4deb46ed486, type: 3}
-  remoteThumbnailContentId: 0
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 33748018544785142
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies:
   - 1d8db162-54f6-43df-b4ef-b499df1f6769
   - e47682b9-c270-40b1-b16d-90b627a5ce1b
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies:
   - com.meta.xr.sdk.movement
   isSingleton: 0

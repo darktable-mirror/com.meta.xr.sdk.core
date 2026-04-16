@@ -74,7 +74,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal virtual IEnumerable<OVRConfigurationTask> GetAssociatedRules(BuildingBlock block)
             => Enumerable.Empty<OVRConfigurationTask>();
 
-        internal HashSet<string> ComputePackageDependencies(VariantsSelection variantSelection)
+        internal virtual HashSet<string> ComputePackageDependencies(VariantsSelection variantSelection)
         {
             var dependencies = packageDependencies == null || packageDependencies.Count == 0 ? new HashSet<string>() :
                 packageDependencies.ToHashSet();

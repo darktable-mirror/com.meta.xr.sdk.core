@@ -27,7 +27,7 @@ namespace Meta.XR.MetaWand.Editor.Telemetry
     {
         public static bool SendMetaWandEvent(this OVRPlugin.UnifiedEventData eventData)
         {
-            eventData.productType = "meta_wand";
+            eventData.productType = OVRPlugin.ProductType.MetaWand;
             eventData.machine_oculus_user_id = MetaWandAuth.Data.IsValid ? MetaWandAuth.Data.ProfileId : 0;
             eventData.SetMetadata("app_version", Application.version);
             eventData.SetMetadata("device_os", SystemInfo.operatingSystem);

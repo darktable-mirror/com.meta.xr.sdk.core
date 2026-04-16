@@ -83,21 +83,30 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
 
     public override void OnActivate(string searchContext, VisualElement rootElement)
     {
-        if (!_activated)
+        if (_activated)
         {
-            OpenTimestamp = EditorApplication.timeSinceStartup;
-            _activated = true;
-            _lastOrigin = _lastOrigin ?? Origins.ProjectSettings;
-
-            OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Open)
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
-                    EditorUserBuildSettings.selectedBuildTargetGroup.ToString())
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Origin, _lastOrigin.ToString())
-                .Send();
-
-            InteractionFlowEvent = InteractionFlowEvent?.AddPoint(OVRProjectSetupTelemetryEvent.MarkerPoints.Open)
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Origin, _lastOrigin.ToString());
+            return;
         }
+
+        OVRProjectSetup.ProcessorQueue.OnProcessorCompleted -= OnProcessorCompleted;
+        OVRProjectSetup.ProcessorQueue.OnProcessorCompleted += OnProcessorCompleted;
+
+        OpenTimestamp = EditorApplication.timeSinceStartup;
+        _activated = true;
+        _lastOrigin = _lastOrigin ?? Origins.ProjectSettings;
+
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Open)
+        {
+            isEssential = OVRPlugin.Bool.True,
+            productType = OVRPlugin.ProductType.Pst
+        };
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
+            EditorUserBuildSettings.selectedBuildTargetGroup.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Origin, _lastOrigin.ToString());
+        unifiedEvent.Send();
+
+        InteractionFlowEvent = InteractionFlowEvent?.AddPoint(OVRProjectSetupTelemetryEvent.MarkerPoints.Open)
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Origin, _lastOrigin.ToString());
     }
 
     public override void OnDeactivate()
@@ -108,23 +117,31 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
             return;
         }
 
-        if (_activated)
+        if (!_activated)
         {
-            OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Close)
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
-                    EditorUserBuildSettings.selectedBuildTargetGroup.ToString())
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Origin, _lastOrigin.ToString())
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.TimeSpent,
-                    TimeSpent.ToString(CultureInfo.InvariantCulture))
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Interaction, _lastInteraction.ToString())
-                .Send();
-
-            InteractionFlowEvent = InteractionFlowEvent?.AddPoint(OVRProjectSetupTelemetryEvent.MarkerPoints.Close)
-                .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Interaction, _lastInteraction.ToString())
-                .Send();
-
-            ResetInteraction();
+            return;
         }
+
+        OVRProjectSetup.ProcessorQueue.OnProcessorCompleted -= OnProcessorCompleted;
+
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Close)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Pst
+        };
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
+            EditorUserBuildSettings.selectedBuildTargetGroup.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Origin, _lastOrigin.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.TimeSpent,
+            TimeSpent.ToString(CultureInfo.InvariantCulture));
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Interaction, _lastInteraction.ToString());
+        unifiedEvent.Send();
+
+        InteractionFlowEvent = InteractionFlowEvent?.AddPoint(OVRProjectSetupTelemetryEvent.MarkerPoints.Close)
+            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Interaction, _lastInteraction.ToString())
+            .Send();
+
+        ResetInteraction();
     }
 
     public override void OnTitleBarGUI()
@@ -135,6 +152,11 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
     public override void OnGUI(string searchContext)
     {
         OvrProjectSetupDrawer.OnGUI();
+    }
+
+    private void OnProcessorCompleted(OVRConfigurationTaskProcessor processor)
+    {
+        SettingsService.RepaintAllSettingsWindow();
     }
 
     public static void OpenSettingsWindow(Origins origin)

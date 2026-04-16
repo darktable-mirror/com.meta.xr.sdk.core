@@ -163,10 +163,14 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             _instance.Focus();
 
-            OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.OpenWindow)
-                .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.ActionTrigger, origin.ToString())
-                .AddAnnotation(OVRTelemetryConstants.BB.AnnotationType.BlocksCount, _blockList.Count)
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.OpenWindow)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.BuildingBlocks
+            };
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.BB.AnnotationType.ActionTrigger, origin.ToString());
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.BB.AnnotationType.BlocksCount, _blockList.Count);
+            unifiedEvent.Send();
 
             if (showDetailPane)
             {
@@ -299,18 +303,17 @@ namespace Meta.XR.BuildingBlocks.Editor
         private static void RefreshBlockList()
         {
             var selectedCollection = SelectedCollection.Value;
+            IEnumerable<BlockBaseData> blocksEnumerable;
             if (selectedCollection != null)
             {
-                _blockList = BlocksContentManager.GetCollection(selectedCollection);
+                blocksEnumerable = BlocksContentManager.GetCollection(selectedCollection);
             }
             else
             {
-                _blockList = Utils.FilteredRegistry;
+                blocksEnumerable = Utils.FilteredRegistry;
             }
 
-            _blockList = Utils.Sort.MostPopular(_blockList)
-                .Where(block => !block.Hidden)
-                .ToList();
+            _blockList = Utils.Sort.MostPopular(blocksEnumerable).ToList();
 
             UpdateCurrentBlockList();
 
@@ -318,7 +321,8 @@ namespace Meta.XR.BuildingBlocks.Editor
                 .Where(tag => _blockList.Any(data =>
                     data.Tags.Contains(tag)
                     && data.Tags.All(otherTag => otherTag.Behavior.Visibility))
-                );
+                )
+                .ToList();
         }
 
         private void OnDisable()
@@ -472,6 +476,12 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private void ShowBlocks(Dimensions dimensions)
         {
+            // Reset global building blocks cache once per frame to avoid repeated FindObjectsByType calls
+            if (Event.current.type == EventType.Layout)
+            {
+                BlocksWindowCache.InvalidateBuildingBlocksCache();
+            }
+
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, false, true, GUIStyle.none,
                 GUI.skin.verticalScrollbar, Styles.GUIStyles.NoMargin, GUILayout.Width(dimensions.WindowWidth));
 
@@ -491,7 +501,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 Show(block, blockRect, isVisibleInScrollView, dimensions.ExpectedThumbnailWidth,
                     dimensions.ExpectedThumbnailHeight);
 
-                if (showTutorial && block.IsInteractable)
+                if (showTutorial && block.GetCache().IsInteractable)
                 {
                     ShowTutorial(blockRect);
                     showTutorial = false;
@@ -891,14 +901,25 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
 
         private static DragAndDropVisualMode HierarchyDropHandler(
+#if UNITY_6000_3_OR_NEWER
+            EntityId dropTargetEntityId,
+#else
             int dropTargetInstanceID,
+#endif
             HierarchyDropFlags dropMode,
             Transform parentForDraggedObjects,
             bool perform)
         {
-            var hoveredObject = EditorUtility.InstanceIDToObject(dropTargetInstanceID) as GameObject;
+            var hoveredObject =
+#if UNITY_6000_3_OR_NEWER
+                EditorUtility.EntityIdToObject(dropTargetEntityId) as GameObject;
+#else
+                EditorUtility.InstanceIDToObject(dropTargetInstanceID) as GameObject;
+#endif
             return DropHandler(perform, hoveredObject);
         }
+
+
 
         private static DragAndDropVisualMode SceneDropHandler(
             Object dropUpon,
@@ -954,8 +975,13 @@ namespace Meta.XR.BuildingBlocks.Editor
             DragAndDrop.SetGenericData(DragAndDropBlockDataLabel, block);
             DragAndDrop.SetGenericData(DragAndDropBlockThumbnailLabel, block.Thumbnail);
             DragAndDrop.SetGenericData(DragAndDropStartMousePosition, CurrentMousePosition);
+#if UNITY_6000_3_OR_NEWER
+            DragAndDrop.AddDropHandlerV2(SceneDropHandler);
+            DragAndDrop.AddDropHandlerV2(HierarchyDropHandler);
+#else
             DragAndDrop.AddDropHandler(SceneDropHandler);
             DragAndDrop.AddDropHandler(HierarchyDropHandler);
+#endif
             DragAndDrop.StartDrag(DragAndDropLabel);
         }
 
@@ -964,8 +990,13 @@ namespace Meta.XR.BuildingBlocks.Editor
             DragAndDrop.SetGenericData(DragAndDropBlockDataLabel, null);
             DragAndDrop.SetGenericData(DragAndDropBlockThumbnailLabel, null);
             DragAndDrop.SetGenericData(DragAndDropStartMousePosition, null);
+#if UNITY_6000_3_OR_NEWER
+            DragAndDrop.RemoveDropHandlerV2(SceneDropHandler);
+            DragAndDrop.RemoveDropHandlerV2(HierarchyDropHandler);
+#else
             DragAndDrop.RemoveDropHandler(SceneDropHandler);
             DragAndDrop.RemoveDropHandler(HierarchyDropHandler);
+#endif
         }
 
         private void OnSelectTag(Tag tag)

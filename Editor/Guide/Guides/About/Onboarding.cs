@@ -66,6 +66,8 @@ namespace Meta.XR.Guides.Editor.About
                         await RemoteJsonContent<RemoteContent>.Create("onboarding_copy.json", 30362822839999478);
                     if (!result.IsSuccess) return;
 
+                    if (result.Content.dictionary == null) return;
+
                     _dictionary = result.Content.dictionary.ToDictionary(pair => pair.key, pair => pair.value);
                     callback?.Invoke();
                 }
@@ -438,10 +440,10 @@ namespace Meta.XR.Guides.Editor.About
             $"{BuildingBlocks.Editor.Utils.FilteredRegistry.Count(data => !data.Hidden)} blocks available!";
 
         public string ReleaseNotesDescription =>
-            $"Meta XR Core SDK • Version {Version}";
+            About.Version.HasValue ? $"Meta XR Core SDK • Version {Version}" : "Meta XR Core SDK";
 
         public string WelcomeDescription =>
-            $"Version {About.Version}";
+            About.Version.HasValue ? $"Version {About.Version}" : string.Empty;
 
         public string WelcomeDescriptionUpdate =>
             "• New version available! ";
@@ -504,8 +506,8 @@ namespace Meta.XR.Guides.Editor.About
         private void InitializeWindow(GuideWindow window)
         {
             _window = window;
-            _window.AddAdditionalTelemetryAnnotations = marker =>
-                marker.AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasNewVersionAvailable,
+            _window.AddAdditionalUnifiedEventMetadata = unifiedEvent =>
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasNewVersionAvailable,
                     About.Version < About.LatestVersion);
         }
 
@@ -565,10 +567,15 @@ namespace Meta.XR.Guides.Editor.About
 
         private void DrawBefore()
         {
-            if (_taskChangeLog is { IsCompleted: true } &&
+            if (_taskChangeLog is { IsCompleted: true, IsFaulted: false } &&
                 Event.current.type == EventType.Layout && _taskChangeLog.Result)
             {
                 UpdatePagesWithRemoteContent();
+                _taskChangeLog = null;
+            }
+            else if (_taskChangeLog is { IsCompleted: true, IsFaulted: true })
+            {
+                // Task failed (e.g., during domain reload), clear it to avoid re-throwing
                 _taskChangeLog = null;
             }
 
@@ -744,7 +751,9 @@ namespace Meta.XR.Guides.Editor.About
             if (pageIndex < 0 || pageIndex >= pages.Count ||
                 !Enum.TryParse(pages[pageIndex].PageId, out _currentPage))
             {
-                // Going past the last page - close first, then open Meta XR Tools menu with delay
+                // Going past the last page - reset page index so reopening starts from first page
+                _currentPageIndex.SetValue(0);
+                // Close first, then open Meta XR Tools menu with delay
                 _window.Close();
                 EditorApplication.delayCall += () => Dropdown.ShowDropdown();
                 return;
@@ -1292,6 +1301,7 @@ namespace Meta.XR.Guides.Editor.About
                 Content = Meta.XR.Simulator.Editor.XRSimInstallationDetector.IsXRSim2Installed() ?
                     new GUIContent(MetaXRSimulatorEnable)
                     : new GUIContent(MetaXRSimulatorInstall),
+                ActionData = Meta.XR.Simulator.ToolbarItem.ToolDescriptor,
                 OriginData = this,
                 Origin = Origins.GuidedSetup,
                 Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardAction,

@@ -105,20 +105,22 @@ namespace Meta.XR.Editor.UserInterface
 
         private void SendTelemetry()
         {
-            var marker = OVRTelemetry.Start(Telemetry.MarkerId.LinkClick);
-            marker = AddAnnotations(marker);
-            marker.Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.LinkClick)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            AddFalcoMetadata(unifiedEvent);
+            unifiedEvent.Send();
         }
 
-        protected virtual OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
+        protected virtual void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
         {
-            var newMarker = marker.AddAnnotation(Telemetry.AnnotationType.Label, Label)
-                .AddAnnotation(Telemetry.AnnotationType.Action, Id ?? Label)
-                .AddAnnotation(Telemetry.AnnotationType.ActionType, GetType().Name)
-                .AddAnnotation(Telemetry.AnnotationType.Origin, Origin.ToString())
-                .AddAnnotation(Telemetry.AnnotationType.OriginData, OriginData?.Id);
-
-            return newMarker;
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Label, Label);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, Id ?? Label);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Origin, Origin.ToString());
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.OriginData, OriginData?.Id);
         }
     }
 
@@ -133,10 +135,10 @@ namespace Meta.XR.Editor.UserInterface
             Application.OpenURL(URL);
         }
 
-        protected override OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
+        protected override void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
         {
-            return base.AddAnnotations(marker)
-                .AddAnnotation(Telemetry.AnnotationType.ActionData, URL);
+            base.AddFalcoMetadata(unifiedEvent);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, URL);
         }
     }
 
@@ -152,10 +154,10 @@ namespace Meta.XR.Editor.UserInterface
             Selection.activeObject = Asset;
         }
 
-        protected override OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
+        protected override void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
         {
-            return base.AddAnnotations(marker)
-                .AddAnnotation(Telemetry.AnnotationType.ActionData, (Asset as IIdentified)?.Id ?? Asset.name);
+            base.AddFalcoMetadata(unifiedEvent);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, (Asset as IIdentified)?.Id ?? Asset.name);
         }
     }
 
@@ -171,10 +173,10 @@ namespace Meta.XR.Editor.UserInterface
             Action?.Invoke();
         }
 
-        protected override OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
+        protected override void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
         {
-            return base.AddAnnotations(marker)
-                .AddAnnotation(Telemetry.AnnotationType.ActionData, ActionData?.Id);
+            base.AddFalcoMetadata(unifiedEvent);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, ActionData?.Id);
         }
     }
 }

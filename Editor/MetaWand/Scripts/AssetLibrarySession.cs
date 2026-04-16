@@ -85,6 +85,8 @@ namespace Meta.XR.MetaWand.Editor
             ActivePrompt.Selected = true;
         }
 
+        public static bool SearchResultReady => ActivePrompt.ContentPlaceholdersPreGenAssets.All(c => c.GetState() is not ContentState.Requesting);
+
         public static async Task SaveSession()
         {
             if (SessionIsEmpty)
@@ -131,6 +133,23 @@ namespace Meta.XR.MetaWand.Editor
                 return val;
 
             return Constants.ErrorUnexpectedError;
+        }
+
+        public static async Task<TelemetryResult> CanShowFeedbackUI()
+        {
+            _apiManager ??= new MetaWandApiManager(MetaWandAuth.Data.AccessToken);
+            return await _apiManager.ShouldDisplayFeedbackUI();
+        }
+
+        public static async Task<TelemetryResult> SearchFeedback(MetaWandApiManager.AssetResultFeedback feedback)
+        {
+            if (ActivePrompt == null)
+            {
+                return new TelemetryResult(success: false, errorMessage: "No active search session");
+            }
+
+            _apiManager ??= new MetaWandApiManager(MetaWandAuth.Data.AccessToken);
+            return await _apiManager.SearchFeedback(ActivePrompt.Id, ActivePrompt.PromptText, feedback);
         }
     }
 }

@@ -18,9 +18,12 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -31,7 +34,10 @@ namespace Meta.XR.Editor.UserInterface
         public bool Hide { get; set; }
         private readonly GUILayoutOption[] _options;
         private readonly Utils.UIItemPlacementType _placementType;
+        private readonly string[] _styleClasses = Array.Empty<string>();
         public GUIStyle Style { get; set; }
+        private VisualElement _containerElement;
+        public VisualElement ContainerElement => _containerElement ??= Get();
 
         public GroupedItem(IEnumerable<IUserInterfaceItem> items,
             Utils.UIItemPlacementType placementType = Utils.UIItemPlacementType.Horizontal,
@@ -48,6 +54,20 @@ namespace Meta.XR.Editor.UserInterface
             Style = style;
             _placementType = placementType;
             _options = options;
+        }
+
+        /// <summary>
+        /// Constructor to use in UIToolkit based environment
+        /// </summary>
+        /// <param name="items"></param>
+        /// <param name="placementType"></param>
+        /// <param name="styleClasses"></param>
+        public GroupedItem(Utils.UIItemPlacementType placementType,
+            IEnumerable<IUserInterfaceItem> items,
+            params string[] styleClasses
+            ) : this(items, placementType, Array.Empty<GUILayoutOption>())
+        {
+            _styleClasses = styleClasses;
         }
 
         public virtual void Draw()
@@ -75,6 +95,35 @@ namespace Meta.XR.Editor.UserInterface
             {
                 EditorGUILayout.EndVertical();
             }
+        }
+
+        public virtual VisualElement Get()
+        {
+            if (_containerElement != null)
+                return _containerElement;
+
+            _containerElement = new VisualElement();
+            var placement = _placementType == Utils.UIItemPlacementType.Horizontal
+                ? Props.Flexbox.Row
+                : Props.Flexbox.Column;
+
+            _containerElement.AddToClassList(placement);
+            _containerElement.AddToClassList(Props.Flexbox.AlignStart);
+
+            foreach (var styleClass in _styleClasses)
+            {
+                if (!string.IsNullOrEmpty(styleClass))
+                {
+                    _containerElement.AddToClassList(styleClass);
+                }
+            }
+
+            foreach (var item in Items)
+            {
+                _containerElement.Add(item.Get());
+            }
+
+            return _containerElement;
         }
     }
 }

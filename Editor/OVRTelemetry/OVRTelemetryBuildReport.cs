@@ -20,7 +20,6 @@
 
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
-using UnityEngine;
 
 internal class OVRTelemetryBuildReport : IPostprocessBuildWithReport
 {
@@ -28,12 +27,17 @@ internal class OVRTelemetryBuildReport : IPostprocessBuildWithReport
 
     public void OnPostprocessBuild(BuildReport report)
     {
-        using var marker = new OVRTelemetryMarker(OVRTelemetryConstants.Editor.MarkerId.Build);
-        marker.SetResult(report.summary.result switch
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.Build)
         {
-            BuildResult.Failed => OVRPlugin.Qpl.ResultType.Fail,
-            BuildResult.Cancelled => OVRPlugin.Qpl.ResultType.Cancel,
-            _ => OVRPlugin.Qpl.ResultType.Success
-        });
+            isEssential = OVRPlugin.Bool.True,
+            productType = OVRPlugin.ProductType.Editor,
+            result = report.summary.result switch
+            {
+                BuildResult.Failed => OVRPlugin.UnifiedEventResult.FAIL,
+                BuildResult.Cancelled => OVRPlugin.UnifiedEventResult.CANCEL,
+                _ => OVRPlugin.UnifiedEventResult.SUCCESS
+            }
+        };
+        unifiedEvent.Send();
     }
 }

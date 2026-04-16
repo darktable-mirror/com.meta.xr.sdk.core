@@ -294,14 +294,26 @@ public class OVRManagerEditor : Editor
 
         var sharpenType = manager.sharpenType;
         OVREditorUtil.SetupEnumField(target, new GUIContent("Sharpen Type", "The sharpen filter of the eye buffer. This amplifies contrast and fine details."), ref sharpenType, ref modified);
-        manager.sharpenType = sharpenType;
+        if (manager.sharpenType != sharpenType)
+        {
+            manager.sharpenType = sharpenType;
+        }
 
+        bool disableRecording = manager.disableRecording;
+        OVREditorUtil.SetupBoolField(target, new GUIContent("Disable Recording", "When enabled, the eye buffer is marked as secure to prevent recording or casting."), ref disableRecording, ref modified);
+        if (manager.disableRecording != disableRecording)
+        {
+            manager.disableRecording = disableRecording;
+        }
 
         OVRManager.ColorSpace colorGamut = runtimeSettings.colorSpace;
         OVREditorUtil.SetupEnumField(target, new GUIContent("Color Gamut",
                 "The target color gamut when displayed on the HMD"), ref colorGamut, ref modified,
             "https://developer.oculus.com/documentation/unity/unity-color-space/");
-        manager.colorGamut = colorGamut;
+        if (manager.colorGamut != colorGamut)
+        {
+            manager.colorGamut = colorGamut;
+        }
 
         bool localDimming = manager.localDimming;
         bool visibilityMesh = runtimeSettings.VisibilityMesh;
@@ -349,7 +361,10 @@ public class OVRManagerEditor : Editor
 
         var trackingOriginType = manager.trackingOriginType;
         OVREditorUtil.SetupEnumField(target, new GUIContent("Tracking Origin Type", "Defines the origin position of the player relative to their tracking space"), ref trackingOriginType, ref modified);
-        manager.trackingOriginType = trackingOriginType;
+        if (manager.trackingOriginType != trackingOriginType)
+        {
+            manager.trackingOriginType = trackingOriginType;
+        }
 
         DrawHeadTrackingSection(manager, runtimeSettings, ref modified);
 
@@ -554,8 +569,16 @@ public class OVRManagerEditor : Editor
                            "Defines if hand poses can leverage algorithms to retrieve hand poses outside of the normal tracking area."),
             ref manager.wideMotionModeHandPosesEnabled, ref modified);
 
+        OVREditorUtil.SetupBoolField(target,
+            new GUIContent("Fast Motion Mode Hand Poses Enabled",
+                "Experimental: Defines if hand poses leverage a higher frequency capture rate."),
+            ref manager.fastMotionModeHandPosesEnabled, ref modified);
 
 
+        OVREditorUtil.SetupBoolField(target,
+            new GUIContent("Wide Motion Mode 2 Hand Poses Enabled",
+                "Experimental: New path to define if hand poses can leverage algorithms to retrieve hand poses outside of the normal tracking area."),
+            ref manager.wideMotionMode2HandPosesEnabled, ref modified);
 
         EditorGUILayout.Space();
         // Hand Tracking Settings

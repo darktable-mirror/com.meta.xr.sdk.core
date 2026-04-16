@@ -21,9 +21,13 @@
 using System;
 using System.Collections.Generic;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 using Button = Meta.XR.Editor.UserInterface.RLDS.Button;
+using Label = Meta.XR.Editor.UserInterface.Label;
+using Spinner = Meta.XR.Editor.UserInterface.RLDS.Spinner;
 
 namespace Meta.XR.MetaWand.Editor
 {
@@ -34,6 +38,7 @@ namespace Meta.XR.MetaWand.Editor
         internal static Action OnClose;
 
         private XR.Editor.UserInterface.Utils.Repainter _repainter;
+        private StyleSheet _currentStyleSheet;
 
         internal static void ShowWindow()
         {
@@ -73,45 +78,77 @@ namespace Meta.XR.MetaWand.Editor
 
         private void OnDestroy() => OnClose?.Invoke();
 
-        private void OnGUI()
+        public void CreateGUI()
         {
-            _repainter.RequestRepaint();
+            rootVisualElement.schedule.Execute(() =>
+            {
+                BuildUI(rootVisualElement);
+            });
+        }
 
-            new GroupedItem(new List<IUserInterfaceItem>
+        private void BuildUI(VisualElement root)
+        {
+            root.Clear();
+            LoadStyleSheet();
+            root.AddToClassList(Props.Surface.Secondary);
+
+            var closeButton = new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Horizontal,
+                new List<IUserInterfaceItem>
                 {
                     new AddSpace(true),
-                    new GroupedItem(new List<IUserInterfaceItem>
+                    new Button(new ActionLinkDescription
                     {
-                        new AddSpace(XR.Editor.UserInterface.RLDS.Styles.Spacing.Space5XL),
-                        new GroupedItem(new List<IUserInterfaceItem>
-                        {
-                            new Label("Continue in your browser", Styles.GUIStyles.Heading3),
-                            new AddSpace(XR.Editor.UserInterface.RLDS.Styles.Spacing.SpaceMD),
-                            new Label("To confirm your Meta login, please continue in the\nbrowser window.",
-                                Styles.GUIStyles.Body2SupportingTextNormal)
-                        }, XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical, GUILayout.Width(360)),
-                        new GroupedItem(new List<IUserInterfaceItem>
-                        {
-                            new AddSpace(XR.Editor.UserInterface.RLDS.Styles.Spacing.Space4XL),
-                            new AddSpace(XR.Editor.UserInterface.RLDS.Styles.Spacing.Space2XL),
-                            Utils.Spinner,
-                        }, Styles.GUIStyles.PaddingTop)
-                    }),
-                    new AddSpace(true),
-                    new GroupedItem(new List<IUserInterfaceItem>
-                    {
-                        new AddSpace(true),
-                        new Button(new ActionLinkDescription
-                            {
-                                Content = new GUIContent("Cancel"),
-                                Action = CloseWindow
-                            }, XR.Editor.UserInterface.RLDS.Styles.Buttons.SecondaryXSmall,
-                            Styles.Constants.ButtonWidthSmall)
-                    })
-                }, XR.Editor.UserInterface.RLDS.Styles.Divs.PaddingSpaceMD,
-                XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical).Draw();
+                        Content = new GUIContent("Cancel"),
+                        Action = CloseWindow
+                    }, Props.ButtonVariant.Secondary, Props.ButtonSize.Small)
+                }, Props.Flexbox.AlignEnd);
+            closeButton.Get().AddToClassList(Props.Flexbox.SelfStretch);
 
-            _repainter.Assess(this);
+            var element = new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical,
+                new List<IUserInterfaceItem>
+                {
+                    new AddSpace(true),
+                    new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Horizontal,
+                        new List<IUserInterfaceItem>
+                        {
+                            new AddSpace(XR.Editor.UserInterface.RLDS.Styles.Spacing.Space5XL,
+                                AddSpace.SpaceDirection.Horizontal),
+                            new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical,
+                                new List<IUserInterfaceItem>
+                                {
+                                    new Label("Continue in your browser", Props.Typography.Heading3),
+                                    new AddSpace(XR.Editor.UserInterface.RLDS.Styles.Spacing.SpaceMD),
+                                    new Label("To confirm your Meta login, please continue in the\nbrowser window.",
+                                        Props.Typography.Body2SupportingText)
+                                }, Props.Flexbox.Grow1),
+                            new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Horizontal,
+                                new List<IUserInterfaceItem>
+                            {
+                                new Spinner(RingSize.Size24, RingColor.Disabled, 720f,
+                                    Props.Flexbox.SelfCenter)
+                            }, Props.Flexbox.Grow1)
+                        }, Props.Flexbox.Grow1, Props.Flexbox.AlignCenter),
+                    new AddSpace(true),
+                    closeButton
+                }, Props.Utilities.MarginLG, Props.Flexbox.Grow1).Get();
+
+            root.Add(element);
+        }
+
+        private void LoadStyleSheet()
+        {
+            var root = rootVisualElement;
+
+            if (_currentStyleSheet != null)
+            {
+                root.styleSheets.Remove(_currentStyleSheet);
+            }
+
+            _currentStyleSheet = RLDSUtils.LoadStyleSheet(!EditorGUIUtility.isProSkin);
+            if (_currentStyleSheet != null)
+            {
+                root.styleSheets.Add(_currentStyleSheet);
+            }
         }
     }
 }

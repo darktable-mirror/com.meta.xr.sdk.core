@@ -79,7 +79,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Compatibility,
                 isDone: _ => !GetMissingPackageIds().Any(),
-                message: BuildFixMessageForMissingPackageDependencies(GetMissingPackageIds())
+                conditionalMessage: _ => BuildFixMessageForMissingPackageDependencies(GetMissingPackageIds())
             );
         }
 

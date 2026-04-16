@@ -20,7 +20,8 @@ MonoBehaviour:
   tags:
     array:
     - name: Voice
-  thumbnail: {fileID: 2800000, guid: e1faf0485fad56242bca4a2d15c5d60a, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 26603624805894006
   order: 0
   prefab: {fileID: 0}
   externalBlockDependencies: []

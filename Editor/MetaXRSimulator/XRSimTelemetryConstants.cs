@@ -29,6 +29,12 @@ internal static class XRSimTelemetryConstants
         public const int BinariesInstalled = 163060014;
     }
 
+    public static class FalcoEventName
+    {
+        public const string ToggleState = "XRSIM_TOGGLE_STATE";
+        public const string BinariesInstalled = "XRSIM_PACKAGE_INSTAL";
+    }
+
     public static class AnnotationType
     {
         public const string IsActive = "active";

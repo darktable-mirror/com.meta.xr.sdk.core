@@ -215,15 +215,31 @@ public class OVRCameraRig : MonoBehaviour
 
     protected virtual void Awake()
     {
-        if (_instance != null)
-        {
-            if (gameObject.scene.IsValid()) // avoid logging error when viewing a prefab
-                Debug.LogError("Only one instance of OVRCameraRig should be created at once!");
-        }
-        else
+        if (!_instance)
         {
             _instance = this;
         }
+        else
+        {
+#if UNITY_EDITOR
+            // in the editor, Awake can be called in several scripted cases.
+            var logMultipleInstances = !UnityEditor.BuildPipeline.isBuildingPlayer && gameObject.scene.IsValid();
+            var severity = LogType.Warning; // (but these cases aren't necessarily errors)
+#else
+            var logMultipleInstances = gameObject.scene.IsValid(); // is non-prefab
+            var severity = LogType.Error; // is an error at runtime
+#endif
+            if (logMultipleInstances)
+            {
+                Debug.LogFormat(
+                    severity,
+                    LogOption.None,
+                    this,
+                    "Only one instance of OVRCameraRig should be created at once!"
+                );
+            }
+        }
+
         _skipUpdate = true;
         EnsureGameObjectIntegrity();
     }
@@ -351,28 +367,9 @@ public class OVRCameraRig : MonoBehaviour
 
         if (updateHandAnchors)
         {
-            //Need this for controller offset because if we're on OpenVR, we want to set the local poses as specified by Unity, but if we're not, OVRInput local position is the right anchor
             if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
             {
-                Vector3 leftPos = Vector3.zero;
-                Vector3 rightPos = Vector3.zero;
-                Quaternion leftQuat = Quaternion.identity;
-                Quaternion rightQuat = Quaternion.identity;
-
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand, NodeStatePropertyType.Position,
-                        OVRPlugin.Node.HandLeft, OVRPlugin.Step.Render, out leftPos))
-                    leftHandAnchor.localPosition = leftPos;
-                if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand, NodeStatePropertyType.Position,
-                        OVRPlugin.Node.HandRight, OVRPlugin.Step.Render, out rightPos))
-                    rightHandAnchor.localPosition = rightPos;
-                if (OVRNodeStateProperties.GetNodeStatePropertyQuaternion(Node.LeftHand,
-                        NodeStatePropertyType.Orientation, OVRPlugin.Node.HandLeft, OVRPlugin.Step.Render,
-                        out leftQuat))
-                    leftHandAnchor.localRotation = leftQuat;
-                if (OVRNodeStateProperties.GetNodeStatePropertyQuaternion(Node.RightHand,
-                        NodeStatePropertyType.Orientation, OVRPlugin.Node.HandRight, OVRPlugin.Step.Render,
-                        out rightQuat))
-                    rightHandAnchor.localRotation = rightQuat;
+                Debug.LogWarning("OpenVR Input Features are no longer supported.");
             }
             else
             {
@@ -430,8 +427,8 @@ public class OVRCameraRig : MonoBehaviour
                     leftHandOnControllerAnchor.localPosition =
                         leftHandAnchor.InverseTransformPoint(leftRelativeHandPosition);
                     leftHandOnControllerAnchor.localRotation = Quaternion.Inverse(leftHandAnchor.localRotation) *
-                                                               OVRInput.GetLocalControllerRotation(OVRInput.Controller
-                                                                   .LHand);
+                                                                OVRInput.GetLocalControllerRotation(OVRInput.Controller
+                                                                    .LHand);
                     leftHandAnchorDetached.localPosition = Vector3.zero;
                     leftHandAnchorDetached.localRotation = Quaternion.identity;
                 }
@@ -476,25 +473,6 @@ public class OVRCameraRig : MonoBehaviour
             }
 
             trackerAnchor.localPosition = tracker.position;
-
-            OVRPose leftOffsetPose = OVRPose.identity;
-            OVRPose rightOffsetPose = OVRPose.identity;
-            if (OVRManager.loadedXRDevice == OVRManager.XRDevice.OpenVR)
-            {
-                leftOffsetPose = OVRManager.GetOpenVRControllerOffset(Node.LeftHand);
-                rightOffsetPose = OVRManager.GetOpenVRControllerOffset(Node.RightHand);
-
-                //Sets poses of left and right nodes, local to the tracking space.
-                OVRManager.SetOpenVRLocalPose(trackingSpace.InverseTransformPoint(leftControllerAnchor.position),
-                    trackingSpace.InverseTransformPoint(rightControllerAnchor.position),
-                    Quaternion.Inverse(trackingSpace.rotation) * leftControllerAnchor.rotation,
-                    Quaternion.Inverse(trackingSpace.rotation) * rightControllerAnchor.rotation);
-            }
-
-            rightControllerAnchor.localPosition = rightOffsetPose.position;
-            rightControllerAnchor.localRotation = rightOffsetPose.orientation;
-            leftControllerAnchor.localPosition = leftOffsetPose.position;
-            leftControllerAnchor.localRotation = leftOffsetPose.orientation;
         }
 
 #if USING_XR_SDK

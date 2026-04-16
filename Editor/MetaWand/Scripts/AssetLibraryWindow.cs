@@ -55,7 +55,19 @@ namespace Meta.XR.MetaWand.Editor
         private TextField _searchTextField;
         private bool _sessionIsDirty;
         private bool _showLoginError;
+        public static UserBool ShowFeedbackButtons { get; private set; }
         private UserBool _userHasAccess;
+        private FeedbackState _feedbackState = FeedbackState.None;
+
+        private const string FeedbackToastMessage = "Thanks for your feedback!";
+        private const float FeedbackToastDuration = 2.0f;
+
+        private enum FeedbackState
+        {
+            None,
+            ThumbsUp,
+            ThumbsDown
+        }
 
         public static AssetLibraryWindow Window =>
             _window ??= GetWindow<AssetLibraryWindow>(Utils.ToolDescriptorAssetLibrary.Name);
@@ -85,7 +97,7 @@ namespace Meta.XR.MetaWand.Editor
         private string SearchText => SearchTextField.Text.Trim();
         public void SetSearchText(string text) => SearchTextField.Text = text;
 
-        private void OnEnable()
+        private async void OnEnable()
         {
             ResetState();
             _sessionIsDirty = AssetLibrarySession.LoadCachedSession();
@@ -122,6 +134,9 @@ namespace Meta.XR.MetaWand.Editor
                     unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, AssetLibrarySession.ActivePrompt?.Id ?? string.Empty);
                     unifiedEvent.SendMetaWandEvent();
                 }
+
+                var feedbackResult = await AssetLibrarySession.CanShowFeedbackUI();
+                ShowFeedbackButtons.SetValue(feedbackResult.Success);
             }
         }
 
@@ -168,7 +183,9 @@ namespace Meta.XR.MetaWand.Editor
                 var scrollableAreaWidth = Window.position.width - 32;
                 DrawSearchResults(AssetLibrarySession.ActivePrompt.ContentPlaceholdersPreGenAssets,
                     scrollableAreaWidth);
+                DrawSearchResultFeedbackArea();
                 EditorGUILayout.EndScrollView();
+                Utils.DrawToast(this);
             }
             else
             {
@@ -232,6 +249,7 @@ namespace Meta.XR.MetaWand.Editor
         private void InitAssetSearch(string search)
         {
             AssetLibrarySession.PerformSearch(search);
+            _feedbackState = FeedbackState.None;
             _sessionIsDirty = true;
         }
 
@@ -296,6 +314,91 @@ namespace Meta.XR.MetaWand.Editor
                         Styles.GUIStyles.HeaderDescription)
                 }, Styles.GUIStyles.HeaderContainerNewState, XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical)
                 .Draw();
+        }
+
+        private void DrawSearchResultFeedbackArea()
+        {
+            if (!ShowFeedbackButtons.Value || !AssetLibrarySession.SearchResultReady) return;
+
+            var style = new GUIStyle(Styles.GUIStyles.PromptAreaContainer);
+            var rect = EditorGUILayout.BeginVertical(style);
+            Utils.DrawRoundedBackground(rect, Radius.RadiusXS, Colors.SurfaceSecondaryBackground.ToTexture());
+
+            new AddSpace(Spacing.Space4XS).Draw();
+            EditorGUILayout.BeginHorizontal();
+            new Label("Did you find the results helpful?", Styles.GUIStyles.Body2SupportingTextNormal).Draw();
+            Utils.DrawFlexibleSpace();
+
+            var iconButtonStyle = new GUIStyle(GUIStyle.none)
+            {
+                padding = new RectOffset(2, 2, 2, 2),
+                fixedWidth = Styles.Constants.UserIconSize,
+                fixedHeight = Styles.Constants.UserIconSize
+            };
+
+            var defaultColor = Styles.Colors.TransparentWhite(0.65f);
+            var hoverColor = Styles.Colors.TransparentWhite(0.9f);
+
+            // Thumbs up button
+            var thumbsUpHover = HoverHelper.IsHover("thumbsUpFeedback");
+            var thumbsUpIcon = _feedbackState == FeedbackState.ThumbsUp
+                ? Styles.Contents.ThumbsUpFilledIcon.Image
+                : Styles.Contents.ThumbsUpOutlinedIcon.Image;
+            using (new XR.Editor.UserInterface.Utils.ColorScope(
+                       XR.Editor.UserInterface.Utils.ColorScope.Scope.Content,
+                       thumbsUpHover ? hoverColor : defaultColor))
+            {
+                if (HoverHelper.Button("thumbsUpFeedback", new GUIContent(thumbsUpIcon), iconButtonStyle, out _))
+                {
+                    OnThumbsUpClicked();
+                }
+            }
+
+            new AddSpace(Spacing.SpaceSM).Draw();
+
+            // Thumbs down button
+            var thumbsDownHover = HoverHelper.IsHover("thumbsDownFeedback");
+            var thumbsDownIcon = _feedbackState == FeedbackState.ThumbsDown
+                ? Styles.Contents.ThumbsDownFilledIcon.Image
+                : Styles.Contents.ThumbsDownOutlinedIcon.Image;
+            using (new XR.Editor.UserInterface.Utils.ColorScope(
+                       XR.Editor.UserInterface.Utils.ColorScope.Scope.Content,
+                       thumbsDownHover ? hoverColor : defaultColor))
+            {
+                if (HoverHelper.Button("thumbsDownFeedback", new GUIContent(thumbsDownIcon), iconButtonStyle, out _))
+                {
+                    OnThumbsDownClicked();
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            new AddSpace(Spacing.Space4XS).Draw();
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private async void OnThumbsUpClicked()
+        {
+            if (_feedbackState == FeedbackState.ThumbsUp)
+            {
+                return;
+            }
+
+            _feedbackState = FeedbackState.ThumbsUp;
+            Utils.ShowToast(FeedbackToastMessage, FeedbackToastDuration);
+            await AssetLibrarySession.SearchFeedback(MetaWandApiManager.AssetResultFeedback.Like);
+        }
+
+        private async void OnThumbsDownClicked()
+        {
+            if (_feedbackState == FeedbackState.ThumbsDown)
+            {
+                return;
+            }
+            _feedbackState = FeedbackState.ThumbsDown;
+            Utils.ShowToast(FeedbackToastMessage, FeedbackToastDuration);
+            await AssetLibrarySession.SearchFeedback(MetaWandApiManager.AssetResultFeedback.Dislike);
         }
 
         private void DrawSearchArea()
@@ -500,6 +603,9 @@ namespace Meta.XR.MetaWand.Editor
             };
             _userHasAccess.SetValue(access);
 
+            var feedbackResult = await AssetLibrarySession.CanShowFeedbackUI();
+            ShowFeedbackButtons.SetValue(feedbackResult.Success);
+
             new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLoginSuccess)
             {
                 isEssential = OVRPlugin.Bool.True,
@@ -523,6 +629,13 @@ namespace Meta.XR.MetaWand.Editor
             {
                 Owner = Utils.ToolDescriptorAssetLibrary,
                 Uid = "mal_user_access_key",
+                Default = false,
+                SendTelemetry = false
+            };
+            ShowFeedbackButtons ??= new UserBool
+            {
+                Owner = Utils.ToolDescriptorAssetLibrary,
+                Uid = "mal_show_feedback_buttons",
                 Default = false,
                 SendTelemetry = false
             };

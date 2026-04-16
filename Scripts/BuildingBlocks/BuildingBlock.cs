@@ -124,9 +124,18 @@ namespace Meta.XR.BuildingBlocks
 
         private void Start()
         {
-            OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.RunBlock)
-                .AddBlockInfo(this)
-                .SendIf(Application.isPlaying);
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.RunBlock)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.BuildingBlocks
+            };
+            unifiedEvent.AddBlockInfo(this);
+            unifiedEvent.Send();
         }
     }
 }

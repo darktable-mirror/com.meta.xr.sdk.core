@@ -183,16 +183,38 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             var prepared = await PrepareRequestImagesAsync(req, supportsVision, inlineRemoteImages,
                 resolveRemoteRedirects, maxInlineBytes, ct);
 
-            var payload = BuildResponsesPayload(model, prepared);
+            var useStreaming = stream != null;
+            var payload = BuildResponsesPayload(model, prepared, useStreaming);
             var http = new HttpTransport(apiKey);
-            var raw = await http.PostJsonAsync(endpoint, payload);
 
-            var text = ExtractAssistantText(raw);
-            stream?.Report(new ChatDelta(text ?? string.Empty));
-            return new ChatResponse(text ?? string.Empty, raw);
+            if (useStreaming)
+            {
+                var fullText = new StringBuilder();
+                var raw = await http.PostJsonStreamAsync(endpoint, payload, new Progress<string>(chunk =>
+                {
+                    var tokens = ParseStreamChunk(chunk);
+                    foreach (var token in tokens)
+                    {
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            fullText.Append(token);
+                            stream.Report(new ChatDelta(token));
+                        }
+                    }
+                }), null, ct);
+
+                StreamingParser.ClearBuffers(0);
+                return new ChatResponse(fullText.ToString(), raw);
+            }
+            else
+            {
+                var raw = await http.PostJsonAsync(endpoint, payload);
+                var text = ExtractAssistantText(raw);
+                return new ChatResponse(text ?? string.Empty, raw);
+            }
         }
 
-        private static string BuildResponsesPayload(string modelId, ChatRequest req)
+        private static string BuildResponsesPayload(string modelId, ChatRequest req, bool useStreaming = false)
         {
             var sb = new StringBuilder(1024);
             sb.Append("{\"model\":\"").Append(EscapeJson(modelId)).Append("\",\"input\":[{");
@@ -225,8 +247,32 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 }
             }
 
-            sb.Append("]}],\"stream\":false}");
+            sb.Append("]}],\"stream\":").Append(useStreaming ? "true" : "false").Append("}");
             return sb.ToString();
+        }
+
+        private static List<string> ParseStreamChunk(string chunk)
+        {
+            return StreamingParser.ParseSse(chunk, jsonData =>
+            {
+                var streamEvent = StreamingParser.ParseJson<StreamEvent>(jsonData);
+                if (streamEvent != null)
+                {
+                    if (streamEvent.type == "response.output_text.delta")
+                        return streamEvent.delta;
+                    if (streamEvent.type == "response.output_text.done")
+                        return streamEvent.text;
+                }
+                return null;
+            });
+        }
+
+        [Serializable]
+        private class StreamEvent
+        {
+            public string type;
+            public string delta;
+            public string text;
         }
 
         private static string ExtractAssistantText(string rawJson)

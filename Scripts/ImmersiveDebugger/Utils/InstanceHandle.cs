@@ -19,6 +19,7 @@
  */
 
 using System;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
@@ -29,23 +30,39 @@ namespace Meta.XR.ImmersiveDebugger.Utils
     {
         public Object Instance { get; }
         public Type Type { get; }
+#if UNITY_6000_5_OR_NEWER
+        public EntityId InstanceId { get; }
+#else
         public int InstanceId { get; }
+#endif
 
+#if UNITY_6000_5_OR_NEWER
+        public bool IsStatic => InstanceId == EntityId.None;
+#else
         public bool IsStatic => InstanceId == 0;
+#endif
         public bool Valid => Type != null && (IsStatic || Instance != null || Type == typeof(Scene));
 
         public InstanceHandle(Type type, Object instance)
         {
             Type = type;
             Instance = instance;
+#if UNITY_6000_5_OR_NEWER
+            InstanceId = instance != null ? instance.GetEntityId() : EntityId.None;
+#else
             InstanceId = instance != null ? instance.GetInstanceID() : 0;
+#endif
         }
 
         public InstanceHandle(Scene scene)
         {
             Type = typeof(Scene);
             Instance = null;
+#if UNITY_6000_5_OR_NEWER
+            InstanceId = EntityId.FromULong(scene.handle.GetRawData());
+#else
             InstanceId = scene.handle;
+#endif
         }
 
         public static InstanceHandle Static(Type type) => new InstanceHandle(type, null);

@@ -308,6 +308,12 @@ namespace Meta.XR.Editor.StatusMenu
         {
             if (_editorToolbarButton == null) return Rect.zero;
 
+            var layoutSize = _editorToolbarButton.layout.size;
+            if (float.IsNaN(layoutSize.x) || float.IsNaN(layoutSize.y))
+            {
+                return Rect.zero;
+            }
+
             var position = _rawPosition;
 
             var parent = _editorToolbarButton as VisualElement;
@@ -317,7 +323,7 @@ namespace Meta.XR.Editor.StatusMenu
                 parent = parent.parent;
             }
 
-            return new Rect(position, _editorToolbarButton.layout.size);
+            return new Rect(position, layoutSize);
         }
 
         internal static void ShowDropdown()

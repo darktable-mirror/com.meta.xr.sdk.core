@@ -120,6 +120,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             public float top_p;
             public float repetition_penalty;
             public int max_completion_tokens;
+            public bool stream;
         }
 
         [Serializable]
@@ -199,21 +200,49 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
             var prepared = await PrepareRequestImagesAsync(req, SupportsVision, inlineRemoteImages, resolveRemoteRedirects, maxInlineBytes, ct);
 
-            var body = BuildBody(prepared);
+            var useStreaming = stream != null;
+            var body = BuildBody(prepared, useStreaming);
             var json = JsonUtility.ToJson(body, false);
 
             var transport = new HttpTransport(apiKey);
-            var raw = await transport.PostJsonAsync(endpointUrl.Trim(), json);
-            if (string.IsNullOrEmpty(raw))
-            {
-                throw new Exception("Llama API error: empty response from transport");
-            }
 
-            var answer = ExtractAssistant(raw);
-            return new ChatResponse(answer, raw: raw);
+            if (useStreaming)
+            {
+                var fullText = new StringBuilder();
+                var raw = await transport.PostJsonStreamAsync(endpointUrl.Trim(), json, new Progress<string>(chunk =>
+                {
+                    var tokens = StreamingParser.ParseSse(chunk, jsonData =>
+                    {
+                        var resp = StreamingParser.ParseJson<StreamResponse>(jsonData);
+                        if (resp?.@event?.event_type == "progress")
+                            return resp.@event.delta?.text;
+                        return null;
+                    });
+
+                    foreach (var token in tokens)
+                    {
+                        fullText.Append(token);
+                        stream.Report(new ChatDelta(token));
+                    }
+                }), null, ct);
+
+                StreamingParser.ClearBuffers(0);
+                return new ChatResponse(fullText.ToString(), raw);
+            }
+            else
+            {
+                var raw = await transport.PostJsonAsync(endpointUrl.Trim(), json);
+                if (string.IsNullOrEmpty(raw))
+                {
+                    throw new Exception("Llama API error: empty response from transport");
+                }
+
+                var answer = ExtractAssistant(raw);
+                return new ChatResponse(answer, raw: raw);
+            }
         }
 
-        private ChatBody BuildBody(ChatRequest req)
+        private ChatBody BuildBody(ChatRequest req, bool useStreaming = false)
         {
             var content = new List<ContentItem>();
 
@@ -247,8 +276,29 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 temperature = temperature,
                 top_p = topP,
                 repetition_penalty = repetitionPenalty,
-                max_completion_tokens = Mathf.Max(1, maxCompletionTokens)
+                max_completion_tokens = Mathf.Max(1, maxCompletionTokens),
+                stream = useStreaming
             };
+        }
+
+        [Serializable]
+        private class StreamDelta
+        {
+            public string text;
+        }
+
+        [Serializable]
+        private class StreamEvent
+        {
+            public string event_type;
+            public StreamDelta delta;
+        }
+
+        [Serializable]
+        private class StreamResponse
+        {
+            // ReSharper disable once InconsistentNaming
+            public StreamEvent @event;
         }
 
         private static string ToImageUrl(ImageInput img) => ImageInputToDataUri(img, "image/jpeg");

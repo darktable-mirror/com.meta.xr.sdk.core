@@ -101,13 +101,13 @@ namespace Meta.XR.Editor.RemoteContent
         private static void SendEvent()
         {
             var keysString = RampKeysCache.ToFormattedString();
-            var guid = Guid.NewGuid().ToString();
-            OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.StartRampKeys)
-                .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FeatureRampUpValues, keysString)
-                .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigration, "1")
-                .AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationEventID, guid)
-                .Send();
-
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.StartRampKeys)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.FeatureRampUpValues, keysString);
+            unifiedEvent.Send();
         }
 
         private static async Task<bool> Reload(bool forceRedownload)
@@ -155,7 +155,7 @@ namespace Meta.XR.Editor.RemoteContent
         public static async Task<bool> GetRemoteKeysResultAsync(string key, bool defaultValue = false)
         {
             await WaitForKeysFetchingAsync();
-            return GetRemoteKeysResult(key);
+            return GetRemoteKeysResult(key, defaultValue);
         }
 
         public static IEnumerable<string> GetKeys()

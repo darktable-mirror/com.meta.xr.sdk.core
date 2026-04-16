@@ -84,19 +84,22 @@ namespace Meta.XR.Editor.Settings
         {
             if (!SendTelemetry) return;
 
-            var marker = OVRTelemetry.Start(Telemetry.MarkerId.SettingsChanged)
-                .AddAnnotation(Telemetry.AnnotationType.Label, Label ?? Uid)
-                .AddAnnotation(Telemetry.AnnotationType.Action, Uid)
-                .AddAnnotation(Telemetry.AnnotationType.ActionData, Owner?.Id)
-                .AddAnnotation(Telemetry.AnnotationType.ActionType, GetType().Name)
-                .AddAnnotation(Telemetry.AnnotationType.Origin, origin.ToString())
-                .AddAnnotation(Telemetry.AnnotationType.OriginData, originData?.Id);
-
-
-            AddAnnotations(marker).Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.SettingsChanged)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Label, Label ?? Uid);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, Uid);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, Owner?.Id);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Origin, origin.ToString());
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.OriginData, originData?.Id);
+            AddMetadata(unifiedEvent);
+            unifiedEvent.Send();
         }
 
-        protected abstract OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker);
+        protected abstract void AddMetadata(OVRPlugin.UnifiedEventData unifiedEvent);
 
         public virtual void Reset() { }
 
@@ -156,10 +159,10 @@ namespace Meta.XR.Editor.Settings
             Value = Default;
         }
 
-        protected override OVRTelemetryMarker AddAnnotations(OVRTelemetryMarker marker)
+        protected override void AddMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
         {
-            return marker.AddAnnotation(Telemetry.AnnotationType.Type, typeof(T).Name)
-                .AddAnnotation(Telemetry.AnnotationType.Value, Value.ToString());
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Type, typeof(T).Name);
+            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Value, Value.ToString());
         }
     }
 
@@ -268,6 +271,16 @@ namespace Meta.XR.Editor.Settings
 
                 baseSetter(value);
             };
+        }
+    }
+
+    internal class UserEnum<T> : CustomEnum<T>
+        where T : Enum
+    {
+        public UserEnum()
+        {
+            Get = () => (T)(object)EditorPrefs.GetInt(Key, string.IsNullOrEmpty(OldKey) ? (int)(object)Default : EditorPrefs.GetInt(OldKey, (int)(object)Default));
+            Set = value => EditorPrefs.SetInt(Key, (int)(object)value);
         }
     }
 

@@ -20,13 +20,19 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
     internal class Toggle : IUserInterfaceItem
     {
+        private VisualElement _visualElement;
+        private readonly string _typography;
+        private UnityEngine.UIElements.Toggle _uiToggle;
+
         public bool Hide { get; set; }
         public bool State { get; set; }
         private readonly bool _toggleOnLeft;
@@ -49,6 +55,21 @@ namespace Meta.XR.Editor.UserInterface
             _options = options;
         }
 
+        /// <summary>
+        /// Constructor to use in UIToolkit based environment
+        /// </summary>
+        /// <param name="label">Label text for the toggle</param>
+        /// <param name="selected">Initial toggle state</param>
+        /// <param name="typography"><see cref="RLDS.Props.Typography"/> for the typographic variants</param>
+        /// <param name="onToggleChanged">Callback when toggle state changes</param>
+        public Toggle(string label, bool selected, string typography, Action<bool> onToggleChanged = null)
+        {
+            _label = label;
+            State = selected;
+            _typography = typography;
+            _onToggleChanged = onToggleChanged;
+        }
+
         public void Draw()
         {
             var newState = _toggleOnLeft
@@ -60,6 +81,46 @@ namespace Meta.XR.Editor.UserInterface
             }
 
             State = newState;
+        }
+
+        /// <summary>
+        /// Creates a UIToolkit Toggle element with RLDS styling applied.
+        /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
+        /// </summary>
+        /// <returns>A VisualElement containing the styled toggle</returns>
+        public VisualElement Get()
+        {
+            _visualElement = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    alignItems = Align.Center
+                }
+            };
+
+            _visualElement.AddToClassList(Props.Toggle.Base);
+
+            _uiToggle = new UnityEngine.UIElements.Toggle
+            {
+                text = _label,
+                value = State
+            };
+
+            if (!string.IsNullOrEmpty(_typography))
+            {
+                _uiToggle.AddToClassList(_typography);
+            }
+
+            _uiToggle.RegisterValueChangedCallback(evt =>
+            {
+                State = evt.newValue;
+                _onToggleChanged?.Invoke(evt.newValue);
+            });
+
+            _visualElement.Add(_uiToggle);
+
+            return _visualElement;
         }
     }
 }

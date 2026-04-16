@@ -98,3 +98,16 @@
 #MetaXRPlayCompanion .unity-toolbar-toggle:disabled > .unity-image {
     --unity-image-tint-color: var(--unity-theme-text-color-3);
 }
+
+/* Internal only button styling */
+#MetaXRPlayCompanion .metaxr-internal-button {
+    background-color: rgba(102, 170, 255, 0.3);
+}
+
+#MetaXRPlayCompanion .metaxr-internal-button:hover {
+    background-color: rgba(153, 194, 255, 0.4);
+}
+
+#MetaXRPlayCompanion .metaxr-internal-button:checked {
+    background-color: rgba(25, 119, 243, 0.5);
+}

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3ce8e2a6d032b924baf5d6affb3116d6, type: 3}
   m_Name: SharedSpatialAnchorCore
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: 975428dc-db04-4e43-be4a-232f192cd3eb
   version: 1
   blockName: Shared Spatial Anchor Core
@@ -22,7 +22,8 @@ MonoBehaviour:
     - name: Multiplayer
     - name: Spatial Anchor
     - name: Advanced
-  thumbnail: {fileID: 2800000, guid: 2a52470dda46ac64788ce268d26170e2, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 10084906254967454
   order: 11
   prefab: {fileID: 4898121156137818306, guid: 7bc8dfffd9922b94ba33926c8a808719, type: 3}
   selectedGuidedSetupIndex: 0
@@ -43,5 +44,5 @@ MonoBehaviour:
     OnAnchorsLoadCompleted(List<OVRSpatialAnchor>)\r\n- OnAnchorsEraseAllCompleted(OVRSpatialAnchor.OperationResult)\r\n-
     OnAnchorEraseCompleted(OVRSpatialAnchor, OVRSpatialAnchor.OperationResult)\r\n-
     OnSpatialAnchorsShareCompleted(List<OVRSpatialAnchor>, OVRSpatialAnchor.OperationResult)"
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  featureDocumentationName:
+  featureDocumentationUrl:

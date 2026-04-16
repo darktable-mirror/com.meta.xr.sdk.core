@@ -89,48 +89,73 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 }
             }
 
+            var useStreaming = stream != null;
             var payload = new GeneratePayload
             {
                 model = model,
                 prompt = req.text ?? string.Empty,
-                stream = false,
+                stream = useStreaming,
                 images = imagesBase64
             };
 
             var json = JsonUtility.ToJson(payload);
             var transport = new HttpTransport(null);
-            var rawJson = await transport.PostJsonAsync(endpoint, json);
 
-            if (string.IsNullOrEmpty(rawJson))
+            if (useStreaming)
             {
-                Debug.LogWarning("[Ollama] Empty HTTP response.");
-                return new ChatResponse(string.Empty, rawJson);
-            }
+                var fullText = new System.Text.StringBuilder();
+                var rawJson = await transport.PostJsonStreamAsync(endpoint, json, new Progress<string>(chunk =>
+                {
+                    var tokens = StreamingParser.ParseNewlineJson(chunk, jsonLine =>
+                    {
+                        var resp = StreamingParser.ParseJson<GenerateResponse>(jsonLine);
+                        return resp?.response;
+                    });
 
-            GenerateResponse resp;
-            try
+                    foreach (var token in tokens)
+                    {
+                        fullText.Append(token);
+                        stream.Report(new ChatDelta(token));
+                    }
+                }), null, ct);
+
+                StreamingParser.ClearBuffers(0);
+                return new ChatResponse(fullText.ToString(), rawJson);
+            }
+            else
             {
-                resp = JsonUtility.FromJson<GenerateResponse>(rawJson);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[Ollama] Failed to parse response JSON with JsonUtility: {ex.Message}\nReturning raw text.");
-                return new ChatResponse(string.Empty, rawJson);
-            }
+                var rawJson = await transport.PostJsonAsync(endpoint, json);
 
-            var text = resp != null ? (resp.response ?? string.Empty) : string.Empty;
+                if (string.IsNullOrEmpty(rawJson))
+                {
+                    Debug.LogWarning("[Ollama] Empty HTTP response.");
+                    return new ChatResponse(string.Empty, rawJson);
+                }
 
-            if (string.IsNullOrEmpty(text) && resp is { done: true, done_reason: "load" })
-            {
-                Debug.Log("[Ollama] Model was loaded (done_reason=load). No content returned.");
+                GenerateResponse resp;
+                try
+                {
+                    resp = JsonUtility.FromJson<GenerateResponse>(rawJson);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[Ollama] Failed to parse response JSON with JsonUtility: {ex.Message}\nReturning raw text.");
+                    return new ChatResponse(string.Empty, rawJson);
+                }
+
+                var text = resp != null ? (resp.response ?? string.Empty) : string.Empty;
+
+                if (string.IsNullOrEmpty(text) && resp is { done: true, done_reason: "load" })
+                {
+                    Debug.Log("[Ollama] Model was loaded (done_reason=load). No content returned.");
+                }
+
+                return new ChatResponse(text, rawJson);
             }
-
-            stream?.Report(new ChatDelta(text));
-            return new ChatResponse(text, rawJson);
         }
 
         /// <summary>
-        /// Converts an <see cref="ImageInput"/> into a base64 payload suitable for Ollama’s image field.
+        /// Converts an <see cref="ImageInput"/> into a base64 payload suitable for Ollama's image field.
         /// Resolves remote URLs when allowed; otherwise reads local bytes or existing data URLs.
         /// </summary>
         /// <param name="img">Image reference from the chat request.</param>

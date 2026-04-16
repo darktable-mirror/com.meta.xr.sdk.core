@@ -18,11 +18,13 @@ MonoBehaviour:
     typeName: OVRManager, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: 0
       Max: 1
       Category: Meta XR
+      Description: 
       DisplayName: 
     memberName: isInsightPassthroughEnabled
     _editorSelectedGizmoIndex: 0
@@ -36,7 +38,7 @@ MonoBehaviour:
       Min: 0
       Max: 1
       Category: Meta XR
-      Description:
+      Description: 
       DisplayName: Suppress Boundary Visibility
     memberName: shouldBoundaryVisibilityBeSuppressed
     _editorSelectedGizmoIndex: 0
@@ -44,98 +46,111 @@ MonoBehaviour:
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: 0
       Max: 1
       Category: Meta XR
+      Description: 
       DisplayName: 
     memberName: textureOpacity
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: 0
       Max: 1
       Category: Meta XR
+      Description: 
       DisplayName: 
     memberName: edgeRenderingEnabled
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: 0
       Max: 0
       Category: Meta XR
-      DisplayName: 
-    memberName: overlayType
-  - enabled: 1
-    typeName: OVRPassthroughLayer, Oculus.VR
-    attribute:
-      GizmoType: 0
-      Color: {r: 0, g: 0, b: 0, a: 0}
-      Tweakable: 1
-      Min: 0
-      Max: 0
-      Category: Meta XR
+      Description: 
       DisplayName: 
     memberName: colorMapEditorType
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: 0
       Max: 0
       Category: Meta XR
+      Description: 
       DisplayName: 
     memberName: edgeColor
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: -1
       Max: 1
       Category: Meta XR
+      Description: 
       DisplayName: Contrast
     memberName: colorMapEditorContrast
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: -1
       Max: 1
       Category: Meta XR
+      Description: 
       DisplayName: Brightness
     memberName: colorMapEditorBrightness
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: 0
       Max: 1
       Category: Meta XR
+      Description: 
       DisplayName: Posterize
     memberName: colorMapEditorPosterize
+    _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: OVRPassthroughLayer, Oculus.VR
     attribute:
       GizmoType: 0
+      ShowGizmoByDefault: 0
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: -1
       Max: 1
       Category: Meta XR
+      Description: 
       DisplayName: Saturation
     memberName: colorMapEditorSaturation
+    _editorSelectedGizmoIndex: 0

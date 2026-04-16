@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d369b86a2df63434f8f587c6abd1cbed, type: 3}
   m_Name: Occlusion
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: c1dbe32c-fed2-4835-8e6a-3fbb4f4f4315
   version: 1
   blockName: Occlusion
@@ -20,7 +20,8 @@ MonoBehaviour:
     array:
     - name: Depth
     - name: Passthrough
-  thumbnail: {fileID: 2800000, guid: 7e5f2a89b5e35214698b4b96959eee17, type: 3}
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 26369487052652065
   order: 10
   prefab: {fileID: 3253279385362999837, guid: 6eb0bdef7d5d3804a816dedfed7979fe, type: 3}
   selectedGuidedSetupIndex: 2
@@ -35,5 +36,5 @@ MonoBehaviour:
   isSingleton: 0
   usageInstructions: Drag and drop this block on desired GameObject with MeshRenderer
     to make that GameObject occludable in Passthrough.
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  featureDocumentationName:
+  featureDocumentationUrl:

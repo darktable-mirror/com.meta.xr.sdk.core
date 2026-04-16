@@ -26,6 +26,7 @@ using System.Collections;
 /// A PCM buffer of data for a haptics effect.
 /// </summary>
 [HelpURL("https://developer.oculus.com/documentation/unity/unity-haptics-apis/")]
+[Obsolete("OVRHaptics has been deprecated. Use System Haptics for default interactions, or the Haptics SDK instead.")]
 public class OVRHapticsClip
 {
     /// <summary>

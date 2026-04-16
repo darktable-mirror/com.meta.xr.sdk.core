@@ -21,15 +21,15 @@ MonoBehaviour:
     array:
     - name: AI
     - name: New
-  thumbnail: {fileID: 2800000, guid: 1778cdaced7699146aed6d0554cfa950, type: 3}
-  remoteThumbnailContentId: 0
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 25532958906397525
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies: []
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies: []
   isSingleton: 0
-  usageInstructions: 
-  featureDocumentationName: 
-  featureDocumentationUrl: 
+  usageInstructions:
+  featureDocumentationName:
+  featureDocumentationUrl:

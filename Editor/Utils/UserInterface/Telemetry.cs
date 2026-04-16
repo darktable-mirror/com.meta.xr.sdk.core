@@ -32,6 +32,13 @@ namespace Meta.XR.Editor.UserInterface
             public const int PageClose = 163065149;
         }
 
+        public static class FalcoEventName
+        {
+            public const string LinkClick = "EDITOR_LINK_CLICKED";
+            public const string PageOpen = "EDITOR_PAGE_OPEN";
+            public const string PageClose = "EDITOR_PAGE_CLOSE";
+        }
+
         public static class AnnotationType
         {
             public const string Label = "label";

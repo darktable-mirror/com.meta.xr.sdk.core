@@ -142,7 +142,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         private static async Task Fetch()
         {
             var result = await UserInterface.RemoteJsonContent<ProviderProfileDefinitions>.Create(
-                "provider_profile_definitions.json", 25224796250502694);
+                "provider_profile_definitions.json", 24975355045490529);
 
             if (!result.IsSuccess)
             {

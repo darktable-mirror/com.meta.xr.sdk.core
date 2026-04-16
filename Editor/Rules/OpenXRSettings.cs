@@ -25,6 +25,7 @@ using UnityEngine.Rendering;
 using UnityEngine.XR.OpenXR;
 using UnityEngine.XR.OpenXR.Features;
 using UnityEngine.XR.OpenXR.Features.Interactions;
+using UnityEngine.XR.OpenXR.Features.MetaQuestSupport;
 using Meta.XR.Editor.Utils;
 using UnityEditor.XR.OpenXR.Features;
 
@@ -84,6 +85,45 @@ namespace Meta.XR.Editor.Rules
                 fixMessage: "OpenXRSettings.Instance.GetFeature<MetaXRSubsampledLayout>.enabled = true"
             );
 
+            // [Recommended] Enable Optimize Buffer Discards
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                platform: BuildTargetGroup.Android,
+                group: OVRProjectSetup.TaskGroup.Rendering,
+                conditionalValidity: buildTargetGroup => GetSettings(buildTargetGroup) != null
+                                                         && OVRProjectSetupRenderingTasks.GetGraphicsAPIs(buildTargetGroup).Any(item => item == GraphicsDeviceType.Vulkan),
+                isDone: buildTargetGroup =>
+                {
+                    var settings = GetSettings(buildTargetGroup);
+                    var ext = settings.GetFeature<MetaQuestFeature>();
+                    if (ext == null)
+                        return true;
+                    // Use reflection to access internal property
+                    var property = ext.GetType().GetProperty("optimizeBufferDiscards", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (property == null)
+                        return true;
+
+                    return (bool)property.GetValue(ext);
+                },
+                message: "Optimize Buffer Discards should be enabled on Vulkan to allow MSAA textures to be memoryless.",
+                fix: buildTargetGroup =>
+                {
+                    var settings = GetSettings(buildTargetGroup);
+                    var ext = settings.GetFeature<MetaQuestFeature>();
+                    if (ext != null)
+                    {
+                        var property = ext.GetType().GetProperty("optimizeBufferDiscards", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (property != null)
+                        {
+                            property.SetValue(ext, true);
+                        }
+                        EditorUtility.SetDirty(ext);
+                        AssetDatabase.SaveAssets();
+                    }
+                },
+                fixMessage: "MetaQuestFeature.optimizeBufferDiscards = true"
+            );
+
             // [Recommended] Include Oculus Touch Interaction Profile for full OVRInput support
             OVRProjectSetup.AddTask(
                 conditionalValidity: buildTargetGroup => GetSettings(buildTargetGroup) != null &&
@@ -127,6 +167,15 @@ namespace Meta.XR.Editor.Rules
         private static UnityEngine.XR.OpenXR.OpenXRSettings GetSettings(BuildTargetGroup buildTargetGroup)
             => UnityEngine.XR.OpenXR.OpenXRSettings.GetSettingsForBuildTargetGroup(buildTargetGroup);
 
+        private static TFeature GetFeature<TFeature>(BuildTargetGroup buildTargetGroup) where TFeature : OpenXRFeature
+        {
+            var settings = GetSettings(buildTargetGroup);
+            return !settings ? null : settings.GetFeature<TFeature>();
+        }
+
+        private static bool TryGetFeature<TFeature>(BuildTargetGroup buildTargetGroup, out TFeature feature)
+            where TFeature : OpenXRFeature
+            => feature = GetFeature<TFeature>(buildTargetGroup);
     }
 }
 

@@ -75,6 +75,11 @@ namespace Meta.XR.Guides.Editor.About
 
         internal bool ParseJsonData(string jsonData)
         {
+            if (string.IsNullOrEmpty(jsonData))
+            {
+                return false;
+            }
+
             ChangelogSerializedData[] response;
             var success = true;
 

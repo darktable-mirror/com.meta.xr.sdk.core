@@ -213,6 +213,20 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                     ? _categoryBackgroundImageStyle.colorOff
                     : _categoryBackgroundImageStyle.color;
             }
+
+            if (_debugInterface != null)
+            {
+                foreach (var categoryRegistry in _registries.Values)
+                {
+                    foreach (var typeRegistry in categoryRegistry.Values)
+                    {
+                        foreach (var inspector in typeRegistry.Values)
+                        {
+                            _debugInterface.SetTransparencyRecursive(inspector, Transparent);
+                        }
+                    }
+                }
+            }
         }
 
         public IInspector RegisterInspector(InstanceHandle instanceHandle, Category category)
@@ -234,6 +248,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             var inspector = GetInspectorInternal(instanceHandle, category, true, out var registry);
             if (inspector != null) return inspector;
+
+            if (!instanceHandle.Valid)
+            {
+                return null;
+            }
 
             var previousScroll = _scrollView ? _scrollView.Progress : 1f;
 

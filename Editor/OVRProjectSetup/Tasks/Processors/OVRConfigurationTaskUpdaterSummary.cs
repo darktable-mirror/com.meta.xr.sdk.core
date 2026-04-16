@@ -192,13 +192,17 @@ internal class OVRConfigurationTaskUpdaterSummary
 
     public void LogEvent()
     {
-        OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Summary)
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level, HighestFixLevel?.ToString() ?? "None")
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Count,
-                GetNumberOfFixes(HighestFixLevel ?? OVRProjectSetup.TaskLevel.Required).ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, BuildTargetGroup.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, GetTotalNumberOfFixes().ToString())
-            .Send();
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Summary)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Pst
+        };
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level, HighestFixLevel?.ToString() ?? "None");
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Count,
+            GetNumberOfFixes(HighestFixLevel ?? OVRProjectSetup.TaskLevel.Required).ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, BuildTargetGroup.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, GetTotalNumberOfFixes().ToString());
+        unifiedEvent.Send();
     }
 
 

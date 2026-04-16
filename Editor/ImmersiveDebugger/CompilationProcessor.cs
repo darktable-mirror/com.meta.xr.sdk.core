@@ -97,7 +97,9 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                 }
 
                 // not try-catch here because any compiler error would be intercepted as not surfaced well in console
-                Assembly assembly = Assembly.LoadFile(absolutePath);
+                // Load assembly from bytes to avoid file locking issues during builds
+                byte[] assemblyBytes = File.ReadAllBytes(absolutePath);
+                Assembly assembly = Assembly.Load(assemblyBytes);
                 var types = assembly.GetTypes().Where(
                     t => t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
                                       BindingFlags.Instance | BindingFlags.DeclaredOnly).Any(

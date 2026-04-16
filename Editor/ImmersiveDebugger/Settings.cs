@@ -103,6 +103,16 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             Tooltip = "Whether or not the Immersive Debugger panel rotates with the player by default."
         };
 
+        private static readonly Setting RecenterOnToggle = new CustomBool
+        {
+            Uid = nameof(RecenterOnToggle),
+            Owner = Utils.ToolDescriptor,
+            Get = () => RuntimeSettings.Instance.RecenterOnToggle,
+            Set = val => RuntimeSettings.Instance.RecenterOnToggle = val,
+            Label = "Recenter On Toggle",
+            Tooltip = "Whether or not the Immersive Debugger panel recenters to the user's position when toggling visibility."
+        };
+
         private static readonly Setting ShowInspectors = new CustomBool
         {
             Uid = nameof(ShowInspectors),
@@ -141,7 +151,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             Owner = Utils.ToolDescriptor,
             Get = () => RuntimeSettings.Instance.ShowWarningLog,
             Set = val => RuntimeSettings.Instance.ShowWarningLog = val,
-            Label = "Show Error Logs in Console",
+            Label = "Show Warning Logs in Console",
             Tooltip = "Show Warning Logs in Console by default."
         };
 
@@ -151,7 +161,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             Owner = Utils.ToolDescriptor,
             Get = () => RuntimeSettings.Instance.ShowErrorLog,
             Set = val => RuntimeSettings.Instance.ShowErrorLog = val,
-            Label = "Show Warning Logs in Console",
+            Label = "Show Error Logs in Console",
             Tooltip = "Show Error Logs in Console by default."
         };
 
@@ -346,6 +356,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             DisplayAtStartup.Draw(origin);
             FollowOverride.Draw(origin);
             RotateOverride.Draw(origin);
+            RecenterOnToggle.Draw(origin);
             PanelDistance.Draw(origin);
 
             EditorGUILayout.Space();

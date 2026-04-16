@@ -140,5 +140,32 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                 DestroyImmediate(component);
             }
         }
+
+        internal override HashSet<string> ComputePackageDependencies(VariantsSelection variantSelection)
+        {
+            var baseDeps = base.ComputePackageDependencies(variantSelection);
+
+            var usesUnityIE = !string.IsNullOrEmpty(modelProvider) &&
+                              modelProvider.Contains("UnityInferenceEngine");
+
+            if (!usesUnityIE)
+            {
+                return baseDeps;
+            }
+
+            const string unityIEPackageId = "com.unity.ai.inference";
+            var depsContainUnityIE = baseDeps.Any(dep => dep.Contains(unityIEPackageId));
+
+            if (depsContainUnityIE)
+            {
+                return baseDeps;
+            }
+
+            const string unityIEPackageVersion = "2.3.0";
+            const string parsedUnityIEPackageId = unityIEPackageId + "@" + unityIEPackageVersion;
+            baseDeps.Add(parsedUnityIEPackageId);
+
+            return baseDeps;
+        }
     }
 }

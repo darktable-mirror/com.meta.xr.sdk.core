@@ -47,12 +47,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SortKey: 177523907
-  ObjectInterest: 1
-  Flags: 262145
+  Priority: 1
+  Flags: 262402
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 8523349013058936098}
   - {fileID: 6626325903834945652}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &8523349013058936098
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -65,10 +66,33 @@ MonoBehaviour:
   m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
   SyncScale: 0
   SyncParent: 0
   _autoAOIOverride: 1
-  DisableSharedModeInterpolation: 0
+  ConfigFlags: 0
+  PhysicsSettings:
+    ForecastEnabled: 1
+    DebugPhysics: 0
+    GravityForecast: 2
+    MaxExtrapolationTime: 0.15
+    MinLinearDetectedError: 0.02
+    MinAngularDetectedError: 3
+    MaxLinearError: 0
+    MaxAngularError: 0
+    LowCorrectionProgressThreshold: 0.015
+    HighErrorSimilarityThreshold: 1
+    MaxErrorAccumulationTime: 0.5
+    MaxRemoteSleepIgnoreTime: 0.5
+    ErrorCorrectionType: 0
+    LinearVelocityCoefficient: 1
+    AngularVelocityCoefficient: 1
+    PositionCorrectionLerp: 0.15
+    RotationCorrectionLerp: 0.15
+    Spring: 75
+    Damper: 2
+    ImpactStartCorrectionTime: 0.1
+    ImpactCorrectionTimeComplete: 0.3
 --- !u!114 &6626325903834945652
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -81,5 +105,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1db8ea62a613f0d488f8f6d4a32758db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _OculusId: 0
-  _LocalAvatarIndex: 0

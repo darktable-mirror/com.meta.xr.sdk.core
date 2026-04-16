@@ -44,6 +44,19 @@ namespace Meta.XR.ImmersiveDebugger
             public const int PanelInteraction = 163058794;
         }
 
+        internal static class FalcoEventName
+        {
+            // Back-End Managers Events
+            public const string ComponentTracked = "ID_COMPONENT_TRACKED";
+            public const string Run = "ID_RUN";
+            public const string FrameUpdate = "ID_FRAME_UPDATE";
+
+            // User Interface Events
+            public const string PanelOpen = "ID_PANEL_OPEN";
+            public const string PanelClose = "ID_PANEL_CLOSE";
+            public const string PanelInteraction = "ID_PANEL_INTERACTION";
+        }
+
         internal enum State
         {
             OnStart,
@@ -85,7 +98,7 @@ namespace Meta.XR.ImmersiveDebugger
             private readonly Method _method;
             private readonly InstanceCache _cache;
             private readonly IEnumerable<IDebugManager> _managers;
-            private OVRTelemetryMarker _runTelemetryMarker;
+            private OVRPlugin.UnifiedEventData _runFalcoEvent;
 
             public static TelemetryTracker Init(Method method,
                 IEnumerable<IDebugManager> managers,
@@ -108,10 +121,14 @@ namespace Meta.XR.ImmersiveDebugger
                 _cache = cache;
                 _managers = managers;
 
-                _runTelemetryMarker = Start(MarkerId.Run)
-                    .AddAnnotation(AnnotationType.Method, _method.ToString())
-                    .AddAnnotation(AnnotationType.State, State.OnStart.ToString())
-                    .AddPlayModeOrigin();
+                _runFalcoEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.Run)
+                {
+                    isEssential = OVRPlugin.Bool.True,
+                    productType = OVRPlugin.ProductType.ImmersiveDebugger
+                };
+                _runFalcoEvent.SetMetadata(AnnotationType.Method, _method.ToString());
+                _runFalcoEvent.SetMetadata(AnnotationType.State, State.OnStart.ToString());
+                _runFalcoEvent.AddPlayModeOrigin();
             }
 
             public void OnStart()
@@ -132,7 +149,7 @@ namespace Meta.XR.ImmersiveDebugger
 
             private void SendStart()
             {
-                _runTelemetryMarker.Send();
+                _runFalcoEvent.Send();
             }
 
             private void SendComponentTracked(State state)
@@ -142,30 +159,34 @@ namespace Meta.XR.ImmersiveDebugger
                     var instancesCount = instances.Count;
                     if (instancesCount <= 0) continue;
 
-                    var marker = Start(MarkerId.ComponentTracked)
-                        .AddPlayModeOrigin()
-                        .AddAnnotation(AnnotationType.State, state.ToString())
-                        .AddAnnotation(AnnotationType.Method, _method.ToString())
-                        .AddAnnotation(AnnotationType.Instances, instances.Count.ToString());
+                    var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.ComponentTracked)
+                    {
+                        isEssential = OVRPlugin.Bool.False,
+                        productType = OVRPlugin.ProductType.ImmersiveDebugger
+                    };
+                    unifiedEvent.SetMetadata(AnnotationType.State, state.ToString());
+                    unifiedEvent.SetMetadata(AnnotationType.Method, _method.ToString());
+                    unifiedEvent.SetMetadata(AnnotationType.Instances, instances.Count.ToString());
 
+                    // When Type is from a non Meta assembly, we will only send a hash
                     if (type.IsTypeCustom())
                     {
-                        // When Type is from a non Meta assembly, we will only send a hash
-                        marker = marker.AddAnnotation(AnnotationType.Type, type.GetTypeHash())
-                            .AddAnnotation(AnnotationType.IsCustom, true);
+                        unifiedEvent.SetMetadata(AnnotationType.Type, type.GetTypeHash());
+                        unifiedEvent.SetMetadata(AnnotationType.IsCustom, true);
                     }
                     else
                     {
-                        marker = marker.AddAnnotation(AnnotationType.Type, type.FullName)
-                            .AddAnnotation(AnnotationType.IsCustom, false);
+                        unifiedEvent.SetMetadata(AnnotationType.Type, type.FullName);
+                        unifiedEvent.SetMetadata(AnnotationType.IsCustom, false);
                     }
 
                     foreach (var manager in _managers)
                     {
-                        marker = marker.AddAnnotation(manager.TelemetryAnnotation, manager.GetCountPerType(type).ToString());
+                        unifiedEvent.SetMetadata(manager.TelemetryAnnotation, manager.GetCountPerType(type).ToString());
                     }
 
-                    marker.Send();
+                    unifiedEvent.AddPlayModeOrigin();
+                    unifiedEvent.Send();
                 }
             }
         }
@@ -205,25 +226,33 @@ namespace Meta.XR.ImmersiveDebugger
             // Ignore any state change that happens before the panel is initialized
             if (!panel.Initialised) return;
 
-            var markerId = panel.isActiveAndEnabled ? MarkerId.PanelOpen : MarkerId.PanelClose;
+            var falcoEventName = panel.isActiveAndEnabled ? FalcoEventName.PanelOpen : FalcoEventName.PanelClose;
 
-            Start(markerId)
-                .AddAnnotation(AnnotationType.Action, panel.name)
-                .AddAnnotation(AnnotationType.ActionType, panel.GetType().Name)
-                .AddAnnotation(AnnotationType.Platform, GetPlayModeOrigin())
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(falcoEventName)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.ImmersiveDebugger
+            };
+            unifiedEvent.SetMetadata(AnnotationType.Action, panel.name);
+            unifiedEvent.SetMetadata(AnnotationType.ActionType, panel.GetType().Name);
+            unifiedEvent.AddPlayModeOrigin();
+            unifiedEvent.Send();
         }
 
         public static void OnButtonClicked(Button button)
         {
             var panel = FetchPanel(button);
-            Start(MarkerId.PanelInteraction)
-                .AddAnnotation(AnnotationType.Action, button.name)
-                .AddAnnotation(AnnotationType.ActionType, button.GetType().Name)
-                .AddAnnotation(AnnotationType.Origin, panel?.name)
-                .AddAnnotation(AnnotationType.OriginType, panel?.GetType().Name)
-                .AddAnnotation(AnnotationType.Platform, GetPlayModeOrigin())
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PanelInteraction)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.ImmersiveDebugger
+            };
+            unifiedEvent.SetMetadata(AnnotationType.Action, button.name);
+            unifiedEvent.SetMetadata(AnnotationType.ActionType, button.GetType().Name);
+            unifiedEvent.SetMetadata(AnnotationType.Origin, panel?.name);
+            unifiedEvent.SetMetadata(AnnotationType.OriginType, panel?.GetType().Name);
+            unifiedEvent.AddPlayModeOrigin();
+            unifiedEvent.Send();
         }
 
         private static Panel FetchPanel(Controller controller)

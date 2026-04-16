@@ -100,12 +100,11 @@ partial struct OVRAnchor
 
     internal static void OnSpaceQueryComplete(OVRDeserialize.SpaceQueryCompleteData data)
     {
-        OVRTelemetryMarker? telemetryMarker = null;
         Result? taskResult = null;
+        UnifiedEventData falcoEvent = default;
         try
         {
-            telemetryMarker =
-                Telemetry.SetAsyncResult(Telemetry.MarkerId.QuerySpaces, data.RequestId, (long)data.Result);
+            falcoEvent = Telemetry.SetAsyncResult(Telemetry.EventName.QuerySpaces, data.RequestId, (long)data.Result);
 
             var requestId = data.RequestId;
             if (!OVRTask.TryGetPendingTask<Result>(data.RequestId, out var task))
@@ -134,7 +133,10 @@ partial struct OVRAnchor
 
             using (rawResults)
             {
-                telemetryMarker?.AddAnnotation(Telemetry.Annotation.ResultsCount, (long)rawResults.Length);
+                if (falcoEvent.eventName != null)
+                {
+                    falcoEvent.SetMetadata(Telemetry.Annotation.ResultsCount, (long)rawResults.Length);
+                }
 
                 foreach (var result in rawResults)
                 {
@@ -146,7 +148,10 @@ partial struct OVRAnchor
         }
         finally
         {
-            telemetryMarker?.Send();
+            if (falcoEvent.eventName != null)
+            {
+                falcoEvent.Send();
+            }
             if (taskResult.HasValue)
             {
                 OVRTask.SetResult(data.RequestId, taskResult.Value);
@@ -170,35 +175,39 @@ partial struct OVRAnchor
     internal static unsafe Result SaveSpaceList(ulong* spaces, uint numSpaces, SpaceStorageLocation location,
         out ulong requestId)
     {
-        var marker = OVRTelemetry
-            .Start((int)Telemetry.MarkerId.SaveSpaceList)
-            .AddAnnotation(Telemetry.Annotation.SpaceCount, (long)numSpaces)
-            .AddAnnotation(Telemetry.Annotation.StorageLocation, (long)location);
-
         var result = OVRPlugin.SaveSpaceList(spaces, numSpaces, location, out requestId);
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.SaveSpaceList)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Editor
+        };
+        unifiedEvent.SetMetadata(Telemetry.Annotation.SpaceCount, (int)numSpaces);
+        unifiedEvent.SetMetadata(Telemetry.Annotation.StorageLocation, (int)location);
 
-        Telemetry.SetSyncResult(marker, requestId, result);
+        Telemetry.SetSyncResult(requestId, result, unifiedEvent);
         return result;
     }
 
     // Invoked by OVRManager event loop
     internal static void OnSpaceListSaveResult(OVRDeserialize.SpaceListSaveResultData eventData)
-        => Telemetry.SetAsyncResultAndSend(Telemetry.MarkerId.SaveSpaceList, eventData.RequestId, eventData.Result);
+        => Telemetry.SetAsyncResultAndSend(Telemetry.EventName.SaveSpaceList, eventData.RequestId, eventData.Result);
 
     [Obsolete]
     internal static Result EraseSpace(ulong space, SpaceStorageLocation location, out ulong requestId)
     {
-        var marker = OVRTelemetry
-            .Start((int)Telemetry.MarkerId.EraseSingleSpace)
-            .AddAnnotation(Telemetry.Annotation.StorageLocation, (long)location);
-
         var result = OVRPlugin.EraseSpaceWithResult(space, location, out requestId);
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.EraseSingleSpace)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Editor
+        };
+        unifiedEvent.SetMetadata(Telemetry.Annotation.StorageLocation, (int)location);
 
-        Telemetry.SetSyncResult(marker, requestId, result);
+        Telemetry.SetSyncResult(requestId, result, unifiedEvent);
         return result;
     }
 
     // Invoked by OVRManager event loop
     internal static void OnSpaceEraseComplete(OVRDeserialize.SpaceEraseCompleteData eventData)
-        => Telemetry.SetAsyncResultAndSend(Telemetry.MarkerId.EraseSingleSpace, eventData.RequestId, eventData.Result);
+        => Telemetry.SetAsyncResultAndSend(Telemetry.EventName.EraseSingleSpace, eventData.RequestId, eventData.Result);
 }

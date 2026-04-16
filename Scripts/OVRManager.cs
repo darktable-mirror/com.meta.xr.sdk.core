@@ -594,6 +594,22 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
     }
 
+    [SerializeField]
+    private bool _disableRecording = false;
+
+    /// <summary>
+    /// When enabled, the eye buffer is marked as secure to prevent recording or casting.
+    /// </summary>
+    public bool disableRecording
+    {
+        get { return _disableRecording; }
+        set
+        {
+            _disableRecording = value;
+            OVRPlugin.SetEyeBufferSecure(_disableRecording);
+        }
+    }
+
     private OVRManager.ColorSpace _colorGamut = OVRManager.ColorSpace.P3;
 
     /// <summary>
@@ -1689,6 +1705,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// <summary>
     /// Specifies OpenVR pose local to tracking space
     /// </summary>
+    [System.Obsolete("Deprecated. OpenVR Input Features are no longer supported.", false)]
     public static void SetOpenVRLocalPose(Vector3 leftPos, Vector3 rightPos, Quaternion leftRot, Quaternion rightRot)
     {
         if (loadedXRDevice == XRDevice.OpenVR)
@@ -1705,6 +1722,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// Specifies the pose offset required to make an OpenVR controller's reported pose match the virtual pose.
     /// Currently we only specify this offset for Oculus Touch on OpenVR.
     /// </summary>
+    [System.Obsolete("Deprecated. OpenVR Input Features are no longer supported.", false)]
     public static OVRPose GetOpenVRControllerOffset(Node hand)
     {
         OVRPose poseOffset = OVRPose.identity;
@@ -1956,8 +1974,20 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     private bool _readOnlyWideMotionModeHandPosesEnabled = false;
     public bool wideMotionModeHandPosesEnabled = false;
 
+    [SerializeField]
+    private bool _readOnlyFastMotionModeHandPosesEnabled = false;
+    /// <summary>
+    /// Experimental: Defines if hand poses leverage a higher frequency capture rate.
+    /// </summary>
+    public bool fastMotionModeHandPosesEnabled = false;
 
 
+    [SerializeField]
+    private bool _readOnlyWideMotionMode2HandPosesEnabled = false;
+    /// <summary>
+    /// Experimental: New path to define if hand poses can leverage algorithms to retrieve hand poses outside of the normal tracking area.
+    /// </summary>
+    public bool wideMotionMode2HandPosesEnabled = false;
     public bool IsSimultaneousHandsAndControllersSupported
     {
         get => (_readOnlyControllerDrivenHandPosesType != OVRManager.ControllerDrivenHandPosesType.None) || launchSimultaneousHandsControllersOnStartup;
@@ -2142,8 +2172,11 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     private void InitOVRManager()
     {
-        using var marker = new OVRTelemetryMarker(OVRTelemetryConstants.OVRManager.MarkerId.Init);
-        marker.AddSDKVersionAnnotation();
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.OVRManager.FalcoEventName.Init)
+        {
+            isEssential = OVRPlugin.Bool.True,
+            productType = OVRPlugin.ProductType.Editor
+        };
 
         // Only allow one instance at runtime.
         if (instance != null)
@@ -2151,7 +2184,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             enabled = false;
             DestroyImmediate(this);
 
-            marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+            unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+            unifiedEvent.Send();
             return;
         }
 
@@ -2221,7 +2255,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (!isSupportedPlatform)
         {
             Debug.LogWarning("This platform is unsupported");
-            marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+            unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+            unifiedEvent.Send();
             return;
         }
 
@@ -2295,8 +2330,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         Initialize();
         InitPermissionRequest();
 
-        marker.AddPoint(OVRTelemetryConstants.OVRManager.InitPermissionRequest);
-
         Debug.LogFormat("Current display frequency {0}, available frequencies [{1}]",
             display.displayFrequency,
             string.Join(", ", display.displayFrequenciesAvailable.Select(f => f.ToString()).ToArray()));
@@ -2315,6 +2348,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         // Set the eyebuffer sharpen type at the start
         OVRPlugin.SetEyeBufferSharpenType(_sharpenType);
 
+        // Apply secure buffer setting at the start
+        OVRPlugin.SetEyeBufferSecure(_disableRecording);
+
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
         // Force OcculusionMesh on all the time, you can change the value to false if you really need it be off for some reasons,
         // be aware there are performance drops if you don't use occlusionMesh.
@@ -2330,8 +2366,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (isInsightPassthroughEnabled)
         {
             InitializeInsightPassthrough();
-
-            marker.AddPoint(OVRTelemetryConstants.OVRManager.InitializeInsightPassthrough);
         }
 
         // Apply validation criteria to _localDimming toggle to ensure it isn't active on invalid systems
@@ -2426,6 +2460,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 
         OVRManagerinitialized = true;
+        unifiedEvent.Send();
     }
 
     private void InitPermissionRequest()
@@ -2986,8 +3021,18 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             OVRPlugin.SetWideMotionModeHandPoses(_readOnlyWideMotionModeHandPosesEnabled);
         }
 
+        if (_readOnlyFastMotionModeHandPosesEnabled != fastMotionModeHandPosesEnabled)
+        {
+            _readOnlyFastMotionModeHandPosesEnabled = fastMotionModeHandPosesEnabled;
+            OVRPlugin.RequestFastMotionMode(_readOnlyFastMotionModeHandPosesEnabled);
+        }
 
 
+        if (_readOnlyWideMotionMode2HandPosesEnabled != wideMotionMode2HandPosesEnabled)
+        {
+            _readOnlyWideMotionMode2HandPosesEnabled = wideMotionMode2HandPosesEnabled;
+            OVRPlugin.SetWideMotionMode2HandPosesEnabled(_readOnlyWideMotionMode2HandPosesEnabled);
+        }
 
         OVRInput.Update();
         metrics.Update();
@@ -3354,7 +3399,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     private void LateUpdate()
     {
+#pragma warning disable CS0618
         OVRHaptics.Process();
+#pragma warning restore CS0618
 
         if (m_SpaceWarpEnabled)
         {
@@ -3539,7 +3586,9 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             {
                 if (!staticPrevEnableMixedRealityCapture)
                 {
-                    OVRPlugin.SendEvent("mixed_reality_capture", "activated");
+                    var evt = new OVRPlugin.UnifiedEventData("mixed_reality_capture");
+                    evt.SetMetadata("status", "activated");
+                    evt.Send();
                     Debug.Log("MixedRealityCapture: activate");
                     staticPrevEnableMixedRealityCapture = true;
                 }

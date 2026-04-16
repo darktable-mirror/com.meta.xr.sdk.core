@@ -23,8 +23,10 @@ using Meta.XR.ImmersiveDebugger.UserInterface;
 using Meta.XR.ImmersiveDebugger.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Meta.XR.ImmersiveDebugger.Hierarchy;
+using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.Manager
 {
@@ -45,6 +47,12 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
     internal static class ManagerUtils
     {
+        /// <summary>
+        /// Binding flags used for discovering nested class members.
+        /// </summary>
+        public const BindingFlags NestedMemberBindingFlags =
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+
         public delegate void RegisterMember<in T>(IMember memberController, T member, DebugMember attribute, InstanceHandle instanceHandle);
         public static void RebuildInspectorForType<T>(IDebugUIPanel panel, InstanceCache cache, Type type, List<(T, DebugMember)> memberPairs, RegisterMember<T> memberRegistration) where T : MemberInfo
         {
@@ -75,6 +83,75 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 }
             }
         }
+
+        /// <summary>
+        /// Checks if a type has members with DebugMember attributes (i.e., is a nested class with debug members).
+        /// </summary>
+        public static bool HasNestedDebugMembers(Type type)
+        {
+            if (type == null || type.IsPrimitive || type == typeof(string) || type.IsEnum)
+            {
+                return false;
+            }
+
+            // Check for common Unity types that shouldn't be treated as nested classes
+            if (type == typeof(Vector2) || type == typeof(Vector3) || type == typeof(Vector4) ||
+                type == typeof(Quaternion) || type == typeof(Color) || type == typeof(Rect) ||
+                type == typeof(Bounds) || type == typeof(Matrix4x4) || type == typeof(Texture2D))
+            {
+                return false;
+            }
+
+            var nestedMembers = type.GetMembers(NestedMemberBindingFlags);
+            return nestedMembers.Any(m => m.GetCustomAttribute<DebugMember>() != null);
+        }
+
+        /// <summary>
+        /// Gets the child member controller for a nested member, creating the foldout structure if needed.
+        /// Works with both Member (runtime) and MockMember (testing) types.
+        /// </summary>
+        public static IMember GetOrCreateNestedMemberController(IMember parentMemberController, MemberInfo nestedMember, DebugMember nestedAttribute)
+        {
+            var expectedTitle = (string.IsNullOrEmpty(nestedAttribute.DisplayName) ? nestedMember.Name : nestedAttribute.DisplayName).ToDisplayText();
+
+            // Try to work with real Member type
+            if (parentMemberController is Member member)
+            {
+                // Setup the parent member as a foldout if not already
+                if (!member.IsFoldout)
+                {
+                    member.SetupAsFoldout();
+                }
+
+                // Check if child member already exists by comparing transformed titles
+                var existingChild = member.ChildMembers.FirstOrDefault(c => c.Title == expectedTitle);
+                if (existingChild != null)
+                {
+                    return existingChild;
+                }
+
+                // Create new child member
+                return member.RegisterChildMember(nestedMember.Name, nestedAttribute);
+            }
+
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets all nested members with DebugMember attributes from a type.
+        /// </summary>
+        public static IEnumerable<(MemberInfo member, DebugMember attribute)> GetNestedDebugMembers(Type nestedType)
+        {
+            var nestedMembers = nestedType.GetMembers(NestedMemberBindingFlags);
+            foreach (var nestedMember in nestedMembers)
+            {
+                var nestedAttribute = nestedMember.GetCustomAttribute<DebugMember>();
+                if (nestedAttribute != null)
+                {
+                    yield return (nestedMember, nestedAttribute);
+                }
+            }
+        }
     }
 }
-

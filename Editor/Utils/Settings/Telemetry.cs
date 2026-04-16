@@ -30,6 +30,11 @@ namespace Meta.XR.Editor.Settings
             public const int SettingsChanged = 163056413;
         }
 
+        public static class FalcoEventName
+        {
+            public const string SettingsChanged = "EDITOR_SETTINGS_CHANGED";
+        }
+
         public static class AnnotationType
         {
             public const string Label = "label";

@@ -193,4 +193,30 @@ namespace Meta.XR.MetaWand.Editor.API
         public string error_user_title;
         public string error_user_msg;
     }
+
+    [Serializable]
+    public class TelemetryRequest
+    {
+        public string action;
+        public string request_id;
+        public string asset_id;
+        public string target_request_id;
+        public string original_search_text;
+        public string access_token;
+        public AppInfoAttribute app_info = new AppInfoAttribute
+        {
+            name = Constants.CoreSDKPackageName,
+            version = Utils.CoreSdkVersion.ToString(),
+            build_channel = "release"
+        };
+    }
+
+    [Serializable]
+    public class TelemetryResponse
+    {
+        public bool success;
+        public string action;
+        public string error_message;
+        public Error error;
+    }
 }

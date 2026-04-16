@@ -128,10 +128,6 @@ namespace Meta.XR.Editor.Features
             builder.Append(projectConfig.eyeTrackingSupport);
             builder.Append(",");
 
-            builder.Append("VirtualKeyboardSupport:");
-            builder.Append(projectConfig.virtualKeyboardSupport);
-            builder.Append(",");
-
             builder.Append("SceneSupport:");
             builder.Append(projectConfig.sceneSupport);
             builder.Append(",");

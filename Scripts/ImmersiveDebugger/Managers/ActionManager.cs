@@ -58,6 +58,8 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             actionList.AddRange(InspectedDataRegistry.GetMembersForType<MethodInfo>(type));
 
             ActionsDict[type] = actionList;
+
+            // First, register standard actions
             ManagerUtils.RebuildInspectorForType(_uiPanel, _instanceCache, type, actionList, (memberController, member, attribute, instance) =>
             {
                 var action = memberController.GetAction();
@@ -66,6 +68,77 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                     memberController.RegisterAction(new ActionHook(member, instance, attribute));
                 }
             });
+
+            // Then, check for fields/properties that are nested classes with action methods
+            var members = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.GetField | BindingFlags.GetProperty);
+            foreach (var parentMember in members)
+            {
+                var parentAttribute = parentMember.GetCustomAttribute<DebugMember>();
+                if (parentAttribute == null || !HasNestedActionMembers(parentMember.GetDataType()))
+                {
+                    continue;
+                }
+
+                // Register the parent member and nested actions for each instance
+                var instances = _instanceCache.GetCacheDataForClass(type);
+                foreach (var instance in instances)
+                {
+                    var inspector = _uiPanel.RegisterInspector(instance, new Category { Id = parentAttribute.Category });
+                    // Register the parent member first (it may not exist if only ActionManager is running)
+                    var parentMemberController = inspector?.RegisterMember(parentMember, parentAttribute);
+                    if (parentMemberController != null)
+                    {
+                        RegisterNestedMembersAsActions(parentMemberController, parentMember, parentMember.GetDataType(), instance);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Registers nested class methods as actions inside a foldout.
+        /// </summary>
+        private void RegisterNestedMembersAsActions(IMember parentMemberController, MemberInfo parentMember, Type nestedType, InstanceHandle instance)
+        {
+            foreach (var (nestedMember, nestedAttribute) in ManagerUtils.GetNestedDebugMembers(nestedType))
+            {
+                // Only register methods as actions
+                if (nestedMember is not MethodInfo nestedMethod)
+                {
+                    continue;
+                }
+
+                var childMemberController = ManagerUtils.GetOrCreateNestedMemberController(parentMemberController, nestedMember, nestedAttribute);
+                if (childMemberController != null)
+                {
+                    // Check if action already exists to avoid duplication
+                    var existingAction = childMemberController.GetAction();
+                    if (!existingAction?.Matches(nestedMethod, instance) ?? true)
+                    {
+                        childMemberController.RegisterAction(new NestedActionHook(parentMember, nestedMethod, instance, nestedAttribute));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if a type has nested members that are methods with DebugMember attributes.
+        /// </summary>
+        private static bool HasNestedActionMembers(Type type)
+        {
+            if (!ManagerUtils.HasNestedDebugMembers(type))
+            {
+                return false;
+            }
+
+            foreach (var (nestedMember, _) in ManagerUtils.GetNestedDebugMembers(type))
+            {
+                if (nestedMember is MethodInfo)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void ProcessTypeFromInspector(Type type, InstanceHandle handle, MemberInfo memberInfo, DebugMember memberAttribute)
@@ -86,4 +159,3 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         }
     }
 }
-

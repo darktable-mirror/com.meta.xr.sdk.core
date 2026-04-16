@@ -21,6 +21,7 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 
 namespace Meta.XR.Editor.UserInterface
@@ -30,6 +31,10 @@ namespace Meta.XR.Editor.UserInterface
     /// </summary>
     internal class Label : IUserInterfaceItem, IDynamicColorItem
     {
+        private VisualElement _visualElement;
+        private readonly string _typography;
+        private UnityEngine.UIElements.Label _uiLabel;
+
         public bool Hide { get; set; }
         public GUIContent LabelContent { get; set; }
         public readonly GUIStyle GUIStyle;
@@ -45,6 +50,17 @@ namespace Meta.XR.Editor.UserInterface
             LabelContent = new GUIContent(label);
             GUIStyle = new GUIStyle(style);
             _options = options;
+        }
+
+        /// <summary>
+        /// Constructor to use in UIToolkit based environment
+        /// </summary>
+        /// <param name="label">Label text to show</param>
+        /// <param name="typography"><see cref="RLDS.Props.Typography"/> for the typographic variants</param>
+        public Label(string label, string typography)
+        {
+            LabelContent = new GUIContent(label);
+            _typography = typography;
         }
 
         public void Draw()
@@ -67,5 +83,38 @@ namespace Meta.XR.Editor.UserInterface
 
         public float GetHeight(float contentWidth = UIStyles.Constants.DefaultWidth - LargeMargin) => GUIStyle.CalcHeight(LabelContent, contentWidth);
         public float GetWidth() => GUIStyle.CalcSize(LabelContent).x;
+
+        /// <summary>
+        /// Creates a UIToolkit Label element with RLDS styling applied.
+        /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
+        /// </summary>
+        /// <returns>A VisualElement containing the styled label</returns>
+        public VisualElement Get()
+        {
+            if (_visualElement != null)
+            {
+                return _visualElement;
+            }
+            _visualElement = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    marginTop = RLDS.Styles.Spacing.Space4XS,
+                    marginBottom = RLDS.Styles.Spacing.Space4XS
+                }
+            };
+
+            _uiLabel = new UnityEngine.UIElements.Label(LabelContent.text);
+            _uiLabel.AddToClassList(_typography);
+            _uiLabel.style.whiteSpace = WhiteSpace.Normal;
+            if (FetchDynamicColor != null)
+            {
+                _uiLabel.style.color = FetchDynamicColor.Invoke(this);
+            }
+            _visualElement.Add(_uiLabel);
+
+            return _visualElement;
+        }
     }
 }

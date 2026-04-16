@@ -20,71 +20,37 @@
 
 using System.Buffers;
 using System.Collections.Generic;
-using Meta.XR.EnvironmentDepth;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
-#if MRUK_INSTALLED
-    [RequireComponent(typeof(ObjectDetectionAgent), typeof(DepthTextureAccess), typeof(EnvironmentDepthManager))]
-#endif
     public class ObjectDetectionVisualizer : MonoBehaviour
     {
         [SerializeField] private GameObject boundingBoxPrefab;
+
+        [Tooltip("Enable or disable bounding box visualization")]
         [SerializeField] private bool showBoundingBoxes = true;
-
-        private float[] _depthBuf;
-        private Matrix4x4[] _vpBuf;
-
-        /// <summary>
-        /// Global toggle for all currently spawned and future bounding‑box renderers.
-        /// </summary>
-        public bool ShowBoundingBoxes
-        {
-            get => showBoundingBoxes;
-            set
-            {
-                if (showBoundingBoxes == value) return;
-                showBoundingBoxes = value;
-                // Toggle every live quad / label renderer.
-                foreach (var g in _live)
-                {
-                    if (!g) continue;
-                    var rc = g.GetComponent<RendererCache>() ?? g.AddComponent<RendererCache>();
-                    rc.EnsureInitialized();
-                    foreach (var r in rc.renderers)
-                    {
-                        if (r) r.enabled = value;
-                    }
-                }
-            }
-        }
-
-#if UNITY_EDITOR
-        // Ensures that ticking / unticking the checkbox in the Inspector during Play‑mode
-        // actually runs the setter above.
-        private void OnValidate() => ShowBoundingBoxes = showBoundingBoxes;
-#endif
-
-        /// <summary>
-        /// Convenience wrapper for runtime UI (e.g. Toggle.onValueChanged).
-        /// </summary>
-        public void SetShowBoundingBoxes(bool value) => ShowBoundingBoxes = value;
 
         private ObjectDetectionAgent _agent;
         private readonly List<GameObject> _live = new();
         private readonly Queue<GameObject> _pool = new();
 #if MRUK_INSTALLED
+        [Tooltip("Scale factor for text labels relative to bounding box size")]
+        [Range(0f, 1f)]
+        [SerializeField] private float labelScale = 0.5f;
+
         private PassthroughCameraAccess _cam;
         private DepthTextureAccess _depth;
+
+        private Matrix4x4[] _vpBuf;
         private int _eyeIdx;
 
         private struct FrameData
         {
             public Pose Pose;
-            public PassthroughCameraAccess.CameraIntrinsics CameraIntrinsics;
-            public float[] Depth;
+            public NativeArray<float> Depth;
             public Matrix4x4[] ViewProjectionMatrix;
         }
 
@@ -117,32 +83,19 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         private void ReturnBuffers()
         {
-            if (_depthBuf != null)
+            if (_vpBuf == null)
             {
-                ArrayPool<float>.Shared.Return(_depthBuf, clearArray: true);
-                _depthBuf = null;
+                return;
             }
 
-            if (_vpBuf != null)
-            {
-                ArrayPool<Matrix4x4>.Shared.Return(_vpBuf, clearArray: true);
-                _vpBuf = null;
-            }
+            ArrayPool<Matrix4x4>.Shared.Return(_vpBuf, clearArray: true);
+            _vpBuf = null;
         }
 
         private void OnDepth(DepthTextureAccess.DepthFrameData d)
         {
             _frame.Pose = d.CameraPose;
-            _frame.CameraIntrinsics = _cam.Intrinsics;
-
-            if (_depthBuf == null || _depthBuf.Length < d.DepthTexturePixels.Length)
-            {
-                if (_depthBuf != null)
-                {
-                    ArrayPool<float>.Shared.Return(_depthBuf);
-                }
-                _depthBuf = ArrayPool<float>.Shared.Rent(d.DepthTexturePixels.Length);
-            }
+            _frame.Depth = d.DepthTexturePixels;
 
             if (_vpBuf == null || _vpBuf.Length < d.ViewProjectionMatrix.Length)
             {
@@ -153,16 +106,19 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 _vpBuf = ArrayPool<Matrix4x4>.Shared.Rent(d.ViewProjectionMatrix.Length);
             }
 
-            NativeArray<float>.Copy(d.DepthTexturePixels, _depthBuf, d.DepthTexturePixels.Length);
             System.Array.Copy(d.ViewProjectionMatrix, _vpBuf, d.ViewProjectionMatrix.Length);
-
-            _frame.Depth = _depthBuf;
             _frame.ViewProjectionMatrix = _vpBuf;
         }
 #endif
 
         private void HandleBatch(List<BoxData> batch)
         {
+            if (!showBoundingBoxes)
+            {
+                ClearAll();
+                return;
+            }
+
             foreach (var g in _live)
             {
                 g.SetActive(false);
@@ -192,31 +148,21 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
                 var quad = _pool.Count > 0 ? _pool.Dequeue() : Instantiate(boundingBoxPrefab);
                 quad.SetActive(true);
-
-                var rc = quad.GetComponent<RendererCache>() ?? quad.AddComponent<RendererCache>();
-                rc.EnsureInitialized();
-                foreach (var r in rc.renderers)
-                {
-                    if (r) r.enabled = showBoundingBoxes;
-                }
-
                 quad.transform.SetPositionAndRotation(pos, rot);
                 quad.transform.localScale = scl;
                 _live.Add(quad);
 
-                var lbl = _pool.Count > 0 ? _pool.Dequeue() : new GameObject("Label");
-                lbl.SetActive(true);
-                if (lbl.TryGetComponent<Renderer>(out var lr)) lr.enabled = showBoundingBoxes;
+                var labelText = quad.GetComponentInChildren<Text>();
+                labelText.text = b.label;
 
-                var tm = lbl.GetComponent<TextMesh>() ?? lbl.AddComponent<TextMesh>();
-                tm.text = b.label;
-                tm.fontSize = 24;
-                tm.characterSize = .02f;
-                tm.anchor = TextAnchor.MiddleCenter;
-                tm.alignment = TextAlignment.Center;
+                var avgScale = (scl.x + scl.y + scl.z) / 3f;
+                var uniformScale = avgScale * labelScale;
 
-                lbl.transform.SetPositionAndRotation(pos + Vector3.up * .02f, rot);
-                _live.Add(lbl);
+                labelText.transform.localScale = new Vector3(
+                    uniformScale / Mathf.Max(scl.x, 0.001f),
+                    uniformScale / Mathf.Max(scl.y, 0.001f),
+                    uniformScale / Mathf.Max(scl.z, 0.001f)
+                );
             }
 #endif
         }
@@ -230,7 +176,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             scale = default;
 
             var cameraTexture = _cam.GetTexture();
-            if (cameraTexture == null)
+            if (!cameraTexture)
             {
                 return false;
             }
@@ -252,7 +198,12 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
             var uv = (new Vector2(clip.x, clip.y) / clip.w) * 0.5f + Vector2.one * 0.5f;
 
-            if (_depth == null || !_depth.IsInitialized)
+            if (!_depth || !_depth.IsInitialized)
+            {
+                return false;
+            }
+
+            if (!_frame.Depth.IsCreated || _frame.Depth.Length == 0)
             {
                 return false;
             }
@@ -261,6 +212,12 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             var sx = Mathf.Clamp((int)(uv.x * texSize), 0, texSize - 1);
             var sy = Mathf.Clamp((int)(uv.y * texSize), 0, texSize - 1);
             var idx = _eyeIdx * texSize * texSize + sy * texSize + sx;
+
+            if (idx < 0 || idx >= _frame.Depth.Length)
+            {
+                return false;
+            }
+
             var d = _frame.Depth[idx];
 
             if (d <= 0 || d > 20 || float.IsInfinity(d))
@@ -289,26 +246,27 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             scale = new Vector3(w, h, 1f);
 
             return true;
-        }
+    }
 #endif
 
-        /// <summary>
-        /// Tiny per-object renderer cache to avoid GetComponentsInChildren each frame.
-        /// </summary>
-        private sealed class RendererCache : MonoBehaviour
+        private void ClearAll()
         {
-            public Renderer[] renderers;
-
-            private void Awake()
+            foreach (var g in _live)
             {
-                EnsureInitialized();
+                if (g)
+                {
+                    Destroy(g);
+                }
             }
 
-            public void EnsureInitialized()
+            _live.Clear();
+
+            while (_pool.Count > 0)
             {
-                if (renderers == null)
+                var g = _pool.Dequeue();
+                if (g)
                 {
-                    renderers = GetComponentsInChildren<Renderer>(true);
+                    Destroy(g);
                 }
             }
         }

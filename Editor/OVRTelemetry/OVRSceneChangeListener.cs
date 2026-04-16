@@ -69,6 +69,12 @@ public class OVRSceneChangeListener
         CompilationPipeline.compilationStarted -= OnCompilationStarted;
         CompilationPipeline.compilationStarted += OnCompilationStarted;
 
+        Selection.selectionChanged -= OnSelectionChanged;
+        Selection.selectionChanged += OnSelectionChanged;
+
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+
         EditorApplication.wantsToQuit -= OnEditorWantsToQuit;
         EditorApplication.wantsToQuit += OnEditorWantsToQuit;
 
@@ -80,6 +86,8 @@ public class OVRSceneChangeListener
     {
         ObjectChangeEvents.changesPublished -= ChangesPublished;
         CompilationPipeline.compilationStarted -= OnCompilationStarted;
+        Selection.selectionChanged -= OnSelectionChanged;
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         EditorApplication.wantsToQuit -= OnEditorWantsToQuit;
         EditorApplication.update -= CheckForInactivity;
     }
@@ -105,9 +113,13 @@ public class OVRSceneChangeListener
         {
             double sessionDuration = lastActivityEventTime - SessionState.GetFloat(SessionStartTimeKey, 0f);
 
-            OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.SceneInactivity)
-                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture))
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneInactivity)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture));
+            unifiedEvent.Send();
 
             SessionState.SetBool(IsActiveSessionKey, false);
         }
@@ -120,9 +132,12 @@ public class OVRSceneChangeListener
         // If the session is not active, trigger a new session started event
         if (!SessionState.GetBool(IsActiveSessionKey, false))
         {
-            // Send activity event - starting or resuming activity
-            OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.SceneActivity)
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneActivity)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.Send();
 
             SessionState.SetBool(IsActiveSessionKey, true);
 
@@ -139,6 +154,16 @@ public class OVRSceneChangeListener
         RegisterUserActivity();
     }
 
+    private static void OnSelectionChanged()
+    {
+        RegisterUserActivity();
+    }
+
+    private static void OnPlayModeStateChanged(PlayModeStateChange state)
+    {
+        RegisterUserActivity();
+    }
+
     private static bool OnEditorWantsToQuit()
     {
         if (SessionState.GetBool(IsActiveSessionKey, false))
@@ -146,14 +171,21 @@ public class OVRSceneChangeListener
             // Send inactivity event for explicit close/end of session
             // Include full session duration without subtracting timeout
             double sessionDuration = EditorApplication.timeSinceStartup - SessionState.GetFloat(SessionStartTimeKey, 0f);
-            OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.SceneInactivity)
-                .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture))
-                .Send();
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneInactivity)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture));
+            unifiedEvent.Send();
         }
 
-        // Send editor shutdown event
-        OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.EditorShutdown)
-            .Send();
+        var shutdownEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.EditorShutdown)
+        {
+            isEssential = OVRPlugin.Bool.True,
+            productType = OVRPlugin.ProductType.Editor
+        };
+        shutdownEvent.Send();
 
         return true;
     }
@@ -173,10 +205,14 @@ public class OVRSceneChangeListener
             return;
         }
 
-        OVRTelemetry.Start(OVRTelemetryConstants.Editor.MarkerId.ComponentAdd)
-             .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.ComponentName, type.Name)
-             .AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.AssemblyName, assemblyName)
-             .Send();
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.ComponentAdd)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Editor
+        };
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.ComponentName, type.Name);
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.AssemblyName, assemblyName);
+        unifiedEvent.Send();
     }
 
     private static void ProcessGameObject(GameObject go)
@@ -215,12 +251,26 @@ public class OVRSceneChangeListener
         {
             case ObjectChangeKind.CreateGameObjectHierarchy:
                 stream.GetCreateGameObjectHierarchyEvent(i, out var createGameObjectHierarchyEvent);
+#if UNITY_6000_5_OR_NEWER
+                ProcessGameObject(
+                    EditorUtility.EntityIdToObject(createGameObjectHierarchyEvent.entityId) as GameObject);
+#elif UNITY_6000_3_OR_NEWER
+                ProcessGameObject(
+                    EditorUtility.EntityIdToObject(createGameObjectHierarchyEvent.instanceId) as GameObject);
+#else
                 ProcessGameObject(
                     EditorUtility.InstanceIDToObject(createGameObjectHierarchyEvent.instanceId) as GameObject);
+#endif
                 break;
             case ObjectChangeKind.ChangeGameObjectStructure:
                 stream.GetChangeGameObjectStructureEvent(i, out var changeGameObjectStructure);
+#if UNITY_6000_5_OR_NEWER
+                ProcessGameObject(EditorUtility.EntityIdToObject(changeGameObjectStructure.entityId) as GameObject);
+#elif UNITY_6000_3_OR_NEWER
+                ProcessGameObject(EditorUtility.EntityIdToObject(changeGameObjectStructure.instanceId) as GameObject);
+#else
                 ProcessGameObject(EditorUtility.InstanceIDToObject(changeGameObjectStructure.instanceId) as GameObject);
+#endif
                 break;
         }
     }

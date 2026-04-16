@@ -157,7 +157,10 @@ namespace Meta.XR.EnvironmentDepth
             Debug.LogError("EnvironmentDepth is disabled. Please install 'com.unity.xr.management' (XR Plugin Management) package.");
             return new DepthProviderNotSupported();
 #endif
-            Debug.LogError("EnvironmentDepth is disabled. Please enable XR provider in 'Project Settings / XR Plug-in Management'.");
+            if (OVRPlugin.initialized) // We're in Link/XRSim or on device
+            {
+                Debug.LogError("EnvironmentDepth is disabled. Please enable XR provider in 'Project Settings / XR Plug-in Management'.");
+            }
             return new DepthProviderNotSupported();
         }
 
@@ -233,18 +236,19 @@ namespace Meta.XR.EnvironmentDepth
             if (!IsSupported)
             {
 #if UNITY_EDITOR
-                if(!Application.isBatchMode)
-                {
-                    Debug.LogError("Environment Depth could not be retrieved! Please ensure the following:" +
-                                   "\n\n" +
-                                   "When running over Link, the spatial data feature needs to be enabled in the Meta Quest Link app.\n" +
-                                   " (Settings > Beta > Spatial Data over Meta Quest Link)." +
-                                   "\n\n" +
-                                   "Check the Project Setup Tool for any project related issues.\n" +
-                                   " (Meta > Tools > Project Setup Tool)" +
-                                   "\n\n" +
-                                   "You are using a Quest 3 or newer device.");
-                }
+                if((!Application.isBatchMode) &&
+                    (OVRPlugin.initialized)) // We're in Link or XRSim                
+                    {
+                        Debug.LogError("Environment Depth could not be retrieved! Please ensure the following:" +
+                                       "\n\n" +
+                                       "When running over Link, the spatial data feature needs to be enabled in the Meta Quest Link app.\n" +
+                                       " (Settings > Developer > Spatial Data over Meta Quest Link)." +
+                                       "\n\n" +
+                                       "Check the Project Setup Tool for any project related issues.\n" +
+                                       " (Meta > Tools > Project Setup Tool)" +
+                                       "\n\n" +
+                                       "You are using a Quest 3 or newer device.");
+                    }                
 #endif
                 return;
             }
@@ -260,8 +264,11 @@ namespace Meta.XR.EnvironmentDepth
             Application.onBeforeRender += OnBeforeRender;
             if (!IsSupported)
             {
-                Debug.LogError($"Environment Depth is not supported. Please check {nameof(EnvironmentDepthManager)}.{nameof(IsSupported)} before enabling {nameof(EnvironmentDepthManager)}.\n" +
+                if (OVRPlugin.initialized) // We're in Link/XRSim or on device
+                {
+                    Debug.LogError($"Environment Depth is not supported. Please check {nameof(EnvironmentDepthManager)}.{nameof(IsSupported)} before enabling {nameof(EnvironmentDepthManager)}.\n" +
                                             "Open 'Meta > Tools > Project Setup Tool' to see requirements.\n");
+                }
                 enabled = false;
                 return;
             }

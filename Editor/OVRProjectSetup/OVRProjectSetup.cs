@@ -537,19 +537,21 @@ public static class OVRProjectSetup
         Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> filter = null,
         LogMessages logMessages = LogMessages.Disabled,
         bool blocking = true,
-        Action<OVRConfigurationTaskProcessor> onCompleted = null)
+        Action<OVRConfigurationTaskProcessor> onCompleted = null,
+        bool bypassCooldown = false)
     {
         var updater =
-            new OVRConfigurationTaskUpdater(Registry, buildTargetGroup, filter, logMessages, blocking, onCompleted);
+            new OVRConfigurationTaskUpdater(Registry, buildTargetGroup, filter, logMessages, blocking, onCompleted, bypassCooldown);
         ProcessorQueue.Request(updater);
     }
 
     internal static Task<OVRConfigurationTaskProcessor> UpdateTasksAsync(
         BuildTargetGroup buildTargetGroup,
         Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> filter = null,
-        LogMessages logMessages = LogMessages.Disabled)
+        LogMessages logMessages = LogMessages.Disabled,
+        bool bypassCooldown = false)
     {
-        var updater = new OVRConfigurationTaskUpdater(Registry, buildTargetGroup, filter, logMessages, false, null);
+        var updater = new OVRConfigurationTaskUpdater(Registry, buildTargetGroup, filter, logMessages, false, null, bypassCooldown);
         ProcessorQueue.Request(updater);
         return Task.Run(updater.WaitForCompletion);
     }

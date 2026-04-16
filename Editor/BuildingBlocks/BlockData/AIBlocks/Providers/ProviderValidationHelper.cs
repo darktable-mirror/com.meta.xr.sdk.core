@@ -171,6 +171,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 "LlamaApi" => BuildLlamaApiRequest(endpoint, apiKey, model),
                 "ElevenLabs" => BuildElevenLabsRequest(endpoint, apiKey, model),
                 "Replicate" => BuildReplicateRequest(endpoint, apiKey, model),
+                "Roboflow" => BuildRoboflowRequest(endpoint, apiKey, model),
                 _ => null
             };
 
@@ -384,8 +385,8 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 case 503:
                     result.State = ValidationState.ServerError;
                     result.Message = $"⚠ Service Unavailable (HTTP 503)\n" +
-                                     $"• The model may be loading or cold-starting\n" +
-                                     $"• For HuggingFace: Model might be spinning up\n" +
+                                     $"• There is a connection but the model may still be loading or cold-starting\n" +
+                                     $"• Make sure your internet connection can reach the provider's services\n" +
                                      $"• Try again in 30-60 seconds" +
                                      (extractedError != null ? $"\n\nDetails: {extractedError}" : "");
                     break;
@@ -683,6 +684,64 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             req.SetRequestHeader("Prefer", "wait");
 
             return req;
+        }
+
+        private static UnityWebRequest BuildRoboflowRequest(string endpoint, string apiKey, string model)
+        {
+            endpoint = endpoint.TrimEnd('/');
+
+            // Determine if this is a local server endpoint by checking for cloud indicators.
+            // A local server is any endpoint that doesn't point to Roboflow's cloud infrastructure.
+            // This includes localhost, local IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x), and any custom hosts.
+            var isCloudEndpoint = endpoint.Contains("roboflow.com") ||
+                                  endpoint.Contains("serverless.roboflow") ||
+                                  endpoint.Contains("detect.roboflow") ||
+                                  endpoint.Contains("infer.roboflow");
+            var isLocalServer = !isCloudEndpoint;
+
+            if (isLocalServer)
+            {
+                // For local inference server, use the dedicated inference API
+                var url = $"{endpoint}/infer/object_detection";
+
+                // 1x1 pixel red PNG image (base64 encoded) - minimal valid image for testing
+                const string testImageBase64 =
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+
+                var payload = new StringBuilder();
+                payload.Append("{");
+                payload.Append("\"api_key\":\"").Append(apiKey).Append("\",");
+                payload.Append("\"model_id\":\"").Append(model).Append("\",");
+                payload.Append("\"image\":{\"type\":\"base64\",\"value\":\"").Append(testImageBase64).Append("\"}");
+                payload.Append("}");
+
+                var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST);
+                var bodyRaw = Encoding.UTF8.GetBytes(payload.ToString());
+
+                req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                req.downloadHandler = new DownloadHandlerBuffer();
+                req.SetRequestHeader("Content-Type", "application/json");
+
+                return req;
+            }
+            else
+            {
+                // For cloud/serverless endpoint, use the original format
+                var url = $"{endpoint}/{model}?api_key={UnityWebRequest.EscapeURL(apiKey)}";
+
+                // 1x1 pixel red PNG image (base64 encoded) - minimal valid image for testing
+                const string testImageBase64 =
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+
+                var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST);
+                var bodyRaw = Encoding.UTF8.GetBytes(testImageBase64);
+
+                req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                req.downloadHandler = new DownloadHandlerBuffer();
+                req.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+                return req;
+            }
         }
 
         private static UnityWebRequest BuildPostJsonRequest(string url, string json, string authValue,

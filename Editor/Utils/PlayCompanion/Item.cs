@@ -45,7 +45,7 @@ namespace Meta.XR.Editor.PlayCompanion
         public bool Show { get; set; }
         public bool IsButton { get; set; } = false;
 
-        public bool IsSelected => Manager.SelectedItem == this;
+        public bool IsSelected => Manager.IsSelected(this);
         public bool IsRegistered => Manager.RegisteredItems.Contains(this);
 
         public void Draw(Action<Item> onClick)

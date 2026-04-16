@@ -20,8 +20,10 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -29,6 +31,7 @@ namespace Meta.XR.Editor.UserInterface
     {
         private readonly bool _showCopy;
         private Action<string> _onCopyButtonPressed;
+        private UnityEngine.UIElements.Button _copyButton;
         public string Id { get; }
 
         public ChatItem(string id, List<IUserInterfaceItem> items, bool showCopy = false, Action<string> onCopyButtonPressed = null,
@@ -63,6 +66,57 @@ namespace Meta.XR.Editor.UserInterface
             {
                 _onCopyButtonPressed?.Invoke(Id);
             }
+        }
+
+        /// <summary>
+        /// Creates a UIToolkit ChatItem element with RLDS styling applied.
+        /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
+        /// </summary>
+        /// <returns>A VisualElement containing the chat item with optional copy button on hover</returns>
+        public override VisualElement Get()
+        {
+            var container = base.Get();
+
+            if (!_showCopy || _copyButton != null)
+                return container;
+
+            container.style.position = Position.Relative;
+
+            _copyButton = new UnityEngine.UIElements.Button(() =>
+            {
+                _onCopyButtonPressed?.Invoke(Id);
+            });
+
+            var copyIcon = new Icon(
+                UIStyles.Contents.CopyIcon,
+                Color.white,
+                (int)RLDS.Styles.IconSize.SizeSM,
+                (int)RLDS.Styles.IconSize.SizeSM
+            ).Get();
+
+            _copyButton.Add(copyIcon);
+            _copyButton.AddToClassList(Props.Button.TertiarySmall);
+
+            _copyButton.style.position = Position.Absolute;
+            _copyButton.style.top = RLDS.Styles.Spacing.SpaceXS;
+            _copyButton.style.right = RLDS.Styles.Spacing.SpaceXS;
+            _copyButton.style.minWidth = RLDS.Styles.IconSize.SizeLG;
+            _copyButton.style.minHeight = RLDS.Styles.IconSize.SizeLG;
+            _copyButton.style.display = DisplayStyle.None;
+
+            container.RegisterCallback<MouseEnterEvent>(evt =>
+            {
+                _copyButton.style.display = DisplayStyle.Flex;
+            });
+
+            container.RegisterCallback<MouseLeaveEvent>(evt =>
+            {
+                _copyButton.style.display = DisplayStyle.None;
+            });
+
+            container.Add(_copyButton);
+
+            return container;
         }
     }
 }

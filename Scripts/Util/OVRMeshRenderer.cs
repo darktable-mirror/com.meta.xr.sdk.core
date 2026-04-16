@@ -182,6 +182,10 @@ public class OVRMeshRenderer : MonoBehaviour
         IsInitialized = true;
     }
 
+    public void SetMaterial(Material newMaterial)
+    {
+        _originalMaterial = newMaterial;
+    }
 
     private void Update()
     {

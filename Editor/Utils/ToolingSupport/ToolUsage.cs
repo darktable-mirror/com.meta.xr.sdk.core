@@ -93,6 +93,9 @@ namespace Meta.XR.Editor.ToolingSupport
                 return null;
             }
 
+            if (OVRPlugin.wrapperVersion.Minor >= 200)
+                return OVRPlugin.wrapperVersion.Minor;
+
             return OVRPlugin.wrapperVersion.Minor - 32;
         }
     }

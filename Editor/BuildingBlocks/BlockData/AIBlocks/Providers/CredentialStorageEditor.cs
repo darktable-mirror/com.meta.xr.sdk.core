@@ -215,7 +215,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
                                                 GUILayout.Space(4);
 
+#if UNITY_6000_5_OR_NEWER
+                                                var testKey = $"{providerId}_{obj.GetEntityId()}";
+#else
                                                 var testKey = $"{providerId}_{obj.GetInstanceID()}";
+#endif
                                                 _isTesting.TryAdd(testKey, false);
 
                                                 if (!_validationResults.ContainsKey(testKey))

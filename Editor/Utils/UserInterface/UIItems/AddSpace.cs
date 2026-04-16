@@ -20,6 +20,7 @@
 
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -28,6 +29,14 @@ namespace Meta.XR.Editor.UserInterface
     /// </summary>
     internal class AddSpace : IUserInterfaceItem
     {
+        public enum SpaceDirection
+        {
+            Vertical,
+            Horizontal
+        }
+
+        private readonly SpaceDirection _direction;
+
         public bool Hide { get; set; }
         private readonly float _space;
         private readonly bool _flexibleSpace;
@@ -40,7 +49,11 @@ namespace Meta.XR.Editor.UserInterface
         /// <summary>
         /// Add fixed space(s) between <see cref="IUserInterfaceItem"/>s.
         /// </summary>
-        public AddSpace(float space = 6f) : this(false) => _space = space;
+        public AddSpace(float space = 6f, SpaceDirection direction = SpaceDirection.Vertical) : this(false)
+        {
+            _space = space;
+            _direction = direction;
+        }
 
         public void Draw()
         {
@@ -52,6 +65,19 @@ namespace Meta.XR.Editor.UserInterface
             {
                 EditorGUILayout.Space(_space);
             }
+        }
+
+        public VisualElement Get()
+        {
+            return new VisualElement
+            {
+                style =
+                {
+                    height = _direction is SpaceDirection.Vertical ? _space : 0,
+                    width = _direction is SpaceDirection.Horizontal ? _space : 0,
+                    flexGrow = _flexibleSpace ? 1 : 0
+                }
+            };
         }
     }
 }

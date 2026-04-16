@@ -34,13 +34,11 @@ namespace Meta.XR.BuildingBlocks.Shared.Editor
         [SerializeField]
         [Variant(
             Behavior = VariantAttribute.VariantBehavior.Parameter,
-            Description = "Whether the target grabbable object has rigidbody and uses gravity for physics simulation.")]
+            Description = "Whether the target grabbable object uses gravity for physics simulation.")]
         public bool _useGravity;
 
 #if META_INTERACTION_SDK_DEFINED
         private const string HandGrabBlockId = Oculus.Interaction.Editor.BuildingBlocks.BlockDataIds.HandGrab;
-        private const string TouchHandGrabBlockId =
-            Oculus.Interaction.Editor.BuildingBlocks.BlockDataIds.TouchHandGrab;
 #endif // META_INTERACTION_SDK_DEFINED
 
 #pragma warning disable CS1998
@@ -49,7 +47,7 @@ namespace Meta.XR.BuildingBlocks.Shared.Editor
         {
 #if META_INTERACTION_SDK_DEFINED
             await base.InstallAsync(blockData, selectedGameObject); // get automatchmaking from base
-            var handGrabBlockData = Utils.GetBlockData(_useGravity ? TouchHandGrabBlockId : HandGrabBlockId);
+            var handGrabBlockData = Utils.GetBlockData(HandGrabBlockId);
             if (selectedGameObject == null)
             {
                 var handGrabObject = await handGrabBlockData.InstallWithDependencies();
@@ -65,7 +63,12 @@ namespace Meta.XR.BuildingBlocks.Shared.Editor
             {
                 await handGrabBlockData.InstallWithDependencies(selectedGameObject);
             }
-
+            if(_useGravity)
+            {
+                Rigidbody rigidbody = selectedGameObject.GetComponent<Rigidbody>();
+                rigidbody.useGravity = true;
+                rigidbody.isKinematic = false;
+            }
             var transferOwnershipOnSelect = selectedGameObject.AddComponent<TransferOwnershipOnSelect>();
             transferOwnershipOnSelect.UseGravity = _useGravity;
             return new List<GameObject> { selectedGameObject };
@@ -79,16 +82,8 @@ namespace Meta.XR.BuildingBlocks.Shared.Editor
         {
             var installationSteps = new List<InstallationStepInfo>();
             installationSteps.AddRange(base.GetInstallationSteps(selection));
-            if (!_useGravity)
-            {
-                var handGrabBlockData = Utils.GetBlockData(HandGrabBlockId);
-                installationSteps.Add(new InstallationStepInfo(handGrabBlockData, "Installs {0}"));
-            }
-            else
-            {
-                var touchHandGrabBlockData = Utils.GetBlockData(TouchHandGrabBlockId);
-                installationSteps.Add(new InstallationStepInfo(touchHandGrabBlockData, "Installs {0}"));
-            }
+            var handGrabBlockData = Utils.GetBlockData(HandGrabBlockId);
+            installationSteps.Add(new InstallationStepInfo(handGrabBlockData, "Installs {0}"));
             return installationSteps;
         }
 #endif // META_INTERACTION_SDK_DEFINED

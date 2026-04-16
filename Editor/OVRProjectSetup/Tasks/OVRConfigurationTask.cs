@@ -292,7 +292,7 @@ internal class OVRConfigurationTask : IIdentified
             return true; // Task is already fixed.
         }
 
-        var fixEvent = OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Fix);
+        var exceptionOccurred = false;
         try
         {
             FixAction(buildTargetGroup);
@@ -307,7 +307,7 @@ internal class OVRConfigurationTask : IIdentified
                 $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
-            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+            exceptionOccurred = true;
         }
 
         InvalidateCache(buildTargetGroup);
@@ -321,20 +321,21 @@ internal class OVRConfigurationTask : IIdentified
                     ? $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\" : {fixMessage}"
                     : $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\"");
         }
-        else
+
+
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Fix)
         {
-            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Cancel);
-        }
-
-
-        fixEvent
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
-                Level.GetValue(buildTargetGroup).ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Group, Group.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, buildTargetGroup.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, currentResult ? "true" : "false")
-            .Send();
+            isEssential = OVRPlugin.Bool.True,
+            productType = OVRPlugin.ProductType.Pst,
+            result = exceptionOccurred ? OVRPlugin.UnifiedEventResult.FAIL : (currentResult ? OVRPlugin.UnifiedEventResult.SUCCESS : OVRPlugin.UnifiedEventResult.CANCEL)
+        };
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
+            Level.GetValue(buildTargetGroup).ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Group, Group.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, buildTargetGroup.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, currentResult ? "true" : "false");
+        unifiedEvent.Send();
 
         return currentResult;
     }
@@ -350,7 +351,7 @@ internal class OVRConfigurationTask : IIdentified
             return true; // Task is already fixed.
         }
 
-        var fixEvent = OVRTelemetry.Start(OVRProjectSetupTelemetryEvent.EventTypes.Fix);
+        var exceptionOccurred = false;
         try
         {
             await AsyncFixAction(buildTargetGroup);
@@ -365,7 +366,7 @@ internal class OVRConfigurationTask : IIdentified
                 $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
-            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+            exceptionOccurred = true;
         }
         catch (Exception exception)
         {
@@ -373,7 +374,7 @@ internal class OVRConfigurationTask : IIdentified
                 $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
-            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+            exceptionOccurred = true;
         }
 
         InvalidateCache(buildTargetGroup);
@@ -387,20 +388,21 @@ internal class OVRConfigurationTask : IIdentified
                     ? $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\" : {fixMessage}"
                     : $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Fixed task \"{Message.GetValue(buildTargetGroup)}\"");
         }
-        else
+
+
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Fix)
         {
-            fixEvent.SetResult(OVRPlugin.Qpl.ResultType.Cancel);
-        }
-
-
-        fixEvent
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
-                Level.GetValue(buildTargetGroup).ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Group, Group.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, buildTargetGroup.ToString())
-            .AddAnnotation(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, currentResult ? "true" : "false")
-            .Send();
+            isEssential = OVRPlugin.Bool.True,
+            productType = OVRPlugin.ProductType.Editor,
+            result = exceptionOccurred ? OVRPlugin.UnifiedEventResult.FAIL : (currentResult ? OVRPlugin.UnifiedEventResult.SUCCESS : OVRPlugin.UnifiedEventResult.CANCEL)
+        };
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
+            Level.GetValue(buildTargetGroup).ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Group, Group.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup, buildTargetGroup.ToString());
+        unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Value, currentResult ? "true" : "false");
+        unifiedEvent.Send();
 
         return currentResult;
     }
@@ -525,6 +527,7 @@ internal class OVRConfigurationTask : IIdentified
 
         EditorGUI.EndDisabledGroup();
 
+
         if (FixAction != null || AsyncFixAction != null)
         {
             EditorGUI.BeginDisabledGroup(cannotBeFixed);
@@ -593,6 +596,7 @@ internal class OVRConfigurationTask : IIdentified
 
         EditorGUILayout.EndHorizontal();
     }
+
 
     private (TextureContent, Color) GetTaskIcon(BuildTargetGroup buildTargetGroup)
     {

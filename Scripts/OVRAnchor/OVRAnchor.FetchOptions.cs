@@ -126,8 +126,6 @@ public partial struct OVRAnchor
 
         internal unsafe Result DiscoverSpaces(out ulong requestId)
         {
-            var telemetryMarker = OVRTelemetry.Start((int)Telemetry.MarkerId.DiscoverSpaces);
-
             // Stores the filters
             using var filterStorage = new OVRNativeList<FilterUnion>(Allocator.Temp);
 
@@ -164,8 +162,6 @@ public partial struct OVRAnchor
                     }
                 });
             }
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.ComponentTypes, spaceComponentTypes.Data,
-                spaceComponentTypes.Count);
 
             using var uuids = Uuids.ToNativeList(Allocator.Temp);
             if (SingleUuid.HasValue)
@@ -185,13 +181,11 @@ public partial struct OVRAnchor
                     }
                 });
             }
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.UuidCount, uuids.Count);
 
             for (var i = 0; i < filterStorage.Count; i++)
             {
                 filters.Add(new IntPtr(filterStorage.PtrToElementAt(i)));
             }
-            telemetryMarker.AddAnnotation(Telemetry.Annotation.TotalFilterCount, filters.Count);
 
             var result = OVRPlugin.DiscoverSpaces(new SpaceDiscoveryInfo
             {
@@ -199,7 +193,17 @@ public partial struct OVRAnchor
                 Filters = (SpaceDiscoveryFilterInfoHeader**)filters.Data,
             }, out requestId);
 
-            Telemetry.SetSyncResult(telemetryMarker, requestId, result);
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.DiscoverSpaces)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(Telemetry.Annotation.ComponentTypes, spaceComponentTypes.Data,
+                spaceComponentTypes.Count);
+            unifiedEvent.SetMetadata(Telemetry.Annotation.UuidCount, uuids.Count);
+            unifiedEvent.SetMetadata(Telemetry.Annotation.TotalFilterCount, filters.Count);
+            Telemetry.SetSyncResult(requestId, result, unifiedEvent);
+
             return result;
         }
 

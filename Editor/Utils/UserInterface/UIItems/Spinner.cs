@@ -21,6 +21,7 @@
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meta.XR.Editor.UserInterface
 {
@@ -70,5 +71,10 @@ namespace Meta.XR.Editor.UserInterface
         }
 
         public bool Hide { get; set; }
+
+        public VisualElement Get()
+        {
+            return new VisualElement();
+        }
     }
 }

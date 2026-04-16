@@ -30,7 +30,8 @@
         "Meta.XR.Editor.EditorCoroutine",
         "meta.xr.mrutilitykit",
         "Meta.XR.Movement",
-        "Meta.XR.Movement.Editor"
+        "Meta.XR.Movement.Editor",
+        "Meta.XR.AskAI.Editor"
     ],
     "includePlatforms": [
         "Editor"
@@ -71,6 +72,11 @@
             "name": "com.meta.xr.sdk.movement",
             "expression": "",
             "define": "USING_META_XR_MOVEMENT_SDK"
+        },
+        {
+            "name": "com.meta.xr.ai.agentbridge",
+            "expression": "",
+            "define": "USING_AGENT_BRIDGE"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

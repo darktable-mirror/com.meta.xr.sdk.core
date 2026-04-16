@@ -40,6 +40,7 @@ namespace Meta.XR.MetaWand.Editor
 
         public const string PreGenPrefix = "pre_gen_";
 
+        public const string ModelLodGroupPrefab = "LOD Group Prefab";
         public const string ModelLod0 = "LOD 0 (XL)";
         public const string ModelLod1 = "LOD 1 (L)";
         public const string ModelLod2 = "LOD 2 (M)";
@@ -77,6 +78,14 @@ namespace Meta.XR.MetaWand.Editor
             { "4778008", ErrorInvalidParam },
             { "4778009", ErrorUnexpectedError }
         };
+
+        // Telemetry action messages for asset feedback
+        public const string AssetFeedbackActionLike = "asset_like";
+        public const string AssetFeedbackActionDislike = "asset_dislike";
+
+        // Telemetry action messages for search feedback
+        public const string SearchFeedbackActionLike = "search_like";
+        public const string SearchFeedbackActionDislike = "search_dislike";
 
         public static class Telemetry
         {

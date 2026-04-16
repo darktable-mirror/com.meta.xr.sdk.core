@@ -237,7 +237,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             if (panelCount == 0) return;
 
-            var positions = CalculateDynamicPositions(panelCount, (RuntimeSettings.DistanceOption)_distanceToggleIndex);
+            var positions = CalculateDynamicPositions(visiblePanels, (RuntimeSettings.DistanceOption)_distanceToggleIndex);
 
             for (int i = 0; i < visiblePanels.Count; i++)
             {
@@ -248,9 +248,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
         }
 
-        private List<Vector3> CalculateDynamicPositions(int panelCount, RuntimeSettings.DistanceOption distanceOption)
+        private List<Vector3> CalculateDynamicPositions(List<DebugPanel> visiblePanels, RuntimeSettings.DistanceOption distanceOption)
         {
             var positions = new List<Vector3>();
+            var panelCount = visiblePanels.Count;
+
             // Base position parameters based on distance option
             var baseDistance = distanceOption switch
             {
@@ -260,8 +262,34 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             };
 
             var baseZ = _panelPositionConstants["PanelDefaultZ"];
-            var panelSpacing = _panelPositionConstants["PanelSpacing"];
-            var startY = 0f; // Start position above debug bar
+            var defaultSpacing = _panelPositionConstants["PanelSpacing"];
+            var defaultDistance = _panelPositionConstants["DistanceDefault"];
+
+            // Calculate panel spacing based on angular width of panels at different distances
+            // Compute the maximum angular width from actual panel dimensions
+            var maxAngularWidth = 0f;
+            var maxDefaultAngularWidth = 0f;
+            foreach (var panel in visiblePanels)
+            {
+                var panelWidthInPixels = panel.LayoutStyle.size.x;
+                var panelWidthInWorldUnits = panelWidthInPixels / panel.PixelsPerUnit;
+                var angularWidth = 2f * Mathf.Atan(panelWidthInWorldUnits / (2f * baseDistance));
+                var defaultAngularWidth = 2f * Mathf.Atan(panelWidthInWorldUnits / (2f * defaultDistance));
+                if (angularWidth > maxAngularWidth)
+                {
+                    maxAngularWidth = angularWidth;
+                    maxDefaultAngularWidth = defaultAngularWidth;
+                }
+            }
+
+            // Use the maximum angular width among visible panels
+            var angularWidthOfPanel = maxAngularWidth;
+            // The gap between panels is the default spacing minus the panel's angular width at default distance
+            var gapBetweenPanels = defaultSpacing - maxDefaultAngularWidth;
+            // Final spacing = panel's angular width at current distance + consistent gap
+            var panelSpacing = angularWidthOfPanel + gapBetweenPanels;
+
+            var startY = 0f;
 
             // Calculate positions based on panel count
             var startYOffset = startY + (panelCount - 1) * panelSpacing / 2f;

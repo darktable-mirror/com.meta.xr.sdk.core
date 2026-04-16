@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.IO;
 using UnityEngine;
 
@@ -42,9 +43,13 @@ namespace Meta.XR.Simulator.Editor
         {
             ToolbarItem.ToolDescriptor.Usage.RecordUsage();
 
-            using var marker = new OVRTelemetryMarker(XRSimTelemetryConstants.MarkerId.ToggleState);
-            marker.AddAnnotation(XRSimTelemetryConstants.AnnotationType.IsActive, true.ToString());
-            marker.AddAnnotation(XRSimTelemetryConstants.AnnotationType.Origin, origin.ToString());
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(XRSimTelemetryConstants.FalcoEventName.ToggleState)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.XrSim
+            };
+            unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.IsActive, true.ToString());
+            unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.Origin, origin.ToString());
 
 #if UNITY_EDITOR_OSX
             if (CultureInfo.InvariantCulture.CompareInfo.IndexOf(SystemInfo.processorType, "Intel", CompareOptions.IgnoreCase) >= 0)
@@ -52,8 +57,9 @@ namespace Meta.XR.Simulator.Editor
                 Utils.LogUtils.DisplayDialogOrError("Meta XR Simulator Not Supported",
                                 "Apple Silicon Mac is required. Intel-based Mac is not currently supported.",
                                 forceHideDialog);
-                marker.AddAnnotation(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Mac intel is not supported");
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Mac intel is not supported");
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.Send();
                 return;
             }
 #endif
@@ -68,8 +74,9 @@ namespace Meta.XR.Simulator.Editor
                 Utils.LogUtils.DisplayDialogOrError("Meta XR Simulator Not Installed",
                                 "Try using different version. Open Edit > Preferences... > Meta XR > Meta XR Simulator and choose different selected version. ",
                                 forceHideDialog);
-                marker.AddAnnotation(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Meta XR Simulator Not Installed");
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Meta XR Simulator Not Installed");
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.Send();
                 return;
             }
 
@@ -86,14 +93,17 @@ namespace Meta.XR.Simulator.Editor
                 Utils.LogUtils.DisplayDialogOrError("XRSimulator requires an Open XR Loader to function",
                     openXRLoaderErrorMessage,
                     forceHideDialog);
-                marker.AddAnnotation(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "OpenXR Loader not installed");
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "OpenXR Loader not installed");
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.Send();
                 return;
             }
 
             if (IsSimulatorActivated())
             {
                 Utils.LogUtils.ReportInfo("Meta XR Simulator", "Meta XR Simulator is already activated.");
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+                unifiedEvent.Send();
                 return;
             }
 
@@ -137,27 +147,36 @@ namespace Meta.XR.Simulator.Editor
 
             Utils.LogUtils.ReportInfo("Meta XR Simulator is activated",
                 $"{XRSimConstants.OpenXrSelectedRuntimeEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.OpenXrSelectedRuntimeEnvKey)}\n{XRSimConstants.XrSimConfigEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.XrSimConfigEnvKey)}");
+
+            unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+            unifiedEvent.Send();
         }
 
         public virtual void DeactivateSimulator(bool forceHideDialog, Origin origin)
         {
-            using var marker = new OVRTelemetryMarker(XRSimTelemetryConstants.MarkerId.ToggleState);
-            marker.AddAnnotation(XRSimTelemetryConstants.AnnotationType.IsActive, false.ToString());
-            marker.AddAnnotation(OVRTelemetryConstants.Editor.AnnotationType.Origin, origin.ToString());
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(XRSimTelemetryConstants.FalcoEventName.ToggleState)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.XrSim
+            };
+            unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.IsActive, false.ToString());
+            unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.Origin, origin.ToString());
 
             if (!XRSimInstallationDetector.IsXRSim2Installed())
             {
                 Utils.LogUtils.DisplayDialogOrError("Meta XR Simulator",
                     $"{XRSimConstants.MetaOpenXrSimulationJsonPath} was not found, make sure you have Meta XR Simulator installed.",
                     forceHideDialog);
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.Send();
                 return;
             }
 
             if (!IsSimulatorActivated())
             {
                 Utils.LogUtils.ReportInfo("Meta XR Simulator", "Meta XR Simulator is not activated.");
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.Send();
                 return;
             }
 
@@ -175,6 +194,9 @@ namespace Meta.XR.Simulator.Editor
 
             Utils.LogUtils.ReportInfo("Meta XR Simulator is deactivated",
                 $"{XRSimConstants.OpenXrSelectedRuntimeEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.OpenXrSelectedRuntimeEnvKey)}\n{XRSimConstants.XrSimConfigEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.XrSimConfigEnvKey)}");
+
+            unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+            unifiedEvent.Send();
         }
 
         public virtual void VerifyAndCorrectActivation()

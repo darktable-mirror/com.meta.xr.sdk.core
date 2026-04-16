@@ -38,6 +38,7 @@ namespace Meta.XR.MetaWand.Editor.API
         private const string SEARCH_ASSETS_URL = "https://graph.oculus.com/meta_wand_v2_search_sync";
         private const string CHECK_USAGE = "https://graph.oculus.com/meta_wand_v2_check_usage";
         private const string FETCH_FROM_LIBRARY_URL = "https://graph.oculus.com/meta_wand_v2_fetch_from_asset_database";
+        private const string TELEMETRY_URL = "https://graph.oculus.com/meta_wand_v2_telemetry";
 
         private string _accessToken;
         private readonly HttpClient _httpClient;
@@ -147,6 +148,89 @@ namespace Meta.XR.MetaWand.Editor.API
             var response = await _httpClient.PostAsync(FETCH_FROM_LIBRARY_URL, content);
             var responseText = await response.Content.ReadAsStringAsync();
             var result = JsonUtility.FromJson<FetchAssetResponse>(responseText);
+            result.success = response.IsSuccessStatusCode;
+
+            return result;
+        }
+
+        /// <summary>
+        /// Test if the client has feedback telemetry permissions
+        /// </summary>
+        /// <param name="requestId">(Optional) A unique id for request.</param>
+        /// <returns>TelemetryResponse indicating success or failure</returns>
+        public async Task<TelemetryResponse> ShouldDisplayFeedbackUI(string requestId = null)
+        {
+            var request = new TelemetryRequest
+            {
+                action = "test_feedback_telemetry",
+                request_id = requestId ?? System.Guid.NewGuid().ToString(),
+                access_token = _accessToken
+            };
+
+            var json = JsonUtility.ToJson(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(TELEMETRY_URL, content);
+            var responseText = await response.Content.ReadAsStringAsync();
+            var result = JsonUtility.FromJson<TelemetryResponse>(responseText);
+            result.success = response.IsSuccessStatusCode;
+
+            return result;
+        }
+
+        /// <summary>
+        /// Log feedback (like or dislike) for a specific asset
+        /// </summary>
+        /// <param name="assetId">The asset ID to provide feedback for</param>
+        /// <param name="action">The feedback action (use Constants.AssetFeedbackActionLike or Constants.AssetFeedbackActionDislike)</param>
+        /// <param name="requestId">(Optional) A unique id for request.</param>
+        /// <returns>TelemetryResponse indicating success or failure</returns>
+        public async Task<TelemetryResponse> AssetFeedback(string assetId, string action, string requestId = null)
+        {
+            var request = new TelemetryRequest
+            {
+                action = action,
+                asset_id = assetId,
+                request_id = requestId ?? System.Guid.NewGuid().ToString(),
+                access_token = _accessToken
+            };
+
+            var json = JsonUtility.ToJson(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(TELEMETRY_URL, content);
+            var responseText = await response.Content.ReadAsStringAsync();
+            var result = JsonUtility.FromJson<TelemetryResponse>(responseText);
+            result.success = response.IsSuccessStatusCode;
+
+            return result;
+        }
+
+        /// <summary>
+        /// Log feedback (like or dislike) for a search query's overall results
+        /// </summary>
+        /// <param name="targetRequestId">The request_id of the original search request</param>
+        /// <param name="originalSearchText">The query of the original search request</param>
+        /// <param name="action">The feedback action (use Constants.SearchFeedbackActionLike or Constants.SearchFeedbackActionDislike)</param>
+        /// <param name="requestId">(Optional) A unique id for request.</param>
+        /// <returns>TelemetryResponse indicating success or failure</returns>
+        public async Task<TelemetryResponse> SearchFeedback(string targetRequestId, string originalSearchText, string action, string requestId = null)
+        {
+            var request = new TelemetryRequest
+            {
+                action = action,
+                target_request_id = targetRequestId,
+                original_search_text = originalSearchText,
+                request_id = requestId ?? System.Guid.NewGuid().ToString(),
+                access_token = _accessToken
+            };
+
+            var json = JsonUtility.ToJson(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(TELEMETRY_URL, content);
+            var responseText = await response.Content.ReadAsStringAsync();
+            var result = JsonUtility.FromJson<TelemetryResponse>(responseText);
             result.success = response.IsSuccessStatusCode;
 
             return result;

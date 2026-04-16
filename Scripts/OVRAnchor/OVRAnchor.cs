@@ -522,8 +522,8 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
         if (task.TryGetInternalData<FetchTaskData>(out var taskData))
         {
-            Telemetry.GetMarker(Telemetry.MarkerId.DiscoverSpaces, data.RequestId)
-                ?.AddAnnotation(Telemetry.Annotation.ResultsCount, taskData.Anchors?.Count ?? 0);
+            Telemetry.SetAsyncResultAndSend(Telemetry.EventName.DiscoverSpaces, data.RequestId, data.Result,
+                Telemetry.Annotation.ResultsCount, taskData.Anchors?.Count ?? 0);
             result = OVRResult.From(taskData.Anchors, (FetchResult)data.Result);
         }
         else
@@ -531,9 +531,8 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
             Debug.LogError($"SpaceDiscovery completed but its task does not have an associated anchor List. " +
                            $"RequestId={data.RequestId}, Result={data.Result}");
             result = OVRResult.From((List<OVRAnchor>)null, (FetchResult)data.Result);
+            Telemetry.SetAsyncResultAndSend(Telemetry.EventName.DiscoverSpaces, data.RequestId, data.Result);
         }
-
-        Telemetry.SetAsyncResultAndSend(Telemetry.MarkerId.DiscoverSpaces, data.RequestId, data.Result);
 
         task.SetResult(result);
     }
@@ -589,8 +588,15 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
             }
         }
 
-        // notify potential subscribers to the incremental results
-        taskData.IncrementalResultsCallback?.Invoke(taskData.Anchors, startingIndex);
+        try
+        {
+            // notify potential subscribers to the incremental results
+            taskData.IncrementalResultsCallback?.Invoke(taskData.Anchors, startingIndex);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
     }
 
     /// \cond
@@ -859,14 +865,16 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
     internal static unsafe OVRTask<OVRResult<SaveResult>> SaveSpacesAsync(ReadOnlySpan<ulong> spaces)
     {
-        var telemetryMarker = OVRTelemetry
-            .Start((int)Telemetry.MarkerId.SaveSpaces)
-            .AddAnnotation(Telemetry.Annotation.SpaceCount, (long)spaces.Length);
-
         fixed (ulong* ptr = spaces)
         {
             var result = SaveSpaces(ptr, spaces.Length, out var requestId);
-            Telemetry.SetSyncResult(telemetryMarker, requestId, result);
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.SaveSpaces)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(Telemetry.Annotation.SpaceCount, spaces.Length);
+            Telemetry.SetSyncResult(requestId, result, unifiedEvent);
 
             return OVRTask.Build(result, requestId).ToResultTask<SaveResult>();
         }
@@ -874,7 +882,7 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
     // Invoked by OVRManager event loop
     internal static void OnSaveSpacesResult(OVRDeserialize.SpacesSaveResultData eventData)
-        => Telemetry.SetAsyncResultAndSend(Telemetry.MarkerId.SaveSpaces, eventData.RequestId, (long)eventData.Result);
+        => Telemetry.SetAsyncResultAndSend(Telemetry.EventName.SaveSpaces, eventData.RequestId, (long)eventData.Result);
 
     /// <summary>
     /// Erases this anchor.
@@ -937,23 +945,25 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
     private static unsafe OVRTask<OVRResult<EraseResult>> EraseSpacesAsync(ReadOnlySpan<ulong> spaces, ReadOnlySpan<Guid> uuids)
     {
-        var telemetryMarker = OVRTelemetry
-            .Start((int)Telemetry.MarkerId.EraseSpaces)
-            .AddAnnotation(Telemetry.Annotation.SpaceCount, spaces.Length)
-            .AddAnnotation(Telemetry.Annotation.UuidCount, uuids.Length);
-
         fixed (ulong* spacesPtr = spaces)
         fixed (Guid* uuidsPtr = uuids)
         {
             var result = EraseSpaces((uint)spaces.Length, spacesPtr, (uint)uuids.Length, uuidsPtr, out var requestId);
-            Telemetry.SetSyncResult(telemetryMarker, requestId, result);
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.EraseSpaces)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor
+            };
+            unifiedEvent.SetMetadata(Telemetry.Annotation.SpaceCount, spaces.Length);
+            unifiedEvent.SetMetadata(Telemetry.Annotation.UuidCount, uuids.Length);
+            Telemetry.SetSyncResult(requestId, result, unifiedEvent);
 
             return OVRTask.Build(result, requestId).ToResultTask<EraseResult>();
         }
     }
 
     internal static void OnEraseSpacesResult(OVRDeserialize.SpacesEraseResultData eventData)
-        => Telemetry.SetAsyncResultAndSend(Telemetry.MarkerId.EraseSpaces, eventData.RequestId, (long)eventData.Result);
+        => Telemetry.SetAsyncResultAndSend(Telemetry.EventName.EraseSpaces, eventData.RequestId, (long)eventData.Result);
 
     /// <summary>
     /// Share this anchor with the specified users.
@@ -1332,11 +1342,14 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
         anchors.Clear();
 
-        var telemetryMarker = OVRTelemetry
-            .Start((int)Telemetry.MarkerId.QuerySpaces)
-            .AddAnnotation(Telemetry.Annotation.Timeout, (double)queryInfo.Timeout)
-            .AddAnnotation(Telemetry.Annotation.MaxResults, (long)queryInfo.MaxQuerySpaces)
-            .AddAnnotation(Telemetry.Annotation.StorageLocation, (long)queryInfo.Location);
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.QuerySpaces)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Editor
+        };
+        unifiedEvent.SetMetadata(Telemetry.Annotation.Timeout, (double)queryInfo.Timeout);
+        unifiedEvent.SetMetadata(Telemetry.Annotation.MaxResults, (int)queryInfo.MaxQuerySpaces);
+        unifiedEvent.SetMetadata(Telemetry.Annotation.StorageLocation, (int)queryInfo.Location);
 
         switch (queryInfo.FilterType)
         {
@@ -1347,20 +1360,20 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
                     {
                         (long)queryInfo.ComponentsInfo.Components[0]
                     };
-                    telemetryMarker.AddAnnotation(Telemetry.Annotation.ComponentTypes, componentTypes,
-                        queryInfo.ComponentsInfo.NumComponents);
+                    unifiedEvent.SetMetadata(Telemetry.Annotation.ComponentTypes, componentTypes,
+                        (int)queryInfo.ComponentsInfo.NumComponents);
                 }
                 break;
             case SpaceQueryFilterType.Group:
-                telemetryMarker.AddAnnotation(Telemetry.Annotation.GroupCount, 1);
+                unifiedEvent.SetMetadata(Telemetry.Annotation.GroupCount, 1);
                 break;
             case SpaceQueryFilterType.Ids:
-                telemetryMarker.AddAnnotation(Telemetry.Annotation.UuidCount, queryInfo.IdInfo.NumIds);
+                unifiedEvent.SetMetadata(Telemetry.Annotation.UuidCount, (int)queryInfo.IdInfo.NumIds);
                 break;
         }
 
         var result = QuerySpaces2(queryInfo, out var requestId);
-        Telemetry.SetSyncResult(telemetryMarker, requestId, result);
+        Telemetry.SetSyncResult(requestId, result, unifiedEvent);
 
         return OVRTask
             .Build(result, requestId)

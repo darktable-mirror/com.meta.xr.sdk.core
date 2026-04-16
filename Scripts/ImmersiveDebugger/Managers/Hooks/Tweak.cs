@@ -65,7 +65,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
         public static bool IsTypeSupportsValueRange(Type t) => t != null && _supportsValueRange.Contains(t);
 
-        public static Tweak Create(MemberInfo memberInfo, DebugMember attribute, InstanceHandle instanceHandle)
+        public static Tweak Create(MemberInfo memberInfo, DebugMember attribute, InstanceHandle instanceHandle, float min, float max)
         {
             var type = memberInfo.GetDataType();
             if (!_types.TryGetValue(type, out var createdType))
@@ -73,7 +73,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 return null;
             }
 
-            return Activator.CreateInstance(createdType, memberInfo, instanceHandle, attribute) as Tweak;
+            return Activator.CreateInstance(createdType, memberInfo, instanceHandle, attribute, min, max) as Tweak;
         }
 
         public static TweakEnum Create(MemberInfo memberInfo, DebugMember attribute, InstanceHandle instanceHandle, Type enumType)
@@ -111,7 +111,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             }
         }
 
-        public static void ProcessMinMaxRange(MemberInfo member, DebugMember attribute, InstanceHandle instance)
+        public static void ProcessMinMaxRange(MemberInfo member, DebugMember attribute, InstanceHandle instance, out float inferredMin, out float inferredMax)
         {
             var memberType = member.GetDataType();
 
@@ -124,13 +124,15 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
             if (attribute.Min <= value && value <= attribute.Max)
             {
+                inferredMin = attribute.Min;
+                inferredMax = attribute.Max;
                 return;
             }
 
             // 50% min, max range
             var spread = Mathf.Abs((float)(value * 0.5f));
-            attribute.Min = RoundToNearest((float)(value - spread), Min);
-            attribute.Max = RoundToNearest((float)(value + spread), Max);
+            inferredMin = RoundToNearest((float)(value - spread), Min);
+            inferredMax = RoundToNearest((float)(value + spread), Max);
         }
 
         internal static float RoundToNearest(float value, string op)
@@ -182,16 +184,19 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         private readonly T _min;
         private readonly T _max;
 
+        public T Min => _min;
+        public T Max => _max;
+
         public override float Tween
         {
             get => InverseLerp(_min, _max, _getter.Invoke());
             set => _setter.Invoke(Lerp(_min, _max, value));
         }
 
-        public Tweak(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute)
+        public Tweak(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute, float min, float max) : base(memberInfo, instanceHandle, attribute)
         {
-            _min = FromFloat(attribute.Min);
-            _max = FromFloat(attribute.Max);
+            _min = FromFloat(min);
+            _max = FromFloat(max);
             _getter = () => (T)memberInfo.GetValue(_instance);
             _setter = (value => memberInfo.SetValue(_instance, value));
         }
@@ -220,5 +225,103 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
         public override float Tween { get; set; }
     }
-}
 
+    /// <summary>
+    /// Tweak for nested class members. Accesses and modifies values through a parent member.
+    /// </summary>
+    internal class NestedTweak<T> : Tweak
+    {
+        public static Func<T, T, T, float> InverseLerp => Tweak<T>.InverseLerp;
+        public static Func<T, T, float, T> Lerp => Tweak<T>.Lerp;
+        public static Func<float, T> FromFloat => Tweak<T>.FromFloat;
+
+        private readonly Func<T> _getter;
+        private readonly Action<T> _setter;
+        private readonly T _min;
+        private readonly T _max;
+
+        public override float Tween
+        {
+            get => InverseLerp(_min, _max, _getter.Invoke());
+            set => _setter.Invoke(Lerp(_min, _max, value));
+        }
+
+        /// <summary>
+        /// Creates a nested tweak that accesses a member through a parent object.
+        /// </summary>
+        /// <param name="parentMemberInfo">The member info for the parent field (e.g., 'data' of type NestedData)</param>
+        /// <param name="nestedMemberInfo">The member info for the nested field (e.g., 'value' inside NestedData)</param>
+        /// <param name="instanceHandle">The instance handle of the root component</param>
+        /// <param name="attribute">The debug member attribute</param>
+        public NestedTweak(MemberInfo parentMemberInfo, MemberInfo nestedMemberInfo, InstanceHandle instanceHandle, DebugMember attribute)
+            : base(nestedMemberInfo, instanceHandle, attribute)
+        {
+            _min = FromFloat(attribute.Min);
+            _max = FromFloat(attribute.Max);
+
+            _getter = () =>
+            {
+                var parentValue = parentMemberInfo.GetValue(_instance);
+                if (parentValue == null) return default;
+                return (T)nestedMemberInfo.GetValue(parentValue);
+            };
+
+            _setter = (value) =>
+            {
+                var parentValue = parentMemberInfo.GetValue(_instance);
+                if (parentValue == null) return;
+                nestedMemberInfo.SetValue(parentValue, value);
+            };
+        }
+    }
+
+    internal static class NestedTweakUtils
+    {
+        /// <summary>
+        /// Creates a nested tweak for accessing and modifying a member through a parent object.
+        /// </summary>
+        public static Tweak CreateNested(MemberInfo parentMemberInfo, MemberInfo nestedMemberInfo, InstanceHandle instanceHandle, DebugMember attribute)
+        {
+            var nestedType = nestedMemberInfo.GetDataType();
+
+            // Process min/max range for the nested member
+            ProcessNestedMinMaxRange(parentMemberInfo, nestedMemberInfo, attribute, instanceHandle);
+
+            var tweakType = typeof(NestedTweak<>).MakeGenericType(nestedType);
+            return Activator.CreateInstance(tweakType, parentMemberInfo, nestedMemberInfo, instanceHandle, attribute) as Tweak;
+        }
+
+        /// <summary>
+        /// Process min/max range for nested members similar to TweakUtils.ProcessMinMaxRange.
+        /// </summary>
+        private static void ProcessNestedMinMaxRange(MemberInfo parentMemberInfo, MemberInfo nestedMemberInfo, DebugMember attribute, InstanceHandle instance)
+        {
+            var memberType = nestedMemberInfo.GetDataType();
+
+            if (!TweakUtils.IsTypeSupportsValueRange(memberType))
+            {
+                return;
+            }
+
+            // Get the parent value first, then the nested value
+            var parentValue = parentMemberInfo.GetValue(instance.Instance);
+            if (parentValue == null) return;
+
+            double value = 0;
+
+            if (memberType == typeof(float)) value = (float)nestedMemberInfo.GetValue(parentValue);
+            else if (memberType == typeof(int)) value = (int)nestedMemberInfo.GetValue(parentValue);
+            else if (memberType == typeof(double)) value = (double)nestedMemberInfo.GetValue(parentValue);
+
+            if (attribute.Min <= value && value <= attribute.Max)
+            {
+                return;
+            }
+
+            // 50% min, max range
+            var spread = Mathf.Abs((float)(value * 0.5f));
+            attribute.Min = TweakUtils.RoundToNearest((float)(value - spread), "min");
+            attribute.Max = TweakUtils.RoundToNearest((float)(value + spread), "max");
+        }
+    }
+}

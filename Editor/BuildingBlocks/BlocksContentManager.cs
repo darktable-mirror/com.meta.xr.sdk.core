@@ -382,10 +382,16 @@ namespace Meta.XR.BuildingBlocks.Editor
             return tagArray;
         }
 
-
-        public static IReadOnlyCollection<BlockBaseData> GetCollection(CollectionTagBehavior collection)
+        public static IEnumerable<BlockBaseData> GetCollection(CollectionTagBehavior collection)
         {
-            return collection == null ? null : RemoteCollections.GetValueOrDefault(collection.Tag, null);
+            if (collection == null)
+            {
+                return Enumerable.Empty<BlockBaseData>();
+            }
+
+            return RemoteCollections.TryGetValue(collection.Tag, out var result)
+                ? result.Where(block => !block.Hidden)
+                : Enumerable.Empty<BlockBaseData>();
         }
 
         #endregion

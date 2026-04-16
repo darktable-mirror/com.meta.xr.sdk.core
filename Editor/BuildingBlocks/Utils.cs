@@ -623,5 +623,50 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             return assemblyQualifiedNames.Select(s => s.Split(",").FirstOrDefault()).ToArray();
         }
+
+        internal static HashSet<string> GetDocUrlsFromBlockData(BlockData blockData)
+        {
+            var urls = new HashSet<string>();
+            if (blockData == null)
+            {
+                return urls;
+            }
+
+            var commonDocs = BlocksContentManager.GetCommonDocs();
+            foreach (var doc in commonDocs)
+            {
+                if (!string.IsNullOrEmpty(doc.url))
+                {
+                    urls.Add(doc.url);
+                }
+            }
+
+            var blocks = blockData.GetAllDependencies().ToList();
+            blocks.Add(blockData);
+            foreach (var block in blocks)
+            {
+                var localBlockData = GetBlockData(block.id);
+                if (localBlockData != null && !string.IsNullOrEmpty(localBlockData.FeatureDocumentationUrl))
+                {
+                    urls.Add(localBlockData.FeatureDocumentationUrl);
+                }
+
+                if (block.tags == null) continue;
+                foreach (var tagName in block.tags)
+                {
+                    var tag = new Tag(tagName);
+                    var docUrls = BlocksContentManager.GetBlockUrls(tag);
+                    foreach (var docUrl in docUrls)
+                    {
+                        if (!string.IsNullOrEmpty(docUrl.url))
+                        {
+                            urls.Add(docUrl.url);
+                        }
+                    }
+                }
+            }
+
+            return urls;
+        }
     }
 }

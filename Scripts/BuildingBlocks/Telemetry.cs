@@ -86,5 +86,65 @@ namespace Meta.XR.BuildingBlocks
 
             return marker.AddAnnotation(AnnotationType.SceneSizeInB, sceneSizeInB.ToString());
         }
+
+        public static void AddBlockInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, BuildingBlock block)
+        {
+            unifiedEvent.SetMetadata(AnnotationType.BlockId, block.BlockId);
+            unifiedEvent.SetMetadata(AnnotationType.InstanceId, block.InstanceId);
+            unifiedEvent.SetMetadata(AnnotationType.BlockName, block.gameObject.name);
+            unifiedEvent.SetMetadata(AnnotationType.Version, block.Version.ToString());
+            unifiedEvent.AddBlockVariantInfo(block);
+        }
+
+        private static void AddBlockVariantInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, BuildingBlock block)
+        {
+            if (block.InstallationRoutineCheckpoint == null || string.IsNullOrEmpty(block.InstallationRoutineCheckpoint.InstallationRoutineId))
+            {
+                return;
+            }
+
+            unifiedEvent.SetMetadata(AnnotationType.InstallationRoutineId,
+                block.InstallationRoutineCheckpoint.InstallationRoutineId);
+            unifiedEvent.AddInstallationRoutineInfo(block.InstallationRoutineCheckpoint);
+        }
+
+        private static void AddInstallationRoutineInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, InstallationRoutineCheckpoint checkpoint)
+        {
+            if (checkpoint == null)
+            {
+                return;
+            }
+
+            using (new OVRObjectPool.ListScope<string>(out var dataList))
+            {
+                // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
+                foreach (var variantCheckpoint in checkpoint.InstallationVariants)
+                {
+                    if (variantCheckpoint == null)
+                    {
+                        continue;
+                    }
+
+                    dataList.Add($"{variantCheckpoint.MemberName}:{variantCheckpoint.Value}");
+                }
+
+                if (dataList.Count > 0)
+                {
+                    unifiedEvent.SetMetadata(AnnotationType.InstallationRoutineData, string.Join(',', dataList));
+                }
+            }
+        }
+
+        public static void AddSceneInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, Scene scene)
+        {
+            long sceneSizeInB = 0;
+
+            if (File.Exists(scene.path))
+            {
+                sceneSizeInB = new FileInfo(scene.path).Length;
+            }
+
+            unifiedEvent.SetMetadata(AnnotationType.SceneSizeInB, sceneSizeInB.ToString());
+        }
     }
 }

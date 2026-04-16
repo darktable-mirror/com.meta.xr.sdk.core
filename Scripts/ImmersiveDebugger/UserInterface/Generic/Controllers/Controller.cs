@@ -83,7 +83,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// As most of the UI elements are 2D rectangles, this RectTransform is representing the element's actual transform.
         /// </summary>
         public RectTransform RectTransform { get; protected set; }
-        protected GameObject GameObject { get; set; }
+        protected internal GameObject GameObject { get; set; }
         /// <summary>
         /// All the children of this UI element.
         /// </summary>

@@ -574,6 +574,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         {
             public const int BorderWidth = 1;
         }
+
         public static class Spacing
         {
             // RLDS spacing

@@ -35,8 +35,7 @@ namespace Meta.XR.Util
         Interaction,
         Passthrough,
         Scene,
-        TrackedKeyboard,
-        VirtualKeyboard
+        TrackedKeyboard
     }
 
     /// <summary>

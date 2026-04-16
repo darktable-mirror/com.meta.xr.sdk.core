@@ -19,6 +19,7 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 partial struct OVRAnchor
@@ -29,40 +30,57 @@ partial struct OVRAnchor
     static class Telemetry
     {
         // requestIds are not necessarily unique across separate APIs, so we need to construct a unique key
-        // to map (markerId, requestId) pairs to a particular OVRTelemetryMarker
+        // to map (eventName, requestId) pairs to a particular UnifiedEventData
         private readonly struct Key : IEquatable<Key>
         {
-            private readonly int _markerId;
+            private readonly string _eventName;
             private readonly ulong _requestId;
-            public Key(MarkerId markerId, ulong requestId) => (_markerId, _requestId) = ((int)markerId, requestId);
-            public Key(OVRTelemetryMarker marker, ulong requestId) => (_markerId, _requestId) = (marker.MarkerId, requestId);
+            public Key(string eventName, ulong requestId) => (_eventName, _requestId) = (eventName, requestId);
 
-            public bool Equals(Key other) => _markerId == other._markerId && _requestId == other._requestId;
+            public bool Equals(Key other) => _eventName == other._eventName && _requestId == other._requestId;
             public override bool Equals(object obj) => obj is Key other && Equals(other);
-            public override int GetHashCode() => unchecked(_markerId.GetHashCode() * 486187739 + _requestId.GetHashCode());
+            public override int GetHashCode() => unchecked((_eventName?.GetHashCode() ?? 0) * 486187739 + _requestId.GetHashCode());
         }
 
-        private static Dictionary<Key, OVRTelemetryMarker> s_markers = new();
+        private static ConcurrentDictionary<Key, OVRPlugin.UnifiedEventData> s_events = new();
 
         // Called from OVRAnchor.Init
-        public static void OnInit() => s_markers.Clear();
-
-        public static void AddMarker(ulong requestId, OVRTelemetryMarker marker)
-            => s_markers.Add(new(marker, requestId), marker);
-
-        public static OVRTelemetryMarker Start(MarkerId markerId, ulong requestId, OVRPlugin.Result result)
+        public static void OnInit()
         {
-            var marker = OVRTelemetry.Start((int)markerId);
-            SetSyncResult(marker, requestId, result);
-            return marker;
+            s_events.Clear();
+        }
+
+        public static void AddEvent(ulong requestId, OVRPlugin.UnifiedEventData unifiedEvent)
+        {
+            if (unifiedEvent.eventName != null)
+            {
+                s_events.TryAdd(new(unifiedEvent.eventName, requestId), unifiedEvent);
+            }
+        }
+
+        public static OVRPlugin.UnifiedEventData Start(string eventName, ulong requestId, OVRPlugin.Result result)
+        {
+            var unifiedEvent = !string.IsNullOrEmpty(eventName)
+                ? new OVRPlugin.UnifiedEventData(eventName)
+                {
+                    isEssential = OVRPlugin.Bool.False,
+                    productType = OVRPlugin.ProductType.Editor
+                }
+                : default;
+            SetSyncResult(requestId, result, unifiedEvent);
+            return unifiedEvent;
         }
 
         // Set the result of the synchronous function call (the one that initiates the async request).
-        // If successful, the marker is stored in a map so that we can mark it complete later.
-        // If result indicates failure, then the marker is completed immediately.
-        public static void SetSyncResult(OVRTelemetryMarker marker, ulong requestId, OVRPlugin.Result result)
+        // If successful, the event is stored in a map so that we can mark it complete later.
+        // If result indicates failure, then the event is completed immediately.
+        public static void SetSyncResult(ulong requestId, OVRPlugin.Result result, OVRPlugin.UnifiedEventData unifiedEvent)
         {
-            marker.AddAnnotation(Annotation.SynchronousResult, (long)result);
+            if (unifiedEvent.eventName != null)
+            {
+                unifiedEvent.SetMetadata(Annotation.SynchronousResult, (int)result);
+            }
+
             if (result.IsSuccess())
             {
                 if (requestId == 0)
@@ -71,38 +89,74 @@ partial struct OVRAnchor
                                              $"method returns a successful result.", nameof(requestId));
                 }
 
-                s_markers.Add(new(marker, requestId), marker);
+                if (unifiedEvent.eventName != null)
+                {
+                    s_events.TryAdd(new(unifiedEvent.eventName, requestId), unifiedEvent);
+                }
             }
             else
             {
-                marker.SetResult(OVRPlugin.Qpl.ResultType.Fail).Send();
+                if (unifiedEvent.eventName != null)
+                {
+                    unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                    unifiedEvent.Send();
+                }
             }
         }
 
-        // Sets the asynchronous result (usually received in the OpenXR event queue) and ends the marker.
-        public static void SetAsyncResultAndSend(MarkerId markerId, ulong requestId, long result)
-            => SetAsyncResult(markerId, requestId, result)?.Send();
+        // Sets the asynchronous result (usually received in the OpenXR event queue) and ends the event.
+        public static void SetAsyncResultAndSend(string eventName, ulong requestId, long result)
+        {
+            var unifiedEvent = SetAsyncResult(eventName, requestId, result);
+            if (unifiedEvent.eventName != null)
+            {
+                unifiedEvent.Send();
+            }
+        }
 
-        // Sets the asynchronous result (usually received in the OpenXR event queue) but does not end the marker.
-        public static OVRTelemetryMarker? SetAsyncResult(MarkerId markerId, ulong requestId, long result)
-            => s_markers.Remove(new(markerId, requestId), out var marker)
-            ? marker
-                .AddAnnotation(Annotation.AsynchronousResult, result)
-                .SetResult(result >= 0 ? OVRPlugin.Qpl.ResultType.Success : OVRPlugin.Qpl.ResultType.Fail)
-            : null;
+        // Sets the asynchronous result with additional metadata and ends the event.
+        // More memory-efficient than retrieving/modifying/storing the event separately - avoids dictionary re-insertion.
+        public static void SetAsyncResultAndSend(string eventName, ulong requestId, long result,
+            string additionalAnnotation, int additionalValue)
+        {
+            var unifiedEvent = SetAsyncResult(eventName, requestId, result);
+            if (unifiedEvent.eventName != null)
+            {
+                unifiedEvent.SetMetadata(additionalAnnotation, additionalValue);
+                unifiedEvent.Send();
+            }
+        }
 
-        public static OVRTelemetryMarker? GetMarker(MarkerId markerId, ulong requestId)
-            => TryGetMarker(markerId, requestId, out var marker) ? marker : null;
+        // Sets the asynchronous result (usually received in the OpenXR event queue) but does not end the event.
+        public static OVRPlugin.UnifiedEventData SetAsyncResult(string eventName, ulong requestId, long result)
+        {
+            var key = new Key(eventName, requestId);
 
-        public static bool TryGetMarker(MarkerId markerId, ulong requestId, out OVRTelemetryMarker marker)
-            => s_markers.TryGetValue(new(markerId, requestId), out marker);
+            if (!s_events.Remove(key, out var unifiedEvent))
+                return default;
 
-        public static bool Remove(MarkerId markerId, ulong requestId, out OVRTelemetryMarker marker)
-            => s_markers.Remove(new(markerId, requestId), out marker);
+            unifiedEvent.SetMetadata(Annotation.AsynchronousResult, (int)result);
+            unifiedEvent.result = result >= 0 ? OVRPlugin.UnifiedEventResult.SUCCESS : OVRPlugin.UnifiedEventResult.FAIL;
 
-        public static OVRTelemetryMarker? GetRemove(MarkerId markerId, ulong requestId)
-            => Remove(markerId, requestId, out var marker) ? marker : null;
+            return unifiedEvent;
+        }
 
+        public static OVRPlugin.UnifiedEventData? GetEvent(string eventName, ulong requestId)
+            => TryGetEvent(eventName, requestId, out var unifiedEvent) ? unifiedEvent : null;
+
+        public static bool TryGetEvent(string eventName, ulong requestId, out OVRPlugin.UnifiedEventData unifiedEvent)
+            => s_events.TryGetValue(new(eventName, requestId), out unifiedEvent);
+
+        public static bool Remove(string eventName, ulong requestId, out OVRPlugin.UnifiedEventData unifiedEvent)
+        {
+            return s_events.Remove(new(eventName, requestId), out unifiedEvent);
+        }
+
+        public static OVRPlugin.UnifiedEventData? GetRemove(string eventName, ulong requestId)
+            => Remove(eventName, requestId, out var unifiedEvent) ? unifiedEvent : null;
+
+        // Deprecated: MarkerId enum is kept for backward compatibility but is no longer used.
+        // Use EventName constants instead.
         internal enum MarkerId
         {
             // XR_META_spatial_entity_discovery
@@ -118,6 +172,24 @@ partial struct OVRAnchor
             EraseSingleSpace = 163062284,
             // XR_META_dynamic_object_tracker
             ConfigureTracker = 163068237,
+        }
+
+        // Falco event names corresponding to MarkerId values
+        internal static class EventName
+        {
+            // XR_META_spatial_entity_discovery
+            public const string DiscoverSpaces = "DISCOVER_SPACES";
+            // XR_META_spatial_entity_persistence
+            public const string SaveSpaces = "SAVE_SPACES";
+            public const string EraseSpaces = "ERASE_SPACES";
+            // XR_FB_spatial_entity_query
+            public const string QuerySpaces = "QUERY_SPACES";
+            // XR_FB_spatial_entity_storage_batch
+            public const string SaveSpaceList = "SAVE_SPACE_LIST";
+            // XR_FB_spatial_entity_storage
+            public const string EraseSingleSpace = "ERASE_SPACE";
+            // XR_META_dynamic_object_tracker
+            public const string ConfigureTracker = "OVRANCHOR_CONFIGURE_TRACKER";
         }
 
         internal static class Annotation

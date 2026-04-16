@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3cd2a68d34d072a468517a80449fbe1d, type: 3}
   m_Name: CharacterRetargeter
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   id: 1735b3a5-6b02-42a3-bbee-e48234afe14b
   version: 1
   blockName: Character Retargeter
@@ -20,14 +20,14 @@ MonoBehaviour:
   tags:
     array:
     - name: Movement
-  thumbnail: {fileID: 2800000, guid: f2603281291aa4b47bdcb06bc9dbf3fe, type: 3}
-  remoteThumbnailContentId: 0
+  thumbnail: {fileID: 0}
+  remoteThumbnailContentId: 25954626250787360
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies:
   - e47682b9-c270-40b1-b16d-90b627a5ce1b
-  guidedSetupName: 
+  guidedSetupName:
   packageDependencies:
   - com.meta.xr.sdk.movement
   isSingleton: 0

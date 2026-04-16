@@ -258,17 +258,27 @@ namespace Meta.XR.Editor.ToolingSupport
 
         private void OnFeedbackIconClicked()
         {
-            var submitFeedbackEvent = OVRTelemetry.Start(OVRTelemetryConstants.Feedback.MarkerId.SubmitFeedback);
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Feedback.FalcoEventName.SubmitFeedback)
+            {
+                isEssential = OVRPlugin.Bool.True,
+                productType = OVRPlugin.ProductType.Editor
+            };
+
             try
             {
                 using Process process = new Process();
                 process.StartInfo.FileName = Utils.GetMqdhDeeplink(MqdhCategoryId);
                 process.StartInfo.UseShellExecute = true;
                 process.Start();
+
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.Feedback.AnnotationType.ToolName, Name);
+                unifiedEvent.Send();
             }
             catch (Win32Exception)
             {
-                submitFeedbackEvent.SetResult(OVRPlugin.Qpl.ResultType.Fail);
+                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.Feedback.AnnotationType.ToolName, Name);
+                unifiedEvent.Send();
                 if (EditorUtility.DisplayDialog("Install Meta Quest Developer Hub",
                         "Meta Quest Developer Hub is not installed on this machine.", "Get Meta Quest Developer Hub", "Cancel"))
                 {
@@ -276,8 +286,6 @@ namespace Meta.XR.Editor.ToolingSupport
                         "https://developers.meta.com/horizon/documentation/unity/ts-odh-getting-started/");
                 }
             }
-
-            submitFeedbackEvent.AddAnnotation(OVRTelemetryConstants.Feedback.AnnotationType.ToolName, Name).Send();
         }
 
         internal void ShowHeaderIcons(Origins origin)

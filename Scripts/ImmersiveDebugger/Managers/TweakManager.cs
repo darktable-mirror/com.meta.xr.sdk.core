@@ -48,37 +48,100 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             var members = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.SetField | BindingFlags.SetProperty);
             foreach (MemberInfo member in members)
             {
-                if (TweakUtils.IsMemberValidForTweak(member))
+                var attribute = member.GetCustomAttribute<DebugMember>();
+                if (attribute == null || !attribute.Tweakable)
                 {
-                    var attribute = member.GetCustomAttribute<DebugMember>();
-                    if (attribute != null && attribute.Tweakable)
-                    {
-                        membersList.Add((member, attribute));
-                    }
+                    continue;
+                }
+
+                // Include member if it's directly tweakable OR if it's a nested class with tweakable members
+                if (TweakUtils.IsMemberValidForTweak(member) || HasNestedTweakableMembers(member.GetDataType()))
+                {
+                    membersList.Add((member, attribute));
                 }
             }
 
             membersList.AddRange(InspectedDataRegistry.GetMembersForType<MemberInfo>(type,
-                (info, attribute) => TweakUtils.IsMemberValidForTweak(info) && attribute.Tweakable));
+                (info, attribute) => attribute.Tweakable && (TweakUtils.IsMemberValidForTweak(info) || HasNestedTweakableMembers(info.GetDataType()))));
 
             TweaksDict[type] = membersList;
 
             ManagerUtils.RebuildInspectorForType(_uiPanel, _instanceCache, type, membersList, (memberController, member, attribute, instance) =>
             {
-                var tweak = memberController.GetTweak();
-                if (!tweak?.Matches(member, instance) ?? true)
+                var memberType = member.GetDataType();
+
+                // Check if this member's type has its own DebugMember-annotated members (nested class)
+                if (ManagerUtils.HasNestedDebugMembers(memberType))
                 {
-                    if (member.IsBaseTypeEqual(typeof(Enum)))
+                    // For nested class, register tweaks for nested members
+                    RegisterNestedMembersAsTweaks(memberController, member, memberType, instance);
+                }
+                else
+                {
+                    // Standard tweak registration
+                    var tweak = memberController.GetTweak();
+                    if (!tweak?.Matches(member, instance) ?? true)
                     {
-                        memberController.RegisterEnum(TweakUtils.Create(member, attribute, instance, member.GetDataType()));
-                    }
-                    else
-                    {
-                        TweakUtils.ProcessMinMaxRange(member, attribute, instance);
-                        memberController.RegisterTweak(TweakUtils.Create(member, attribute, instance));
+                        if (member.IsBaseTypeEqual(typeof(Enum)))
+                        {
+                            memberController.RegisterEnum(TweakUtils.Create(member, attribute, instance, member.GetDataType()));
+                        }
+                        else
+                        {
+                            TweakUtils.ProcessMinMaxRange(member, attribute, instance, out float min, out float max);
+                            memberController.RegisterTweak(TweakUtils.Create(member, attribute, instance, min, max));
+                        }
                     }
                 }
             });
+        }
+
+        /// <summary>
+        /// Registers nested class members as tweaks inside a foldout.
+        /// Only handles tweak registration - WatchManager handles watches separately.
+        /// </summary>
+        private void RegisterNestedMembersAsTweaks(IMember parentMemberController, MemberInfo parentMember, Type nestedType, InstanceHandle instance)
+        {
+            foreach (var (nestedMember, nestedAttribute) in ManagerUtils.GetNestedDebugMembers(nestedType))
+            {
+                // Only register tweakable members
+                if (!nestedAttribute.Tweakable || !TweakUtils.IsMemberValidForTweak(nestedMember))
+                {
+                    continue;
+                }
+
+                var childMemberController = ManagerUtils.GetOrCreateNestedMemberController(parentMemberController, nestedMember, nestedAttribute);
+                if (childMemberController != null)
+                {
+                    // Register tweak
+                    var nestedTweak = NestedTweakUtils.CreateNested(parentMember, nestedMember, instance, nestedAttribute);
+                    if (nestedTweak != null)
+                    {
+                        childMemberController.RegisterTweak(nestedTweak);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if a type has nested members that are both tweakable and valid for tweaking.
+        /// </summary>
+        private static bool HasNestedTweakableMembers(Type type)
+        {
+            if (!ManagerUtils.HasNestedDebugMembers(type))
+            {
+                return false;
+            }
+
+            foreach (var (nestedMember, nestedAttribute) in ManagerUtils.GetNestedDebugMembers(type))
+            {
+                if (nestedAttribute.Tweakable && TweakUtils.IsMemberValidForTweak(nestedMember))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void ProcessTypeFromInspector(Type type, InstanceHandle handle, MemberInfo memberInfo, DebugMember memberAttribute)

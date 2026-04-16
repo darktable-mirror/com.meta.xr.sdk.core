@@ -439,14 +439,18 @@ public class OVRSceneManager : MonoBehaviour
 
     void Start()
     {
-        OVRTelemetry.Start(OVRTelemetryConstants.Scene.MarkerId.UseOVRSceneManager)
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.UsingBasicPrefabs,
-                (PlanePrefab != null || VolumePrefab != null) ? "true" : "false")
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.UsingPrefabOverrides,
-                (PrefabOverrides.Count > 0) ? "true" : "false")
-            .AddAnnotation(OVRTelemetryConstants.Scene.AnnotationType.ActiveRoomsOnly,
-                ActiveRoomsOnly ? "true" : "false")
-            .Send();
+        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Scene.FalcoEventName.UseOVRSceneManager)
+        {
+            isEssential = OVRPlugin.Bool.False,
+            productType = OVRPlugin.ProductType.Editor
+        };
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.UsingBasicPrefabs,
+            (PlanePrefab != null || VolumePrefab != null) ? "true" : "false");
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.UsingPrefabOverrides,
+            (PrefabOverrides.Count > 0) ? "true" : "false");
+        unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.ActiveRoomsOnly,
+            ActiveRoomsOnly ? "true" : "false");
+        unifiedEvent.Send();
     }
 
     private static void LogResult(OVRAnchor.FetchResult value)

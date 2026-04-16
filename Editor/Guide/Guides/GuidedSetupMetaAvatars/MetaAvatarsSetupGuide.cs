@@ -90,9 +90,9 @@ namespace Meta.XR.Guides.Editor
             {
                 _appIdValidateField.Hide = Common.ValidAppId(_appIdField.Text) || _appIdField.Text.Equals(Common.DefaultAppIdFieldText);
             };
-            _window.AddAdditionalTelemetryAnnotations = marker =>
-                marker.AddAnnotation(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasAppId,
-                Common.HasAppId());
+            _window.AddAdditionalUnifiedEventMetadata = unifiedEvent =>
+                unifiedEvent.SetMetadata(OVRTelemetryConstants.GuidedSetup.AnnotationType.HasAppId,
+                    Common.HasAppId());
         }
 
         [GuideItems]

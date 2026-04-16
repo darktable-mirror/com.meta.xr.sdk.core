@@ -34,6 +34,14 @@ internal static class OVRProjectSetupTelemetryEvent
         public const int InteractionFlow = 163069594;
     }
 
+    public static class FalcoEventNames
+    {
+        public const string Open = "UPST_OPEN";
+        public const string Close = "UPST_CLOSE";
+        public const string Fix = "UPST_FIX";
+        public const string Summary = "UPST_SUMMARY";
+    }
+
     public static class AnnotationTypes
     {
         public const string Uid = "Uid";

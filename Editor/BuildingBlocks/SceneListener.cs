@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using Meta.XR.Editor.Settings;
 using UnityEngine.SceneManagement;
 using UnityEditor;
@@ -56,13 +57,17 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             EditorApplication.delayCall += () =>
             {
-                var sceneBlocks = Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None);
+                var sceneBlocks = UnityEngine.Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None);
 
                 foreach (var block in sceneBlocks)
                 {
-                    OVRTelemetry.Start(OVRTelemetryConstants.BB.MarkerId.OpenSceneWithBlock)
-                        .AddBlockInfo(block)
-                        .Send();
+                    var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.OpenSceneWithBlock)
+                    {
+                        isEssential = OVRPlugin.Bool.True,
+                        productType = OVRPlugin.ProductType.BuildingBlocks
+                    };
+                    unifiedEvent.AddBlockInfo(block);
+                    unifiedEvent.Send();
                 }
             };
         }

@@ -67,6 +67,15 @@ namespace Meta.XR.Editor.Rules
             return versionParts.Length > 0 && int.TryParse(versionParts[0], out version);
         }
 
-        private static int SDKVersion => OVRPlugin.version.Minor - 32;
+        private static int SDKVersion
+        {
+            get
+            {
+                if (OVRPlugin.wrapperVersion.Minor >= 200)
+                    return OVRPlugin.wrapperVersion.Minor;
+
+                return OVRPlugin.wrapperVersion.Minor - 32;
+            }
+        }
     }
 }

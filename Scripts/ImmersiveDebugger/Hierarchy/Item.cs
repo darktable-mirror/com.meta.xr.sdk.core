@@ -36,7 +36,11 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
         public Item Parent => _parent;
         public int Depth => _depth;
         public InstanceHandle Handle => _handle;
+#if UNITY_6000_5_OR_NEWER
+        public EntityId Id => Handle.InstanceId;
+#else
         public int Id => Handle.InstanceId;
+#endif
         public virtual Category Category => new() { Item = this };
         public bool Dirty { get; set; }
 
@@ -231,6 +235,8 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
             // Content are the components on this gameObject
             foreach (var component in _owner.GetComponents<Component>())
             {
+                if (component == null) continue;
+
                 var item = new ComponentItem();
                 item.SetOwner(component);
                 _components.Add(item);

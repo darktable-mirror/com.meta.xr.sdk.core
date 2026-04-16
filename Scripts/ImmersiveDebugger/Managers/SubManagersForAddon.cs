@@ -114,8 +114,8 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 }
                 else
                 {
-                    TweakUtils.ProcessMinMaxRange(memberInfo, memberAttribute, handle);
-                    member.RegisterTweak(TweakUtils.Create(memberInfo, memberAttribute, handle));
+                    TweakUtils.ProcessMinMaxRange(memberInfo, memberAttribute, handle, out float min, out float max);
+                    member.RegisterTweak(TweakUtils.Create(memberInfo, memberAttribute, handle, min, max));
                 }
             }
             return true;

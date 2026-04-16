@@ -362,7 +362,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                     if (currentIndex < 0)
                     {
                         // Current value is not in available options, reset to first option
-                        ApplyValue(options[0], out var resetChanged);
+                        ApplyValue(options[0], out changed);
                         currentIndex = 0;
                     }
 
