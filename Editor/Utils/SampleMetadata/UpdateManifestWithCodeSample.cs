@@ -47,7 +47,24 @@ namespace Meta.XR.Samples.Editor
             var manifestFiles = Directory.GetFiles(Path.Combine(path, ".."), "AndroidManifest.xml", SearchOption.AllDirectories);
             foreach (var manifestFile in manifestFiles)
             {
-                UpdateManifest(manifestFile, listOfSamples);
+                try
+                {
+                    UpdateManifest(manifestFile, listOfSamples);
+                }
+                catch (System.Exception)
+                {
+                    // use longpath prefix
+                    var manifestLongPath = "\\\\?\\" + Path.GetFullPath(manifestFile);
+                    try
+                    {
+                        UpdateManifest(manifestLongPath, listOfSamples);
+                    }
+                    catch (System.Exception e)
+                    {
+                        // This is the best effort. Ignore the error.
+                        Debug.LogWarning($"Unable to update AndroidManifest: {e}");
+                    }
+                }
             }
         }
 

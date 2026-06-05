@@ -67,7 +67,7 @@ namespace Meta.XR.Editor.UserInterface
         /// Creates a UIToolkit Indicator element with RLDS styling applied.
         /// </summary>
         /// <returns>A VisualElement containing the styled indicator</returns>
-        public VisualElement Get()
+        public VisualElement Build()
         {
             var indicator = new VisualElement();
             indicator.AddToClassList(Props.Indicator.Base);

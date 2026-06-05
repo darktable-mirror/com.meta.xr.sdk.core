@@ -51,6 +51,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEngine.Serialization;
 #if UNITY_EDITOR
@@ -66,6 +67,7 @@ using UnityEngine.XR;
 #if USING_XR_SDK_OPENXR
 using Meta.XR;
 using UnityEngine.XR.OpenXR;
+using UnityEngine.XR.OpenXR.Features;
 #endif
 
 #if USING_XR_MANAGEMENT
@@ -1623,30 +1625,15 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     }
 
     /// <summary>
-    /// Gets if the GPU Utility is supported
-    /// This feature is only supported on QCOMM-based Android devices
+    /// \deprecated Gets if the GPU Utility is supported
     /// </summary>
-    public static bool gpuUtilSupported
-    {
-        get { return OVRPlugin.gpuUtilSupported; }
-    }
+    public static bool gpuUtilSupported => false;
 
     /// <summary>
-    /// Gets the GPU Utilised Level (0.0 - 1.0)
-    /// This feature is only supported on QCOMM-based Android devices
+    /// \deprecated Gets the GPU Utilised Level (0.0 - 1.0).
     /// </summary>
-    public static float gpuUtilLevel
-    {
-        get
-        {
-            if (!OVRPlugin.gpuUtilSupported)
-            {
-                Debug.LogWarning("GPU Util is not supported");
-            }
-
-            return OVRPlugin.gpuUtilLevel;
-        }
-    }
+    [Obsolete("GPU Util is not supported.")]
+    public static float gpuUtilLevel => 0;
 
     /// <summary>
     /// Get the system headset type
@@ -1785,6 +1772,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     protected static WeakReference<Camera> m_lastSpaceWarpCamera;
     protected static bool m_SpaceWarpEnabled;
+    protected static bool m_SpaceWarpFeatureEnabled;
     protected static Transform m_AppSpaceTransform;
     protected static DepthTextureMode m_CachedDepthTextureMode;
 
@@ -1982,12 +1970,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     public bool fastMotionModeHandPosesEnabled = false;
 
 
-    [SerializeField]
-    private bool _readOnlyWideMotionMode2HandPosesEnabled = false;
-    /// <summary>
-    /// Experimental: New path to define if hand poses can leverage algorithms to retrieve hand poses outside of the normal tracking area.
-    /// </summary>
-    public bool wideMotionMode2HandPosesEnabled = false;
     public bool IsSimultaneousHandsAndControllersSupported
     {
         get => (_readOnlyControllerDrivenHandPosesType != OVRManager.ControllerDrivenHandPosesType.None) || launchSimultaneousHandsControllersOnStartup;
@@ -2172,10 +2154,10 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     private void InitOVRManager()
     {
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.OVRManager.FalcoEventName.Init)
+        var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.OVRManager.FalcoEventName.Init)
         {
-            isEssential = OVRPlugin.Bool.True,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = true,
+            productType = TelemetryProductType.Editor
         };
 
         // Only allow one instance at runtime.
@@ -2184,7 +2166,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             enabled = false;
             DestroyImmediate(this);
 
-            unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+            unifiedEvent.result = UnifiedEventResult.FAIL;
             unifiedEvent.Send();
             return;
         }
@@ -2255,7 +2237,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (!isSupportedPlatform)
         {
             Debug.LogWarning("This platform is unsupported");
-            unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+            unifiedEvent.result = Meta.XR.Telemetry.UnifiedEventResult.FAIL;
             unifiedEvent.Send();
             return;
         }
@@ -2420,23 +2402,37 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
         Debug.Log($"[OVRManager] Current hand skeleton version is {OVRPlugin.HandSkeletonVersion}");
 
+        m_SpaceWarpFeatureEnabled = false;
+#if UNITY_OPENXR_PLUGIN_1_15_0_OR_NEWER && UNITY_6000_1_OR_NEWER
+        var spaceWarpFeature = OpenXRSettings.Instance.GetFeature<SpaceWarpFeature>();
+        if (spaceWarpFeature != null)
+        {
+            m_SpaceWarpFeatureEnabled = spaceWarpFeature.enabled;
+        }
+#endif
+
 #if UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER
         var openXrSettings = OpenXRSettings.Instance;
         if (openXrSettings != null)
         {
             var subsampledFeature = openXrSettings.GetFeature<MetaXRSubsampledLayout>();
-            var spaceWarpFeature = openXrSettings.GetFeature<MetaXRSpaceWarp>();
+            var metaSpaceWarpFeature = openXrSettings.GetFeature<MetaXRSpaceWarp>();
 
             bool subsampledOn = false;
             if (subsampledFeature != null)
                 subsampledOn = subsampledFeature.enabled;
 
             bool spaceWarpOn = false;
+            if (metaSpaceWarpFeature != null)
+                spaceWarpOn = metaSpaceWarpFeature.enabled;
+
+#if UNITY_OPENXR_PLUGIN_1_15_0_OR_NEWER && UNITY_6000_1_OR_NEWER
             if (spaceWarpFeature != null)
-                spaceWarpOn = spaceWarpFeature.enabled;
+                spaceWarpOn |= spaceWarpFeature.enabled;
+#endif
 
             Debug.Log(string.Format("OpenXR Meta Quest Runtime Settings:\nDepth Submission Mode - {0}\nRendering Mode - {1}\nOptimize Buffer Discards - {2}\nSymmetric Projection - {3}\nSubsampled Layout - {4}\nSpace Warp - {5}",
-                    openXrSettings.depthSubmissionMode, openXrSettings.renderMode, openXrSettings.optimizeBufferDiscards, openXrSettings.symmetricProjection, subsampledOn, spaceWarpOn));
+                openXrSettings.depthSubmissionMode, openXrSettings.renderMode, openXrSettings.optimizeBufferDiscards, openXrSettings.symmetricProjection, subsampledOn, spaceWarpOn));
         }
 #endif
 #if OCULUS_XR_PLUGIN_4_3_0_OR_NEWER
@@ -3018,7 +3014,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (_readOnlyWideMotionModeHandPosesEnabled != wideMotionModeHandPosesEnabled)
         {
             _readOnlyWideMotionModeHandPosesEnabled = wideMotionModeHandPosesEnabled;
-            OVRPlugin.SetWideMotionModeHandPoses(_readOnlyWideMotionModeHandPosesEnabled);
+            OVRPlugin.SetWideMotionMode2HandPosesEnabled(_readOnlyWideMotionModeHandPosesEnabled);
         }
 
         if (_readOnlyFastMotionModeHandPosesEnabled != fastMotionModeHandPosesEnabled)
@@ -3027,12 +3023,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             OVRPlugin.RequestFastMotionMode(_readOnlyFastMotionModeHandPosesEnabled);
         }
 
-
-        if (_readOnlyWideMotionMode2HandPosesEnabled != wideMotionMode2HandPosesEnabled)
-        {
-            _readOnlyWideMotionMode2HandPosesEnabled = wideMotionMode2HandPosesEnabled;
-            OVRPlugin.SetWideMotionMode2HandPosesEnabled(_readOnlyWideMotionMode2HandPosesEnabled);
-        }
 
         OVRInput.Update();
         metrics.Update();
@@ -3586,7 +3576,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             {
                 if (!staticPrevEnableMixedRealityCapture)
                 {
-                    var evt = new OVRPlugin.UnifiedEventData("mixed_reality_capture");
+                    var evt = new UnifiedEventData("mixed_reality_capture");
                     evt.SetMetadata("status", "activated");
                     evt.Send();
                     Debug.Log("MixedRealityCapture: activate");

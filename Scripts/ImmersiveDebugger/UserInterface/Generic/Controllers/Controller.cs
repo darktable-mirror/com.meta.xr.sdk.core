@@ -278,7 +278,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             Visibility = true;
         }
 
-        internal void ToggleVisibility()
+        /// <summary>
+        /// Toggle the visibility of the UI element. It will invoke the <see cref="OnVisibilityChanged"/> event,
+        /// and the game object's active status would be toggled.
+        /// </summary>
+        public void ToggleVisibility()
         {
             Visibility = !GameObject.activeSelf;
         }
@@ -300,7 +304,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// Processes layout refresh for this controller and recursively updates all children.
         /// </summary>
         /// <param name="force">If true, forces layout refresh even if not requested.</param>
-        protected void UpdateRefreshLayout(bool force)
+        internal void UpdateRefreshLayout(bool force)
         {
             if (!force && !_refreshLayoutRequested) return;
 

@@ -575,11 +575,6 @@ public class OVRManagerEditor : Editor
             ref manager.fastMotionModeHandPosesEnabled, ref modified);
 
 
-        OVREditorUtil.SetupBoolField(target,
-            new GUIContent("Wide Motion Mode 2 Hand Poses Enabled",
-                "Experimental: New path to define if hand poses can leverage algorithms to retrieve hand poses outside of the normal tracking area."),
-            ref manager.wideMotionMode2HandPosesEnabled, ref modified);
-
         EditorGUILayout.Space();
         // Hand Tracking Settings
         OVRHandSkeletonVersion handSkeletonVersion = runtimeSettings.HandSkeletonVersion;

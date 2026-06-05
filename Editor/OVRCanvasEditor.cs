@@ -19,6 +19,7 @@
  */
 
 using System.Linq;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using Meta.XR.Editor.UserInterface;
@@ -118,7 +119,7 @@ public class OVRCanvasEditor : Editor
                                 onUpgrade?.Invoke(overlay);
                                 EditorUtility.SetDirty(overlay);
                                 Debug.Log($"Added {nameof(OVROverlayCanvas)} to {canvas.gameObject}", overlay);
-                                var evt = new OVRPlugin.UnifiedEventData("canvas_upgrade_clicked");
+                                var evt = new UnifiedEventData("canvas_upgrade_clicked");
                                 evt.SetMetadata("component_type", telemetryParam);
                                 evt.Send();
                             }

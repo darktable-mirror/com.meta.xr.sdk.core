@@ -33,7 +33,8 @@ namespace Meta.XR
     public class MetaOpenXRFeatureAttribute : OpenXRFeatureAttribute
     {
         public MetaOpenXRFeatureAttribute(string featureId, string uiName, string desc, string version,
-            string targetApiVersion = null, string category = FeatureCategory.Feature, params string[] extensions)
+            string targetApiVersion = null, string category = FeatureCategory.Feature,
+            string docsLink = "https://developers.meta.com/horizon/develop/unity", params string[] extensions)
         {
             UiName = uiName;
             BuildTargetGroups = new[]
@@ -44,7 +45,7 @@ namespace Meta.XR
             Category = category;
             Company = "Meta";
             Desc = desc;
-            DocumentationLink = "https://developers.meta.com/horizon/develop/unity";
+            DocumentationLink = docsLink;
             OpenxrExtensionStrings = string.Join(' ', extensions);
 #if UNITY_OPENXR_PLUGIN_1_16_0_OR_NEWER
             if (!string.IsNullOrEmpty(targetApiVersion))

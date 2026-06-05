@@ -39,6 +39,14 @@ namespace Meta.XR
             MetaXRFoveationFeature.featureId,
             MetaXREyeTrackedFoveationFeature.featureId,
             MetaXRSubsampledLayout.featureId,
+#if UNITY_OPENXR_PLUGIN_1_15_0_OR_NEWER && UNITY_6000_1_OR_NEWER
+            SpaceWarpFeature.k_SpaceWarpFeatureId,
+#else
+            MetaXRSpaceWarp.featureId,
+#endif
+#if UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER
+            OculusTouchControllerProximityProfile.featureId,
+#endif
             },
         UiName = "Meta XR",
         Description = "Feature set for using Meta XR Features",
@@ -51,6 +59,9 @@ namespace Meta.XR
         DefaultFeatureIds = new string[]
         {
             MetaXRFoveationFeature.featureId,
+#if UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER
+            OculusTouchControllerProximityProfile.featureId
+#endif
         }
     )]
     sealed class MetaXRFeatureSet

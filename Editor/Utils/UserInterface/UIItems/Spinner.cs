@@ -72,7 +72,7 @@ namespace Meta.XR.Editor.UserInterface
 
         public bool Hide { get; set; }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             return new VisualElement();
         }

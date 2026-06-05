@@ -28,6 +28,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
     internal class Member : Controller, IMember
     {
+        private const int MaxDescriptionLength = 300;
+
         private Label _title;
         private TextArea _description;
 
@@ -62,7 +64,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         public string Description
         {
             get => _description.Content;
-            set => _description.Content = value;
+            set => _description.Content = value?.Length > MaxDescriptionLength ? value.Substring(0, MaxDescriptionLength) + "..." : value;
         }
 
         public Color PillColor

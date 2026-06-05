@@ -26,7 +26,9 @@
         "Meta.XR.Guides.Editor",
         "Meta.XR.Editor.RemoteContent",
         "Meta.XR.Editor.EditorCoroutine",
-        "Meta.XR.AskAI.Editor"
+        "Meta.XR.AskAI.Editor",
+        "Meta.XR.Editor.PlayCompanion",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"
@@ -38,6 +40,11 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [
+        {
+            "name": "com.unity.nuget.newtonsoft-json",
+            "expression": "",
+            "define": "HAS_AGENTBRIDGE"
+        },
         {
             "name": "com.unity.xr.management",
             "expression": "",
@@ -164,9 +171,9 @@
             "define": "UNITY_TEXTMESHPRO"
         },
         {
-            "name": "com.meta.xr.ai.agentbridge",
-            "expression": "",
-            "define": "USING_AGENT_BRIDGE"
+            "name": "com.unity.xr.openxr",
+            "expression": "1.17.0",
+            "define": "UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

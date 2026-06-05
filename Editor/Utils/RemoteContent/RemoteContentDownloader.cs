@@ -24,6 +24,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Meta.XR.Telemetry;
 using UnityEngine;
 
 namespace Meta.XR.Editor.RemoteContent
@@ -207,10 +208,10 @@ namespace Meta.XR.Editor.RemoteContent
 
         private async Task<DownloadResult<byte[]>> DownloadContent(IScopedProgressDisplayer scopedProgressDisplayer)
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Utils.FalcoEventName.DownloadContent)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Utils.FalcoEventName.DownloadContent)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.BuildingBlocks
+                isEssential = false,
+                productType = TelemetryProductType.BuildingBlocks
             };
             try
             {
@@ -236,14 +237,14 @@ namespace Meta.XR.Editor.RemoteContent
                     new ProgressReportingStream(memoryStream, totalBytes, scopedProgressDisplayer);
                 await contentStream.CopyToAsync(progressStream, 81920);
 
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+                unifiedEvent.result = UnifiedEventResult.SUCCESS;
                 unifiedEvent.Send();
                 return DownloadResult<byte[]>.Success(memoryStream.ToArray(), fileName);
             }
             catch (Exception ex)
             {
                 unifiedEvent.SetMetadata(OVRTelemetryConstants.Utils.AnnotationType.ErrorMessage, ex.Message);
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.result = UnifiedEventResult.FAIL;
                 unifiedEvent.Send();
                 return DownloadResult<byte[]>.Failure(ex.Message);
             }

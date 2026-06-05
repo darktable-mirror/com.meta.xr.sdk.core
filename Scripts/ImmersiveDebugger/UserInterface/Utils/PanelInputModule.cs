@@ -26,6 +26,9 @@ using System.Collections.Generic;
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+#if USE_INPUT_SYSTEM_PACKAGE
+using UnityEngine.InputSystem;
+#endif
 using Cursor = Meta.XR.ImmersiveDebugger.UserInterface.Generic.Cursor;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
@@ -267,8 +270,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // Use mouse input in Editor Play mode
             if (IsEditorPlayMode)
             {
+#if USE_INPUT_SYSTEM_PACKAGE && ENABLE_INPUT_SYSTEM
+                var mouse = Mouse.current;
+                var pressed = mouse != null && mouse.leftButton.wasPressedThisFrame;
+                var released = mouse != null && mouse.leftButton.wasReleasedThisFrame;
+#else
                 var pressed = Input.GetMouseButtonDown(0);
                 var released = Input.GetMouseButtonUp(0);
+#endif
 
                 if (pressed && released)
                     return PointerEventData.FramePressState.PressedAndReleased;
@@ -349,15 +358,37 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             return controller;
         }
 
+        private static bool IsValidScreenPosition(Vector3 screenPosition, Camera camera)
+        {
+            if (float.IsNaN(screenPosition.x) || float.IsNaN(screenPosition.y) ||
+                float.IsInfinity(screenPosition.x) || float.IsInfinity(screenPosition.y))
+            {
+                return false;
+            }
+
+            var pixelRect = camera.pixelRect;
+            if (screenPosition.x < pixelRect.xMin || screenPosition.x > pixelRect.xMax ||
+                screenPosition.y < pixelRect.yMin || screenPosition.y > pixelRect.yMax)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         private void UpdateRayTransform(Transform rayTransform, OVRInput.Controller controller)
         {
             // Use mouse position to create ray in Editor Play mode
             if (IsEditorPlayMode)
             {
+#if USE_INPUT_SYSTEM_PACKAGE && ENABLE_INPUT_SYSTEM
+                var mousePosition = Mouse.current?.position.ReadValue() ?? Vector2.zero;
+#else
                 var mousePosition = Input.mousePosition;
+#endif
                 var camera = _debugInterface?.Camera ?? Camera.main;
 
-                if (camera != null)
+                if (camera != null && IsValidScreenPosition(mousePosition, camera))
                 {
                     var ray = camera.ScreenPointToRay(mousePosition);
                     rayTransform.position = ray.origin;

@@ -20,6 +20,7 @@
 
 using System.Collections.Generic;
 using System.Text;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -106,14 +107,14 @@ namespace Meta.XR.Samples.Editor
 
             if (sendEmpty || allSamplesData.Count > 0)
             {
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(eventName);
+                var unifiedEvent = new UnifiedEventData(eventName);
 
                 foreach (var kvp in allSamplesData)
                 {
                     unifiedEvent.SetMetadata(kvp.Key, string.Join(", ", kvp.Value));
                 }
 
-                unifiedEvent.isEssential = OVRPlugin.Bool.True;
+                unifiedEvent.isEssential = true;
                 unifiedEvent.Send();
             }
 

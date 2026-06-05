@@ -20,6 +20,7 @@
 
 using System;
 using Meta.XR.Samples.Telemetry;
+using Meta.XR.Telemetry;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -95,29 +96,29 @@ namespace Meta.XR.Samples
         {
             SendEvent(SampleTelemetryEvents.EventTypes.Open,
                 SampleTelemetryEvents.EventTypes.OpenFalcoEventName,
-                OVRPlugin.ProductType.Editor);
+                TelemetryProductType.Editor);
         }
 
         private void SendCloseEvent()
         {
             SendEvent(SampleTelemetryEvents.EventTypes.Close,
                 SampleTelemetryEvents.EventTypes.CloseFalcoEventName,
-                OVRPlugin.ProductType.Editor);
+                TelemetryProductType.Editor);
         }
 
         private void SendRunEvent()
         {
             SendEvent(SampleTelemetryEvents.EventTypes.Run,
                 SampleTelemetryEvents.EventTypes.RunFalcoEventName,
-                OVRPlugin.ProductType.Editor);
+                TelemetryProductType.Editor);
         }
 
-        private void SendEvent(int eventType, string falcoEventName, OVRPlugin.ProductType productType)
+        private void SendEvent(int eventType, string falcoEventName, TelemetryProductType productType)
         {
             var timeSpent = Time.realtimeSinceStartup - _timestampOpen;
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(falcoEventName)
+            var unifiedEvent = new UnifiedEventData(falcoEventName)
             {
-                isEssential = OVRPlugin.Bool.False,
+                isEssential = false,
                 productType = productType
             };
             unifiedEvent.SetMetadata(SampleTelemetryEvents.AnnotationTypes.Sample, gameObject.scene.name);

@@ -28,6 +28,7 @@ using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
@@ -163,10 +164,10 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             _instance.Focus();
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.OpenWindow)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.OpenWindow)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.BuildingBlocks
+                isEssential = true,
+                productType = TelemetryProductType.BuildingBlocks
             };
             unifiedEvent.SetMetadata(OVRTelemetryConstants.BB.AnnotationType.ActionTrigger, origin.ToString());
             unifiedEvent.SetMetadata(OVRTelemetryConstants.BB.AnnotationType.BlocksCount, _blockList.Count);

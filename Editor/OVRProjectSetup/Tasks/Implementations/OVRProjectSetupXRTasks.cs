@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Linq;
 using Meta.XR.Editor.Utils;
 using Meta.XR.Telemetry;
@@ -76,7 +77,16 @@ internal static class OVRProjectSetupXRTasks
             isDone: _ => !PackageList.IsPackageInstalled(OculusXRPackageName),
             message: $"Beginning with v74, it is recommended to use the OpenXR plugin ({UnityXRPackage}) instead of the OculusXR plugin ({OculusXRPackageName}).",
             fixMessage: $"Open Package Manager",
-            fix: _ => { UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName); }
+            fix: _ =>
+            {
+                if (Application.isBatchMode)
+                {
+                    IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-fix-skipped-batchmode",
+                        $"Skipping Package Manager UI (no graphics device in batch mode). Install {OculusXRPackageName} manually or via the command line.");
+                    return;
+                }
+                UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName);
+            }
         );
 #else
         OVRProjectSetup.AddTask(
@@ -103,7 +113,16 @@ internal static class OVRProjectSetupXRTasks
             fixAutomatic: false,
             message: $"It's not recommended to install Oculus XR Plugin and OpenXR Plugin at the same time, which may introduce unintentional conflicts.\nClick 'Edit' to open the Package Manager to uninstall one of the plugins. OpenXR Plugin is the recommended plugin to use.",
             fixMessage: $"Open Package Manager",
-            fix: _ => { UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName); }
+            fix: _ =>
+            {
+                if (Application.isBatchMode)
+                {
+                    IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-fix-skipped-batchmode",
+                        $"Skipping Package Manager UI (no graphics device in batch mode). Install {OculusXRPackageName} manually or via the command line.");
+                    return;
+                }
+                UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName);
+            }
         );
     }
 
@@ -127,7 +146,7 @@ internal static class OVRProjectSetupXRTasks
         var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, true);
         if (settings == null)
         {
-            throw new OVRConfigurationTaskException("Could not find XR Plugin Manager settings");
+            throw new InvalidOperationException("Could not find XR Plugin Manager settings");
         }
 
         var loader = GetLoader<T>(buildTargetGroup);
@@ -152,7 +171,7 @@ internal static class OVRProjectSetupXRTasks
         var settings = GetXRGeneralSettingsForBuildTarget(buildTargetGroup, true);
         if (settings == null)
         {
-            throw new OVRConfigurationTaskException("Could not find XR Plugin Manager settings");
+            throw new InvalidOperationException("Could not find XR Plugin Manager settings");
         }
 
         var loader = GetLoader<T>(buildTargetGroup);

@@ -246,6 +246,8 @@ internal static class OVRTelemetryConstants
             public const int RenderThreadingMode = 163060994;
             public const int RenderingPath = 163068301;
             public const int XrPluginType = 163069107;
+            public const int InputCompatibility = 163058910;
+            public const int InputSystemUsed = 163054752;
         }
 
         public static class FalcoEventName
@@ -253,6 +255,8 @@ internal static class OVRTelemetryConstants
             public const string RenderThreadingMode = "OCULUS_UNITY_RENDER_THREADING_MODE";
             public const string RenderingPath = "OCULUS_UNITY_RENDERING_PATH";
             public const string XrPluginType = "OCULUS_UNITY_XR_PLUGIN";
+            public const string InputCompatibility = "OCULUS_UNITY_INPUT_COMPAT";
+            public const string InputSystemUsed = "OCULUS_UNITY_INPUT_SYSTEM_USED";
         }
 
         public static class AnnotationType

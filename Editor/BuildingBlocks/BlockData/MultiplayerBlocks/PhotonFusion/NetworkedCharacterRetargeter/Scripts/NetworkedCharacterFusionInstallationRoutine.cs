@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 using Meta.XR.BuildingBlocks.Editor;
 using UnityEditor;
@@ -42,14 +43,14 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
         /// <param name="block">The block to be installed</param>
         /// <param name="selectedGameObject">The selected game object</param>
         /// <returns>The installed game object instances.</returns>
-        /// <exception cref="OVRConfigurationTaskException">Error with executing this block.</exception>
+        /// <exception cref="InvalidOperationException">Error with executing this block.</exception>
         public override List<GameObject> Install(BlockData block, GameObject selectedGameObject)
         {
 #if USING_META_XR_MOVEMENT_SDK
             var characterPrefab = NetworkCharacterSpawnerEditor.CreateCharacterPrefabFromModel();
             if (characterPrefab == null)
             {
-                throw new OVRConfigurationTaskException("Must have a configured retargeted character for networking!");
+                throw new InvalidOperationException("Must have a configured retargeted character for networking!");
             }
 
             var installation = base.Install(block, selectedGameObject);

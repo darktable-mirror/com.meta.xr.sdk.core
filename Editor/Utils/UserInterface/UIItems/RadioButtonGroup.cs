@@ -123,7 +123,7 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             if (_hasDuplicateRadioButtonId)
             {
@@ -139,7 +139,7 @@ namespace Meta.XR.Editor.UserInterface
 
             foreach (var radioButton in _buttons.Where(item => !item.Hide))
             {
-                var radioButtonElement = radioButton.Get();
+                var radioButtonElement = radioButton.Build();
                 container.Add(radioButtonElement);
             }
 

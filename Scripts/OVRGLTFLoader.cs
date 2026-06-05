@@ -139,7 +139,7 @@ public class OVRGLTFLoader
     // <nodeIndex, OVRGLTFAnimatinonNodeMorphTargetHandler>
     private Dictionary<int, OVRGLTFAnimationNodeMorphTargetHandler> m_morphTargetHandlers;
 
-    private Shader m_Shader = Shader.Find("Legacy Shaders/Diffuse");
+    private Shader m_Shader = Shader.Find("Meta/Lit");
     private Shader m_AlphaBlendShader = Shader.Find("Unlit/Transparent");
     private OVRTextureQualityFiltering m_TextureQuality = OVRTextureQualityFiltering.Bilinear; // = Unity default
     private float m_TextureMipmapBias = 0.0f; // = shader default

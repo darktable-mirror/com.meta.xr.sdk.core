@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections;
+using Meta.XR.Telemetry;
 using Meta.XR.Util;
 using UnityEngine;
 using UnityEngine.Android;
@@ -54,10 +55,10 @@ public class OVRSceneModelLoader : MonoBehaviour
     /// </summary>
     protected virtual void Start()
     {
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Scene.FalcoEventName.UseDefaultSceneModelLoader)
+        var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Scene.FalcoEventName.UseDefaultSceneModelLoader)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = false,
+            productType = TelemetryProductType.Editor
         };
         unifiedEvent.Send();
 

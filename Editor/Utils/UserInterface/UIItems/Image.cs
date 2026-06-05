@@ -95,7 +95,7 @@ namespace Meta.XR.Editor.UserInterface
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A VisualElement containing the styled image</returns>
-        public UnityEngine.UIElements.VisualElement Get()
+        public UnityEngine.UIElements.VisualElement Build()
         {
             var container = new UnityEngine.UIElements.VisualElement();
             container.style.width = _width;

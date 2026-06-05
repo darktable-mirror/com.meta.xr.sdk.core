@@ -74,7 +74,7 @@ namespace Meta.XR.Simulator.Editor
         public virtual List<ProcessPort> GetProcessesByPort(string targetPort)
         {
             var ports = new HashSet<ProcessPort>();
-#if UNITY_EDITOR_OSX
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
             var path = "lsof";
             var args = $"-t -n -P -iTCP:{targetPort} -sTCP:LISTEN";
 #elif UNITY_EDITOR_WIN
@@ -86,7 +86,7 @@ namespace Meta.XR.Simulator.Editor
             return new List<ProcessPort>();
 #endif
             var (retCode, content) = ExecuteProcess(path, args);
-#if UNITY_EDITOR_OSX
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
             if(retCode == 1){
                 // According lsof man page, lsof will return 1 if there is no processes on specified port.
                 return new List<ProcessPort>();

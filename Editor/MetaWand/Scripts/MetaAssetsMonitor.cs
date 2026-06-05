@@ -21,6 +21,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Meta.XR.MetaWand.Editor.Telemetry;
+using Meta.XR.Telemetry;
 using UnityEditor;
 
 namespace Meta.XR.MetaWand.Editor
@@ -72,11 +73,11 @@ namespace Meta.XR.MetaWand.Editor
         {
             var fileName = Path.GetFileNameWithoutExtension(assetPath);
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameAssetDeleted)
+            var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNameAssetDeleted)
             {
                 entrypoint = Constants.Telemetry.EntrypointLoadState,
                 target = Constants.Telemetry.TargetProjectAssets,
-                isEssential = OVRPlugin.Bool.True
+                isEssential = true
             };
 
             unifiedEvent.SetMetadata(Constants.Telemetry.ParamSessionId, assetInfo.PromptId ?? string.Empty);

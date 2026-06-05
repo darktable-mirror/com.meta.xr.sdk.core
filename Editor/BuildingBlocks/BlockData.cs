@@ -174,15 +174,15 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
             finally
             {
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.InstallBlockData)
+                var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.InstallBlockData)
                 {
-                    isEssential = OVRPlugin.Bool.True,
-                    productType = OVRPlugin.ProductType.BuildingBlocks,
+                    isEssential = true,
+                    productType = TelemetryProductType.BuildingBlocks,
                     result = installException switch
                     {
-                        null => OVRPlugin.UnifiedEventResult.SUCCESS,
-                        InstallationCancelledException => OVRPlugin.UnifiedEventResult.CANCEL,
-                        _ => OVRPlugin.UnifiedEventResult.FAIL
+                        null => UnifiedEventResult.SUCCESS,
+                        InstallationCancelledException => UnifiedEventResult.CANCEL,
+                        _ => UnifiedEventResult.FAIL
                     }
                 };
                 unifiedEvent.SetMetadata(OVRTelemetryConstants.BB.AnnotationType.BlockId, Id);
@@ -309,11 +309,11 @@ namespace Meta.XR.BuildingBlocks.Editor
                 // Show guided setup window if available
                 ShowGuidedSetup();
 
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.AddBlock)
+                var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.AddBlock)
                 {
-                    isEssential = OVRPlugin.Bool.True,
-                    productType = OVRPlugin.ProductType.BuildingBlocks,
-                    result = OVRPlugin.UnifiedEventResult.SUCCESS
+                    isEssential = true,
+                    productType = TelemetryProductType.BuildingBlocks,
+                    result = UnifiedEventResult.SUCCESS
                 };
                 unifiedEvent.AddBlockInfo(block);
                 unifiedEvent.AddSceneInfo(spawnedObject.scene);
@@ -419,10 +419,10 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             await InstallWithDependenciesAndCommit();
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.UpdateBlock)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.UpdateBlock)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.BuildingBlocks
+                isEssential = true,
+                productType = TelemetryProductType.BuildingBlocks
             };
             unifiedEvent.SetMetadata(OVRTelemetryConstants.BB.AnnotationType.BlockId, Id);
             unifiedEvent.SetMetadata(OVRTelemetryConstants.BB.AnnotationType.Version, Version);

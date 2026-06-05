@@ -24,6 +24,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Meta.XR.Editor.Callbacks;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEditor.MPE;
 using UnityEngine;
@@ -101,10 +102,10 @@ namespace Meta.XR.Editor.RemoteContent
         private static void SendEvent()
         {
             var keysString = RampKeysCache.ToFormattedString();
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.StartRampKeys)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.StartRampKeys)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.FeatureRampUpValues, keysString);
             unifiedEvent.Send();

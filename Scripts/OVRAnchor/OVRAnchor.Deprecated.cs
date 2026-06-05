@@ -23,6 +23,8 @@ using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using static OVRPlugin;
+using UnifiedEventData = Meta.XR.Telemetry.UnifiedEventData;
+using TelemetryProductType = Meta.XR.Telemetry.TelemetryProductType;
 
 partial struct OVRAnchor
 {
@@ -176,10 +178,10 @@ partial struct OVRAnchor
         out ulong requestId)
     {
         var result = OVRPlugin.SaveSpaceList(spaces, numSpaces, location, out requestId);
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.SaveSpaceList)
+        var unifiedEvent = new UnifiedEventData(Telemetry.EventName.SaveSpaceList)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = false,
+            productType = TelemetryProductType.Editor
         };
         unifiedEvent.SetMetadata(Telemetry.Annotation.SpaceCount, (int)numSpaces);
         unifiedEvent.SetMetadata(Telemetry.Annotation.StorageLocation, (int)location);
@@ -196,10 +198,10 @@ partial struct OVRAnchor
     internal static Result EraseSpace(ulong space, SpaceStorageLocation location, out ulong requestId)
     {
         var result = OVRPlugin.EraseSpaceWithResult(space, location, out requestId);
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.EraseSingleSpace)
+        var unifiedEvent = new UnifiedEventData(Telemetry.EventName.EraseSingleSpace)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = false,
+            productType = TelemetryProductType.Editor
         };
         unifiedEvent.SetMetadata(Telemetry.Annotation.StorageLocation, (int)location);
 

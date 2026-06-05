@@ -23,6 +23,7 @@ using System;
 using System.Collections.Generic;
 using Meta.XR.ImmersiveDebugger.UserInterface;
 using Meta.XR.ImmersiveDebugger.Utils;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -57,8 +58,12 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             0.1f,
             Telemetry.FalcoEventName.FrameUpdate,
             true,
-            OVRPlugin.ProductType.ImmersiveDebugger,
-            eventData => eventData.AddPlayModeOrigin()
+            TelemetryProductType.ImmersiveDebugger,
+            eventData =>
+            {
+                eventData.SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, OVRTelemetry.GetPlayModeOrigin());
+                return eventData;
+            }
             );
 
         public IDebugUIPanel UiPanel { get; private set; }

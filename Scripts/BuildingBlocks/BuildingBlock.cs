@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -129,10 +130,10 @@ namespace Meta.XR.BuildingBlocks
                 return;
             }
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.RunBlock)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.RunBlock)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.BuildingBlocks
+                isEssential = false,
+                productType = TelemetryProductType.BuildingBlocks
             };
             unifiedEvent.AddBlockInfo(this);
             unifiedEvent.Send();

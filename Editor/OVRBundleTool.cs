@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 using System.IO;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEditor;
 
@@ -128,7 +129,7 @@ public class OVRBundleTool : EditorWindow
         InitializePanel();
 
         OVRPlugin.SetDeveloperMode(OVRPlugin.Bool.True);
-        var evt = new OVRPlugin.UnifiedEventData("oculus_bundle_tool");
+        var evt = new UnifiedEventData("oculus_bundle_tool");
         evt.SetMetadata("action", "show_window");
         evt.Send();
     }

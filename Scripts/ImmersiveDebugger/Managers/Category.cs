@@ -26,6 +26,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
     internal struct Category : IEquatable<Category>
     {
         private const string DefaultCategoryName = "Uncategorized";
+        private const int MaxLabelLength = 22;
 
         public static Category Default = new();
 
@@ -42,7 +43,14 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         /// <summary>
         /// The label that will get displayed
         /// </summary>
-        public string Label => Item?.Label ?? (string.IsNullOrEmpty(Id) ? DefaultCategoryName : Id);
+        public string Label
+        {
+            get
+            {
+                var label = Item?.Label ?? (string.IsNullOrEmpty(Id) ? DefaultCategoryName : Id);
+                return label?.Length > MaxLabelLength ? label.Substring(0, MaxLabelLength) + "..." : label;
+            }
+        }
 
         private string Uid => (Item?.Id.ToString() ?? Id) ?? string.Empty;
 
@@ -51,4 +59,3 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         public override int GetHashCode() => Uid.GetHashCode();
     }
 }
-

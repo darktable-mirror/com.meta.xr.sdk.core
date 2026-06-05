@@ -44,6 +44,11 @@
     "defineConstraints": [],
     "versionDefines": [
         {
+            "name": "com.unity.nuget.newtonsoft-json",
+            "expression": "",
+            "define": "HAS_AGENTBRIDGE"
+        },
+        {
             "name": "com.meta.xr.sdk.platform",
             "expression": "",
             "define": "USING_META_XR_PLATFORM_SDK"
@@ -72,11 +77,6 @@
             "name": "com.meta.xr.sdk.movement",
             "expression": "",
             "define": "USING_META_XR_MOVEMENT_SDK"
-        },
-        {
-            "name": "com.meta.xr.ai.agentbridge",
-            "expression": "",
-            "define": "USING_AGENT_BRIDGE"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

@@ -67,10 +67,10 @@ namespace Meta.XR.Telemetry
             if (string.IsNullOrEmpty(guid)) return;
             var featuresInScene = await FeatureManager.GetFeaturesInScene(scene);
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.FeaturesInScene)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.FeaturesInScene)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.XRFeature
+                isEssential = true,
+                productType = TelemetryProductType.XRFeature
             };
             unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.Guid,
                 guid);

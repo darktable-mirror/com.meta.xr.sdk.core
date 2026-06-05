@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2bbfcccc4c3a20146ba719198d58ab0e, type: 3}
   m_Name: SpatialAudio
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: 6737262b-4fab-4779-a38b-fe74012fa505
   version: 1
   blockName: Spatial Audio
@@ -21,17 +21,16 @@ MonoBehaviour:
     - name: Audio
   thumbnail: {fileID: 0}
   remoteThumbnailContentId: 25769202376047024
-  order: 0
   prefab: {fileID: 0}
   selectedGuidedSetupIndex: 0
   externalBlockDependencies: []
   dependencies: []
-  guidedSetupName:
+  guidedSetupName: 
   packageDependencies:
   - com.meta.xr.sdk.audio
   isSingleton: 0
   usageInstructions: Please note that the Audio SDK supports using the FMOD and Wwise
     audio engines which are currently not supported by this Building Block. Full
     instructions in https://developer.oculus.com/documentation/unity/meta-xr-audio-sdk-unity-spatialize/.
-  featureDocumentationName: Meta XR Audio SDK
-  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/meta-xr-audio-sdk-unity
+  featureDocumentationName: 
+  featureDocumentationUrl: 

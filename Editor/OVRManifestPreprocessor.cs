@@ -68,7 +68,7 @@ public class OVRManifestPreprocessor : EditorWindow
     public static void OpenAndroidManifestToolWindow()
     {
         GetWindow(typeof(OVRManifestPreprocessor));
-        var evt = new OVRPlugin.UnifiedEventData("manifest_processor");
+        var evt = new UnifiedEventData("manifest_processor");
         evt.SetMetadata("status", "activated");
         evt.Send();
     }
@@ -288,8 +288,13 @@ public class OVRManifestPreprocessor : EditorWindow
             nodeList = node.ChildNodes;
         }
 
-        foreach (XmlElement e in nodeList)
+        foreach (XmlNode node in nodeList)
         {
+            if (node is not XmlElement e)
+            {
+                continue;
+            }
+
             if (name == null || name == e.GetAttribute("name", @namespace) || name == e.LocalName)
             {
                 element = e;
@@ -356,8 +361,13 @@ public class OVRManifestPreprocessor : EditorWindow
         }
 
         var nodes = doc.SelectNodes(path + "/" + elementName);
-        foreach (XmlElement e in nodes)
+        foreach (XmlNode node in nodes)
         {
+            if (node is not XmlElement e)
+            {
+                continue;
+            }
+
             if (name == null || name == e.GetAttribute("name", @namespace))
             {
                 element = e;
@@ -378,8 +388,13 @@ public class OVRManifestPreprocessor : EditorWindow
             return;
         }
 
-        foreach (XmlElement e in element.ChildNodes)
+        foreach (XmlNode node in element.ChildNodes)
         {
+            if (node is not XmlElement e)
+            {
+                continue;
+            }
+
             if (name == e.Name)
             {
                 var newElement = doc.CreateElement(prefix, name, @namespace);
@@ -919,7 +934,7 @@ public class OVRManifestPreprocessor : EditorWindow
             if (settings != null)
             {
                 var foveationFeature = settings.GetFeature<MetaXREyeTrackedFoveationFeature>();
-                if (foveationFeature.enabled && targetEyeTrackingSupport == OVRProjectConfig.FeatureSupport.None)
+                if (foveationFeature != null && foveationFeature.enabled && targetEyeTrackingSupport == OVRProjectConfig.FeatureSupport.None)
                 {
                     targetEyeTrackingSupport = OVRProjectConfig.FeatureSupport.Supported;
                 }
@@ -1134,6 +1149,11 @@ public class OVRManifestPreprocessor : EditorWindow
         {
             foreach (XmlNode node in nodeList)
             {
+                if (node is not XmlElement)
+                {
+                    continue;
+                }
+
                 var name = node.Attributes?["name", androidNamespaceURI];
                 if (name != null)
                 {
@@ -1237,7 +1257,7 @@ public class OVRManifestPreprocessor : EditorWindow
     {
 #if USING_XR_SDK_OPENXR
         var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget));
-        if (settings.Manager.activeLoaders.Count > 0)
+        if (settings?.Manager?.activeLoaders != null && settings.Manager.activeLoaders.Count > 0)
         {
             var openXRLoader = settings.Manager.activeLoaders[0] as OpenXRLoader;
             return openXRLoader != null;

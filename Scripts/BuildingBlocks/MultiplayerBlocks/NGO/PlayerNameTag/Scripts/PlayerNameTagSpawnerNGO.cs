@@ -40,6 +40,8 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         /// </summary>
         public bool IsConnected => IsSpawned;
 
+        private string _pendingPlayerName;
+
         /// <summary>
         /// Spawns the name tag with the given username for this player.
         /// An implementation of the <see cref="Meta.XR.MultiplayerBlocks.Shared.INameTagSpawner"/> interface.
@@ -47,15 +49,32 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         /// <param name="playerName">The selected username for this player.</param>
         public void Spawn(string playerName)
         {
-            SpawnServerRpc(playerName);
+            _pendingPlayerName = playerName;
+            SpawnServerRpc();
         }
 
         [ServerRpc(RequireOwnership = false)]
-        private void SpawnServerRpc(string playerName, ServerRpcParams serverRpcParams = default)
+        private void SpawnServerRpc(ServerRpcParams serverRpcParams = default)
         {
             var go = Instantiate(playerNameTagPrefab);
             go.GetComponent<NetworkObject>().SpawnWithOwnership(serverRpcParams.Receive.SenderClientId);
-            go.GetComponent<PlayerNameTagNGO>().PlayerName.Value = playerName;
+            SetPlayerNameClientRpc(go.GetComponent<NetworkObject>().NetworkObjectId,
+                new ClientRpcParams
+                {
+                    Send = new ClientRpcSendParams
+                    {
+                        TargetClientIds = new[] { serverRpcParams.Receive.SenderClientId }
+                    }
+                });
+        }
+
+        [ClientRpc]
+        private void SetPlayerNameClientRpc(ulong networkObjectId, ClientRpcParams clientRpcParams = default)
+        {
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var networkObject))
+            {
+                networkObject.GetComponent<PlayerNameTagNGO>().PlayerName.Value = _pendingPlayerName;
+            }
         }
     }
 }

@@ -20,6 +20,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -192,10 +193,10 @@ internal class OVRConfigurationTaskUpdaterSummary
 
     public void LogEvent()
     {
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Summary)
+        var unifiedEvent = new UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Summary)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Pst
+            isEssential = false,
+            productType = TelemetryProductType.Pst
         };
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level, HighestFixLevel?.ToString() ?? "None");
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Count,

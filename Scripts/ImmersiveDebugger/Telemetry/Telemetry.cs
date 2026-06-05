@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using Meta.XR.ImmersiveDebugger.Manager;
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using Meta.XR.ImmersiveDebugger.Utils;
+using Meta.XR.Telemetry;
 using static OVRTelemetry;
 
 namespace Meta.XR.ImmersiveDebugger
@@ -98,7 +99,7 @@ namespace Meta.XR.ImmersiveDebugger
             private readonly Method _method;
             private readonly InstanceCache _cache;
             private readonly IEnumerable<IDebugManager> _managers;
-            private OVRPlugin.UnifiedEventData _runFalcoEvent;
+            private UnifiedEventData _runFalcoEvent;
 
             public static TelemetryTracker Init(Method method,
                 IEnumerable<IDebugManager> managers,
@@ -121,10 +122,10 @@ namespace Meta.XR.ImmersiveDebugger
                 _cache = cache;
                 _managers = managers;
 
-                _runFalcoEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.Run)
+                _runFalcoEvent = new UnifiedEventData(FalcoEventName.Run)
                 {
-                    isEssential = OVRPlugin.Bool.True,
-                    productType = OVRPlugin.ProductType.ImmersiveDebugger
+                    isEssential = true,
+                    productType = TelemetryProductType.ImmersiveDebugger
                 };
                 _runFalcoEvent.SetMetadata(AnnotationType.Method, _method.ToString());
                 _runFalcoEvent.SetMetadata(AnnotationType.State, State.OnStart.ToString());
@@ -159,10 +160,10 @@ namespace Meta.XR.ImmersiveDebugger
                     var instancesCount = instances.Count;
                     if (instancesCount <= 0) continue;
 
-                    var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.ComponentTracked)
+                    var unifiedEvent = new UnifiedEventData(FalcoEventName.ComponentTracked)
                     {
-                        isEssential = OVRPlugin.Bool.False,
-                        productType = OVRPlugin.ProductType.ImmersiveDebugger
+                        isEssential = false,
+                        productType = TelemetryProductType.ImmersiveDebugger
                     };
                     unifiedEvent.SetMetadata(AnnotationType.State, state.ToString());
                     unifiedEvent.SetMetadata(AnnotationType.Method, _method.ToString());
@@ -228,10 +229,10 @@ namespace Meta.XR.ImmersiveDebugger
 
             var falcoEventName = panel.isActiveAndEnabled ? FalcoEventName.PanelOpen : FalcoEventName.PanelClose;
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(falcoEventName)
+            var unifiedEvent = new UnifiedEventData(falcoEventName)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.ImmersiveDebugger
+                isEssential = true,
+                productType = TelemetryProductType.ImmersiveDebugger
             };
             unifiedEvent.SetMetadata(AnnotationType.Action, panel.name);
             unifiedEvent.SetMetadata(AnnotationType.ActionType, panel.GetType().Name);
@@ -242,10 +243,10 @@ namespace Meta.XR.ImmersiveDebugger
         public static void OnButtonClicked(Button button)
         {
             var panel = FetchPanel(button);
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PanelInteraction)
+            var unifiedEvent = new UnifiedEventData(FalcoEventName.PanelInteraction)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.ImmersiveDebugger
+                isEssential = false,
+                productType = TelemetryProductType.ImmersiveDebugger
             };
             unifiedEvent.SetMetadata(AnnotationType.Action, button.name);
             unifiedEvent.SetMetadata(AnnotationType.ActionType, button.GetType().Name);

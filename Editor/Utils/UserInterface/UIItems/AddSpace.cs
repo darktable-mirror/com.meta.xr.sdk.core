@@ -67,7 +67,7 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             return new VisualElement
             {

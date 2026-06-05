@@ -24,6 +24,9 @@ using System.Threading.Tasks;
 using Unity.Collections;
 using UnityEngine;
 using static OVRPlugin;
+using Meta.XR.Telemetry;
+using TelemetryProductType = Meta.XR.Telemetry.TelemetryProductType;
+using UnifiedEventData = Meta.XR.Telemetry.UnifiedEventData;
 
 partial struct OVRAnchor
 {
@@ -482,10 +485,10 @@ partial struct OVRAnchor
                 using (var markerTypes = configuration.ToMarkerTypes(Allocator.Temp))
 #pragma warning restore 0618
                 {
-                    var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.ConfigureTracker)
+                    var unifiedEvent = new UnifiedEventData(Telemetry.EventName.ConfigureTracker)
                     {
-                        isEssential = OVRPlugin.Bool.False,
-                        productType = OVRPlugin.ProductType.Editor
+                        isEssential = false,
+                        productType = TelemetryProductType.Editor
                     };
                     unifiedEvent.SetMetadata(Telemetry.Annotation.DynamicObjectClasses, classes.AsReadOnlySpan());
                     unifiedEvent.SetMetadata(Telemetry.Annotation.MarkerTypes, markerTypes.AsReadOnlySpan());

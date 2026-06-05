@@ -26,6 +26,8 @@ using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UserInterface;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Telemetry;
+using Meta.XR.Telemetry;
+using AnnotationType = Meta.XR.Editor.UserInterface.Telemetry.AnnotationType;
 
 namespace Meta.XR.Editor.Notifications
 {
@@ -83,10 +85,10 @@ namespace Meta.XR.Editor.Notifications
                 if (notification == null) return;
                 if (Notifications.Contains(notification)) return;
 
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageOpen)
+                var unifiedEvent = new UnifiedEventData(FalcoEventName.PageOpen)
                 {
-                    isEssential = OVRPlugin.Bool.True,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = true,
+                    productType = TelemetryProductType.Editor
                 };
                 unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
                 unifiedEvent.SetMetadata(AnnotationType.Action, Origins.Notification.ToString());
@@ -104,10 +106,10 @@ namespace Meta.XR.Editor.Notifications
                 if (notification == null) return;
                 if (!Notifications.Contains(notification)) return;
 
-                var unifiedEventClose = new OVRPlugin.UnifiedEventData(FalcoEventName.PageClose)
+                var unifiedEventClose = new UnifiedEventData(FalcoEventName.PageClose)
                 {
-                    isEssential = OVRPlugin.Bool.False,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = false,
+                    productType = TelemetryProductType.Editor
                 };
                 unifiedEventClose.SetMetadata(AnnotationType.Origin, origin.ToString());
                 unifiedEventClose.SetMetadata(AnnotationType.Action, Origins.Notification.ToString());

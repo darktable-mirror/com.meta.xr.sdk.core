@@ -71,7 +71,7 @@ namespace Meta.XR.Editor.UserInterface
         /// Creates a UIToolkit Badge element with RLDS styling applied.
         /// </summary>
         /// <returns>A VisualElement containing the styled badge with label</returns>
-        public VisualElement Get()
+        public VisualElement Build()
         {
             var badge = new VisualElement();
             badge.AddToClassList(Props.Badge.Base);

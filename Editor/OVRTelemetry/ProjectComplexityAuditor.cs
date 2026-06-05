@@ -27,6 +27,9 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using TelemetryProductType = Meta.XR.Telemetry.TelemetryProductType;
+using UnifiedEventData = Meta.XR.Telemetry.UnifiedEventData;
+using Meta.XR.Telemetry;
 using Debug = UnityEngine.Debug;
 
 namespace Meta.XR.Editor.Telemetry
@@ -86,10 +89,10 @@ namespace Meta.XR.Editor.Telemetry
                 { "AudioClips", "t:AudioClip" }
             };
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData("PROJECT_COMPLEXITY_METRICS")
+            var unifiedEvent = new UnifiedEventData("PROJECT_COMPLEXITY_METRICS")
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
 
             var stopwatch = new Stopwatch();

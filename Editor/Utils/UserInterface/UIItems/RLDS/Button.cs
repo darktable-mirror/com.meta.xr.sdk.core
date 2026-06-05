@@ -112,7 +112,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A UnityEngine.UIElements.Button configured with RLDS styling</returns>
-        public VisualElement Get()
+        public VisualElement Build()
         {
             if (_button != null)
             {

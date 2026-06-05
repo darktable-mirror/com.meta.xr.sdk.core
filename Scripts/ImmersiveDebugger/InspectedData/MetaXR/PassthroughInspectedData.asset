@@ -39,7 +39,7 @@ MonoBehaviour:
       Max: 1
       Category: Meta XR
       Description: 
-      DisplayName: Suppress Boundary Visibility
+      DisplayName: Boundary Visibility
     memberName: shouldBoundaryVisibilityBeSuppressed
     _editorSelectedGizmoIndex: 0
   - enabled: 1

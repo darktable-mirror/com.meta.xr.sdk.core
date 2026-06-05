@@ -20,6 +20,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM && UNITY_NEW_INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
@@ -214,7 +215,7 @@ public class OVRHeadsetEmulator : MonoBehaviour
 
             if (!hasSentEvent)
             {
-                var evt = new OVRPlugin.UnifiedEventData("headset_emulator");
+                var evt = new UnifiedEventData("headset_emulator");
                 evt.SetMetadata("status", "activated");
                 evt.Send();
                 hasSentEvent = true;

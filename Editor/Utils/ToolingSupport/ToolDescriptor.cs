@@ -27,6 +27,7 @@ using Meta.XR.Editor.Id;
 using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using System.Linq;
@@ -258,10 +259,10 @@ namespace Meta.XR.Editor.ToolingSupport
 
         private void OnFeedbackIconClicked()
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Feedback.FalcoEventName.SubmitFeedback)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Feedback.FalcoEventName.SubmitFeedback)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
 
             try
@@ -276,7 +277,7 @@ namespace Meta.XR.Editor.ToolingSupport
             }
             catch (Win32Exception)
             {
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.result = UnifiedEventResult.FAIL;
                 unifiedEvent.SetMetadata(OVRTelemetryConstants.Feedback.AnnotationType.ToolName, Name);
                 unifiedEvent.Send();
                 if (EditorUtility.DisplayDialog("Install Meta Quest Developer Hub",

@@ -20,6 +20,7 @@
 
 using System;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Telemetry;
 using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -61,10 +62,10 @@ namespace Meta.XR.BuildingBlocks.Editor
 
                 foreach (var block in sceneBlocks)
                 {
-                    var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.OpenSceneWithBlock)
+                    var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.BB.FalcoEventName.OpenSceneWithBlock)
                     {
-                        isEssential = OVRPlugin.Bool.True,
-                        productType = OVRPlugin.ProductType.BuildingBlocks
+                        isEssential = true,
+                        productType = TelemetryProductType.BuildingBlocks
                     };
                     unifiedEvent.AddBlockInfo(block);
                     unifiedEvent.Send();

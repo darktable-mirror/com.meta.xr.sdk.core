@@ -26,7 +26,6 @@ namespace Meta.XR.BuildingBlocks.Editor
     [InitializeOnLoad]
     internal static class HandTrackingSetupRules
     {
-        private static string InputMappingScriptDefine = "OVR_DISABLE_HAND_PINCH_BUTTON_MAPPING";
         private static UnityEditor.Build.NamedBuildTarget[] BuildTargetsToCheck =
         {
             UnityEditor.Build.NamedBuildTarget.Android,
@@ -67,7 +66,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 {
                     foreach (var buildTarget in BuildTargetsToCheck)
                     {
-                        if (!PlayerSettings.GetScriptingDefineSymbols(buildTarget).Contains(InputMappingScriptDefine))
+                        if (!PlayerSettings.GetScriptingDefineSymbols(buildTarget).Contains(ScriptingDefineConstants.InputMappingScriptDefine))
                             return false;
                     }
                     return true;
@@ -81,14 +80,14 @@ namespace Meta.XR.BuildingBlocks.Editor
                     foreach (var buildTarget in BuildTargetsToCheck)
                     {
                         string curDefines = PlayerSettings.GetScriptingDefineSymbols(buildTarget);
-                        if (!curDefines.Contains(InputMappingScriptDefine))
+                        if (!curDefines.Contains(ScriptingDefineConstants.InputMappingScriptDefine))
                         {
                             PlayerSettings.SetScriptingDefineSymbols(buildTarget,
-                                curDefines != "" ? $"{curDefines};{InputMappingScriptDefine}" : InputMappingScriptDefine);
+                                curDefines != "" ? $"{curDefines};{ScriptingDefineConstants.InputMappingScriptDefine}" : ScriptingDefineConstants.InputMappingScriptDefine);
                         }
                     }
                 },
-                fixMessage: $"Set script define {InputMappingScriptDefine} to disable legacy mapping"
+                fixMessage: $"Set script define {ScriptingDefineConstants.InputMappingScriptDefine} to disable legacy mapping"
             );
         }
 

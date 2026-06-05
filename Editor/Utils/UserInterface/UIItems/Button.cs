@@ -52,7 +52,7 @@ namespace Meta.XR.Editor.UserInterface
             EditorGUI.EndDisabledGroup();
         }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             return new VisualElement();
         }

@@ -21,6 +21,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Meta.XR.Telemetry;
 using Meta.XR.Util;
 using Unity.Collections;
 using UnityEngine;
@@ -439,10 +440,10 @@ public class OVRSceneManager : MonoBehaviour
 
     void Start()
     {
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Scene.FalcoEventName.UseOVRSceneManager)
+        var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Scene.FalcoEventName.UseOVRSceneManager)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = false,
+            productType = TelemetryProductType.Editor
         };
         unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.UsingBasicPrefabs,
             (PlanePrefab != null || VolumePrefab != null) ? "true" : "false");

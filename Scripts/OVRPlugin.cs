@@ -26,21 +26,25 @@
 #define REQUIRES_XR_SDK
 #endif
 
-#if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || (UNITY_ANDROID && !UNITY_EDITOR))
+#if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_EDITOR_LINUX || UNITY_STANDALONE_LINUX || (UNITY_ANDROID && !UNITY_EDITOR))
 #define OVRPLUGIN_UNSUPPORTED_PLATFORM
 #endif
 
-#if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || (UNITY_ANDROID && !UNITY_EDITOR))
+#if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_EDITOR_LINUX || UNITY_STANDALONE_LINUX || (UNITY_ANDROID && !UNITY_EDITOR))
 #define OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
 #endif
 
-#if !(UNITY_EDITOR_WIN || UNITY_EDITOR_OSX)
+#if !(UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX)
 #define OVRPLUGIN_METAWANDAUTH_UNSUPPORTED_PLATFORM
 #endif
 
 
 #if UNITY_ANDROID && !UNITY_EDITOR
 #define OVRPLUGIN_INCLUDE_MRC_ANDROID
+#endif
+
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+#pragma warning disable CS0414
 #endif
 
 using System;
@@ -58,6 +62,46 @@ using UnityEngine.XR.OpenXR.Features.Extensions.PerformanceSettings;
 
 // Internal C# wrapper for OVRPlugin.
 
+/// <summary>
+/// Extension methods for converting between C# types and OVRPlugin types.
+/// </summary>
+internal static class OVRPluginTypeConversions
+{
+    internal static OVRPlugin.Bool ToOVRPluginBool(this bool value)
+    {
+        return value ? OVRPlugin.Bool.True : OVRPlugin.Bool.False;
+    }
+
+    internal static OVRPlugin.OptionalBool ToOVRPluginOptionalBool(this bool? value)
+    {
+        if (!value.HasValue)
+            return OVRPlugin.OptionalBool.Unknown;
+        return value.Value ? OVRPlugin.OptionalBool.True : OVRPlugin.OptionalBool.False;
+    }
+
+    internal static OVRPlugin.ProductType ToOVRPluginProductType(this Meta.XR.Telemetry.TelemetryProductType value)
+    {
+        return value switch
+        {
+            Meta.XR.Telemetry.TelemetryProductType.None => OVRPlugin.ProductType.None,
+            Meta.XR.Telemetry.TelemetryProductType.Editor => OVRPlugin.ProductType.Editor,
+            Meta.XR.Telemetry.TelemetryProductType.XRFeature => OVRPlugin.ProductType.XRFeature,
+            Meta.XR.Telemetry.TelemetryProductType.Pst => OVRPlugin.ProductType.Pst,
+            Meta.XR.Telemetry.TelemetryProductType.MetaWand => OVRPlugin.ProductType.MetaWand,
+            Meta.XR.Telemetry.TelemetryProductType.CoreSdk => OVRPlugin.ProductType.CoreSdk,
+            Meta.XR.Telemetry.TelemetryProductType.XrSim => OVRPlugin.ProductType.XrSim,
+            Meta.XR.Telemetry.TelemetryProductType.BuildingBlocks => OVRPlugin.ProductType.BuildingBlocks,
+            Meta.XR.Telemetry.TelemetryProductType.Mruk => OVRPlugin.ProductType.Mruk,
+            Meta.XR.Telemetry.TelemetryProductType.ImmersiveDebugger => OVRPlugin.ProductType.ImmersiveDebugger,
+            Meta.XR.Telemetry.TelemetryProductType.PlatformSdk => OVRPlugin.ProductType.PlatformSdk,
+            Meta.XR.Telemetry.TelemetryProductType.HapticsSdk => OVRPlugin.ProductType.HapticsSdk,
+            Meta.XR.Telemetry.TelemetryProductType.MovementSdk => OVRPlugin.ProductType.MovementSdk,
+            _ => OVRPlugin.ProductType.None
+        };
+    }
+}
+
+
 public static partial class OVRPlugin
 {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
@@ -69,7 +113,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_201_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_203_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -231,6 +275,7 @@ public static partial class OVRPlugin
         Unknown = 2
     }
 
+
     public enum ProductType
     {
         None,
@@ -244,7 +289,8 @@ public static partial class OVRPlugin
         Mruk,
         ImmersiveDebugger,
         PlatformSdk,
-        HapticsSdk
+        HapticsSdk,
+        MovementSdk
     }
 
     public static string ProductTypeToString(ProductType productType)
@@ -263,6 +309,7 @@ public static partial class OVRPlugin
             ProductType.ImmersiveDebugger => "id",
             ProductType.PlatformSdk => "platform_sdk",
             ProductType.HapticsSdk => "haptics_sdk",
+            ProductType.MovementSdk => "movement_sdk",
             _ => ""
         };
     }
@@ -282,6 +329,7 @@ public static partial class OVRPlugin
             "id" => ProductType.ImmersiveDebugger,
             "platform_sdk" => ProductType.PlatformSdk,
             "haptics_sdk" => ProductType.HapticsSdk,
+            "movement_sdk" => ProductType.MovementSdk,
             _ => ProductType.None,
         };
     }
@@ -1979,7 +2027,6 @@ public static partial class OVRPlugin
         ThumbTap = 5,
         Invalid = -1,
     }
-
 
     [Flags]
     public enum HandFingerPinch
@@ -7524,6 +7571,7 @@ public static partial class OVRPlugin
         }
     }
 
+    [Obsolete]
     public static float gpuUtilLevel
     {
         get
@@ -7571,7 +7619,7 @@ public static partial class OVRPlugin
                 {
                     int numFrequencies = 0;
                     Result result =
-                        OVRP_1_21_0.ovrp_GetSystemDisplayAvailableFrequencies(IntPtr.Zero, ref numFrequencies);
+                        Shim.ovrp_GetSystemDisplayAvailableFrequencies(IntPtr.Zero, ref numFrequencies);
                     if (result == Result.Success)
                     {
                         if (numFrequencies > 0)
@@ -7579,7 +7627,7 @@ public static partial class OVRPlugin
                             int maxNumElements = numFrequencies;
                             _nativeSystemDisplayFrequenciesAvailable =
                                 new OVRNativeBuffer(sizeof(float) * maxNumElements);
-                            result = OVRP_1_21_0.ovrp_GetSystemDisplayAvailableFrequencies(
+                            result = Shim.ovrp_GetSystemDisplayAvailableFrequencies(
                                 _nativeSystemDisplayFrequenciesAvailable.GetPointer(), ref numFrequencies);
                             if (result == Result.Success)
                             {
@@ -7612,7 +7660,7 @@ public static partial class OVRPlugin
             if (version >= OVRP_1_21_0.version)
             {
                 float displayFrequency;
-                Result result = OVRP_1_21_0.ovrp_GetSystemDisplayFrequency2(out displayFrequency);
+                Result result = Shim.ovrp_GetSystemDisplayFrequency2(out displayFrequency);
                 if (result == Result.Success)
                 {
                     return displayFrequency;
@@ -7637,7 +7685,7 @@ public static partial class OVRPlugin
 #else
             if (version >= OVRP_1_21_0.version)
             {
-                OVRP_1_21_0.ovrp_SetSystemDisplayFrequency(value);
+                Shim.ovrp_SetSystemDisplayFrequency(value);
             }
 #endif
         }
@@ -7887,6 +7935,7 @@ public static partial class OVRPlugin
         FAIL,
         CANCEL
     }
+
 
     public struct UnifiedEventData
     {
@@ -8239,28 +8288,80 @@ public static partial class OVRPlugin
         }
 
 
+        // Convert OVRPlugin.UnifiedEventData to Meta.XR.Telemetry.UnifiedEventData and send
+        var telemetryEventData = new Meta.XR.Telemetry.UnifiedEventData(eventData.eventName)
+        {
+            isEssential = eventData.isEssential == Bool.True,
+            productType = (Meta.XR.Telemetry.TelemetryProductType)(int)eventData.productType,
+            project_name = eventData.project_name,
+            entrypoint = eventData.entrypoint,
+            project_guid = eventData.project_guid,
+            type = eventData.type,
+            target = eventData.target,
+            error_msg = eventData.error_msg,
+            is_internal_build = eventData.is_internal_build == OptionalBool.Unknown ? null : eventData.is_internal_build == OptionalBool.True,
+            batch_mode = eventData.batch_mode == OptionalBool.Unknown ? null : eventData.batch_mode == OptionalBool.True,
+            machine_oculus_user_id = eventData.machine_oculus_user_id,
+            metadataHandle = eventData.metadataHandle,
+            is_runtime = eventData.is_runtime == OptionalBool.Unknown ? null : eventData.is_runtime == OptionalBool.True,
+            result = eventData.result.HasValue
+                ? (Meta.XR.Telemetry.UnifiedEventResult?)((Meta.XR.Telemetry.UnifiedEventResult)(int)eventData.result.Value)
+                : null
+        };
+
+        return SendUnifiedEvent(telemetryEventData);
+#endif
+    }
+
+
+    internal static Result SendUnifiedEvent(Meta.XR.Telemetry.UnifiedEventData eventData)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (!OVRTelemetry.IsActive)
+        {
+            return Result.Failure_NotInitialized;
+        }
+
+
+        var isEssential = eventData.isEssential.ToOVRPluginBool();
+        var productType = eventData.productType.ToOVRPluginProductType();
+
         if (version >= OVRP_1_116_0.version)
         {
             string resultString = eventData.result.HasValue ? eventData.result.Value.ToString().ToUpper() : "SUCCESS";
-            return OVRP_1_116_0.ovrp_SendUnifiedEventV5(eventData.isEssential, ProductTypeToString(eventData.productType), eventData.eventName,
+            return OVRP_1_116_0.ovrp_SendUnifiedEventV5(isEssential, ProductTypeToString(productType), eventData.eventName,
                 eventData.metadataHandle, eventData.project_name, eventData.entrypoint, eventData.project_guid,
-                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build,
-                eventData.batch_mode, eventData.machine_oculus_user_id, eventData.is_runtime,
+                eventData.type, eventData.target, eventData.error_msg,
+                eventData.is_internal_build.ToOVRPluginOptionalBool(),
+                eventData.batch_mode.ToOVRPluginOptionalBool(),
+                eventData.machine_oculus_user_id,
+                eventData.is_runtime.ToOVRPluginOptionalBool(),
                 resultString);
-        } else if (version >= OVRP_1_114_0.version) {
-            return OVRP_1_114_0.ovrp_SendUnifiedEventV3(eventData.isEssential, ProductTypeToString(eventData.productType), eventData.eventName,
-                eventData.GetMetadata(), eventData.project_name, eventData.entrypoint, eventData.project_guid,
-                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build,
-                eventData.batch_mode, eventData.machine_oculus_user_id);
+        }
+
+        // For older API versions, we need to get the metadata JSON
+        string metadataJson = eventData.GetMetadata();
+
+        if (version >= OVRP_1_114_0.version) {
+            return OVRP_1_114_0.ovrp_SendUnifiedEventV3(isEssential, ProductTypeToString(productType), eventData.eventName,
+                metadataJson, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.type, eventData.target, eventData.error_msg,
+                eventData.is_internal_build.ToOVRPluginOptionalBool(),
+                eventData.batch_mode.ToOVRPluginOptionalBool(),
+                eventData.machine_oculus_user_id);
         } else if (version >= OVRP_1_110_0.version) {
-            return OVRP_1_110_0.ovrp_SendUnifiedEventV2(eventData.isEssential, ProductTypeToString(eventData.productType), eventData.eventName,
-                eventData.GetMetadata(), eventData.project_name, eventData.entrypoint, eventData.project_guid,
-                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build.ToString(),
-                eventData.batch_mode.ToString());
+            return OVRP_1_110_0.ovrp_SendUnifiedEventV2(isEssential, ProductTypeToString(productType), eventData.eventName,
+                metadataJson, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.type, eventData.target, eventData.error_msg,
+                eventData.is_internal_build.ToOVRPluginOptionalBool().ToString(),
+                eventData.batch_mode.ToOVRPluginOptionalBool().ToString());
         } else if (version == OVRP_1_109_0.version) {
-            return OVRP_1_109_0.ovrp_SendUnifiedEvent(eventData.isEssential, ProductTypeToString(eventData.productType), eventData.eventName,
-                eventData.GetMetadata(), eventData.project_name, eventData.entrypoint, eventData.project_guid,
-                eventData.type, eventData.target, eventData.error_msg, eventData.is_internal_build.ToString());
+            return OVRP_1_109_0.ovrp_SendUnifiedEvent(isEssential, ProductTypeToString(productType), eventData.eventName,
+                metadataJson, eventData.project_name, eventData.entrypoint, eventData.project_guid,
+                eventData.type, eventData.target, eventData.error_msg,
+                eventData.is_internal_build.ToOVRPluginOptionalBool().ToString());
         }
         else // < OVRP_1_109_0.version
         {
@@ -8270,18 +8371,18 @@ public static partial class OVRPlugin
     }
 
     public static Result SendUnifiedEvent(
-        Bool isEssential,
-        ProductType productType,
-        string eventName,
-        string event_metadata_json,
-        string project_name = "",
-        string event_entrypoint = "",
-        string project_guid = "",
-        string event_type = "",
-        string event_target = "",
-        string error_msg = "",
-        string is_internal_build = "",
-        string batch_mode = "")
+            Bool isEssential,
+            ProductType productType,
+            string eventName,
+            string event_metadata_json,
+            string project_name = "",
+            string event_entrypoint = "",
+            string project_guid = "",
+            string event_type = "",
+            string event_target = "",
+            string error_msg = "",
+            string is_internal_build = "",
+            string batch_mode = "")
     {
         var eventData = new UnifiedEventData(eventName)
         {
@@ -8406,6 +8507,194 @@ public static partial class OVRPlugin
             machine_oculus_user_id
         );
     }
+
+    #region Telemetry Metadata API
+
+    /// <summary>
+    /// Creates a new telemetry metadata handle for building event metadata.
+    /// </summary>
+    /// <param name="metadataHandle">The created metadata handle.</param>
+    /// <returns>Result indicating success or failure.</returns>
+    public static Result TelemetryCreateMetadataHandle(out int metadataHandle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        metadataHandle = 0;
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_116_0.version)
+        {
+            metadataHandle = 0;
+            return Result.Failure_NotYetImplemented;
+        }
+        return OVRP_1_116_0.ovrp_TelemetryCreateMetadataHandle(out metadataHandle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a string metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetrySetMetadata(string key, string value, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_116_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_116_0.ovrp_TelemetrySetMetadata(key, value, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets an int metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetrySetMetadataInt(string key, int value, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_116_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_116_0.ovrp_TelemetrySetMetadataInt(key, value, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a float metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetrySetMetadataFloat(string key, float value, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_116_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_116_0.ovrp_TelemetrySetMetadataFloat(key, value, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a double metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetrySetMetadataDouble(string key, double value, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_116_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_116_0.ovrp_TelemetrySetMetadataDouble(key, value, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a bool metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetrySetMetadataBool(string key, bool value, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_116_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_116_0.ovrp_TelemetrySetMetadataBool(key, value, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a long metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetrySetMetadataLong(string key, long value, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_200_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_200_0.ovrp_TelemetrySetMetadataLong(key, value, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets an int array metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static unsafe Result TelemetrySetMetadataIntArray(string key, int* values, int count, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_200_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_200_0.ovrp_TelemetrySetMetadataIntArray(key, values, count, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a long array metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static unsafe Result TelemetrySetMetadataLongArray(string key, long* values, int count, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_200_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_200_0.ovrp_TelemetrySetMetadataLongArray(key, values, count, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a double array metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static unsafe Result TelemetrySetMetadataDoubleArray(string key, double* values, int count, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_200_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_200_0.ovrp_TelemetrySetMetadataDoubleArray(key, values, count, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Sets a string array metadata value on a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetrySetMetadataStringArray(string key, string[] values, int count, int handle)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_200_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_200_0.ovrp_TelemetrySetMetadataStringArray(key, values, count, handle);
+#endif
+    }
+
+    /// <summary>
+    /// Gets the metadata JSON string from a telemetry metadata handle.
+    /// </summary>
+    public static Result TelemetryGetMetadata(int handle, System.Text.StringBuilder metadataJson, int bufferSize)
+    {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
+        if (version < OVRP_1_116_0.version)
+            return Result.Failure_NotYetImplemented;
+        return OVRP_1_116_0.ovrp_TelemetryGetMetadata(handle, metadataJson, bufferSize);
+#endif
+    }
+
+    /// <summary>
+    /// Gets the minimum version required for the new metadata handle API.
+    /// </summary>
+    public static System.Version TelemetryMetadataHandleMinVersion => OVRP_1_116_0.version;
+
+    /// <summary>
+    /// Gets the minimum version required for long and array metadata APIs.
+    /// </summary>
+    public static System.Version TelemetryMetadataArrayMinVersion => OVRP_1_200_0.version;
+
+    #endregion Telemetry Metadata API
 
     public static bool SetHeadPoseModifier(ref Quatf relativeRotation, ref Vector3f relativeTranslation)
     {
@@ -10981,7 +11270,7 @@ public static partial class OVRPlugin
                 colorSpace = ColorSpace.P3;
             }
 
-            return OVRP_1_49_0.ovrp_SetClientColorDesc(colorSpace) == Result.Success;
+            return Shim.ovrp_SetClientColorDesc(colorSpace) == Result.Success;
         }
         else
         {
@@ -10998,7 +11287,7 @@ public static partial class OVRPlugin
         ColorSpace colorSpace = ColorSpace.Unknown;
         if (version >= OVRP_1_49_0.version)
         {
-            Result res = OVRP_1_49_0.ovrp_GetHmdColorDesc(ref colorSpace);
+            Result res = Shim.ovrp_GetHmdColorDesc(ref colorSpace);
             if (res != Result.Success)
             {
                 Debug.LogError("GetHmdColorDesc: Failed to get Hmd color description");
@@ -14503,7 +14792,7 @@ public static partial class OVRPlugin
     {
         public static readonly System.Version version = new System.Version(1, 17, 0);
 
-#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_WIN || OVRPLUGIN_EDITOR_MOCK_ENABLED
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX || UNITY_STANDALONE_WIN || OVRPLUGIN_EDITOR_MOCK_ENABLED
         [DllImport(pluginName, CallingConvention = CallingConvention.Cdecl)]
         public static extern Result ovrp_GetExternalCameraPose(CameraDevice camera, out Posef cameraPose);
 

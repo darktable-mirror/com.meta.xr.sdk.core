@@ -45,7 +45,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             "\n\nYou can track your components' members by using either of the following methods: " +
             $"\n• <i>In code:</i> Add the <b>{nameof(DebugMember)}</b> attribute to any member you want to track" +
             $"\n• <i>In scene:</i> Add and configure the <b>{nameof(DebugInspector)}</b> component to any GameObject you want to track" +
-            $"\n<color={ColorToHex(NewColor)}>• [New]</color><i> Using the hierarchy view:</i> Directly within the Immersive Debugger, track any GameObject and its Components without any preconfiguration";
+            "\n• <i>Using the hierarchy view:</i> Directly within the Immersive Debugger, track any GameObject and its Components without any preconfiguration";
 
         internal static readonly TextureContent.Category ImmersiveDebuggerIcons = new("ImmersiveDebugger/Icons");
         internal static readonly TextureContent StatusIcon = TextureContent.CreateContent("ovr_icon_idf.png", ImmersiveDebuggerIcons, $"Open {PublicName}");

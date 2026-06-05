@@ -28,6 +28,7 @@ using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.UserInterface.RLDS;
 using Meta.XR.MetaWand.Editor.API;
 using Meta.XR.MetaWand.Editor.Telemetry;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
@@ -58,6 +59,7 @@ namespace Meta.XR.MetaWand.Editor
         public static UserBool ShowFeedbackButtons { get; private set; }
         private UserBool _userHasAccess;
         private FeedbackState _feedbackState = FeedbackState.None;
+        private bool _showEmptySearchWarning;
 
         private const string FeedbackToastMessage = "Thanks for your feedback!";
         private const float FeedbackToastDuration = 2.0f;
@@ -104,9 +106,9 @@ namespace Meta.XR.MetaWand.Editor
 
             if (ShouldLogIn())
             {
-                new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
+                new UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
                 {
-                    isEssential = OVRPlugin.Bool.True,
+                    isEssential = true,
                     entrypoint = Constants.Telemetry.EntrypointSignUp
                 }.SendMetaWandEvent();
             }
@@ -114,9 +116,9 @@ namespace Meta.XR.MetaWand.Editor
             {
                 if (_sessionIsDirty)
                 {
-                    var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
+                    var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
                     {
-                        isEssential = OVRPlugin.Bool.False,
+                        isEssential = false,
                         entrypoint = Constants.Telemetry.EntrypointLoadState,
                         target = Constants.Telemetry.TargetLoadingResultsPanel
                     };
@@ -125,9 +127,9 @@ namespace Meta.XR.MetaWand.Editor
                 }
                 else
                 {
-                    var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
+                    var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNamePageImpression)
                     {
-                        isEssential = OVRPlugin.Bool.False,
+                        isEssential = false,
                         entrypoint = Constants.Telemetry.EntrypointNullState,
                         target = Constants.Telemetry.TargetStartPanel
                     };
@@ -144,9 +146,9 @@ namespace Meta.XR.MetaWand.Editor
         {
             await AssetLibrarySession.SaveSession();
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
+            var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                isEssential = OVRPlugin.Bool.False,
+                isEssential = false,
                 entrypoint = Constants.Telemetry.EntrypointLoadState,
                 target = Constants.Telemetry.TargetDismissButton
             };
@@ -227,13 +229,18 @@ namespace Meta.XR.MetaWand.Editor
         private void Search()
         {
             if (string.IsNullOrEmpty(SearchText) || SearchText == Constants.SearchPlaceholderText)
+            {
+                _showEmptySearchWarning = true;
                 return;
+            }
+
+            _showEmptySearchWarning = false;
 
             Utils.ToolDescriptorAssetLibrary.Usage.RecordUsage();
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
+            var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                isEssential = OVRPlugin.Bool.False,
+                isEssential = false,
                 entrypoint = Constants.Telemetry.EntrypointNullState,
                 target = Constants.Telemetry.TargetSearchButton
             };
@@ -429,6 +436,18 @@ namespace Meta.XR.MetaWand.Editor
             SearchTextField.Draw();
             new AddSpace(Spacing.Space3XS).Draw();
             SearchButton.Draw();
+
+            if (_showEmptySearchWarning)
+            {
+                new AddSpace(Spacing.Space4XS).Draw();
+                using (new XR.Editor.UserInterface.Utils.ColorScope(
+                           XR.Editor.UserInterface.Utils.ColorScope.Scope.Content,
+                           Colors.TextNegative))
+                {
+                    new Label("Please enter a search prompt", Styles.GUIStyles.Body2TextXS).Draw();
+                }
+            }
+
             EditorGUILayout.EndVertical();
         }
 
@@ -523,9 +542,9 @@ namespace Meta.XR.MetaWand.Editor
             Utils.DrawURLLabel("Learn more about Meta accounts", learnMetaAccountUrl,
                 Styles.GUIStyles.BodySmallCenterAlign, () =>
                 {
-                    new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
+                    new UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
                     {
-                        isEssential = OVRPlugin.Bool.True,
+                        isEssential = true,
                         entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
                         target = Constants.Telemetry.TargetLearnMoreButton
                     }.SendMetaWandEvent();
@@ -553,9 +572,9 @@ namespace Meta.XR.MetaWand.Editor
         {
             if (MetaWandAuth.IsAuthenticating) return;
 
-            new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
+            new UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                isEssential = OVRPlugin.Bool.True,
+                isEssential = true,
                 entrypoint = Constants.Telemetry.EntrypointAuthToolbar,
                 target = Constants.Telemetry.TargetLoginButton
             }.SendMetaWandEvent();
@@ -585,9 +604,9 @@ namespace Meta.XR.MetaWand.Editor
                 _showLoginError = true;
                 MetaWandAuthWindow.CloseWindow();
 
-                new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLoginFailure)
+                new UnifiedEventData(Constants.Telemetry.EventNameLoginFailure)
                 {
-                    isEssential = OVRPlugin.Bool.True,
+                    isEssential = true,
                     entrypoint = Constants.Telemetry.EntrypointAuthToolbar
                 }.SendMetaWandEvent();
 
@@ -606,9 +625,9 @@ namespace Meta.XR.MetaWand.Editor
             var feedbackResult = await AssetLibrarySession.CanShowFeedbackUI();
             ShowFeedbackButtons.SetValue(feedbackResult.Success);
 
-            new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLoginSuccess)
+            new UnifiedEventData(Constants.Telemetry.EventNameLoginSuccess)
             {
-                isEssential = OVRPlugin.Bool.True,
+                isEssential = true,
                 entrypoint = Constants.Telemetry.EntrypointAuthToolbar
             }.SendMetaWandEvent();
 

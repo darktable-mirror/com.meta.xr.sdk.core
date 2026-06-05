@@ -48,6 +48,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.EnvironmentDepth")]
 [assembly: InternalsVisibleTo("Meta.XR.MetaWand.Editor")]
-[assembly: InternalsVisibleTo("Meta.MCPBridge")]
+[assembly: InternalsVisibleTo("meta.xr.ai.mcpbridge")]
 [assembly: InternalsVisibleTo("Meta.XR.MRUtilityKit.Tests")]
 [assembly: InternalsVisibleTo("meta.xr.ai.agentbridge.telemetry")]

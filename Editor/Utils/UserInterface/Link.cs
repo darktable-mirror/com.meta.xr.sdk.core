@@ -20,6 +20,7 @@
 
 using System;
 using Meta.XR.Editor.Id;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -105,16 +106,16 @@ namespace Meta.XR.Editor.UserInterface
 
         private void SendTelemetry()
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.LinkClick)
+            var unifiedEvent = new UnifiedEventData(Telemetry.FalcoEventName.LinkClick)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
             AddFalcoMetadata(unifiedEvent);
             unifiedEvent.Send();
         }
 
-        protected virtual void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
+        protected virtual void AddFalcoMetadata(UnifiedEventData unifiedEvent)
         {
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.Label, Label);
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, Id ?? Label);
@@ -135,7 +136,7 @@ namespace Meta.XR.Editor.UserInterface
             Application.OpenURL(URL);
         }
 
-        protected override void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
+        protected override void AddFalcoMetadata(UnifiedEventData unifiedEvent)
         {
             base.AddFalcoMetadata(unifiedEvent);
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, URL);
@@ -154,7 +155,7 @@ namespace Meta.XR.Editor.UserInterface
             Selection.activeObject = Asset;
         }
 
-        protected override void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
+        protected override void AddFalcoMetadata(UnifiedEventData unifiedEvent)
         {
             base.AddFalcoMetadata(unifiedEvent);
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, (Asset as IIdentified)?.Id ?? Asset.name);
@@ -173,7 +174,7 @@ namespace Meta.XR.Editor.UserInterface
             Action?.Invoke();
         }
 
-        protected override void AddFalcoMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
+        protected override void AddFalcoMetadata(UnifiedEventData unifiedEvent)
         {
             base.AddFalcoMetadata(unifiedEvent);
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, ActionData?.Id);

@@ -21,6 +21,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
+using UnifiedEventData = Meta.XR.Telemetry.UnifiedEventData;
+using UnifiedEventResult = Meta.XR.Telemetry.UnifiedEventResult;
+using TelemetryProductType = Meta.XR.Telemetry.TelemetryProductType;
 
 partial struct OVRAnchor
 {
@@ -42,7 +46,7 @@ partial struct OVRAnchor
             public override int GetHashCode() => unchecked((_eventName?.GetHashCode() ?? 0) * 486187739 + _requestId.GetHashCode());
         }
 
-        private static ConcurrentDictionary<Key, OVRPlugin.UnifiedEventData> s_events = new();
+        private static ConcurrentDictionary<Key, UnifiedEventData> s_events = new();
 
         // Called from OVRAnchor.Init
         public static void OnInit()
@@ -50,7 +54,7 @@ partial struct OVRAnchor
             s_events.Clear();
         }
 
-        public static void AddEvent(ulong requestId, OVRPlugin.UnifiedEventData unifiedEvent)
+        public static void AddEvent(ulong requestId, UnifiedEventData unifiedEvent)
         {
             if (unifiedEvent.eventName != null)
             {
@@ -58,13 +62,13 @@ partial struct OVRAnchor
             }
         }
 
-        public static OVRPlugin.UnifiedEventData Start(string eventName, ulong requestId, OVRPlugin.Result result)
+        public static UnifiedEventData Start(string eventName, ulong requestId, OVRPlugin.Result result)
         {
             var unifiedEvent = !string.IsNullOrEmpty(eventName)
-                ? new OVRPlugin.UnifiedEventData(eventName)
+                ? new UnifiedEventData(eventName)
                 {
-                    isEssential = OVRPlugin.Bool.False,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = false,
+                    productType = TelemetryProductType.Editor
                 }
                 : default;
             SetSyncResult(requestId, result, unifiedEvent);
@@ -74,7 +78,7 @@ partial struct OVRAnchor
         // Set the result of the synchronous function call (the one that initiates the async request).
         // If successful, the event is stored in a map so that we can mark it complete later.
         // If result indicates failure, then the event is completed immediately.
-        public static void SetSyncResult(ulong requestId, OVRPlugin.Result result, OVRPlugin.UnifiedEventData unifiedEvent)
+        public static void SetSyncResult(ulong requestId, OVRPlugin.Result result, UnifiedEventData unifiedEvent)
         {
             if (unifiedEvent.eventName != null)
             {
@@ -98,7 +102,7 @@ partial struct OVRAnchor
             {
                 if (unifiedEvent.eventName != null)
                 {
-                    unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                    unifiedEvent.result = UnifiedEventResult.FAIL;
                     unifiedEvent.Send();
                 }
             }
@@ -128,7 +132,7 @@ partial struct OVRAnchor
         }
 
         // Sets the asynchronous result (usually received in the OpenXR event queue) but does not end the event.
-        public static OVRPlugin.UnifiedEventData SetAsyncResult(string eventName, ulong requestId, long result)
+        public static UnifiedEventData SetAsyncResult(string eventName, ulong requestId, long result)
         {
             var key = new Key(eventName, requestId);
 
@@ -136,23 +140,23 @@ partial struct OVRAnchor
                 return default;
 
             unifiedEvent.SetMetadata(Annotation.AsynchronousResult, (int)result);
-            unifiedEvent.result = result >= 0 ? OVRPlugin.UnifiedEventResult.SUCCESS : OVRPlugin.UnifiedEventResult.FAIL;
+            unifiedEvent.result = result >= 0 ? UnifiedEventResult.SUCCESS : UnifiedEventResult.FAIL;
 
             return unifiedEvent;
         }
 
-        public static OVRPlugin.UnifiedEventData? GetEvent(string eventName, ulong requestId)
+        public static UnifiedEventData? GetEvent(string eventName, ulong requestId)
             => TryGetEvent(eventName, requestId, out var unifiedEvent) ? unifiedEvent : null;
 
-        public static bool TryGetEvent(string eventName, ulong requestId, out OVRPlugin.UnifiedEventData unifiedEvent)
+        public static bool TryGetEvent(string eventName, ulong requestId, out UnifiedEventData unifiedEvent)
             => s_events.TryGetValue(new(eventName, requestId), out unifiedEvent);
 
-        public static bool Remove(string eventName, ulong requestId, out OVRPlugin.UnifiedEventData unifiedEvent)
+        public static bool Remove(string eventName, ulong requestId, out UnifiedEventData unifiedEvent)
         {
             return s_events.Remove(new(eventName, requestId), out unifiedEvent);
         }
 
-        public static OVRPlugin.UnifiedEventData? GetRemove(string eventName, ulong requestId)
+        public static UnifiedEventData? GetRemove(string eventName, ulong requestId)
             => Remove(eventName, requestId, out var unifiedEvent) ? unifiedEvent : null;
 
         // Deprecated: MarkerId enum is kept for backward compatibility but is no longer used.

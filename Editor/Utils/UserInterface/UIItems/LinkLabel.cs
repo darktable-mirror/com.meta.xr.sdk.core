@@ -59,6 +59,11 @@ namespace Meta.XR.Editor.UserInterface
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A VisualElement containing the styled clickable link label</returns>
-        public VisualElement Get() => new IMGUIContainer(Draw);
+        public VisualElement Build()
+        {
+            var container = new IMGUIContainer(Draw);
+            container.style.marginTop = 2;
+            return container;
+        }
     }
 }

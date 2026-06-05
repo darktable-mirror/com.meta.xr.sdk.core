@@ -42,9 +42,9 @@ namespace Meta.XR.Telemetry
         private static void SendEvent(SDK sdk, string issueCode, string eventType, string message, string memberName, int lineNumber, string fullPath)
         {
             string fileName = Path.GetFileName(fullPath);
-            var unifiedEvent = new OVRPlugin.UnifiedEventData("INTEGRATION_ISSUE")
+            var unifiedEvent = new UnifiedEventData("INTEGRATION_ISSUE")
             {
-                isEssential = OVRPlugin.Bool.True
+                isEssential = true
             };
             unifiedEvent.SetMetadata("sdk", sdk.ToString());
             unifiedEvent.SetMetadata("issue_code", issueCode);

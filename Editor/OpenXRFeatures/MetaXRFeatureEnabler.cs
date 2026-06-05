@@ -21,7 +21,6 @@
 #if USING_XR_SDK_OPENXR
 #if UNITY_EDITOR
 
-using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
@@ -34,7 +33,7 @@ namespace Meta.XR
     /// Automatically enables the MetaXRFeature feature
     /// </summary>
     [InitializeOnLoad]
-    public class MetaXRFeatureEnabler : MonoBehaviour
+    public static class MetaXRFeatureEnabler
     {
         static MetaXRFeatureEnabler()
         {
@@ -57,17 +56,9 @@ namespace Meta.XR
             if (featureSetAndroid != null && !featureSetAndroid.isEnabled)
                 needEnable = true;
 
-            // First check if OVRProjectConfig has said we declined the prompt before
+            // Check if OVRProjectConfig has said we declined the prompt before
             var config = OVRProjectConfig.CachedProjectConfig;
             bool promptDeclined = config.metaXrFeaturePromptDeclined;
-
-            // If we don't have a signal from OVRProjectConfig, check old path which was an editor pref setting and update project config to match
-            if (!promptDeclined)
-            {
-                promptDeclined = EditorPrefs.GetBool("meta_xr_feature_declined", false);
-                config.metaXrFeaturePromptDeclined = promptDeclined;
-                OVRProjectConfig.CommitProjectConfig(config);
-            }
 
             if (promptDeclined)
                 return;

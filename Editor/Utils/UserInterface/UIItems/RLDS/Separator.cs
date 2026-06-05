@@ -58,7 +58,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
             GUI.DrawTexture(rect, dropShadow, ScaleMode.StretchToFill, true);
         }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             var divider = new VisualElement();
             divider.AddToClassList(Props.Divider.Base);

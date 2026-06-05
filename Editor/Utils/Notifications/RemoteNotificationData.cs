@@ -39,9 +39,13 @@ namespace Meta.XR.Editor.Notifications
         public float duration;
         public NotificationUrlButton urlButton;
         public NotificationFilter[] filters;
+        public NotificationFilterGroup[] filterGroups;
         public string rampUpKey;
         public string gradientColor;
         public ulong headerContentId;
+        public int minSdkVersion;
+        public string startDate;
+        public string endDate;
     }
 
     [Serializable]
@@ -50,6 +54,13 @@ namespace Meta.XR.Editor.Notifications
         public string field;
         public string @operator;
         public string value;
+    }
+
+    [Serializable]
+    internal struct NotificationFilterGroup
+    {
+        public string @operator;
+        public NotificationFilter[] filters;
     }
 
     [Serializable]

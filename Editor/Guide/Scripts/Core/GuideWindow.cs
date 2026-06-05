@@ -24,6 +24,7 @@ using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.UserInterface.RLDS;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -53,7 +54,7 @@ namespace Meta.XR.Guides.Editor
         public Action DrawBefore;
         public Action DrawHeader;
         public Action DrawAfter;
-        public Action<OVRPlugin.UnifiedEventData> AddAdditionalUnifiedEventMetadata;
+        public Action<UnifiedEventData> AddAdditionalUnifiedEventMetadata;
 
         public VisualElement RootContainer => rootVisualElement;
         public VisualElement ItemContainer { get; private set; }
@@ -268,7 +269,6 @@ namespace Meta.XR.Guides.Editor
 
                 var scrollview = new ScrollView(ScrollViewMode.Vertical);
                 scrollview.AddToClassList(Props.Utilities.NoMargin);
-                root.Add(scrollview);
 
                 if (DrawHeader == DrawDefaultHeader)
                 {
@@ -279,21 +279,26 @@ namespace Meta.XR.Guides.Editor
                     DrawHeader?.Invoke();
                 }
 
+                root.Add(scrollview);
                 ItemContainer = new VisualElement();
                 ItemContainer.AddToClassList(Props.Flexbox.Grow1);
                 ItemContainer.AddToClassList(Props.Utilities.MarginTopXS);
                 ItemContainer.AddToClassList(Props.Utilities.Padding2xMD);
-                root.Add(ItemContainer);
+                scrollview.Add(ItemContainer);
 
                 foreach (var item in Items)
                 {
                     if (item == null || item.Hide) continue;
-                    ItemContainer.Add(item.Get());
+                    ItemContainer.Add(item.Build());
                 }
 
                 // Footer
-                ItemContainer.Add(new AddSpace(true).Get());
-                ItemContainer.Add(DrawFootersVisualElement());
+                root.Add(new AddSpace(true).Build());
+                var footerContainer = new VisualElement();
+                footerContainer.AddToClassList(Props.Utilities.MarginTopXS);
+                footerContainer.AddToClassList(Props.Utilities.Padding2xMD);
+                footerContainer.Add(DrawFootersVisualElement());
+                root.Add(footerContainer);
 
                 DrawAfter?.Invoke();
             });
@@ -388,10 +393,10 @@ namespace Meta.XR.Guides.Editor
 
         private void OnClose()
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageClose)
+            var unifiedEvent = new UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageClose)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
             AddFalcoTelemetryMetadata(unifiedEvent, Origins.Self);
             unifiedEvent.Send();
@@ -401,10 +406,10 @@ namespace Meta.XR.Guides.Editor
 
         private void OnOpen(Origins origin)
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageOpen)
+            var unifiedEvent = new UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageOpen)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
             AddFalcoTelemetryMetadata(unifiedEvent, origin);
             unifiedEvent.Send();
@@ -412,7 +417,7 @@ namespace Meta.XR.Guides.Editor
             Meta.XR.Editor.Notifications.Notification.Manager.RequestSnooze(this);
         }
 
-        private void AddFalcoTelemetryMetadata(OVRPlugin.UnifiedEventData unifiedEvent, Origins origin)
+        private void AddFalcoTelemetryMetadata(UnifiedEventData unifiedEvent, Origins origin)
         {
             unifiedEvent.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.Origin, origin.ToString());
             unifiedEvent.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.Action, Origins.GuidedSetup.ToString());
@@ -536,10 +541,10 @@ namespace Meta.XR.Guides.Editor
                 container.Add(new IMGUIContainer(DontShowAgainGUI));
             }
 
-            container.Add(new AddSpace(true).Get());
+            container.Add(new AddSpace(true).Build());
             if (_guideOptions.ShowCloseButton)
             {
-                container.Add(CloseButtonRLDS.Get());
+                container.Add(CloseButtonRLDS.Build());
             }
 
             return container;

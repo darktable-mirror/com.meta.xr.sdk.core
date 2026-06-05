@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -367,7 +368,7 @@ public class OVROverlayCanvas : OVRRayTransformer
 #if UNITY_EDITOR
         if (Application.IsPlaying(this))
         {
-            var evt = new OVRPlugin.UnifiedEventData("canvas_initialized");
+            var evt = new UnifiedEventData("canvas_initialized");
             evt.SetMetadata("manual_redraw", manualRedraw);
             evt.SetMetadata("render_interval", renderInterval);
             evt.SetMetadata("super_sample", superSample);

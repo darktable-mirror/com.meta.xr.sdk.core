@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -84,10 +85,10 @@ namespace Meta.XR.Guides.Editor
 #endif
             Selection.activeObject = PlatformSettings.Instance;
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.GuidedSetup.FalcoEventName.SetAppIdFromGuidedSetup)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.GuidedSetup.FalcoEventName.SetAppIdFromGuidedSetup)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.Send();
             return true;

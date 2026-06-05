@@ -50,7 +50,6 @@ namespace Meta.XR.Editor.PlayCompanion
             EditorApplication.update += Update;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             EditorApplication.quitting += OnEditorQuitting;
-            OVRUserSettingsProvider.Register("Toolbar", OnSettingsGUI);
 
             Update();
         }

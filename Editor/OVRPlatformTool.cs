@@ -109,7 +109,7 @@ namespace Assets.Oculus.VR.Editor
             });
             thread.Start();
 
-            var evt = new OVRPlugin.UnifiedEventData("oculus_platform_tool");
+            var evt = new UnifiedEventData("oculus_platform_tool");
             evt.SetMetadata("action", "show_window");
             evt.Send();
         }
@@ -430,7 +430,7 @@ namespace Assets.Oculus.VR.Editor
             rt.center = new Vector2(EditorGUIUtility.currentViewWidth / 2 - rt.width / 2 - buttonPadding, btnYPos);
             if (GUI.Button(rt, btnTxt, GUI.skin.button))
             {
-                var evt = new OVRPlugin.UnifiedEventData("oculus_platform_tool");
+                var evt = new UnifiedEventData("oculus_platform_tool");
                 evt.SetMetadata("action", "upload");
                 evt.Send();
                 OVRPlatformTool.log = string.Empty;
@@ -555,7 +555,7 @@ namespace Assets.Oculus.VR.Editor
                 OVRPlatformTool.log += fixCount.ToString() + " project setup fix" + (fixCount == 1 ? " was" : "es were") + " found. \n" +
                                        "Please run Meta\\Tools\\Project Setup Tool to review and fix project setup errors. \n" +
                                        "You can uncheck 'Run Project Setup Tool' to bypass project setup errors. \n";
-                var lintEvt = new OVRPlugin.UnifiedEventData("oculus_platform_tool_lint");
+                var lintEvt = new UnifiedEventData("oculus_platform_tool_lint");
                 lintEvt.SetMetadata("fix_count", fixCount);
                 lintEvt.Send();
             }
@@ -617,7 +617,7 @@ namespace Assets.Oculus.VR.Editor
             string platformUtil = toolDataPath + "/ovr-platform-util.exe";
             if (!System.IO.File.Exists(platformUtil))
             {
-                var evt = new OVRPlugin.UnifiedEventData("oculus_platform_tool");
+                var evt = new UnifiedEventData("oculus_platform_tool");
                 evt.SetMetadata("action", "provision_util");
                 evt.Send();
                 EditorCoroutine downloadCoroutine = EditorCoroutine.Start(ProvisionPlatformUtil(platformUtil));

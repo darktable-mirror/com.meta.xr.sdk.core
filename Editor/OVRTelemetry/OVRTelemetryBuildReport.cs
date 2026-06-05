@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using Meta.XR.Telemetry;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 
@@ -27,15 +28,15 @@ internal class OVRTelemetryBuildReport : IPostprocessBuildWithReport
 
     public void OnPostprocessBuild(BuildReport report)
     {
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.Build)
+        var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.Build)
         {
-            isEssential = OVRPlugin.Bool.True,
-            productType = OVRPlugin.ProductType.Editor,
+            isEssential = true,
+            productType = TelemetryProductType.Editor,
             result = report.summary.result switch
             {
-                BuildResult.Failed => OVRPlugin.UnifiedEventResult.FAIL,
-                BuildResult.Cancelled => OVRPlugin.UnifiedEventResult.CANCEL,
-                _ => OVRPlugin.UnifiedEventResult.SUCCESS
+                BuildResult.Failed => UnifiedEventResult.FAIL,
+                BuildResult.Cancelled => UnifiedEventResult.CANCEL,
+                _ => UnifiedEventResult.SUCCESS
             }
         };
         unifiedEvent.Send();

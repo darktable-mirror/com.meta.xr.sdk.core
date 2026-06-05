@@ -18,15 +18,16 @@
  * limitations under the License.
  */
 
-#if USING_XR_COMPOSITION_LAYERS
+#if USING_XR_COMPOSITION_LAYERS && USING_XR_SDK_OPENXR
 using System;
 using UnityEngine;
 using Unity.XR.CompositionLayers.Provider;
+using Unity.XR.CompositionLayers;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using System.Runtime.InteropServices;
 
-namespace Unity.XR.CompositionLayers.Extensions
+namespace Meta.XR
 {
     /// <summary>
     /// Subclass of <see cref="CompositionLayerExtension" /> to support
@@ -44,11 +45,10 @@ namespace Unity.XR.CompositionLayers.Extensions
     [AddComponentMenu("XR/Composition Layers/Extensions/Filtering Settings")]
     public class FilteringSettingsExtension : CompositionLayerExtension
     {
-        const uint XR_FB_composition_layer_settings = 1000204000;
-
-        [Flags]
+        // Keep in sync with XrCompositionLayerSettingsFlagsFB
         public enum XrCompositionLayerSettingsFlags
         {
+            None = 0x0,
             NormalSuperSampling = 0x1,
             QualitySuperSampling = 0x2,
             NormalSharpening = 0x4,
@@ -65,10 +65,10 @@ namespace Unity.XR.CompositionLayers.Extensions
         [Tooltip("The filtering layer flags to apply to this layer")]
         XrCompositionLayerSettingsFlags m_LayerFlags = 0;
 
-        NativeArray<Native.XrCompositionLayerSettingsFB> m_NativeArray;
+        NativeArray<XrCompositionLayerSettingsFB> m_NativeArray;
 
         /// <summary>
-        /// The value used to scale a given color by.
+        /// The value used to determine what filtering operation to perform on the layer.
         /// </summary>
         public XrCompositionLayerSettingsFlags LayerFlags
         {
@@ -82,12 +82,16 @@ namespace Unity.XR.CompositionLayers.Extensions
         /// <returns>the pointer to the composition layer settings extension's native struct.</returns>
         public override unsafe void* GetNativeStructPtr()
         {
-            var openXRStruct = new Native.XrCompositionLayerSettingsFB(XR_FB_composition_layer_settings, null, (ulong)m_LayerFlags);
+            var layerSettings = new XrCompositionLayerSettingsFB
+            {
+                Type = XrCompositionLayerSettingsFB.StructureType,
+                LayerFlags = (XrCompositionLayerSettingsFlagsFB)LayerFlags,
+            };
 
             if (!m_NativeArray.IsCreated)
-                m_NativeArray = new NativeArray<Native.XrCompositionLayerSettingsFB>(1, Allocator.Persistent);
+                m_NativeArray = new NativeArray<XrCompositionLayerSettingsFB>(1, Allocator.Persistent);
 
-            m_NativeArray[0] = openXRStruct;
+            m_NativeArray[0] = layerSettings;
             return m_NativeArray.GetUnsafePtr();
         }
 
@@ -98,24 +102,6 @@ namespace Unity.XR.CompositionLayers.Extensions
 
             if (m_NativeArray.IsCreated)
                 m_NativeArray.Dispose();
-        }
-
-        private static class Native
-        {
-            [StructLayout(LayoutKind.Sequential)]
-            public unsafe struct XrCompositionLayerSettingsFB
-            {
-                public XrCompositionLayerSettingsFB(uint type, void* next, ulong layerFlags)
-                {
-                    this.type = type;
-                    this.next = next;
-                    this.layerFlags = layerFlags;
-                }
-
-                private uint type;
-                private void* next;
-                private ulong layerFlags;
-            }
         }
     }
 }

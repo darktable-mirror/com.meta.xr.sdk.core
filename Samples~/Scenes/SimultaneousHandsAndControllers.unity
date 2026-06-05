@@ -2141,8 +2141,7 @@ PrefabInstance:
         It also indicates whether the controller(s) are in hand or not. Multimodal
         allows users to enjoy the benefits of both worlds: they can use hands for
         immersion, and controllers for accuracy and haptics. When enabled, Multimodal
-        overrides other transition methods, including auto transitions and double
-        tap.'
+        overrides automatic transitions between hands and controllers.'
       objectReference: {fileID: 0}
     - target: {fileID: 5942352356363341370, guid: 90e50ed5da21320459bef15430974648,
         type: 3}

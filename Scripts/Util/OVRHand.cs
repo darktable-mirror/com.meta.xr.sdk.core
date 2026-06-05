@@ -116,7 +116,6 @@ public class OVRHand : MonoBehaviour,
         Invalid = OVRPlugin.MicrogestureType.Invalid,
     }
 
-
     private OVRPlugin.HandTrackingState _handTrackingState = new OVRPlugin.HandTrackingState();
     private bool _handTrackingStateValid;
 
@@ -460,7 +459,6 @@ public class OVRHand : MonoBehaviour,
             ? (MicrogestureType)microgestureValue
             : MicrogestureType.Invalid;
     }
-
 
     /// <summary>
     /// Returns the mesh type associated with this Hand's type.

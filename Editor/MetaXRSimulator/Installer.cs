@@ -48,11 +48,11 @@ namespace Meta.XR.Simulator.Editor
 
         internal static async Task<bool> DownloadXRSimulator(string downloadUrl)
         {
-            var falcoEvent = new OVRPlugin.UnifiedEventData
+            var falcoEvent = new UnifiedEventData
             {
                 eventName = XRSimTelemetryConstants.FalcoEventName.BinariesInstalled,
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.XrSim
+                isEssential = true,
+                productType = TelemetryProductType.XrSim
             };
             falcoEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.XRSimVersion, "2");
 
@@ -61,13 +61,13 @@ namespace Meta.XR.Simulator.Editor
             {
                 EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
                 OnInstalled?.Invoke();
-                falcoEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+                falcoEvent.result = UnifiedEventResult.SUCCESS;
                 falcoEvent.Send();
             }, errorMessage =>
             {
                 EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
                 Utils.LogUtils.DisplayDialogOrError(Name, errorMessage, true);
-                falcoEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                falcoEvent.result = UnifiedEventResult.FAIL;
                 falcoEvent.Send();
             });
         }
@@ -129,49 +129,59 @@ namespace Meta.XR.Simulator.Editor
 
         internal static async Task<bool> DownloadInstaller(string downloadPath, string url, Action<string> onError)
         {
-            int progressId = Utils.LogUtils.CreateProgress(Name, false);
-
-            _webRequest = UnityWebRequest.Get(url);
-            var handler = new DownloadHandlerFile(downloadPath);
-            _webRequest.downloadHandler = handler;
-            handler.removeFileOnAbort = true;
-
-            UnityWebRequestAsyncOperation operation = _webRequest.SendWebRequest();
-            operation.completed += _ =>
+            try
             {
-                Utils.LogUtils.ReportInfo(Name, "finished downloading " + url);
-            };
+                int progressId = Utils.LogUtils.CreateProgress(Name, false);
 
-            while (!_webRequest.downloadHandler.isDone && !operation.isDone)
-            {
-                Progress.Report(progressId, _webRequest.downloadProgress, "Downloading package");
-                await Task.Yield();
-            }
+                _webRequest = UnityWebRequest.Get(url);
+                var handler = new DownloadHandlerFile(downloadPath);
+                _webRequest.downloadHandler = handler;
+                handler.removeFileOnAbort = true;
 
-            if (_webRequest.result != UnityWebRequest.Result.Success)
-            {
-                onError?.Invoke(_webRequest.error);
-                Progress.Finish(progressId, Progress.Status.Failed);
-                return false;
-            }
+                UnityWebRequestAsyncOperation operation = _webRequest.SendWebRequest();
+                operation.completed += _ =>
+                {
+                    Utils.LogUtils.ReportInfo(Name, "finished downloading " + url);
+                };
 
-            Utils.LogUtils.ReportInfo(Name, "Finished saving data to " + downloadPath);
-            _webRequest = null;
-            Progress.Remove(progressId);
+                while (!_webRequest.downloadHandler.isDone && !operation.isDone)
+                {
+                    Progress.Report(progressId, _webRequest.downloadProgress, "Downloading package");
+                    await Task.Yield();
+                }
+
+                if (_webRequest.result != UnityWebRequest.Result.Success)
+                {
+                    onError?.Invoke(_webRequest.error);
+                    Progress.Finish(progressId, Progress.Status.Failed);
+                    return false;
+                }
+
+                Utils.LogUtils.ReportInfo(Name, "Finished saving data to " + downloadPath);
+                _webRequest = null;
+                Progress.Remove(progressId);
 
 #if UNITY_EDITOR_OSX
-            // Remove quarantine attribute from downloaded file
-            {
-                const string Attribute = "com.apple.provenance";
-                var args = Utils.EscapeArguments(new string[] { "-d", Attribute, downloadPath });
-                var (retCode, contents) = Utils.ProcessUtils.ExecuteProcess("xattr", args);
-                if (retCode != 0)
+                // Remove quarantine attribute from downloaded file
                 {
-                    Utils.LogUtils.ReportError(Name, string.Format("failed to remove {0}, retCode={1}, contents={2}", Attribute, retCode, contents));
+                    const string Attribute = "com.apple.provenance";
+                    var args = Utils.EscapeArguments(new string[] { "-d", Attribute, downloadPath });
+                    var (retCode, contents) = Utils.ProcessUtils.ExecuteProcess("xattr", args);
+                    if (retCode != 0)
+                    {
+                        Utils.LogUtils.ReportError(Name, string.Format("failed to remove {0}, retCode={1}, contents={2}", Attribute, retCode, contents));
+                    }
                 }
-            }
 #endif
-            return true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                IssueTracker.TrackWarning(IssueTracker.SDK.XRSim, "xr-simulator-download-failed",
+                    $"[{Name}] Failed to download installer: {ex.Message}");
+                onError?.Invoke($"Failed to download installer: {ex.Message}");
+                return false;
+            }
         }
     }
 }

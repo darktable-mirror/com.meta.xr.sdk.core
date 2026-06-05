@@ -19,6 +19,7 @@
  */
 
 #if USING_XR_SDK_OPENXR
+using System;
 using System.Linq;
 using UnityEditor;
 using UnityEngine.Rendering;
@@ -28,6 +29,7 @@ using UnityEngine.XR.OpenXR.Features.Interactions;
 using UnityEngine.XR.OpenXR.Features.MetaQuestSupport;
 using Meta.XR.Editor.Utils;
 using UnityEditor.XR.OpenXR.Features;
+using UnityEditor.Build;
 
 #if USING_XR_SDK_OCULUS
 using Unity.XR.Oculus;
@@ -38,6 +40,12 @@ namespace Meta.XR.Editor.Rules
     [InitializeOnLoad]
     internal static class OpenXRSettings
     {
+        private static BuildTargetGroup[] BuildTargetsToCheck =
+        {
+            BuildTargetGroup.Android,
+            BuildTargetGroup.Standalone
+        };
+
         static OpenXRSettings()
         {
 #if USING_XR_MANAGEMENT
@@ -124,10 +132,10 @@ namespace Meta.XR.Editor.Rules
                 fixMessage: "MetaQuestFeature.optimizeBufferDiscards = true"
             );
 
-            // [Recommended] Include Oculus Touch Interaction Profile for full OVRInput support
+            // [Required] Include Oculus Touch Interaction Profile for full OVRInput support
             OVRProjectSetup.AddTask(
                 conditionalValidity: buildTargetGroup => GetSettings(buildTargetGroup) != null &&
-                    PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.XRPluginManagementPackageName),
+                    PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.UnityXRPackage),
                 level: OVRProjectSetup.TaskLevel.Required,
                 group: OVRProjectSetup.TaskGroup.Packages,
                 isDone: buildTargetGroup =>
@@ -155,13 +163,93 @@ namespace Meta.XR.Editor.Rules
                     var touchFeature = settings.GetFeature<OculusTouchControllerProfile>();
                     if (touchFeature == null)
                     {
-                        throw new OVRConfigurationTaskException("Could not find Oculus Touch Interaction Profile in OpenXR settings");
+                        throw new InvalidOperationException("Could not find Oculus Touch Interaction Profile in OpenXR settings");
                     }
                     touchFeature.enabled = true;
                     FeatureHelpers.RefreshFeatures(buildTargetGroup);
                 },
                 fixMessage: "Add Oculus Touch Controller Interaction Profile"
             );
+
+#if UNITY_OPENXR_PLUGIN_1_15_0_OR_NEWER && UNITY_6000_1_OR_NEWER
+            OVRProjectSetup.AddTask(
+                conditionalValidity: buildTargetGroup => GetSettings(buildTargetGroup) != null &&
+                    PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.XRPluginManagementPackageName),
+                platform: BuildTargetGroup.Android,
+                level: OVRProjectSetup.TaskLevel.Required,
+                group: OVRProjectSetup.TaskGroup.Packages,
+                isDone: buildTargetGroup =>
+                {
+                    var settings = GetSettings(buildTargetGroup);
+                    var metaSpaceWarpFeature = settings.GetFeature<MetaXRSpaceWarp>();
+
+                    if (metaSpaceWarpFeature == null)
+                        throw new InvalidOperationException("Could not find the Meta XR Space Warp feature");
+
+                    return !metaSpaceWarpFeature.enabled;
+                },
+                message: "It's recommended to use Application SpaceWarp feature over Meta XR Space Warp feature to avoid conflicts.",
+                fix: buildTargetGroup =>
+                {
+                    var settings = GetSettings(buildTargetGroup);
+
+                    var metaSpaceWarpFeature = settings.GetFeature<MetaXRSpaceWarp>();
+                    var spaceWarpFeature = settings.GetFeature<SpaceWarpFeature>();
+
+                    if (metaSpaceWarpFeature == null)
+                        throw new InvalidOperationException("Could not find the Meta XR Space Warp feature");
+                    if (spaceWarpFeature == null)
+                        throw new InvalidOperationException("Could not find the Application Space Warp feature");
+
+                    metaSpaceWarpFeature.enabled = false;
+                    spaceWarpFeature.enabled = true;
+
+                    FeatureHelpers.RefreshFeatures(buildTargetGroup);
+                },
+                fixMessage: "Enable Application SpaceWarp and disable Meta XR Space Warp"
+            );
+#endif
+
+#if UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER
+            // [Recommended] Enable Oculus Touch Controller Proximity if the Oculus Touch Controller Interaction Profile is enabled
+            OVRProjectSetup.AddTask(
+                conditionalValidity: buildTargetGroup => GetSettings(buildTargetGroup) != null &&
+                    PackageList.IsPackageInstalled(OVRProjectSetupXRTasks.XRPluginManagementPackageName),
+                level: OVRProjectSetup.TaskLevel.Recommended,
+                group: OVRProjectSetup.TaskGroup.Compatibility,
+                isDone: buildTargetGroup =>
+                {
+                    var settings = GetSettings(buildTargetGroup);
+
+                    var touchFeatureEnabled = settings.GetFeatures<OpenXRInteractionFeature>()
+                        .Any(f => f is OculusTouchControllerProfile && f.enabled);
+                    var proximityFeatureEnabled = settings.GetFeatures<OpenXRInteractionFeature>()
+                        .Any(f => f is OculusTouchControllerProximityProfile && f.enabled);
+                    return touchFeatureEnabled == proximityFeatureEnabled;
+                },
+                message: "Recommended to enable Oculus Touch Controller Proximity Interaction when using the Oculus Touch Controller Interaction Profile and vice versa.",
+                fix: buildTargetGroup =>
+                {
+                    var settings = GetSettings(buildTargetGroup);
+
+                    var proximityFeature = settings.GetFeature<OculusTouchControllerProximityProfile>();
+                    if (proximityFeature == null)
+                    {
+                        throw new InvalidOperationException("Could not find Oculus Touch Controller Proximity Profile in OpenXR settings");
+                    }
+                    proximityFeature.enabled = true;
+
+                    var touchFeature = settings.GetFeature<OculusTouchControllerProfile>();
+                    if (touchFeature == null)
+                    {
+                        throw new InvalidOperationException("Could not find Oculus Touch Interaction Profile in OpenXR settings");
+                    }
+                    touchFeature.enabled = true;
+                    FeatureHelpers.RefreshFeatures(buildTargetGroup);
+                },
+                fixMessage: "Enable Oculus Touch Controller Proximity Profile"
+            );
+#endif
         }
 
         private static UnityEngine.XR.OpenXR.OpenXRSettings GetSettings(BuildTargetGroup buildTargetGroup)

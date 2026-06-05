@@ -100,6 +100,14 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             Debug.Log(text);
         }
 
+        /// <summary>
+        /// Instance method wrapper for Logger. Use this when adding persistent listeners via the Inspector or editor scripts.
+        /// </summary>
+        public void Log(string text)
+        {
+            Logger(text);
+        }
+
         public void SendPrompt()
         {
             var text = !string.IsNullOrWhiteSpace(userInput) ? userInput : GetDefaultPromptText(selectedPrompt);

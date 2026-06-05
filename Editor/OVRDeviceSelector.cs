@@ -33,7 +33,8 @@ public class OVRDeviceSelector
     {
         get
         {
-            return isTargetDeviceQuest || isTargetDeviceQuest2 || isTargetDeviceQuestPro || isTargetDeviceQuest3 || isTargetDeviceQuest3S;
+            return isTargetDeviceQuest || isTargetDeviceQuest2 || isTargetDeviceQuestPro || isTargetDeviceQuest3 || isTargetDeviceQuest3S
+            ;
         }
     }
 
@@ -115,4 +116,5 @@ public class OVRDeviceSelector
 #endif
         }
     }
+
 }

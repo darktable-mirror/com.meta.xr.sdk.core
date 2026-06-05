@@ -25,7 +25,9 @@ using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Telemetry;
 using UnityEditor;
+using AnnotationType = Meta.XR.Editor.UserInterface.Telemetry.AnnotationType;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
@@ -262,7 +264,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             var showAll = tag == CustomTagBehaviors.AllBuildingBlocksCollection;
             var blockCount = showAll
-                ? _blockList.Count
+                ? _blockList.Count(block => !block.Hidden)
                 : (_collectionBlockCounts != null && _collectionBlockCounts.TryGetValue(tag, out var cachedCount) ? cachedCount : 0);
             var subLabelText = showAll ? $"{blockCount} blocks" : $"{blockCount} recommended blocks";
             GUILayout.Label(subLabelText, Styles.GUIStyles.CollectionAreaStatusStyle);
@@ -365,10 +367,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             // Transitioning from detail page to grid
             if (CurrentTargetPage == Page.Details && targetPage == Page.Grid)
             {
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageClose)
+                var unifiedEvent = new UnifiedEventData(FalcoEventName.PageClose)
                 {
-                    isEssential = OVRPlugin.Bool.False,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = false,
+                    productType = TelemetryProductType.Editor
                 };
                 unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
                 unifiedEvent.SetMetadata(AnnotationType.OriginData, originData.Id);
@@ -381,10 +383,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             // Transitioning from collections page to grid
             if (CurrentTargetPage == Page.Collections && targetPage == Page.Grid)
             {
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageOpen)
+                var unifiedEvent = new UnifiedEventData(FalcoEventName.PageOpen)
                 {
-                    isEssential = OVRPlugin.Bool.True,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = true,
+                    productType = TelemetryProductType.Editor
                 };
                 unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
                 unifiedEvent.SetMetadata(AnnotationType.Action, Origins.BlockGrid.ToString());
@@ -403,10 +405,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             _selectedBlock = blockData;
             _variantInitialized = false;
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(FalcoEventName.PageOpen)
+            var unifiedEvent = new UnifiedEventData(FalcoEventName.PageOpen)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(AnnotationType.Origin, origin.ToString());
             unifiedEvent.SetMetadata(AnnotationType.OriginData, originData.Id);

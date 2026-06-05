@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using Meta.XR.BuildingBlocks.AIBlocks;
 using Meta.XR.BuildingBlocks.Editor;
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEngine;
 
 namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
@@ -33,7 +34,7 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         [Variant(
             Behavior = VariantAttribute.VariantBehavior.Parameter,
             Description = "Whether debugging tools should also be included.",
-            Default = false,
+            Default = true,
             Order = 110
         )]
         public bool includeDebuggingTools;
@@ -42,12 +43,38 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
         {
             var installedObjects = await base.InstallAsync(block, selectedGameObject);
 
-            if (!includeDebuggingTools)
+            if (includeDebuggingTools)
+            {
+                ConnectEventLoggers(installedObjects);
+            }
+            else
             {
                 DisableDebuggingTools(installedObjects);
             }
 
             return installedObjects;
+        }
+
+        private static void ConnectEventLoggers(IEnumerable<GameObject> objects)
+        {
+            foreach (var @object in objects)
+            {
+                var llmAgent = @object.GetComponent<LlmAgent>();
+                if (llmAgent == null)
+                {
+                    continue;
+                }
+
+                var llmAgentHelper = @object.GetComponent<LlmAgentHelper>();
+                if (llmAgentHelper == null)
+                {
+                    continue;
+                }
+
+                UnityEventTools.AddPersistentListener(llmAgent.onPromptSent, llmAgentHelper.Log);
+                UnityEventTools.AddPersistentListener(llmAgent.onResponseReceived, llmAgentHelper.Log);
+                EditorUtility.SetDirty(@object);
+            }
         }
 
         private static void DisableDebuggingTools(IEnumerable<GameObject> objects)

@@ -28,8 +28,10 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.ImmersiveDebugger")]
 [assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.RemoteContent")]
-[assembly: InternalsVisibleTo("Meta.MCPBridge")]
-[assembly: InternalsVisibleTo("Meta.MCPBridge.Editor")]
+[assembly: InternalsVisibleTo("meta.xr.ai.mcpbridge")]
+[assembly: InternalsVisibleTo("meta.xr.ai.agentbridge.editor")]
+[assembly: InternalsVisibleTo("meta.xr.ai.mcpbridge.editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
 [assembly: InternalsVisibleTo("meta.xr.mrutilitykit.tests")]
+[assembly: InternalsVisibleTo("Meta.XR.ImmersiveDebugger.DevAgent.Editor")]
 

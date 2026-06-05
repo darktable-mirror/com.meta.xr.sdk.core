@@ -28,6 +28,13 @@ using System.Text;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Telemetry;
 using UnityEditor;
+#if USING_XR_MANAGEMENT
+using UnityEditor.XR.Management;
+#endif
+#if USING_XR_SDK_OCULUS
+using Unity.XR.Oculus;
+#endif
+
 using UnityEngine;
 
 namespace Oculus.VR.Editor
@@ -86,6 +93,63 @@ namespace Oculus.VR.Editor
             }
 
             CheckHasPluginChanged(false);
+#if UNITY_6000_0_OR_NEWER
+            CheckOculusXREnabled();
+#endif
+        }
+
+        private static void CheckOculusXREnabled()
+        {
+#if USING_XR_MANAGEMENT
+#if USING_XR_SDK_OCULUS
+            if (Application.isBatchMode) return;
+            if (Application.isPlaying) return;
+
+            var buildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(buildTargetGroup);
+            if (settings == null) return;
+            if (settings.Manager == null) return;
+
+            const string key = "meta.user_has_seen_oculus_deprecation_warning";
+
+            if (SessionState.GetBool(key, false))
+            {
+                // User has already seen the prompt this session.
+                return;
+            }
+
+            if (OVRProjectConfig.CachedProjectConfig.useOpenXRPromptDeclined)
+            {
+                // User permanently declined
+                return;
+            }
+
+            if (settings.Manager.activeLoaders.OfType<OculusLoader>().Any())
+            {
+                var response = EditorUtility.DisplayDialog(
+                    "Oculus Plugin Deprecation",
+                    "This project is using the deprecated Oculus XR plugin provider. " +
+                    "While this plugin may continue to work, it is not officially supported by Meta in Unity 6 or later. " +
+                    "We strongly recommended that you migrate to the OpenXR plugin provider.\n\n" +
+                    "Go to Project Settings > XR Plugin Management to disable Oculus and enable OpenXR.",
+                    ok: "Ok",
+                    cancel: "Dismiss forever (for this project)");
+
+                SessionState.SetBool(key, true);
+
+                if (response)
+                {
+                    SettingsService.OpenProjectSettings("Project/XR Plug-in Management");
+                }
+                else // "don't remind me again" selected
+                {
+                    var projectConfig = OVRProjectConfig.CachedProjectConfig;
+                    projectConfig.useOpenXRPromptDeclined = true;
+                    OVRProjectConfig.CommitProjectConfig(projectConfig);
+                }
+            }
+#endif
+#endif
         }
 
         private static void CheckHasPluginChanged(bool forceUpdate)

@@ -197,52 +197,29 @@ namespace Meta.XR.Editor.UserInterface
             return items;
         }
 
-        private struct Link
-        {
-            public string Content { get; set; }
-            public string Url { get; set; }
-        }
-
         private struct MarkdownContent
         {
             public string Text { get; set; }
-            public IEnumerable<Link> Links { get; set; }
             public bool IsTitle { get; set; }
             public int TitleLevel { get; set; }
         }
 
         private static IEnumerable<IUserInterfaceItem> GetGuideItemsForMarkdownContent(MarkdownContent content)
         {
-            if (!string.IsNullOrEmpty(content.Text))
-            {
-                if (content.IsTitle)
-                {
-                    // Use different styles or sizes for titles based on TitleLevel
-                    var style = content.TitleLevel == 1
-                        ? Styles.GUIStyles.TitleStyle
-                        : Styles.GUIStyles.SubtitleStyle;
-                    yield return new Label(content.Text, style);
-                }
-                else
-                {
-                    yield return new Label(content.Text, Styles.GUIStyles.RichTextStyle);
-                }
-            }
+            if (string.IsNullOrEmpty(content.Text))
+                yield break;
 
-            foreach (var link in content.Links)
+            if (content.IsTitle)
             {
-                yield return new LinkLabel(new GUIContent(link.Content), link.Url, null);
-                yield return new AddSpace(5);
+                var style = content.TitleLevel == 1
+                    ? Styles.GUIStyles.TitleStyle
+                    : Styles.GUIStyles.SubtitleStyle;
+                yield return new Label(content.Text, style);
             }
-        }
-
-        private static string CapitalizeFirstLetter(string input)
-        {
-            if (string.IsNullOrEmpty(input))
+            else
             {
-                return input;
+                yield return new Label(content.Text, Styles.GUIStyles.RichTextStyle);
             }
-            return char.ToUpper(input[0]) + input.Substring(1);
         }
 
         private static MarkdownContent ParseMarkdownLine(string line)
@@ -266,31 +243,9 @@ namespace Meta.XR.Editor.UserInterface
                 line = "• " + line[2..];
             }
 
-            var links = new List<Link>();
-            const string pattern = @"\[(.*?)\]\((.*?)\)(\.)?";
-            var originalLine = line;
-            line = Regex.Replace(line, pattern, match =>
-            {
-                var trailingDot = match.Groups[3].Value;
-                var link = new Link
-                {
-                    Content = CapitalizeFirstLetter(match.Groups[1].Value) + trailingDot,
-                    Url = match.Groups[2].Value
-                };
-                links.Add(link);
-                var matchEndIndex = match.Index + match.Length;
-                if (matchEndIndex == originalLine.Length || originalLine[matchEndIndex] == '\n')
-                {
-                    // Erase the link from the string if it's at the end of a line
-                    return string.Empty;
-                }
-
-                return link.Content + trailingDot;
-            });
             return new MarkdownContent
             {
                 Text = line,
-                Links = links,
                 IsTitle = isTitle,
                 TitleLevel = titleLevel
             };
@@ -318,6 +273,11 @@ namespace Meta.XR.Editor.UserInterface
             const string strikethroughPattern = @"~~(.+?)~~";
             const string strikethroughReplacement = "<s>$1</s>";
             input = Regex.Replace(input, strikethroughPattern, strikethroughReplacement);
+
+            const string linkPattern = @"\[(.*?)\]\((.*?)\)";
+            const string linkReplacement = "<color=#6B9BFA><link=\"$2\"><u>$1</u></link></color>";
+            input = Regex.Replace(input, linkPattern, linkReplacement);
+
             return input;
         }
 
@@ -325,7 +285,6 @@ namespace Meta.XR.Editor.UserInterface
         {
             var lines = markdown.Split('\n').ToList();
 
-            // Remove leading empty lines
             while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0]))
             {
                 lines.RemoveAt(0);
@@ -336,7 +295,6 @@ namespace Meta.XR.Editor.UserInterface
                 lines[0] = lines[0].TrimStart();
             }
 
-            // Remove trailing empty lines
             while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
             {
                 lines.RemoveAt(lines.Count - 1);
@@ -346,9 +304,6 @@ namespace Meta.XR.Editor.UserInterface
         }
     }
 
-    /// <summary>
-    /// A UI item that displays a code block with monospace font and bordered box styling.
-    /// </summary>
     internal class CodeBlockItem : IUserInterfaceItem
     {
         private readonly string _code;
@@ -368,7 +323,7 @@ namespace Meta.XR.Editor.UserInterface
         {
         }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             if (_visualElement != null)
             {
@@ -391,7 +346,6 @@ namespace Meta.XR.Editor.UserInterface
             var codeLabel = new UnityEngine.UIElements.Label(_code);
             codeLabel.AddToClassList(Props.CodeBlock.Label);
 
-            // Try to load Inconsolata font, fall back to system monospace fonts
             var monoFont = Resources.Load<Font>("Inconsolata");
             if (monoFont != null)
             {
@@ -399,22 +353,18 @@ namespace Meta.XR.Editor.UserInterface
             }
             else
             {
-                // Fallback to system monospace font (Consolas on Windows, Menlo on Mac)
                 codeLabel.style.unityFont = Font.CreateDynamicFontFromOSFont(
                     new[] { "Consolas", "Menlo", "Monaco", "Courier New" }, 12);
             }
 
-            // Create toast notification (hidden by default)
             var toast = new UnityEngine.UIElements.Label("Code copied!");
             toast.AddToClassList(Props.Toast.Root);
 
-            // Create copy button (hidden by default, shown on hover)
             var copyButton = new UnityEngine.UIElements.Button();
             copyButton.clicked += () =>
             {
                 GUIUtility.systemCopyBuffer = _code;
 
-                // Show toast and hide after 2 seconds
                 toast.style.display = DisplayStyle.Flex;
                 copyButton.style.display = DisplayStyle.None;
                 toast.schedule.Execute(() =>
@@ -427,7 +377,6 @@ namespace Meta.XR.Editor.UserInterface
             copyButton.style.backgroundImage = new StyleBackground(Background.FromTexture2D(UIStyles.Contents.CopyIcon.Image as Texture2D));
             copyButton.tooltip = "Copy code";
 
-            // Show/hide copy button on hover
             codeContainer.RegisterCallback<MouseEnterEvent>(evt =>
             {
                 copyButton.style.display = DisplayStyle.Flex;

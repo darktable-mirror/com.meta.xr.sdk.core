@@ -18,10 +18,7 @@
  * limitations under the License.
  */
 
-using System;
-using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
-using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
@@ -43,20 +40,8 @@ namespace Meta.XR.Guides.Editor.About
         private static int? _version;
         public static int? Version => _version ??= PackageList.ComputePackageVersion(PackageName);
 
-        private static WelcomePage _welcomePage;
-        private static WelcomePage WelcomePage => _welcomePage ??= new WelcomePage();
-
         private static Onboarding _onboarding;
         private static Onboarding Onboarding => _onboarding ??= new Onboarding();
-
-        private const string RampUpKey = "onboarding_new_flow";
-        public static Task<bool> UseOnboarding() =>
-                FeatureRampUpManager.GetFeatureKeysResultAsync(RampUpKey, false);
-        public static async Task<GuidedSetup> FetchGuide()
-        {
-            var useNewFlow = await UseOnboarding();
-            return useNewFlow ? Onboarding : WelcomePage;
-        }
 
         private static int? _latestVersion;
         public static int? LatestVersion => _latestVersion ??= PackageList.ComputeLatestPackageVersion(PackageName);
@@ -110,10 +95,9 @@ namespace Meta.XR.Guides.Editor.About
             };
         }
 
-        private static async void ShowGuide(Origins origin, bool forceShow = false)
+        private static void ShowGuide(Origins origin, bool forceShow = false)
         {
-            var guide = await FetchGuide();
-            guide.ShowWindow(origin, forceShow);
+            Onboarding.ShowWindow(origin, forceShow);
         }
 
         private static (string, Color?) ComputeInfoText()

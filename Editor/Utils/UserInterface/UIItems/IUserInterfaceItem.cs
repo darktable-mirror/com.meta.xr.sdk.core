@@ -33,11 +33,11 @@ namespace Meta.XR.Editor.UserInterface
         public bool Hide { get; set; }
 
         /// <summary>
-        /// Creates a UIToolkit VisualElement representation of this UI item.
+        /// Builds a UIToolkit VisualElement representation of this UI item.
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A VisualElement containing the UI item</returns>
-        public VisualElement Get();
+        public VisualElement Build();
     }
 
     internal interface IDynamicColorItem

@@ -24,7 +24,9 @@ using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.ToolingSupport;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static Meta.XR.Editor.UserInterface.Styles;
+using Label = Meta.XR.Editor.UserInterface.Label;
 
 namespace Meta.XR.Guides.Editor
 {
@@ -50,7 +52,8 @@ namespace Meta.XR.Guides.Editor
             var options = new GuideWindow.GuideOptions(GuideWindow.DefaultOptions)
             {
                 MinWindowHeight = ContentHeight,
-                MaxWindowHeight = ContentHeight
+                MaxWindowHeight = ContentHeight,
+                UseUIToolkit = true
             };
 
             _window = Guide.Create(title, description, this, options);
@@ -69,6 +72,12 @@ namespace Meta.XR.Guides.Editor
             _infoLabel = new Icon(GuideStyles.Contents.InfoIcon, Colors.OffWhite,
                 "This feature doesn't require App ID to be filled in at the development stage to test in headset, " +
                 "as long as your account used to test in headset is in a verified developer org.");
+            var infoElement = _infoLabel.Build();
+            var label = infoElement.Q<UnityEngine.UIElements.Label>();
+            if (label != null)
+            {
+                label.style.whiteSpace = UnityEngine.UIElements.WhiteSpace.Normal;
+            }
             return new List<IUserInterfaceItem>
             {
                 _infoLabel,
@@ -79,7 +88,7 @@ namespace Meta.XR.Guides.Editor
                 new AddSpace(),
                 VerifyOrg(),
                 new AddSpace(),
-                TestUserAddUI(),
+                TestUserAddUI()
             };
         }
 

@@ -82,7 +82,7 @@ namespace Meta.XR.Editor.UserInterface
         /// Creates a UIToolkit ProgressBar element with RLDS styling applied.
         /// </summary>
         /// <returns>A VisualElement containing the styled progress bar</returns>
-        public VisualElement Get()
+        public VisualElement Build()
         {
             var container = new VisualElement();
             container.AddToClassList(Props.ProgressBar.Container);

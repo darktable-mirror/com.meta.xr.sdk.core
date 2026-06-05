@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine.UIElements;
 
@@ -105,16 +106,16 @@ namespace Meta.XR.Editor.ToolingSupport
 
         private void OnOpened()
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.PageOpen)
+            var unifiedEvent = new UnifiedEventData(UserInterface.Telemetry.FalcoEventName.PageOpen)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString());
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.OriginData, (string)null);
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, SelfOrigin.ToString());
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, _tool.Id);
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.SetMetadata(AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString());
+            unifiedEvent.SetMetadata(AnnotationType.OriginData, (string)null);
+            unifiedEvent.SetMetadata(AnnotationType.Action, SelfOrigin.ToString());
+            unifiedEvent.SetMetadata(AnnotationType.ActionData, _tool.Id);
+            unifiedEvent.SetMetadata(AnnotationType.ActionType, GetType().Name);
             unifiedEvent.Send();
 
             _expectedSettingProvider = this;
@@ -124,16 +125,16 @@ namespace Meta.XR.Editor.ToolingSupport
 
         private void OnClosed()
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.PageClose)
+            var unifiedEvent = new UnifiedEventData(UserInterface.Telemetry.FalcoEventName.PageClose)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString());
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.OriginData, (string)null);
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, SelfOrigin.ToString());
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionData, _tool.Id);
-            unifiedEvent.SetMetadata(Telemetry.AnnotationType.ActionType, GetType().Name);
+            unifiedEvent.SetMetadata(AnnotationType.Origin, (_lastOrigin ?? SelfOrigin).ToString());
+            unifiedEvent.SetMetadata(AnnotationType.OriginData, (string)null);
+            unifiedEvent.SetMetadata(AnnotationType.Action, SelfOrigin.ToString());
+            unifiedEvent.SetMetadata(AnnotationType.ActionData, _tool.Id);
+            unifiedEvent.SetMetadata(AnnotationType.ActionType, GetType().Name);
             unifiedEvent.Send();
 
             _lastOrigin = null;

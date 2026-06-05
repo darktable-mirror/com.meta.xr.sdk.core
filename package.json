@@ -1,7 +1,7 @@
 {
   "name": "com.meta.xr.sdk.core",
   "displayName": "Meta XR Core SDK",
-  "version": "201.0.0",
+  "version": "203.0.0",
   "description": "Meta XR Core SDK package provides the latest features to create immersive experiences for Meta XR devices.",
   "samples": [
     {
@@ -25,8 +25,8 @@
       "path": "Samples~/Haptics"
     }
   ],
-  "unity": "2022.3",
-  "unityRelease": "15f1",
+  "unity": "6000.0",
+  "unityRelease": "66f2",
   "author": {
     "name": "Meta Platforms, Inc.",
     "url": "https://developers.meta.com/horizon/"
@@ -36,10 +36,10 @@
   "keywords": [
     "Oculus",
     "Quest",
-    "XR",
     "SDK",
-    "Utilities",
-    "Meta"
+    "XR",
+    "Meta",
+    "Utilities"
   ],
   "dependencies": {
     "com.unity.modules.audio": "1.0.0",

@@ -19,15 +19,16 @@
  */
 
 using Meta.XR.MetaWand.Editor.API;
+using Meta.XR.Telemetry;
 using UnityEngine;
 
 namespace Meta.XR.MetaWand.Editor.Telemetry
 {
     internal static class MetaWandEvent
     {
-        public static bool SendMetaWandEvent(this OVRPlugin.UnifiedEventData eventData)
+        public static bool SendMetaWandEvent(this UnifiedEventData eventData)
         {
-            eventData.productType = OVRPlugin.ProductType.MetaWand;
+            eventData.productType = TelemetryProductType.MetaWand;
             eventData.machine_oculus_user_id = MetaWandAuth.Data.IsValid ? MetaWandAuth.Data.ProfileId : 0;
             eventData.SetMetadata("app_version", Application.version);
             eventData.SetMetadata("device_os", SystemInfo.operatingSystem);

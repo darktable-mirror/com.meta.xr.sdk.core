@@ -102,7 +102,7 @@ namespace Meta.XR.MetaWand.Editor
                         Action = CloseWindow
                     }, Props.ButtonVariant.Secondary, Props.ButtonSize.Small)
                 }, Props.Flexbox.AlignEnd);
-            closeButton.Get().AddToClassList(Props.Flexbox.SelfStretch);
+            closeButton.Build().AddToClassList(Props.Flexbox.SelfStretch);
 
             var element = new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical,
                 new List<IUserInterfaceItem>
@@ -130,7 +130,7 @@ namespace Meta.XR.MetaWand.Editor
                         }, Props.Flexbox.Grow1, Props.Flexbox.AlignCenter),
                     new AddSpace(true),
                     closeButton
-                }, Props.Utilities.MarginLG, Props.Flexbox.Grow1).Get();
+                }, Props.Utilities.MarginLG, Props.Flexbox.Grow1).Build();
 
             root.Add(element);
         }

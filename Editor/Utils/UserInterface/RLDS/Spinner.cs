@@ -121,7 +121,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         /// The animation starts automatically when this method is called.
         /// </summary>
         /// <returns>A VisualElement containing the styled animated spinner</returns>
-        public VisualElement Get()
+        public VisualElement Build()
         {
             if (_container != null)
             {

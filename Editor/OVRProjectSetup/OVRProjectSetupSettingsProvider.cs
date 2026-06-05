@@ -22,6 +22,7 @@ using System.Globalization;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.ToolingSupport;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine.UIElements;
 
@@ -95,10 +96,10 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
         _activated = true;
         _lastOrigin = _lastOrigin ?? Origins.ProjectSettings;
 
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Open)
+        var unifiedEvent = new UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Open)
         {
-            isEssential = OVRPlugin.Bool.True,
-            productType = OVRPlugin.ProductType.Pst
+            isEssential = true,
+            productType = TelemetryProductType.Pst
         };
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
             EditorUserBuildSettings.selectedBuildTargetGroup.ToString());
@@ -124,10 +125,10 @@ internal class OVRProjectSetupSettingsProvider : SettingsProvider
 
         OVRProjectSetup.ProcessorQueue.OnProcessorCompleted -= OnProcessorCompleted;
 
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Close)
+        var unifiedEvent = new UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Close)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Pst
+            isEssential = false,
+            productType = TelemetryProductType.Pst
         };
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,
             EditorUserBuildSettings.selectedBuildTargetGroup.ToString());

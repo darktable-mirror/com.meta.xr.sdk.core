@@ -111,7 +111,7 @@ namespace Meta.XR.Editor.UserInterface
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A VisualElement containing the styled text field</returns>
-        public virtual VisualElement Get()
+        public virtual VisualElement Build()
         {
             if (_visualElement != null)
             {

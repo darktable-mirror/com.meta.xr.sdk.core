@@ -19,7 +19,7 @@
  */
 
 
-#if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || (UNITY_ANDROID && !UNITY_EDITOR))
+#if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_EDITOR_LINUX || UNITY_STANDALONE_LINUX || (UNITY_ANDROID && !UNITY_EDITOR))
 #define OVRPLUGIN_UNSUPPORTED_PLATFORM
 #endif
 
@@ -467,6 +467,63 @@ partial class OVRPlugin
             }
 #endif
             return OVRP_1_86_0.ovrp_IsMultimodalHandsControllersSupported(ref enabled);
+        }
+
+        public static Result ovrp_GetSystemDisplayFrequency2(out float systemDisplayFrequency)
+        {
+#if USING_XR_SDK_OPENXR
+            if (MetaXRFeature.TryGet(out var feature))
+            {
+                return feature.ovrp_GetSystemDisplayFrequency2(out systemDisplayFrequency);
+            }
+#endif
+            return OVRP_1_21_0.ovrp_GetSystemDisplayFrequency2(out systemDisplayFrequency);
+        }
+
+        public static Result ovrp_GetSystemDisplayAvailableFrequencies(
+            IntPtr systemDisplayAvailableFrequencies,
+            ref int numFrequencies)
+        {
+#if USING_XR_SDK_OPENXR
+            if (MetaXRFeature.TryGet(out var feature))
+            {
+                return feature.ovrp_GetSystemDisplayAvailableFrequencies(systemDisplayAvailableFrequencies, ref numFrequencies);
+            }
+#endif
+            return OVRP_1_21_0.ovrp_GetSystemDisplayAvailableFrequencies(systemDisplayAvailableFrequencies, ref numFrequencies);
+        }
+
+        public static Result ovrp_SetSystemDisplayFrequency(float requestedFrequency)
+        {
+#if USING_XR_SDK_OPENXR
+            if (MetaXRFeature.TryGet(out var feature))
+            {
+                return feature.ovrp_SetSystemDisplayFrequency(requestedFrequency);
+            }
+#endif
+            return OVRP_1_21_0.ovrp_SetSystemDisplayFrequency(requestedFrequency);
+        }
+
+        public static Result ovrp_SetClientColorDesc(ColorSpace colorSpace)
+        {
+#if USING_XR_SDK_OPENXR
+            if (MetaXRFeature.TryGet(out var feature))
+            {
+                return feature.ovrp_SetClientColorDesc(colorSpace);
+            }
+#endif
+            return OVRP_1_49_0.ovrp_SetClientColorDesc(colorSpace);
+        }
+
+        public static Result ovrp_GetHmdColorDesc(ref ColorSpace colorSpace)
+        {
+#if USING_XR_SDK_OPENXR
+            if (MetaXRFeature.TryGet(out var feature))
+            {
+                return feature.ovrp_GetHmdColorDesc(ref colorSpace);
+            }
+#endif
+            return OVRP_1_49_0.ovrp_GetHmdColorDesc(ref colorSpace);
         }
     }
 #endif // !OVRPLUGIN_UNSUPPORTED_PLATFORM

@@ -65,12 +65,6 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal override bool IsInstallable => HasInstallationRoutine && base.IsInstallable;
 
-        internal override bool IsInteractable =>
-            HasInstallationRoutine
-            && !HasMissingDependencies
-            && !IsSingletonAndAlreadyPresent
-            && !Utils.IsApplicationPlaying();
-
         internal static IEnumerable<BlockData> ComputeOptionalDependencies(InterfaceBlockData blockData, VariantsSelection selection)
         {
             var possibleRoutines = selection.ComputePossibleInstallationRoutines(blockData);

@@ -35,6 +35,7 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
     private static Dictionary<(OVRConfigurationTask, BuildTargetGroup), bool> _lastSeenDoneValues =
         new Dictionary<(OVRConfigurationTask, BuildTargetGroup), bool>();
 
+
     protected override Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>> OpenTasksFilter =>
         (Func<IEnumerable<OVRConfigurationTask>, List<OVRConfigurationTask>>)(tasksToFilter => tasksToFilter
             .Where(task => !task.IsIgnored(BuildTargetGroup))
@@ -92,10 +93,10 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
 
     protected override void ProcessTask(OVRConfigurationTask task)
     {
-        var changedState = CacheDoneResultAndReturnIfStateChanged(task, BuildTargetGroup);
+        var (isDone, changedState) = CacheDoneResultAndReturnIfStateChanged(task, BuildTargetGroup);
         Summary.AddTask(task, changedState);
 
-        if (task.IsDone(BuildTargetGroup))
+        if (isDone)
         {
             return;
         }
@@ -107,7 +108,7 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
         }
     }
 
-    private static bool CacheDoneResultAndReturnIfStateChanged(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
+    private static (bool isDone, bool didStateChange) CacheDoneResultAndReturnIfStateChanged(OVRConfigurationTask task, BuildTargetGroup buildTargetGroup)
     {
         var currentResult = task.IsDone(buildTargetGroup);
         var didStateChange = true;
@@ -116,7 +117,7 @@ internal class OVRConfigurationTaskUpdater : OVRConfigurationTaskProcessor
             didStateChange = currentResult != lastSeenResult;
         }
         _lastSeenDoneValues[(task, buildTargetGroup)] = currentResult;
-        return didStateChange;
+        return (currentResult, didStateChange);
     }
 
     public override void Complete()

@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
@@ -113,10 +114,10 @@ public class OVRSceneChangeListener
         {
             double sessionDuration = lastActivityEventTime - SessionState.GetFloat(SessionStartTimeKey, 0f);
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneInactivity)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneInactivity)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture));
             unifiedEvent.Send();
@@ -132,10 +133,10 @@ public class OVRSceneChangeListener
         // If the session is not active, trigger a new session started event
         if (!SessionState.GetBool(IsActiveSessionKey, false))
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneActivity)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneActivity)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.Send();
 
@@ -171,19 +172,19 @@ public class OVRSceneChangeListener
             // Send inactivity event for explicit close/end of session
             // Include full session duration without subtracting timeout
             double sessionDuration = EditorApplication.timeSinceStartup - SessionState.GetFloat(SessionStartTimeKey, 0f);
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneInactivity)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.SceneInactivity)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.SessionDuration, sessionDuration.ToString(CultureInfo.InvariantCulture));
             unifiedEvent.Send();
         }
 
-        var shutdownEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.EditorShutdown)
+        var shutdownEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.EditorShutdown)
         {
-            isEssential = OVRPlugin.Bool.True,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = true,
+            productType = TelemetryProductType.Editor
         };
         shutdownEvent.Send();
 
@@ -205,10 +206,10 @@ public class OVRSceneChangeListener
             return;
         }
 
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.ComponentAdd)
+        var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.ComponentAdd)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = false,
+            productType = TelemetryProductType.Editor
         };
         unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.ComponentName, type.Name);
         unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.AssemblyName, assemblyName);

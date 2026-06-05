@@ -20,6 +20,7 @@
 
 using System.Threading.Tasks;
 using Meta.XR.Editor.Features;
+using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEditor;
@@ -67,9 +68,9 @@ public static class OVRSceneOpen
         if (string.IsNullOrEmpty(guid)) return;
 
         var features = await FeatureManager.GetFeaturesInScene(scene);
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(eventName)
+        var unifiedEvent = new UnifiedEventData(eventName)
         {
-            isEssential = OVRPlugin.Bool.False
+            isEssential = false
         };
         unifiedEvent.SetMetadata(OVRTelemetryConstants.Scene.AnnotationType.Guid,
             guid);

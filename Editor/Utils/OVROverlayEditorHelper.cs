@@ -127,7 +127,7 @@ public static class OVROverlayEditorHelper
             {
                 setCanvasLayer(HiddenCanvasLayer);
                 setMask(~LayerMask.GetMask(layerName));
-                var evt = new OVRPlugin.UnifiedEventData("canvas_set_layer_clicked");
+                var evt = new UnifiedEventData("canvas_set_layer_clicked");
                 evt.Send();
             }
         }
@@ -141,7 +141,7 @@ public static class OVROverlayEditorHelper
             SetLayerName(unusedLayer, DefaultHiddenCanvasLayerName);
             setCanvasLayer(unusedLayer);
             setMask(~(1 << unusedLayer));
-            var evt = new OVRPlugin.UnifiedEventData("canvas_set_default_layer_clicked");
+            var evt = new UnifiedEventData("canvas_set_default_layer_clicked");
             evt.Send();
         }
     }

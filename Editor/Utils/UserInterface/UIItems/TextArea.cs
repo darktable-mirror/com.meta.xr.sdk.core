@@ -67,9 +67,9 @@ namespace Meta.XR.Editor.UserInterface
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A VisualElement containing the styled multiline text field</returns>
-        public override VisualElement Get()
+        public override VisualElement Build()
         {
-            var visualElement = base.Get();
+            var visualElement = base.Build();
 
             // Find the TextField within the container and enable multiline
             var textField = visualElement.Q<UnityEngine.UIElements.TextField>();

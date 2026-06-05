@@ -22,6 +22,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
 using static OVRInput;
 
 /// <summary>
@@ -121,10 +122,10 @@ public static class SystemHaptics
         {
             SetControllerHapticsParametric(vibration, controller);
 
-            var eventData = new OVRPlugin.UnifiedEventData("systemhaptics_play_pattern")
+            var eventData = new UnifiedEventData("systemhaptics_play_pattern")
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.CoreSdk,
+                isEssential = true,
+                productType = TelemetryProductType.CoreSdk,
                 project_name = "systemhaptics"
             };
             eventData.Send();

@@ -129,10 +129,65 @@ namespace Meta.XR.Editor.Notifications
                 return false;
             }
 
+            if (data.minSdkVersion > 0)
+            {
+                var sdkVersion = ToolUsage.GetSdkVersion();
+                if (!sdkVersion.HasValue || sdkVersion.Value < data.minSdkVersion)
+                {
+                    return false;
+                }
+            }
+
+            if (!data.IsWithinScheduledDateRange())
+            {
+                return false;
+            }
+
+            if (data.filterGroups is { Length: > 0 })
+            {
+                return data.filterGroups.All(group => EvaluateFilterGroup(group, validator));
+            }
+
             return (data.filters ?? Enumerable.Empty<NotificationFilter>())
                 .All(validator.ValidateFilter);
         }
 
+        private static bool EvaluateFilterGroup(NotificationFilterGroup group, Validator validator)
+        {
+            var filters = group.filters ?? Enumerable.Empty<NotificationFilter>();
+
+            if (string.Equals(group.@operator, "OR", System.StringComparison.OrdinalIgnoreCase))
+                return filters.Any(validator.ValidateFilter);
+
+            if (string.Equals(group.@operator, "NOT", System.StringComparison.OrdinalIgnoreCase))
+                return !filters.All(validator.ValidateFilter);
+
+            return filters.All(validator.ValidateFilter);
+        }
+
         private static string GetShownNotificationKey(this NotificationData data) => $"Notification_Shown_{data.id}";
+
+        private static bool IsWithinScheduledDateRange(this NotificationData data)
+        {
+            var now = System.DateTimeOffset.UtcNow;
+
+            if (!string.IsNullOrEmpty(data.startDate)
+                && System.DateTimeOffset.TryParse(data.startDate, null,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var start)
+                && now < start)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(data.endDate)
+                && System.DateTimeOffset.TryParse(data.endDate, null,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var end)
+                && now > end)
+            {
+                return false;
+            }
+
+            return true;
+        }
     }
 }

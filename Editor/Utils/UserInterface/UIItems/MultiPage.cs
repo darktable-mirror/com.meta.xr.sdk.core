@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Meta.XR.Editor.Id;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
@@ -233,10 +234,10 @@ namespace Meta.XR.Editor.UserInterface
         {
             if (CurrentPage != null)
             {
-                var closeEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageClose)
+                var closeEvent = new UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageClose)
                 {
-                    isEssential = OVRPlugin.Bool.False,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = false,
+                    productType = TelemetryProductType.Editor
                 };
                 closeEvent = AddTelemetryAnnotationsForFalco(closeEvent);
                 closeEvent.Send();
@@ -260,17 +261,17 @@ namespace Meta.XR.Editor.UserInterface
 
             if (CurrentPage != null)
             {
-                var openEvent = new OVRPlugin.UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageOpen)
+                var openEvent = new UnifiedEventData(XR.Editor.UserInterface.Telemetry.FalcoEventName.PageOpen)
                 {
-                    isEssential = OVRPlugin.Bool.True,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = true,
+                    productType = TelemetryProductType.Editor
                 };
                 openEvent = AddTelemetryAnnotationsForFalco(openEvent);
                 openEvent.Send();
             }
         }
 
-        private OVRPlugin.UnifiedEventData AddTelemetryAnnotationsForFalco(OVRPlugin.UnifiedEventData eventData)
+        private UnifiedEventData AddTelemetryAnnotationsForFalco(UnifiedEventData eventData)
         {
             eventData.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.Origin, Origins.GuidedSetup.ToString());
             eventData.SetMetadata(XR.Editor.UserInterface.Telemetry.AnnotationType.OriginData, Owner?.Id);
@@ -284,7 +285,7 @@ namespace Meta.XR.Editor.UserInterface
 
         public bool Hide { get; set; }
 
-        public UnityEngine.UIElements.VisualElement Get()
+        public UnityEngine.UIElements.VisualElement Build()
         {
             return new UnityEngine.UIElements.VisualElement();
         }

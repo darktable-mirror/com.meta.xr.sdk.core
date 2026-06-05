@@ -18,13 +18,12 @@
  * limitations under the License.
  */
 
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
-    public class BlockContextMenu : MonoBehaviour
+    public static class BlockContextMenu
     {
         private const string ItemPath = "GameObject/Building Blocks/Break Block Connection";
         private const int ItemPriority = 10;

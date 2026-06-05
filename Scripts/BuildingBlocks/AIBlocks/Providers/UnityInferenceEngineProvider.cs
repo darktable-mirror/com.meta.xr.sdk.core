@@ -187,8 +187,25 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 return;
             }
 
-            if (!modelFile || (useStreamingAsset && !string.IsNullOrEmpty(streamingAssetFileName)))
+            // Determine the model source and validate configuration
+            var loadFromStreamingAssets = useStreamingAsset && !string.IsNullOrEmpty(streamingAssetFileName);
+            var hasEmbeddedModel = modelFile != null;
+
+            if (!loadFromStreamingAssets && !hasEmbeddedModel)
             {
+                Debug.LogError("[UnityInferenceEngineProvider] No model configured. " +
+                    "Either assign a ModelAsset to 'modelFile' or enable 'useStreamingAsset' with a valid 'streamingAssetFileName'.");
+                throw new InvalidOperationException("No model configured. Please assign a model asset or configure streaming asset path.");
+            }
+
+            if (loadFromStreamingAssets)
+            {
+                if (string.IsNullOrWhiteSpace(streamingAssetFileName))
+                {
+                    Debug.LogError("[UnityInferenceEngineProvider] 'useStreamingAsset' is enabled but 'streamingAssetFileName' is empty.");
+                    throw new InvalidOperationException("Streaming asset filename is not configured.");
+                }
+
                 var srcPath = Path.Combine(Application.streamingAssetsPath, streamingAssetFileName);
 
                 if (srcPath.Contains("://") || srcPath.Contains("jar:"))
@@ -201,19 +218,31 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                         var op = req.SendWebRequest();
                         while (!op.isDone)
                         {
-                          await Task.Yield();
+                            await Task.Yield();
                         }
 
                         if (req.result != UnityWebRequest.Result.Success)
                         {
-                            Debug.LogError($"Failed to extract .sentis from StreamingAssets: {srcPath}\n{req.error}");
-                            throw new IOException(req.error);
+                            Debug.LogError($"[UnityInferenceEngineProvider] Failed to extract .sentis from StreamingAssets: {srcPath}\n{req.error}");
+                            throw new IOException($"Failed to extract model from StreamingAssets: {req.error}");
                         }
                     }
+
+                    if (!File.Exists(dstPath))
+                    {
+                        Debug.LogError($"[UnityInferenceEngineProvider] Model file does not exist after extraction: {dstPath}");
+                        throw new FileNotFoundException($"Model file not found: {dstPath}");
+                    }
+
                     _model = ModelLoader.Load(dstPath);
                 }
                 else
                 {
+                    if (!File.Exists(srcPath))
+                    {
+                        Debug.LogError($"[UnityInferenceEngineProvider] Model file not found at StreamingAssets path: {srcPath}");
+                        throw new FileNotFoundException($"Model file not found: {srcPath}");
+                    }
                     _model = ModelLoader.Load(srcPath);
                 }
             }
@@ -222,9 +251,36 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 _model = ModelLoader.Load(modelFile);
             }
 
-            _worker = new Worker(_model, backend);
+            // Validate that the model was loaded successfully
+            if (_model == null)
+            {
+                Debug.LogError("[UnityInferenceEngineProvider] ModelLoader.Load returned null. The model file may be corrupted or in an incompatible format.");
+                throw new InvalidOperationException("Failed to load model. ModelLoader returned null.");
+            }
 
-            var sh = _model.inputs[0].shape.ToIntArray();
+            if (_model.inputs == null || _model.inputs.Count == 0)
+            {
+                Debug.LogError("[UnityInferenceEngineProvider] Model has no inputs defined. " +
+                    "The model file may be corrupted, improperly converted, or in an incompatible format. " +
+                    $"Model outputs count: {_model.outputs?.Count ?? 0}");
+                throw new InvalidOperationException("Model has no inputs defined. Please verify the model file is valid.");
+            }
+
+            var inputShape = _model.inputs[0].shape;
+            if (inputShape == null)
+            {
+                Debug.LogError("[UnityInferenceEngineProvider] Model input shape is null.");
+                throw new InvalidOperationException("Model input shape is not defined.");
+            }
+
+            var sh = inputShape.ToIntArray();
+            if (sh == null || sh.Length < 4)
+            {
+                Debug.LogError($"[UnityInferenceEngineProvider] Invalid input shape. Expected at least 4 dimensions (NCHW), got: {sh?.Length ?? 0}");
+                throw new InvalidOperationException($"Invalid model input shape. Expected 4D tensor, got {sh?.Length ?? 0}D.");
+            }
+
+            _worker = new Worker(_model, backend);
             _input = new Tensor<float>(new TensorShape(sh));
 
             inputHeight = sh[2];

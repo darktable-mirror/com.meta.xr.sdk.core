@@ -26,6 +26,8 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using static OVRPlugin;
 using TaskResult = OVRResult<System.Collections.Generic.List<OVRAnchor>, OVRAnchor.FetchResult>;
+using UnifiedEventData = Meta.XR.Telemetry.UnifiedEventData;
+using TelemetryProductType = Meta.XR.Telemetry.TelemetryProductType;
 
 /// <summary>
 /// Represents an anchor.
@@ -868,10 +870,10 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         fixed (ulong* ptr = spaces)
         {
             var result = SaveSpaces(ptr, spaces.Length, out var requestId);
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.SaveSpaces)
+            var unifiedEvent = new UnifiedEventData(Telemetry.EventName.SaveSpaces)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(Telemetry.Annotation.SpaceCount, spaces.Length);
             Telemetry.SetSyncResult(requestId, result, unifiedEvent);
@@ -949,10 +951,10 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
         fixed (Guid* uuidsPtr = uuids)
         {
             var result = EraseSpaces((uint)spaces.Length, spacesPtr, (uint)uuids.Length, uuidsPtr, out var requestId);
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.EraseSpaces)
+            var unifiedEvent = new UnifiedEventData(Telemetry.EventName.EraseSpaces)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(Telemetry.Annotation.SpaceCount, spaces.Length);
             unifiedEvent.SetMetadata(Telemetry.Annotation.UuidCount, uuids.Length);
@@ -1342,10 +1344,10 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
 
         anchors.Clear();
 
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.QuerySpaces)
+        var unifiedEvent = new UnifiedEventData(Telemetry.EventName.QuerySpaces)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Editor
+            isEssential = false,
+            productType = TelemetryProductType.Editor
         };
         unifiedEvent.SetMetadata(Telemetry.Annotation.Timeout, (double)queryInfo.Timeout);
         unifiedEvent.SetMetadata(Telemetry.Annotation.MaxResults, (int)queryInfo.MaxQuerySpaces);

@@ -4,7 +4,8 @@
     "references": [
         "Meta.XR.Editor.Callbacks",
         "Meta.XR.ImmersiveDebugger.Interface",
-        "Oculus.VR"
+        "Oculus.VR",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -28,6 +29,11 @@
             "name": "com.unity.xr.openxr",
             "expression": "",
             "define": "USING_XR_SDK_OPENXR"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "USE_INPUT_SYSTEM_PACKAGE"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

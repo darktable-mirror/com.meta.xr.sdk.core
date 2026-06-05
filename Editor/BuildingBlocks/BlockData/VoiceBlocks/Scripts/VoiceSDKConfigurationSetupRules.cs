@@ -56,8 +56,8 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
 
         static bool UsesVoiceSDKComponents() {
-            return Object.FindObjectOfType<AppDictationExperience>() != null
-                || Object.FindObjectOfType<TTSService>() != null;
+            return Object.FindAnyObjectByType<AppDictationExperience>() != null
+                || Object.FindAnyObjectByType<TTSService>() != null;
         }
     }
 }

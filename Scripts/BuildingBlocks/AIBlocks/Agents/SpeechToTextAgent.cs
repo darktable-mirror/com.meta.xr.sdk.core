@@ -145,6 +145,10 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _env = 0f;
             _lastSpeechSampleIdx = -1;
 
+#if UNITY_WEBGL // WebGL does not support the Microphone class.
+            yield return null;
+#else
+
             _mic = Microphone.Start(deviceName, true, 10, sampleRate);
             while (Microphone.GetPosition(deviceName) <= 0) yield return null;
 
@@ -293,6 +297,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 onTranscript?.Invoke(task.Result);
                 Debug.Log($"[STT] {task.Result}");
             }
+#endif
         }
 
         private float EstimateNoiseDb()

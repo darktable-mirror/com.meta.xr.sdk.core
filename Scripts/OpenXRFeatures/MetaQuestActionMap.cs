@@ -165,6 +165,12 @@ public class MetaQuestActionMap
         // Haptic
         new ActionBinding(QuestTouchDevice + LeftHand + Haptic, Hand.LHand, "{Haptic}", InputActionType.Value),
         new ActionBinding(QuestTouchDevice + RightHand + Haptic, Hand.RHand, "{Haptic}", InputActionType.Value),
+
+        // Proximity
+        new ActionBinding(QuestTouchDevice + LeftHand + NearTouchTrigger, Hand.LHand, "triggerProximity", InputActionType.Button),
+        new ActionBinding(QuestTouchDevice + RightHand + NearTouchTrigger, Hand.RHand, "triggerProximity", InputActionType.Button),
+        new ActionBinding(QuestTouchDevice + LeftHand + NearTouchThumb, Hand.LHand, "thumbProximity", InputActionType.Button),
+        new ActionBinding(QuestTouchDevice + RightHand + NearTouchThumb, Hand.RHand, "thumbProximity", InputActionType.Button),
     };
 
     public static readonly ActionBinding[] TouchProActions =
@@ -186,12 +192,6 @@ public class MetaQuestActionMap
         new ActionBinding(QuestTouchDevice + RightHand + HapticThumb, Hand.RHand, "hapticThumb", InputActionType.Value),
         new ActionBinding(QuestTouchDevice + LeftHand + HapticTrigger, Hand.LHand, "hapticTrigger", InputActionType.Value),
         new ActionBinding(QuestTouchDevice + RightHand + HapticTrigger, Hand.RHand, "hapticTrigger", InputActionType.Value),
-
-        // Proximity
-        new ActionBinding(QuestTouchDevice + LeftHand + NearTouchTrigger, Hand.LHand, "triggerProximity", InputActionType.Button),
-        new ActionBinding(QuestTouchDevice + RightHand + NearTouchTrigger, Hand.RHand, "triggerProximity", InputActionType.Button),
-        new ActionBinding(QuestTouchDevice + LeftHand + NearTouchThumb, Hand.LHand, "thumbProximity", InputActionType.Button),
-        new ActionBinding(QuestTouchDevice + RightHand + NearTouchThumb, Hand.RHand, "thumbProximity", InputActionType.Button),
     };
 
     public static readonly ActionBinding[] TouchPlusActions =
@@ -205,12 +205,6 @@ public class MetaQuestActionMap
         new ActionBinding(QuestTouchDevice + RightHand + TriggerCurl, Hand.RHand, "triggerCurl", InputActionType.Value),
         new ActionBinding(QuestTouchDevice + LeftHand + TriggerSlide, Hand.LHand, "triggerSlide", InputActionType.Value),
         new ActionBinding(QuestTouchDevice + RightHand + TriggerSlide, Hand.RHand, "triggerSlide", InputActionType.Value),
-
-        // Proximity
-        new ActionBinding(QuestTouchDevice + LeftHand + NearTouchTrigger, Hand.LHand, "triggerProximity", InputActionType.Button),
-        new ActionBinding(QuestTouchDevice + RightHand + NearTouchTrigger, Hand.RHand, "triggerProximity", InputActionType.Button),
-        new ActionBinding(QuestTouchDevice + LeftHand + NearTouchThumb, Hand.LHand, "thumbProximity", InputActionType.Button),
-        new ActionBinding(QuestTouchDevice + RightHand + NearTouchThumb, Hand.RHand, "thumbProximity", InputActionType.Button),
     };
 
     private static MetaQuestActionMap _instance;

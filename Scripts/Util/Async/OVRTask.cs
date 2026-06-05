@@ -647,9 +647,15 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
     internal void NotifyIncrementalResult<TIncrementalResult>(TIncrementalResult incrementalResult)
         => IncrementalResultSubscriber<TIncrementalResult>.Notify(_id, incrementalResult);
 
+    // IMPORTANT: We store TaskId (Guid) instead of OVRTask<List<TResult>> to break
+    // recursive type expansion in IL2CPP. Storing OVRTask<List<TResult>> as a field
+    // causes IL2CPP to initialize that type's fields, which includes another
+    // OVRTask<List<List<TResult>>>, leading to infinite recursion and stack overflow.
+    // See: Unity 6.5 IL2CPP regression with SetupGCDescriptor in InitSizeAndFieldLayoutLocked.
     private readonly struct CombinedTaskData : IDisposable
     {
-        public readonly OVRTask<List<TResult>> Task;
+        // Store just the Guid, not OVRTask<List<TResult>>, to avoid recursive type expansion
+        public readonly Guid TaskId;
 
         private readonly HashSet<Guid> _remainingTaskIds;
 
@@ -658,6 +664,11 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
         private readonly Dictionary<Guid, TResult> _completedTasks;
 
         private readonly List<TResult> _userOwnedResultList;
+
+        // Note: We use 'new OVRTask<>()' instead of 'OVRTask.FromGuid<>()' here because
+        // FromGuid calls Create which throws if the task already exists. The task is
+        // registered once in the constructor, and Task just wraps the existing Guid.
+        public OVRTask<List<TResult>> Task => new OVRTask<List<TResult>>(TaskId);
 
         private void OnSingleTaskCompleted(Guid taskId, TResult result)
         {
@@ -686,7 +697,10 @@ public readonly struct OVRTask<TResult> : IEquatable<OVRTask<TResult>>, IDisposa
 
         public CombinedTaskData(IEnumerable<OVRTask<TResult>> tasks, List<TResult> userOwnedResultList)
         {
-            Task = OVRTask.FromGuid<List<TResult>>(Guid.NewGuid());
+            TaskId = Guid.NewGuid();
+            // Register the task with OVRTask system
+            OVRTask.FromGuid<List<TResult>>(TaskId);
+
             _remainingTaskIds = OVRObjectPool.HashSet<Guid>();
             _originalTaskOrder = OVRObjectPool.List<Guid>();
             _completedTasks = OVRObjectPool.Dictionary<Guid, TResult>();

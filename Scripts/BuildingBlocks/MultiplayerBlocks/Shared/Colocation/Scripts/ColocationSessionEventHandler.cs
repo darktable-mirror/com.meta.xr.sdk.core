@@ -55,6 +55,9 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         private SharedAnchorManager _sharedAnchorManager;
         private AlignCameraToAnchor _alignCameraToAnchor;
         private OVRCameraRig _cameraRig;
+#if META_MR_UTILITY_KIT_DEFINED
+        private UnityEngine.Events.UnityAction _sceneLoadedCallback;
+#endif // META_MR_UTILITY_KIT_DEFINED
 
         [Serializable]
         private struct SpaceSharingInfo
@@ -184,7 +187,17 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
         private async Task<bool> LoadScene()
         {
-            MRUK.Instance.RegisterSceneLoadedCallback(() =>
+            if(MRUK.Instance == null)
+            {
+                Logger.Log("Host failed to load scene from device as MRUK is not initialized", LogLevel.Error);
+                return false;
+            }
+            if (_sceneLoadedCallback != null)
+            {
+                MRUK.Instance.SceneLoadedEvent.RemoveListener(_sceneLoadedCallback);
+            }
+
+            MRUK.Instance.RegisterSceneLoadedCallback(_sceneLoadedCallback = () =>
             {
                 var currentRoom = MRUK.Instance.GetCurrentRoom();
                 var roomAnchorTransform = currentRoom.FloorAnchors[0].transform;
@@ -197,10 +210,19 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             });
             if (!MRUK.Instance.IsInitialized)
             {
-                var loadDeviceResult = await MRUK.Instance.LoadSceneFromDevice();
+                var loadDeviceResult = await MRUK.Instance.LoadSceneFromDevice(requestSceneCaptureIfNoDataFound: false);
+                if (loadDeviceResult == MRUK.LoadDeviceResult.NoRoomsFound)
+                {
+                    Logger.Log("No rooms found on device. Requesting Space Setup...", LogLevel.Warning);
+                    if (await OVRScene.RequestSpaceSetup())
+                    {
+                        loadDeviceResult = await MRUK.Instance.LoadSceneFromDevice(requestSceneCaptureIfNoDataFound: false);
+                    }
+                }
                 if (loadDeviceResult != MRUK.LoadDeviceResult.Success)
                 {
-                    Logger.Log($"Host failed to load scene from device: {loadDeviceResult}", LogLevel.Error);
+                    Logger.Log($"Host failed to load scene from device: {loadDeviceResult}. " +
+                        "Please run Space Setup on your device before using this feature.", LogLevel.Error);
                     return false;
                 }
             }
@@ -274,6 +296,10 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                     break;
                 case Basis.RoomAnchors:
 #if META_MR_UTILITY_KIT_DEFINED
+                    if (MRUK.Instance != null && _sceneLoadedCallback != null)
+                    {
+                        MRUK.Instance.SceneLoadedEvent.RemoveListener(_sceneLoadedCallback);
+                    }
                     LocalMatchmaking.OnSessionCreateSucceeded.RemoveListener(OnSessionCreatedWithSpaceSharing);
                     LocalMatchmaking.OnSessionDiscoverSucceeded.RemoveListener(OnSessionDiscoveredWithSpaceSharing);
                     LocalMatchmaking.BeforeStartHost = null;

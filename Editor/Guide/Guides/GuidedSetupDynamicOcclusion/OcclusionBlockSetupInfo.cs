@@ -73,7 +73,11 @@ namespace Meta.XR.Guides.Editor
             var title = "Occlusion Building Block";
             var description = ImportantTag +
                               " Occlusion Building Block made the following critical changes in the current project.";
-            _window = Guide.Create(title, description, this);
+            var options = new GuideWindow.GuideOptions(GuideWindow.DefaultOptions)
+            {
+                UseUIToolkit = true
+            };
+            _window = Guide.Create(title, description, this, options);
             return _window;
         }
     }

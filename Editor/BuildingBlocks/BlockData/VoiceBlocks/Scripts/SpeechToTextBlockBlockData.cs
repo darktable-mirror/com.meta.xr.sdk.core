@@ -43,7 +43,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             // care of finding the config and adding it to AppDictationDataCreation.
             await VoiceBlocksUtils.GetWitConfig();
             AppDictationDataCreation.AddVoiceCommandServiceToScene();
-            var instance = FindObjectOfType<AppDictationExperience>().gameObject;
+            var instance = FindAnyObjectByType<AppDictationExperience>().gameObject;
             instance.name = $"{Utils.BlockPublicTag} {BlockName}";
             return new List<GameObject> { instance };
 #else

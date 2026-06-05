@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Meta.XR.Telemetry;
 using UnityEditor;
+using UnityEngine;
 using Meta.XR.Editor.PlayCompanion;
 using Meta.XR.Editor.StatusMenu;
 using Styles = Meta.XR.Editor.PlayCompanion.Styles;
@@ -106,6 +107,7 @@ namespace Meta.XR.Simulator
                     group: OVRProjectSetup.TaskGroup.Features,
                     isDone: buildTargetGroup => XRSimInstallationDetector.IsXRSim2Installed(),
                     level: OVRProjectSetup.TaskLevel.Recommended,
+                    fixAutomatic: !Application.isBatchMode,
                     message: "Newest Meta XR Simulator not installed, consider installing it",
                     fixMessage: "Download Meta XR Simulator",
                     fix: async buildTargetGroup => await Installer.EnsureMetaXRSimulatorInstalled(),

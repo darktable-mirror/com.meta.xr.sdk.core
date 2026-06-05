@@ -335,6 +335,7 @@ namespace Meta.XR.Editor.UserInterface
                 richText = true,
                 fontSize = 11,
                 wordWrap = true,
+                alignment = TextAnchor.MiddleLeft,
                 normal =
                 {
                     textColor = Colors.OffWhite

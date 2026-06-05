@@ -20,6 +20,7 @@
 
 using System;
 using System.IO;
+using Meta.XR.Telemetry;
 using UnityEngine;
 
 #if UNITY_EDITOR_OSX
@@ -43,10 +44,10 @@ namespace Meta.XR.Simulator.Editor
         {
             ToolbarItem.ToolDescriptor.Usage.RecordUsage();
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(XRSimTelemetryConstants.FalcoEventName.ToggleState)
+            var unifiedEvent = new UnifiedEventData(XRSimTelemetryConstants.FalcoEventName.ToggleState)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.XrSim
+                isEssential = false,
+                productType = TelemetryProductType.XrSim
             };
             unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.IsActive, true.ToString());
             unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.Origin, origin.ToString());
@@ -57,8 +58,8 @@ namespace Meta.XR.Simulator.Editor
                 Utils.LogUtils.DisplayDialogOrError("Meta XR Simulator Not Supported",
                                 "Apple Silicon Mac is required. Intel-based Mac is not currently supported.",
                                 forceHideDialog);
-                unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Mac intel is not supported");
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+            unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Mac intel is not supported");
+                unifiedEvent.result = UnifiedEventResult.FAIL;
                 unifiedEvent.Send();
                 return;
             }
@@ -75,7 +76,7 @@ namespace Meta.XR.Simulator.Editor
                                 "Try using different version. Open Edit > Preferences... > Meta XR > Meta XR Simulator and choose different selected version. ",
                                 forceHideDialog);
                 unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Meta XR Simulator Not Installed");
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.result = UnifiedEventResult.FAIL;
                 unifiedEvent.Send();
                 return;
             }
@@ -94,7 +95,7 @@ namespace Meta.XR.Simulator.Editor
                     openXRLoaderErrorMessage,
                     forceHideDialog);
                 unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "OpenXR Loader not installed");
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.result = UnifiedEventResult.FAIL;
                 unifiedEvent.Send();
                 return;
             }
@@ -102,7 +103,7 @@ namespace Meta.XR.Simulator.Editor
             if (IsSimulatorActivated())
             {
                 Utils.LogUtils.ReportInfo("Meta XR Simulator", "Meta XR Simulator is already activated.");
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+                unifiedEvent.result = UnifiedEventResult.SUCCESS;
                 unifiedEvent.Send();
                 return;
             }
@@ -148,16 +149,16 @@ namespace Meta.XR.Simulator.Editor
             Utils.LogUtils.ReportInfo("Meta XR Simulator is activated",
                 $"{XRSimConstants.OpenXrSelectedRuntimeEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.OpenXrSelectedRuntimeEnvKey)}\n{XRSimConstants.XrSimConfigEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.XrSimConfigEnvKey)}");
 
-            unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+            unifiedEvent.result = UnifiedEventResult.SUCCESS;
             unifiedEvent.Send();
         }
 
         public virtual void DeactivateSimulator(bool forceHideDialog, Origin origin)
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(XRSimTelemetryConstants.FalcoEventName.ToggleState)
+            var unifiedEvent = new UnifiedEventData(XRSimTelemetryConstants.FalcoEventName.ToggleState)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.XrSim
+                isEssential = false,
+                productType = TelemetryProductType.XrSim
             };
             unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.IsActive, false.ToString());
             unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.Origin, origin.ToString());
@@ -167,7 +168,7 @@ namespace Meta.XR.Simulator.Editor
                 Utils.LogUtils.DisplayDialogOrError("Meta XR Simulator",
                     $"{XRSimConstants.MetaOpenXrSimulationJsonPath} was not found, make sure you have Meta XR Simulator installed.",
                     forceHideDialog);
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.result = UnifiedEventResult.FAIL;
                 unifiedEvent.Send();
                 return;
             }
@@ -175,7 +176,7 @@ namespace Meta.XR.Simulator.Editor
             if (!IsSimulatorActivated())
             {
                 Utils.LogUtils.ReportInfo("Meta XR Simulator", "Meta XR Simulator is not activated.");
-                unifiedEvent.result = OVRPlugin.UnifiedEventResult.FAIL;
+                unifiedEvent.result = UnifiedEventResult.FAIL;
                 unifiedEvent.Send();
                 return;
             }
@@ -195,7 +196,7 @@ namespace Meta.XR.Simulator.Editor
             Utils.LogUtils.ReportInfo("Meta XR Simulator is deactivated",
                 $"{XRSimConstants.OpenXrSelectedRuntimeEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.OpenXrSelectedRuntimeEnvKey)}\n{XRSimConstants.XrSimConfigEnvKey} is set to {Utils.SystemUtils.GetEnvironmentVariable(XRSimConstants.XrSimConfigEnvKey)}");
 
-            unifiedEvent.result = OVRPlugin.UnifiedEventResult.SUCCESS;
+            unifiedEvent.result = UnifiedEventResult.SUCCESS;
             unifiedEvent.Send();
         }
 

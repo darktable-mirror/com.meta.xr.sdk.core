@@ -35,6 +35,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
     {
         private List<DebugPanel> _panels = new List<DebugPanel>();
         private Dictionary<DebugPanel, Toggle> _panelToggles = new Dictionary<DebugPanel, Toggle>();
+
+        /// <summary>
+        /// Provides read-only access to the registered panels for inspectors.
+        /// </summary>
+        internal IReadOnlyList<DebugPanel> RegisteredPanels => _panels;
+
         private Flex _buttonsAnchor;
         private Flex _miniButtonsAnchor;
         private Label _titleLabel;

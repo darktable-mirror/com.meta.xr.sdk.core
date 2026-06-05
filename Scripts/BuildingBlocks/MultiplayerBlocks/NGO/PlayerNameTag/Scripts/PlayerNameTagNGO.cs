@@ -44,7 +44,10 @@ namespace Meta.XR.MultiplayerBlocks.NGO
         /// The networked string responsible for storing the player's username when using the Unity Netcode for Gameobjects networking framework.
         /// When set, it triggers a visual update of what's displayed in the player name tag for all connected clients.
         /// </summary>
-        public NetworkVariable<FixedString128Bytes> PlayerName = new();
+        public NetworkVariable<FixedString128Bytes> PlayerName = new(
+            default,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Owner);
 
         private void Awake()
         {

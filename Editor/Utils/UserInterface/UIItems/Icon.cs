@@ -53,6 +53,8 @@ namespace Meta.XR.Editor.UserInterface
             _icon = icon;
             Color = iconColor;
             LabelText = labelText;
+            _width = (int)SmallIconSize;
+            _height = (int)SmallIconSize;
 
             var layoutOptions = new List<GUILayoutOption>
             {
@@ -114,7 +116,7 @@ namespace Meta.XR.Editor.UserInterface
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A VisualElement containing the styled icon and optional label</returns>
-        public VisualElement Get()
+        public VisualElement Build()
         {
             if (_container != null)
             {
@@ -126,7 +128,7 @@ namespace Meta.XR.Editor.UserInterface
                 style =
                 {
                     flexDirection = LabelTextAvailable ? FlexDirection.Row : FlexDirection.Column,
-                    alignItems = Align.Center
+                    alignItems = Align.FlexStart
                 }
             };
 

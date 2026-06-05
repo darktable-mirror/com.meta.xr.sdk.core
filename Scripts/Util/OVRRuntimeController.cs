@@ -142,7 +142,12 @@ public class OVRRuntimeController : MonoBehaviour
                 if (modelData != null)
                 {
                     OVRGLTFLoader loader = new OVRGLTFLoader(modelData);
-                    loader.SetModelShader(m_controllerModelShader);
+
+                    if (m_controllerModelShader != null)
+                    {
+                        loader.SetModelShader(m_controllerModelShader);
+                    }
+
                     OVRGLTFScene scene = loader.LoadGLB(m_supportAnimation);
                     m_controllerObject = scene.root;
                     m_animationNodes = scene.animationNodes;

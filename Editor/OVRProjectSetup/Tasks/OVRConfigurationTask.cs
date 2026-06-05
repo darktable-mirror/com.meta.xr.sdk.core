@@ -42,7 +42,7 @@ internal class OVRConfigurationTask : IIdentified
     private static readonly FieldInfoHandle<Dictionary<BuildTargetGroup, List<Unity.XR.CoreUtils.Editor.BuildValidationRule>>> UnityValidatorRulesDict = new();
 #endif
 
-    internal static readonly string ConsoleLinkHref = "OpenProjectSetupTool";
+    internal const string ConsoleLinkHref = "OpenProjectSetupTool";
     private static readonly GUIContent FixButtonContent = new("Fix", "Fix with recommended settings");
     private static readonly GUIContent ApplyButtonContent = new("Apply", "Apply the recommended settings");
 
@@ -301,10 +301,10 @@ internal class OVRConfigurationTask : IIdentified
                 OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(silentMode: Application.isBatchMode);
             }
         }
-        catch (OVRConfigurationTaskException exception)
+        catch (Exception exception)
         {
-            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-task-fix-failed",
-                $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-task-fix-exception",
+                exception, enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
             exceptionOccurred = true;
@@ -323,11 +323,11 @@ internal class OVRConfigurationTask : IIdentified
         }
 
 
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Fix)
+        var unifiedEvent = new UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Fix)
         {
-            isEssential = OVRPlugin.Bool.True,
-            productType = OVRPlugin.ProductType.Pst,
-            result = exceptionOccurred ? OVRPlugin.UnifiedEventResult.FAIL : (currentResult ? OVRPlugin.UnifiedEventResult.SUCCESS : OVRPlugin.UnifiedEventResult.CANCEL)
+            isEssential = true,
+            productType = TelemetryProductType.Pst,
+            result = exceptionOccurred ? UnifiedEventResult.FAIL : (currentResult ? UnifiedEventResult.SUCCESS : UnifiedEventResult.CANCEL)
         };
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString());
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
@@ -360,18 +360,10 @@ internal class OVRConfigurationTask : IIdentified
                 OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(silentMode: Application.isBatchMode);
             }
         }
-        catch (OVRConfigurationTaskException exception)
-        {
-            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-async-task-fix-failed",
-                $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
-            Debug.LogWarning(
-                $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
-            exceptionOccurred = true;
-        }
         catch (Exception exception)
         {
             IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-async-task-fix-exception",
-                $"Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception.Message}", enableDebugLog: false);
+                exception, enableDebugLog: false);
             Debug.LogWarning(
                 $"[{OVRProjectSetupUtils.ProjectSetupToolPublicName}] Failed to fix task \"{Message.GetValue(buildTargetGroup)}\" : {exception}");
             exceptionOccurred = true;
@@ -390,11 +382,11 @@ internal class OVRConfigurationTask : IIdentified
         }
 
 
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Fix)
+        var unifiedEvent = new UnifiedEventData(OVRProjectSetupTelemetryEvent.FalcoEventNames.Fix)
         {
-            isEssential = OVRPlugin.Bool.True,
-            productType = OVRPlugin.ProductType.Editor,
-            result = exceptionOccurred ? OVRPlugin.UnifiedEventResult.FAIL : (currentResult ? OVRPlugin.UnifiedEventResult.SUCCESS : OVRPlugin.UnifiedEventResult.CANCEL)
+            isEssential = true,
+            productType = TelemetryProductType.Editor,
+            result = exceptionOccurred ? UnifiedEventResult.FAIL : (currentResult ? UnifiedEventResult.SUCCESS : UnifiedEventResult.CANCEL)
         };
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, Uid.ToString());
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Level,
@@ -499,7 +491,19 @@ internal class OVRConfigurationTask : IIdentified
             return cachedState;
         }
 
-        var result = _isDone(buildTargetGroup);
+        bool result;
+        try
+        {
+            result = _isDone(buildTargetGroup);
+        }
+        catch (Exception exception)
+        {
+            IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-get-done-state-exception",
+                exception,
+                enableDebugLog: false);
+            result = true;
+        }
+
         _isDoneCache[buildTargetGroup] = result;
         return result;
     }

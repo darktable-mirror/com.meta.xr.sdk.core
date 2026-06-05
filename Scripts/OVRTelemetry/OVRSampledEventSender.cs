@@ -19,6 +19,7 @@
  */
 
 using System;
+using Meta.XR.Telemetry;
 
 internal class OVRSampledEventSender
 {
@@ -26,15 +27,15 @@ internal class OVRSampledEventSender
     private readonly float _recordChance;
     private readonly string _falcoEventName;
     private readonly bool _isEssential;
-    private readonly OVRPlugin.ProductType _productType;
-    private readonly Func<OVRPlugin.UnifiedEventData, OVRPlugin.UnifiedEventData> _addMetadataFunc;
-    private OVRPlugin.UnifiedEventData _unifiedEventData;
+    private readonly TelemetryProductType _productType;
+    private readonly Func<UnifiedEventData, UnifiedEventData> _addMetadataFunc;
+    private UnifiedEventData _unifiedEventData;
 
     public OVRSampledEventSender(float recordRecordChance,
         string falcoEventName = null,
         bool isEssential = false,
-        OVRPlugin.ProductType productType = OVRPlugin.ProductType.None,
-        Func<OVRPlugin.UnifiedEventData, OVRPlugin.UnifiedEventData> addMetadataFunc = null)
+        TelemetryProductType productType = TelemetryProductType.None,
+        Func<UnifiedEventData, UnifiedEventData> addMetadataFunc = null)
     {
         _recordChance = recordRecordChance;
         _falcoEventName = falcoEventName;
@@ -66,9 +67,9 @@ internal class OVRSampledEventSender
 
         if (!string.IsNullOrEmpty(_falcoEventName))
         {
-            _unifiedEventData = new OVRPlugin.UnifiedEventData(_falcoEventName)
+            _unifiedEventData = new UnifiedEventData(_falcoEventName)
             {
-                isEssential = _isEssential ? OVRPlugin.Bool.True : OVRPlugin.Bool.False,
+                isEssential = _isEssential,
                 productType = _productType
             };
 

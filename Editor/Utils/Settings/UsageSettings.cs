@@ -24,18 +24,28 @@ namespace Meta.XR.Editor.Settings
     {
         public static readonly UserInt NumberOfActiveSessions = new()
         {
-            Uid = "UsageSettings.NumberOfActiveSessions",
+            Uid = "UsageSettings.NumberOfActiveSessions"
         };
 
         public static readonly OnlyOnceUserString UserActivationDate = new()
         {
-            Uid = "UsageSettings.UserActivationDate",
+            Uid = "UsageSettings.UserActivationDate"
+        };
+
+        public static readonly OnlyOnceUserInt InitialSDKVersion = new()
+        {
+            Uid = "UsageSettings.InitialSDKVersion"
+        };
+
+        public static readonly UserInt LastUsedSDKVersion = new()
+        {
+            Uid = "UsageSettings.LastUsedSDKVersion"
         };
 
         // Kept to support older versions of XR Simulator
         public static readonly ProjectSettings.SettingBool UsesXRSimulator = new()
         {
-            Uid = "UsageSettings.UsesXRSimulator",
+            Uid = "UsageSettings.UsesXRSimulator"
         };
     }
 }

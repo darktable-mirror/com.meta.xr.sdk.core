@@ -119,7 +119,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         .ToArray();
 
     public List<DeviceType> targetDeviceTypes = new()
-        { DeviceType.Quest, DeviceType.Quest2, DeviceType.QuestPro, DeviceType.Quest3, DeviceType.Quest3S };
+        { DeviceType.Quest, DeviceType.Quest2, DeviceType.QuestPro, DeviceType.Quest3, DeviceType.Quest3S
+        };
 
     public bool allowOptional3DofHeadTracking = false;
     public HandTrackingSupport handTrackingSupport = HandTrackingSupport.ControllersOnly;
@@ -152,6 +153,8 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool removeGradleManifest = true;
 
     public bool metaXrFeaturePromptDeclined = false;
+
+    public bool useOpenXRPromptDeclined = false;
 
     [System.Obsolete("Focus awareness is now required. The option will be deprecated.", false)]
     public bool focusAware = true;
@@ -323,6 +326,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
                 projectConfig.minHorizonOsSdkVersion = horizonOsSdkVersions[0];
                 projectConfig.targetHorizonOsSdkVersion = horizonOsSdkVersions[horizonOsSdkVersions.Length - 1];
                 projectConfig.metaXrFeaturePromptDeclined = false;
+                projectConfig.useOpenXRPromptDeclined = false;
                 AssetDatabase.CreateAsset(projectConfig, oculusProjectConfigAssetPath);
             }
         }
@@ -361,6 +365,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
             {
                 projectConfig.targetDeviceTypes.Add(DeviceType.Quest3S);
             }
+
         }
 
         return projectConfig;

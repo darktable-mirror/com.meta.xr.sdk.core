@@ -20,6 +20,7 @@
 
 using Meta.XR.Editor.Settings;
 using Meta.XR.Samples.Editor;
+using Meta.XR.Telemetry;
 using UnityEditor;
 
 [InitializeOnLoad]
@@ -49,10 +50,10 @@ internal class OVREditorStart
 
         if (InitSession.Value)
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.Start)
+            var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.Start)
             {
-                isEssential = OVRPlugin.Bool.True,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = true,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.UsesProSkin, EditorGUIUtility.isProSkin);
             unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.AnnotationType.Samples,

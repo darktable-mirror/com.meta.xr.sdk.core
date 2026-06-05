@@ -18,15 +18,16 @@
  * limitations under the License.
  */
 
-#if USING_XR_COMPOSITION_LAYERS
+#if USING_XR_COMPOSITION_LAYERS && USING_XR_SDK_OPENXR
 using System;
 using UnityEngine;
 using Unity.XR.CompositionLayers.Provider;
+using Unity.XR.CompositionLayers;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using System.Runtime.InteropServices;
 
-namespace Unity.XR.CompositionLayers.Extensions
+namespace Meta.XR
 {
     /// <summary>
     /// Subclass of <see cref="CompositionLayerExtension" /> to support
@@ -44,8 +45,7 @@ namespace Unity.XR.CompositionLayers.Extensions
     [AddComponentMenu("XR/Composition Layers/Extensions/Depth Test")]
     public class DepthTestExtension : CompositionLayerExtension
     {
-        const uint XR_FB_composition_layer_depth_test = 1000212000;
-
+        // Keep in sync with XrCompareOpFB
         public enum XrCompareOp
         {
             Never = 0,
@@ -71,10 +71,10 @@ namespace Unity.XR.CompositionLayers.Extensions
         [Tooltip("The depth testing compare operation used for this layer")]
         XrCompareOp m_CompareOp = XrCompareOp.Less;
 
-        NativeArray<Native.XrCompositionLayerDepthTestFB> m_NativeArray;
+        NativeArray<XrCompositionLayerDepthTestFB> m_NativeArray;
 
         /// <summary>
-        /// The value used to scale a given color by.
+        /// The value used indicate whether writes to the composition depth buffer are enabled for this layer.
         /// </summary>
         public bool DepthMask
         {
@@ -83,7 +83,7 @@ namespace Unity.XR.CompositionLayers.Extensions
         }
 
         /// <summary>
-        /// The value used to scale a given color by.
+        /// The value used to indicate what compare operation is used in the depth test.
         /// </summary>
         public XrCompareOp CompareOp
         {
@@ -97,12 +97,17 @@ namespace Unity.XR.CompositionLayers.Extensions
         /// <returns>the pointer to the depth test extension's native struct.</returns>
         public override unsafe void* GetNativeStructPtr()
         {
-            var openXRStruct = new Native.XrCompositionLayerDepthTestFB(XR_FB_composition_layer_depth_test, null, m_DepthMask, (uint)m_CompareOp);
+            var depthTest = new XrCompositionLayerDepthTestFB
+            {
+                Type = XrCompositionLayerDepthTestFB.StructureType,
+                DepthMask = m_DepthMask,
+                CompareOp = (XrCompareOpFB)m_CompareOp,
+            };
 
             if (!m_NativeArray.IsCreated)
-                m_NativeArray = new NativeArray<Native.XrCompositionLayerDepthTestFB>(1, Allocator.Persistent);
+                m_NativeArray = new NativeArray<XrCompositionLayerDepthTestFB>(1, Allocator.Persistent);
 
-            m_NativeArray[0] = openXRStruct;
+            m_NativeArray[0] = depthTest;
             return m_NativeArray.GetUnsafePtr();
         }
 
@@ -113,26 +118,6 @@ namespace Unity.XR.CompositionLayers.Extensions
 
             if (m_NativeArray.IsCreated)
                 m_NativeArray.Dispose();
-        }
-
-        private static class Native
-        {
-            [StructLayout(LayoutKind.Sequential)]
-            public unsafe struct XrCompositionLayerDepthTestFB
-            {
-                public XrCompositionLayerDepthTestFB(uint type, void* next, bool depthMask, uint compareOp)
-                {
-                    this.type = type;
-                    this.next = next;
-                    this.depthMask = depthMask;
-                    this.compareOp = compareOp;
-                }
-
-                private uint type;
-                private void* next;
-                private bool depthMask;
-                private uint compareOp;
-            }
         }
     }
 }

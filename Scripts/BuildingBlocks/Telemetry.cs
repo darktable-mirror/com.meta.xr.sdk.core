@@ -19,8 +19,10 @@
  */
 
 using System.IO;
+using Meta.XR.Telemetry;
 using UnityEngine.SceneManagement;
 using static OVRTelemetryConstants.BB;
+using AnnotationType = OVRTelemetryConstants.BB.AnnotationType;
 
 namespace Meta.XR.BuildingBlocks
 {
@@ -87,7 +89,7 @@ namespace Meta.XR.BuildingBlocks
             return marker.AddAnnotation(AnnotationType.SceneSizeInB, sceneSizeInB.ToString());
         }
 
-        public static void AddBlockInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, BuildingBlock block)
+        public static void AddBlockInfo(ref this UnifiedEventData unifiedEvent, BuildingBlock block)
         {
             unifiedEvent.SetMetadata(AnnotationType.BlockId, block.BlockId);
             unifiedEvent.SetMetadata(AnnotationType.InstanceId, block.InstanceId);
@@ -96,7 +98,7 @@ namespace Meta.XR.BuildingBlocks
             unifiedEvent.AddBlockVariantInfo(block);
         }
 
-        private static void AddBlockVariantInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, BuildingBlock block)
+        private static void AddBlockVariantInfo(ref this UnifiedEventData unifiedEvent, BuildingBlock block)
         {
             if (block.InstallationRoutineCheckpoint == null || string.IsNullOrEmpty(block.InstallationRoutineCheckpoint.InstallationRoutineId))
             {
@@ -108,7 +110,7 @@ namespace Meta.XR.BuildingBlocks
             unifiedEvent.AddInstallationRoutineInfo(block.InstallationRoutineCheckpoint);
         }
 
-        private static void AddInstallationRoutineInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, InstallationRoutineCheckpoint checkpoint)
+        private static void AddInstallationRoutineInfo(ref this UnifiedEventData unifiedEvent, InstallationRoutineCheckpoint checkpoint)
         {
             if (checkpoint == null)
             {
@@ -135,7 +137,7 @@ namespace Meta.XR.BuildingBlocks
             }
         }
 
-        public static void AddSceneInfo(ref this OVRPlugin.UnifiedEventData unifiedEvent, Scene scene)
+        public static void AddSceneInfo(ref this UnifiedEventData unifiedEvent, Scene scene)
         {
             long sceneSizeInB = 0;
 

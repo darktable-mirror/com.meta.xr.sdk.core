@@ -73,9 +73,9 @@ namespace Meta.XR.Editor.UserInterface
         /// This method provides an alternative to the IMGUI Draw() method for UIToolkit-based workflows.
         /// </summary>
         /// <returns>A VisualElement containing the chat item with optional copy button on hover</returns>
-        public override VisualElement Get()
+        public override VisualElement Build()
         {
-            var container = base.Get();
+            var container = base.Build();
 
             if (!_showCopy || _copyButton != null)
                 return container;
@@ -92,7 +92,7 @@ namespace Meta.XR.Editor.UserInterface
                 Color.white,
                 (int)RLDS.Styles.IconSize.SizeSM,
                 (int)RLDS.Styles.IconSize.SizeSM
-            ).Get();
+            ).Build();
 
             _copyButton.Add(copyIcon);
             _copyButton.AddToClassList(Props.Button.TertiarySmall);

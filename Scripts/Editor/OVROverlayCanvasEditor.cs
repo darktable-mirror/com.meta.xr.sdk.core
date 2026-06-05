@@ -23,6 +23,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Linq;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
 using static OVROverlayEditorHelper;
 
 [CustomEditor(typeof(OVROverlayCanvas))]
@@ -86,7 +87,7 @@ public class OVROverlayCanvasEditor : Editor
             if (GUILayout.Button("Fix Hidden Scene Layers"))
             {
                 canvas.SetCanvasLayer(canvas.gameObject.layer, true);
-                var evt = new OVRPlugin.UnifiedEventData("canvas_fix_canvas_layers_clicked");
+                var evt = new UnifiedEventData("canvas_fix_canvas_layers_clicked");
                 evt.Send();
             }
         }
@@ -97,7 +98,7 @@ public class OVROverlayCanvasEditor : Editor
             if (GUILayout.Button("Set Hidden Scene Layer Name"))
             {
                 SetLayerName(canvas.gameObject.layer, DefaultHiddenCanvasLayerName);
-                var evt = new OVRPlugin.UnifiedEventData("canvas_set_canvas_layer_name_clicked");
+                var evt = new UnifiedEventData("canvas_set_canvas_layer_name_clicked");
                 evt.Send();
             }
         }
@@ -127,7 +128,7 @@ public class OVROverlayCanvasEditor : Editor
                 if (GUILayout.Button($"Remove {LayerMask.LayerToName(canvas.gameObject.layer)} from Camera cullingMask"))
                 {
                     mainCamera.cullingMask &= ~(1 << canvas.gameObject.layer);
-                    var evt = new OVRPlugin.UnifiedEventData("canvas_remove_from_culling_mask_clicked");
+                    var evt = new UnifiedEventData("canvas_remove_from_culling_mask_clicked");
                     evt.Send();
                 }
             }
@@ -141,7 +142,7 @@ public class OVROverlayCanvasEditor : Editor
                 if (GUILayout.Button($"Add {LayerMask.LayerToName(canvas.layer)} to Camera cullingMask"))
                 {
                     mainCamera.cullingMask |= 1 << canvas.layer;
-                    var evt = new OVRPlugin.UnifiedEventData("canvas_add_to_culling_mask_clicked");
+                    var evt = new UnifiedEventData("canvas_add_to_culling_mask_clicked");
                     evt.Send();
                 }
             }
@@ -183,7 +184,7 @@ public class OVROverlayCanvasEditor : Editor
                     settings.CanvasRenderLayer = newLayer;
                     SetLayerName(settings.CanvasRenderLayer, DefaultCanvasRenderLayerName);
                 }
-                var evt = new OVRPlugin.UnifiedEventData("canvas_create_render_layer_clicked");
+                var evt = new UnifiedEventData("canvas_create_render_layer_clicked");
                 evt.Send();
             }
         }
@@ -290,7 +291,7 @@ public class OVROverlayCanvasEditor : Editor
                     if (GUILayout.Button($"Set up rendering triggers for {text}"))
                     {
                         Undo.AddComponent<OVROverlayCanvas_TMPChanged>(text.gameObject).TargetCanvas = canvas;
-                        var evt = new OVRPlugin.UnifiedEventData("canvas_add_tmpchanged_clicked");
+                        var evt = new UnifiedEventData("canvas_add_tmpchanged_clicked");
                         evt.Send();
                     }
                 }

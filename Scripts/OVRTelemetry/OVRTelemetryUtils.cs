@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Telemetry;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
@@ -52,13 +53,13 @@ internal static partial class OVRTelemetry
         return marker.AddAnnotation(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, GetPlayModeOrigin());
     }
 
-    public static OVRPlugin.UnifiedEventData AddPlayModeOrigin(this OVRPlugin.UnifiedEventData eventData)
+    public static UnifiedEventData AddPlayModeOrigin(this UnifiedEventData eventData)
     {
         eventData.SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.Origin, GetPlayModeOrigin());
         return eventData;
     }
 
-    public static unsafe bool SetMetadata<T>(this OVRPlugin.UnifiedEventData unifiedEvent, string key, ReadOnlySpan<T> values) where T : unmanaged, Enum
+    public static unsafe bool SetMetadata<T>(this UnifiedEventData unifiedEvent, string key, ReadOnlySpan<T> values) where T : unmanaged, Enum
     {
         // If the underlying type is already a long or ulong, we can just cast it.
         var underlyingType = Enum.GetUnderlyingType(typeof(T));

@@ -1093,6 +1093,191 @@ namespace Meta.XR
     }
 #endregion
 
+#region XR_FB_composition_layer_settings
+    public partial struct XrCompositionLayerSettingsFB
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000204000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public XrCompositionLayerSettingsFlagsFB LayerFlags;
+    }
+
+    [Flags]
+    public enum XrCompositionLayerSettingsFlagsFB : ulong
+    {
+        /// <summary>
+        /// Indicates compositor _may_ use layer texture supersampling.
+        /// </summary>
+        NormalSuperSamplingBit = 1 << 0,
+
+        /// <summary>
+        /// Indicates compositor _may_ use high quality layer texture supersampling.
+        /// </summary>
+        QualitySuperSamplingBit = 1 << 1,
+
+        /// <summary>
+        /// Indicates compositor _may_ use layer texture sharpening.
+        /// </summary>
+        NormalSharpeningBit = 1 << 2,
+
+        /// <summary>
+        /// Indicates compositor _may_ use high quality layer texture sharpening.
+        /// </summary>
+        QualitySharpeningBit = 1 << 3,
+
+        /// <summary>
+        /// Indicates compositor _may_ automatically toggle a texture filtering mechanism to improve visual quality of layer. This _must_ not be the only bit set. (Added by apiext:XR_META_automatic_layer_filter)
+        /// </summary>
+        AutoLayerFilterBit = 1 << 5,
+    }
+#endregion
+
+#region XR_META_automatic_layer_filter
+
+#endregion
+
+#region XR_FB_composition_layer_depth_test
+    public enum XrCompareOpFB
+    {
+        /// <summary>
+        /// Comparison is never true.
+        /// </summary>
+        Never = 0,
+
+        /// <summary>
+        /// Comparison is true if source less than is destination.
+        /// </summary>
+        Less = 1,
+
+        /// <summary>
+        /// Comparison is true if source is equal to destination.
+        /// </summary>
+        Equal = 2,
+
+        /// <summary>
+        /// Comparison is true if source is less than or equal to destination.
+        /// </summary>
+        LessOrEqual = 3,
+
+        /// <summary>
+        /// Comparison is true if source is greater than destination.
+        /// </summary>
+        Greater = 4,
+
+        /// <summary>
+        /// Comparison is true if source is not equal to destination.
+        /// </summary>
+        NotEqual = 5,
+
+        /// <summary>
+        /// Comparison is true if source is greater than or equal to destination.
+        /// </summary>
+        GreaterOrEqual = 6,
+
+        /// <summary>
+        /// Comparison is always true.
+        /// </summary>
+        Always = 7,
+    }
+
+    public partial struct XrCompositionLayerDepthTestFB
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000212000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public XrBool32 DepthMask;
+        public XrCompareOpFB CompareOp;
+    }
+#endregion
+
+#region XR_FB_composition_layer_secure_content
+    public partial struct XrCompositionLayerSecureContentFB
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000072000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public XrCompositionLayerSecureContentFlagsFB Flags;
+    }
+
+    [Flags]
+    public enum XrCompositionLayerSecureContentFlagsFB : ulong
+    {
+        /// <summary>
+        /// Indicates the layer will only be visible inside the HMD, and not visible to external sources
+        /// </summary>
+        ExcludeLayerBit = 1 << 0,
+
+        /// <summary>
+        /// Indicates the layer will be displayed inside the HMD, but replaced by proxy content when written to external sources
+        /// </summary>
+        ReplaceLayerBit = 1 << 1,
+    }
+#endregion
+
+
+#region XR_FB_color_space
+    public enum XrColorSpaceFB
+    {
+        Unmanaged = 0,
+        Rec2020 = 1,
+        Rec709 = 2,
+        RiftCv1 = 3,
+        RiftS = 4,
+        Quest = 5,
+        P3 = 6,
+        AdobeRgb = 7,
+    }
+
+    public partial struct XrSystemColorSpacePropertiesFB
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000108000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public XrColorSpaceFB ColorSpace;
+    }
+
+    partial class OpenXRNativeFuncs
+    {
+        public unsafe delegate XrResult xrEnumerateColorSpacesFB(
+            XrSession session,
+            uint colorSpaceCapacityInput,
+            out uint colorSpaceCountOutput,
+            XrColorSpaceFB* colorSpaces);
+
+        public delegate XrResult xrSetColorSpaceFB(
+            XrSession session,
+            XrColorSpaceFB colorSpace);
+    }
+#endregion
+
+#region XR_FB_display_refresh_rate
+    public partial struct XrEventDataDisplayRefreshRateChangedFB
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000101000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public float FromDisplayRefreshRate;
+        public float ToDisplayRefreshRate;
+    }
+
+    partial class OpenXRNativeFuncs
+    {
+        public unsafe delegate XrResult xrEnumerateDisplayRefreshRatesFB(
+            XrSession session,
+            uint displayRefreshRateCapacityInput,
+            out uint displayRefreshRateCountOutput,
+            float* displayRefreshRates);
+
+        public delegate XrResult xrGetDisplayRefreshRateFB(
+            XrSession session,
+            out float displayRefreshRate);
+
+        public delegate XrResult xrRequestDisplayRefreshRateFB(
+            XrSession session,
+            float displayRefreshRate);
+    }
+#endregion
+
 #region Core Spec
     partial class OpenXRNativeFuncs
     {

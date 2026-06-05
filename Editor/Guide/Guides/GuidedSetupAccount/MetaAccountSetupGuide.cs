@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.ToolingSupport;
+using Meta.XR.Telemetry;
 using Oculus.Platform;
 using UnityEditor;
 using UnityEngine;
@@ -157,10 +158,10 @@ namespace Meta.XR.Guides.Editor
             {
                 _appIdSet = Common.SetAppId(_appIdField.Text);
                 UpdateAppIdStatus();
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.GuidedSetup.FalcoEventName.SetAppIdFromGuidedSetup)
+                var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.GuidedSetup.FalcoEventName.SetAppIdFromGuidedSetup)
                 {
-                    isEssential = OVRPlugin.Bool.False,
-                    productType = OVRPlugin.ProductType.Editor
+                    isEssential = false,
+                    productType = TelemetryProductType.Editor
                 };
                 unifiedEvent.Send();
             });

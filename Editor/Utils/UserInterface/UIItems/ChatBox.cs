@@ -93,7 +93,7 @@ namespace Meta.XR.Editor.UserInterface
 
         public bool Hide { get; set; }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             if (_scrollView != null)
                 return _scrollView;
@@ -112,13 +112,13 @@ namespace Meta.XR.Editor.UserInterface
 
             foreach (var chatItem in _chatItems)
             {
-                var itemElement = chatItem.Get();
+                var itemElement = chatItem.Build();
                 if (itemElement != null)
                 {
                     contentContainer.Add(itemElement);
 
                     var spacer = new AddSpace(RLDS.Styles.Spacing.SpaceSM);
-                    contentContainer.Add(spacer.Get());
+                    contentContainer.Add(spacer.Build());
                 }
             }
 
@@ -143,13 +143,13 @@ namespace Meta.XR.Editor.UserInterface
 
             foreach (var chatItem in _chatItems)
             {
-                var itemElement = chatItem.Get();
+                var itemElement = chatItem.Build();
                 if (itemElement != null)
                 {
                     contentContainer.Add(itemElement);
 
                     var spacer = new AddSpace(RLDS.Styles.Spacing.SpaceSM);
-                    contentContainer.Add(spacer.Get());
+                    contentContainer.Add(spacer.Build());
                 }
             }
 

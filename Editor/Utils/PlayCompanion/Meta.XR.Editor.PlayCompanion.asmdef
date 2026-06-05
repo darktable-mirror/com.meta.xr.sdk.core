@@ -5,7 +5,6 @@
         "Meta.XR.Editor.UserInterface",
         "Meta.XR.Editor.Reflection",
         "Meta.XR.Editor.Settings",
-        "Oculus.VR.Editor",
         "Meta.XR.Editor.Id",
         "Meta.XR.Editor.ToolingSupport"
     ],

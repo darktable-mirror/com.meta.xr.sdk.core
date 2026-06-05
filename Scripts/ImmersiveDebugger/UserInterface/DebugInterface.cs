@@ -53,6 +53,31 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private List<DebugPanel> _allPanels = new List<DebugPanel>();
         private ValueContainer<float> _panelPositionConstants;
 
+        /// <summary>
+        /// Provides read-only access to the DebugBar for inspectors.
+        /// </summary>
+        internal DebugBar Bar => _bar;
+
+        /// <summary>
+        /// Provides read-only access to the list of all registered panels for inspectors.
+        /// </summary>
+        internal IReadOnlyList<DebugPanel> AllPanels => _allPanels;
+
+        /// <summary>
+        /// Gets the current state of the Follow (translation) override.
+        /// </summary>
+        internal bool FollowOverrideState => _followButton?.State ?? false;
+
+        /// <summary>
+        /// Gets the current state of the Rotate override.
+        /// </summary>
+        internal bool RotateOverrideState => _rotateButton?.State ?? false;
+
+        /// <summary>
+        /// Gets the current state of the Opacity override.
+        /// </summary>
+        internal bool OpacityOverrideState => _opacityButton?.State ?? false;
+
         protected override bool FollowOverride
         {
             get => _followButton.State;
@@ -172,14 +197,28 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             UpdateDynamicPanelPositions();
         }
 
-        private void ToggleFollowTranslation()
+        /// <summary>
+        /// Toggles the follow translation override.
+        /// </summary>
+        internal void ToggleFollowTranslation()
         {
             FollowOverride = !FollowOverride;
         }
 
-        private void ToggleFollowRotation()
+        /// <summary>
+        /// Toggles the follow rotation override.
+        /// </summary>
+        internal void ToggleFollowRotation()
         {
             RotateOverride = !RotateOverride;
+        }
+
+        /// <summary>
+        /// Toggles the opacity override for all panels.
+        /// </summary>
+        internal void ToggleOpacity()
+        {
+            OpacityOverride = !OpacityOverride;
         }
 
         private void UpdateVisibility()

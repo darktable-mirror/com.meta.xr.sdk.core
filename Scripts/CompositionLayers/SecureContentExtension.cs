@@ -18,16 +18,17 @@
  * limitations under the License.
  */
 
-#if USING_XR_COMPOSITION_LAYERS
+#if USING_XR_COMPOSITION_LAYERS && USING_XR_SDK_OPENXR
 using System;
 using UnityEngine;
 using Unity.XR.CompositionLayers.Provider;
+using Unity.XR.CompositionLayers;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using System.Runtime.InteropServices;
 using UnityEngine.Serialization;
 
-namespace Unity.XR.CompositionLayers.Extensions
+namespace Meta.XR
 {
     /// <summary>
     /// Subclass of <see cref="CompositionLayerExtension" /> to support
@@ -45,11 +46,10 @@ namespace Unity.XR.CompositionLayers.Extensions
     [AddComponentMenu("XR/Composition Layers/Extensions/Secure Content")]
     public class SecureContentExtension : CompositionLayerExtension
     {
-        const uint XR_FB_composition_layer_secure_content = 1000072000;
-
-        [Flags]
+        // Keep in sync with XrCompositionLayerSecureContentFlagsFB
         public enum XrCompositionLayerSecureContentFlags
         {
+            None = 0x0,
             ExcludeLayer = 0x1,
             ReplaceLayer = 0x2,
         }
@@ -64,10 +64,10 @@ namespace Unity.XR.CompositionLayers.Extensions
         [Tooltip("The secure content flags for this layer")]
         XrCompositionLayerSecureContentFlags m_Flags = 0;
 
-        NativeArray<Native.XrCompositionLayerSecureContentFB> m_NativeArray;
+        NativeArray<XrCompositionLayerSecureContentFB> m_NativeArray;
 
         /// <summary>
-        /// The value used to scale a given color by.
+        /// The value used determine how secure content will be rendered when viewed from external sources
         /// </summary>
         public XrCompositionLayerSecureContentFlags Flags
         {
@@ -81,12 +81,16 @@ namespace Unity.XR.CompositionLayers.Extensions
         /// <returns>the pointer to the secure content extension's native struct.</returns>
         public override unsafe void* GetNativeStructPtr()
         {
-            var openXRStruct = new Native.XrCompositionLayerSecureContentFB(XR_FB_composition_layer_secure_content, null, (ulong)m_Flags);
+            var secureContent = new XrCompositionLayerSecureContentFB
+            {
+                Type = XrCompositionLayerSecureContentFB.StructureType,
+                Flags = (XrCompositionLayerSecureContentFlagsFB)Flags,
+            };
 
             if (!m_NativeArray.IsCreated)
-                m_NativeArray = new NativeArray<Native.XrCompositionLayerSecureContentFB>(1, Allocator.Persistent);
+                m_NativeArray = new NativeArray<XrCompositionLayerSecureContentFB>(1, Allocator.Persistent);
 
-            m_NativeArray[0] = openXRStruct;
+            m_NativeArray[0] = secureContent;
             return m_NativeArray.GetUnsafePtr();
         }
 
@@ -97,24 +101,6 @@ namespace Unity.XR.CompositionLayers.Extensions
 
             if (m_NativeArray.IsCreated)
                 m_NativeArray.Dispose();
-        }
-
-        private static class Native
-        {
-            [StructLayout(LayoutKind.Sequential)]
-            public unsafe struct XrCompositionLayerSecureContentFB
-            {
-                public XrCompositionLayerSecureContentFB(uint type, void* next, ulong flags)
-                {
-                    this.type = type;
-                    this.next = next;
-                    this.flags = flags;
-                }
-
-                private uint type;
-                private void* next;
-                private ulong flags;
-            }
         }
     }
 }

@@ -86,7 +86,7 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
-        public VisualElement Get()
+        public VisualElement Build()
         {
             var container = new VisualElement();
             container.AddToClassList(Props.Radio.Item);

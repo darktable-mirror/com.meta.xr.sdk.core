@@ -92,73 +92,120 @@ namespace Meta.XR.Editor.Notifications
             protected override T GetField() => _field;
         }
 
-        private class CallbackFilterChecker<T> : BaseFilterChecker<T>
-        {
-            private readonly Func<T> _fieldCallback;
-
-            public CallbackFilterChecker(Func<T> fieldCallback)
-            {
-                _fieldCallback = fieldCallback;
-            }
-
-            protected override T GetField() => _fieldCallback();
-        }
-
         private readonly IReadOnlyDictionary<string, FilterChecker> _checkers;
 
-        private static IEnumerable<(string Key, FilterChecker Checker)> GetFiltersForToolUsage(
-            ToolUsage toolUsage)
+        internal struct ToolUsageData
         {
-            yield return (
-                $"{toolUsage.ToolId}_is_used",
-                new CallbackFilterChecker<bool>(() => toolUsage.IsUsed));
-
-            yield return (
-                $"{toolUsage.ToolId}_times_used",
-                new CallbackFilterChecker<int>(() => toolUsage.TimesUsed));
-
-            yield return (
-                $"{toolUsage.ToolId}_days_since_last_used",
-                new CallbackFilterChecker<int>(() => toolUsage.DaysSinceLastUsed));
-
-            yield return (
-                $"{toolUsage.ToolId}_last_used_in_sdk_version",
-                new CallbackFilterChecker<int>(() => toolUsage.LastUsedInSDKVersion ?? ToolUsage.MissingSDKVersion));
+            public string ToolId;
+            public bool IsUsed;
+            public int TimesUsed;
+            public int DaysSinceLastUsed;
+            public int LastUsedInSdkVersion;
         }
 
-        public Validator()
+        internal struct UsageData
         {
+            public int NumberOfActiveSessions;
+            public int DaysSinceActivation;
+            public int? CurrentSdkVersion;
+            public int InitialSdkVersion;
+            public int LastUsedSdkVersion;
+            public bool IsFirstSessionAfterSdkUpdate;
+
+            public static UsageData Resolve()
+            {
+                var sdkVersion = ToolUsage.GetSdkVersion();
+                var previousSdkVersion = UsageSettings.LastUsedSDKVersion.Value;
+
+                if (sdkVersion.HasValue)
+                {
+                    UsageSettings.InitialSDKVersion.SetValue(sdkVersion.Value);
+                    UsageSettings.LastUsedSDKVersion.SetValue(sdkVersion.Value);
+                }
+
+                int daysSinceActivation = 0;
+                if (long.TryParse(UsageSettings.UserActivationDate, out var activationTime))
+                {
+                    var storedDate = DateTimeOffset.FromUnixTimeSeconds(activationTime);
+                    var elapsed = DateTimeOffset.UtcNow - storedDate;
+                    daysSinceActivation = (int)elapsed.TotalDays;
+                }
+
+                return new UsageData
+                {
+                    NumberOfActiveSessions = UsageSettings.NumberOfActiveSessions.Value,
+                    DaysSinceActivation = daysSinceActivation,
+                    CurrentSdkVersion = sdkVersion,
+                    InitialSdkVersion = sdkVersion.HasValue ? UsageSettings.InitialSDKVersion.Value : 0,
+                    LastUsedSdkVersion = previousSdkVersion,
+                    IsFirstSessionAfterSdkUpdate = sdkVersion.HasValue && previousSdkVersion != 0 && previousSdkVersion != sdkVersion.Value
+                };
+            }
+        }
+
+        private static IEnumerable<(string Key, FilterChecker Checker)> GetFiltersForToolUsageData(
+            ToolUsageData toolUsageData)
+        {
+            yield return (
+                $"{toolUsageData.ToolId}_is_used",
+                new ValueFilterChecker<bool>(toolUsageData.IsUsed));
+
+            yield return (
+                $"{toolUsageData.ToolId}_times_used",
+                new ValueFilterChecker<int>(toolUsageData.TimesUsed));
+
+            yield return (
+                $"{toolUsageData.ToolId}_days_since_last_used",
+                new ValueFilterChecker<int>(toolUsageData.DaysSinceLastUsed));
+
+            yield return (
+                $"{toolUsageData.ToolId}_last_used_in_sdk_version",
+                new ValueFilterChecker<int>(toolUsageData.LastUsedInSdkVersion));
+        }
+
+        private static IEnumerable<ToolUsageData> GetToolUsageDataFromRegistry()
+        {
+            foreach (var tool in ToolRegistry.Registry)
+            {
+                yield return new ToolUsageData
+                {
+                    ToolId = tool.Usage.ToolId,
+                    IsUsed = tool.Usage.IsUsed,
+                    TimesUsed = tool.Usage.TimesUsed,
+                    DaysSinceLastUsed = tool.Usage.DaysSinceLastUsed,
+                    LastUsedInSdkVersion = tool.Usage.LastUsedInSDKVersion ?? ToolUsage.MissingSDKVersion
+                };
+            }
+        }
+
+        public Validator() : this(UsageData.Resolve())
+        {
+        }
+
+
+        private Validator(UsageData usageData, IEnumerable<ToolUsageData> toolUsages = null)
+        {
+            toolUsages ??= GetToolUsageDataFromRegistry();
+
             var checkers = new Dictionary<string, FilterChecker>
             {
                 { "platform", new ValueFilterChecker<string>(Application.platform.ToString()) },
                 { "unity_version", new ValueFilterChecker<Version>(ParseUnityVersion(Application.unityVersion)) },
-                {
-                    "number_active_sessions", new CallbackFilterChecker<int>(() => UsageSettings.NumberOfActiveSessions)
-                },
-                {
-                    "days_since_activation", new CallbackFilterChecker<int>(() =>
-                    {
-                        if (!long.TryParse(UsageSettings.UserActivationDate, out var activationTime))
-                        {
-                            return 0;
-                        }
-
-                        var storedDate = DateTimeOffset.FromUnixTimeSeconds(activationTime);
-                        var elapsed = DateTimeOffset.UtcNow - storedDate;
-                        return (int)elapsed.TotalDays;
-                    })
-                }
+                { "number_active_sessions", new ValueFilterChecker<int>(usageData.NumberOfActiveSessions) },
+                { "days_since_activation", new ValueFilterChecker<int>(usageData.DaysSinceActivation) }
             };
 
-            var sdkVersion = ToolUsage.GetSdkVersion();
-            if (sdkVersion.HasValue)
+            if (usageData.CurrentSdkVersion.HasValue)
             {
-                checkers.Add("sdk_version", new ValueFilterChecker<int>(sdkVersion.Value));
+                checkers.Add("sdk_version", new ValueFilterChecker<int>(usageData.CurrentSdkVersion.Value));
+                checkers.Add("initial_sdk_version", new ValueFilterChecker<int>(usageData.InitialSdkVersion));
+                checkers.Add("last_used_sdk_version", new ValueFilterChecker<int>(usageData.LastUsedSdkVersion));
+                checkers.Add("is_first_session_after_sdk_update", new ValueFilterChecker<bool>(usageData.IsFirstSessionAfterSdkUpdate));
             }
 
-            foreach (var tool in ToolRegistry.Registry)
+            foreach (var toolUsageData in toolUsages)
             {
-                foreach (var (key, checker) in GetFiltersForToolUsage(tool.Usage))
+                foreach (var (key, checker) in GetFiltersForToolUsageData(toolUsageData))
                 {
                     if (checkers.TryAdd(key, checker))
                     {

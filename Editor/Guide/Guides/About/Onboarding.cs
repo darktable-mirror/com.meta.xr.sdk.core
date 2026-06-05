@@ -434,13 +434,25 @@ namespace Meta.XR.Guides.Editor.About
 
         public readonly RemoteString Role5Title =
             new(nameof(Role5Title), "Other");
+
+        public readonly RemoteString ReleaseNotesLoading =
+            new(nameof(ReleaseNotesLoading), "Loading release notes...");
+
+        public readonly RemoteString ReleaseNotesFallback =
+            new(nameof(ReleaseNotesFallback), "Release notes are currently unavailable. You can view them online:");
+
+        public readonly RemoteString ReleaseNotesViewOnline =
+            new(nameof(ReleaseNotesViewOnline), "View Release Notes");
+
+        public readonly string UrlReleaseNotes =
+            "https://developers.meta.com/horizon/downloads/package/meta-xr-core-sdk";
         #endregion
 
         public string BuildingBlocksStatus =>
             $"{BuildingBlocks.Editor.Utils.FilteredRegistry.Count(data => !data.Hidden)} blocks available!";
 
         public string ReleaseNotesDescription =>
-            About.Version.HasValue ? $"Meta XR Core SDK • Version {Version}" : "Meta XR Core SDK";
+            VersionLabel != null ? $"Meta XR Core SDK • Version {VersionLabel}" : "Meta XR Core SDK";
 
         public string WelcomeDescription =>
             About.Version.HasValue ? $"Version {About.Version}" : string.Empty;
@@ -474,11 +486,9 @@ namespace Meta.XR.Guides.Editor.About
 
         private Tween _fader;
 
-        private int Version => _changelogFetcher != null && _changelogFetcher.LatestVersion != null
-            ? _changelogFetcher.LatestVersion.Major
-            : About.LatestVersion != null
-                ? About.LatestVersion.Value
-                : 0;
+        private string VersionLabel => _changelogFetcher != null && _changelogFetcher.LatestVersion != null
+            ? _changelogFetcher.LatestVersion.ToString()
+            : null;
 
         internal override GuideWindow CreateWindow()
         {
@@ -567,15 +577,9 @@ namespace Meta.XR.Guides.Editor.About
 
         private void DrawBefore()
         {
-            if (_taskChangeLog is { IsCompleted: true, IsFaulted: false } &&
-                Event.current.type == EventType.Layout && _taskChangeLog.Result)
+            if (_taskChangeLog is { IsCompleted: true } && Event.current.type == EventType.Layout)
             {
                 UpdatePagesWithRemoteContent();
-                _taskChangeLog = null;
-            }
-            else if (_taskChangeLog is { IsCompleted: true, IsFaulted: true })
-            {
-                // Task failed (e.g., during domain reload), clear it to avoid re-throwing
                 _taskChangeLog = null;
             }
 
@@ -1203,6 +1207,25 @@ namespace Meta.XR.Guides.Editor.About
             var latestVersion = _changelogFetcher.LatestVersion;
             if (latestVersion == null)
             {
+                if (_taskChangeLog != null && !_taskChangeLog.IsCompleted)
+                {
+                    content.Add(new Label(ReleaseNotesLoading));
+                }
+                else
+                {
+                    content.Add(new Label(ReleaseNotesFallback));
+                    content.Add(new AddSpace(Margin));
+                    content.Add(new LinkLabel(new UrlLinkDescription()
+                    {
+                        Id = "ReleaseNotesOnline",
+                        OriginData = this,
+                        Origin = Origins.GuidedSetup,
+                        Content = new GUIContent(ReleaseNotesViewOnline),
+                        URL = UrlReleaseNotes,
+                        Style = Meta.XR.Editor.UserInterface.Styles.GUIStyles.CardAction,
+                        Color = Meta.XR.Editor.UserInterface.Styles.Colors.MetaForLink
+                    }));
+                }
                 return content;
             }
 
@@ -1214,20 +1237,17 @@ namespace Meta.XR.Guides.Editor.About
                 // Inserting space (because adding a margin doesn't work in Pages)
                 var item = changeLogItems[i];
                 if (item is not Label label) continue;
-                if (label.GUIStyle.fontSize <= 12) continue;
+
+                // Set origin for link click telemetry
+                label.LinkOrigin = Origins.GuidedSetup;
+                label.LinkOriginData = this;
+
+                if (label.GUIStyle == null || label.GUIStyle.fontSize <= 12) continue;
                 changeLogItems.Insert(i++, new AddSpace(DoubleMargin));
             }
 
-            foreach (var item in changeLogItems)
-            {
-                // Add origin data for links
-                if (item is not LinkLabel linkLabel) continue;
-                linkLabel.LinkDescription.Origin = Origins.GuidedSetup;
-                linkLabel.LinkDescription.OriginData = this;
-            }
-
-            // Wrapping around a Scroll View
-            var scrollView = new ScrollView(changeLogItems, UIItemPlacementType.Vertical);
+            // Wrapping around a UIToolkit Container for clickable links
+            var scrollView = new UIToolkitContainer(changeLogItems, UIItemPlacementType.Vertical);
             content.Add(scrollView);
 
             return content;

@@ -24,6 +24,8 @@ using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using static OVRPlugin;
+using UnifiedEventData = Meta.XR.Telemetry.UnifiedEventData;
+using TelemetryProductType = Meta.XR.Telemetry.TelemetryProductType;
 using UnityEngine;
 
 public partial struct OVRAnchor
@@ -193,10 +195,10 @@ public partial struct OVRAnchor
                 Filters = (SpaceDiscoveryFilterInfoHeader**)filters.Data,
             }, out requestId);
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.EventName.DiscoverSpaces)
+            var unifiedEvent = new UnifiedEventData(Telemetry.EventName.DiscoverSpaces)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(Telemetry.Annotation.ComponentTypes, spaceComponentTypes.Data,
                 spaceComponentTypes.Count);

@@ -37,7 +37,7 @@ namespace Meta.XR.Editor.UserInterface
         private readonly string[] _styleClasses = Array.Empty<string>();
         public GUIStyle Style { get; set; }
         private VisualElement _containerElement;
-        public VisualElement ContainerElement => _containerElement ??= Get();
+        public VisualElement ContainerElement => _containerElement ??= Build();
 
         public GroupedItem(IEnumerable<IUserInterfaceItem> items,
             Utils.UIItemPlacementType placementType = Utils.UIItemPlacementType.Horizontal,
@@ -97,7 +97,7 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
-        public virtual VisualElement Get()
+        public virtual VisualElement Build()
         {
             if (_containerElement != null)
                 return _containerElement;
@@ -120,7 +120,7 @@ namespace Meta.XR.Editor.UserInterface
 
             foreach (var item in Items)
             {
-                _containerElement.Add(item.Get());
+                _containerElement.Add(item.Build());
             }
 
             return _containerElement;

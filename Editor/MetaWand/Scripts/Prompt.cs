@@ -27,6 +27,7 @@ using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.MetaWand.Editor.API;
 using Meta.XR.MetaWand.Editor.Telemetry;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -112,9 +113,9 @@ namespace Meta.XR.MetaWand.Editor
             var result = await _apiManager.SearchAssets(PromptText, Constants.SearchResultQueryCount, polyCount, Id);
             if (!result.Success)
             {
-                var failureEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreviewsGenerated)
+                var failureEvent = new UnifiedEventData(Constants.Telemetry.EventNamePreviewsGenerated)
                 {
-                    isEssential = OVRPlugin.Bool.False,
+                    isEssential = false,
                     entrypoint = Constants.Telemetry.EntrypointLoadState,
                     target = Constants.Telemetry.TargetPreviewPanel
                 };
@@ -132,9 +133,9 @@ namespace Meta.XR.MetaWand.Editor
                     ? result.ErrorMessage
                     : Constants.ErrorMessageDefaultFailedToLoad;
 
-                new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreGenerationFailure)
+                new UnifiedEventData(Constants.Telemetry.EventNamePreGenerationFailure)
                 {
-                    isEssential = OVRPlugin.Bool.True,
+                    isEssential = true,
                     entrypoint = Constants.Telemetry.EntrypointLoadState,
                     target = Constants.Telemetry.TargetPreviewPanel
                 }.SendMetaWandEvent();
@@ -164,9 +165,9 @@ namespace Meta.XR.MetaWand.Editor
 
             var successCount = results.Count(success => success);
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreviewsGenerated)
+            var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNamePreviewsGenerated)
             {
-                isEssential = OVRPlugin.Bool.True,
+                isEssential = true,
                 entrypoint = Constants.Telemetry.EntrypointLoadState,
                 target = Constants.Telemetry.TargetPreviewPanel
             };
@@ -223,9 +224,9 @@ namespace Meta.XR.MetaWand.Editor
 
         private async Task AddToScene()
         {
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
+            var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNameLinkClick)
             {
-                isEssential = OVRPlugin.Bool.True,
+                isEssential = true,
                 entrypoint = Constants.Telemetry.EntrypointLoadState,
                 target = Constants.Telemetry.TargetAddToSceneButton
             };
@@ -250,9 +251,9 @@ namespace Meta.XR.MetaWand.Editor
             _ = PrefabUtility.InstantiatePrefab(_savedPrefab) as GameObject;
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
 
-            var unifiedEvent2 = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNameObjectAddedToScene)
+            var unifiedEvent2 = new UnifiedEventData(Constants.Telemetry.EventNameObjectAddedToScene)
             {
-                isEssential = OVRPlugin.Bool.True,
+                isEssential = true,
                 entrypoint = Constants.Telemetry.EntrypointLoadState
             };
             unifiedEvent2.SetMetadata(Constants.Telemetry.ParamAssetId, Asset.AssetId);
@@ -276,9 +277,9 @@ namespace Meta.XR.MetaWand.Editor
                     ? Constants.SomethingWrong
                     : result.ErrorMessage, null, ShouldShowTryAgain(result.ErrorSubCode));
 
-                var unifiedEvent = new OVRPlugin.UnifiedEventData(Constants.Telemetry.EventNamePreGenerationFailure)
+                var unifiedEvent = new UnifiedEventData(Constants.Telemetry.EventNamePreGenerationFailure)
                 {
-                    isEssential = OVRPlugin.Bool.True,
+                    isEssential = true,
                     entrypoint = Constants.Telemetry.EntrypointLoadState,
                     target = Constants.Telemetry.TargetAddToSceneButton
                 };

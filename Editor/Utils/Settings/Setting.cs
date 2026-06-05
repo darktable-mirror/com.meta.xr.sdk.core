@@ -20,6 +20,7 @@
 
 using System;
 using Meta.XR.Editor.Id;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -84,10 +85,10 @@ namespace Meta.XR.Editor.Settings
         {
             if (!SendTelemetry) return;
 
-            var unifiedEvent = new OVRPlugin.UnifiedEventData(Telemetry.FalcoEventName.SettingsChanged)
+            var unifiedEvent = new UnifiedEventData(Telemetry.FalcoEventName.SettingsChanged)
             {
-                isEssential = OVRPlugin.Bool.False,
-                productType = OVRPlugin.ProductType.Editor
+                isEssential = false,
+                productType = TelemetryProductType.Editor
             };
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.Label, Label ?? Uid);
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.Action, Uid);
@@ -99,7 +100,7 @@ namespace Meta.XR.Editor.Settings
             unifiedEvent.Send();
         }
 
-        protected abstract void AddMetadata(OVRPlugin.UnifiedEventData unifiedEvent);
+        protected abstract void AddMetadata(UnifiedEventData unifiedEvent);
 
         public virtual void Reset() { }
 
@@ -159,7 +160,7 @@ namespace Meta.XR.Editor.Settings
             Value = Default;
         }
 
-        protected override void AddMetadata(OVRPlugin.UnifiedEventData unifiedEvent)
+        protected override void AddMetadata(UnifiedEventData unifiedEvent)
         {
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.Type, typeof(T).Name);
             unifiedEvent.SetMetadata(Telemetry.AnnotationType.Value, Value.ToString());

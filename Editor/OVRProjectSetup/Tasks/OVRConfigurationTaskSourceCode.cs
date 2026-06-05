@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -101,10 +102,10 @@ internal class OVRConfigurationTaskSourceCode
             OpenAssetDelegate?.Invoke(_object, Line);
         }
 
-        var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.ProjectSetup.FalcoEventName.GoToSource)
+        var unifiedEvent = new UnifiedEventData(OVRTelemetryConstants.ProjectSetup.FalcoEventName.GoToSource)
         {
-            isEssential = OVRPlugin.Bool.False,
-            productType = OVRPlugin.ProductType.Pst
+            isEssential = false,
+            productType = TelemetryProductType.Pst
         };
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.Uid, _task.Uid.ToString());
         unifiedEvent.SetMetadata(OVRProjectSetupTelemetryEvent.AnnotationTypes.BuildTargetGroup,

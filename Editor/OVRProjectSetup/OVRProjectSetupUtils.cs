@@ -114,7 +114,36 @@ internal static class OVRProjectSetupUtils
         };
     }
 
-    public static bool IsCoreModuleLoaded =>
-        AppDomain.CurrentDomain.GetAssemblies()
-            .Any(assembly => assembly.GetName().Name == "UnityEngine.CoreModule");
+    public static bool IsCoreModuleLoaded => IsCoreModuleLoadedImpl(AppDomain.CurrentDomain.GetAssemblies);
+
+    /// <summary>
+    /// Internal implementation that accepts a delegate for testability.
+    /// In production, pass <c>AppDomain.CurrentDomain.GetAssemblies</c>.
+    /// In tests, pass a mock that simulates assembly reload race conditions.
+    /// </summary>
+    internal static bool IsCoreModuleLoadedImpl(Func<System.Reflection.Assembly[]> getAssemblies)
+    {
+        try
+        {
+            return getAssemblies()
+                .Any(assembly =>
+                {
+                    try
+                    {
+                        return assembly.GetName().Name == "UnityEngine.CoreModule";
+                    }
+                    catch (Exception)
+                    {
+                        // During assembly reload, GetName() can throw FileNotFoundException
+                        // for partially-unloaded assemblies. Silently skip these.
+                        return false;
+                    }
+                });
+        }
+        catch (Exception)
+        {
+            // GetAssemblies() itself can fail during domain reload.
+            return false;
+        }
+    }
 }

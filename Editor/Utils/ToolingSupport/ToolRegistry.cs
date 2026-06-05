@@ -35,6 +35,11 @@ namespace Meta.XR.Editor.ToolingSupport
 
         public static void Register(ToolDescriptor descriptor)
         {
+            if (_registry.Any(d => d.Name == descriptor.Name))
+            {
+                return;
+            }
+
             _registry.Add(descriptor);
 
             // Register a delayed callback to initialize descriptors

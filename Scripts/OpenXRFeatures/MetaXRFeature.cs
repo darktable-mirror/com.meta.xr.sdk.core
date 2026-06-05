@@ -145,9 +145,9 @@ namespace Meta.XR
             "XR_META_recommended_layer_resolution",
             "XR_EXT_local_floor",
             "XR_METAX1_passthrough_camera_data",
-            "XR_METAX1_hand_tracking_frequency_hint",
-            "XR_METAX1_hand_tracking_unextrapolated_poses",
-            "XR_METAX1_hand_tracking_wide_motion_mode2",
+            "XR_META_hand_tracking_frequency_hint",
+            "XR_META_hand_tracking_unextrapolated_poses",
+            "XR_META_hand_tracking_wide_motion_mode2",
         })]
 #endif
     public partial class MetaXRFeature : MetaFeatureBase<MetaXRFeature>
@@ -177,6 +177,9 @@ namespace Meta.XR
             public OpenXRNativeFuncs.xrGetDeviceSampleRateFB xrGetDeviceSampleRateFB;
             public OpenXRNativeFuncs.xrResumeSimultaneousHandsAndControllersTrackingMETA xrResumeSimultaneousHandsAndControllersTrackingMETA;
             public OpenXRNativeFuncs.xrPauseSimultaneousHandsAndControllersTrackingMETA xrPauseSimultaneousHandsAndControllersTrackingMETA;
+            public OpenXRNativeFuncs.xrEnumerateDisplayRefreshRatesFB xrEnumerateDisplayRefreshRatesFB;
+            public OpenXRNativeFuncs.xrGetDisplayRefreshRateFB xrGetDisplayRefreshRateFB;
+            public OpenXRNativeFuncs.xrRequestDisplayRefreshRateFB xrRequestDisplayRefreshRateFB;
             public OpenXRNativeFuncs.xrQuerySpacesFB xrQuerySpacesFB;
             public OpenXRNativeFuncs.xrGetSpaceContainerFB xrGetSpaceContainerFB;
             public OpenXRNativeFuncs.xrCreateSpatialAnchorFB xrCreateSpatialAnchorFB;
@@ -204,6 +207,7 @@ namespace Meta.XR
             public OpenXRNativeFuncs.xrShareSpacesMETA xrShareSpacesMETA;
             public OpenXRNativeFuncs.xrDestroySpace xrDestroySpace;
             public OpenXRNativeFuncs.xrRequestSceneCaptureFB xrRequestSceneCaptureFB;
+            public OpenXRNativeFuncs.xrSetColorSpaceFB xrSetColorSpaceFB;
         }
 
         /// <summary>
@@ -245,10 +249,13 @@ namespace Meta.XR
         private bool _hapticsAmplitudeEnvelopeEnabled = false;
         private bool _hapticPcmEnabled = false;
         private bool _simultaneousHandsAndControllersEnabled = false;
+        private bool _displayRefreshRateEnabled = false;
+        private bool _colorSpaceEnabled = false;
 
         // Supported booleans that hold information about if a feature is supported after calling xrGetSystemProperties.
         private bool _parametricHapticsSupported = false;
         private bool _simultaneousHandsAndControllersSupported = false;
+        private XrColorSpaceFB _nativeColorSpace = XrColorSpaceFB.Unmanaged;
 
         /// <inheritdoc />
         protected override IntPtr HookGetInstanceProcAddr(IntPtr func)
@@ -388,6 +395,8 @@ namespace Meta.XR
             _hapticPcmEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_haptic_pcm");
             _hapticsAmplitudeEnvelopeEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_haptic_amplitude_envelope");
             _simultaneousHandsAndControllersEnabled = OpenXRRuntime.IsExtensionEnabled("XR_META_simultaneous_hands_and_controllers");
+            _displayRefreshRateEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_display_refresh_rate");
+            _colorSpaceEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_color_space");
 
             unsafe
             {
@@ -429,6 +438,16 @@ namespace Meta.XR
                             Unsafe.InsertFirst(&systemProperties, &simultaneousHandsAndControllers);
                         }
 
+                        var colorSpaceProperties = new XrSystemColorSpacePropertiesFB
+                        {
+                            Type = XrSystemColorSpacePropertiesFB.StructureType,
+                        };
+
+                        if (_colorSpaceEnabled)
+                        {
+                            Unsafe.InsertFirst(&systemProperties, &colorSpaceProperties);
+                        }
+
                         if (xrGetSystemProperties(Instance, systemId, ref systemProperties)
                             .OrLogFormat(LogPrefix + nameof(xrGetSystemProperties))
                             .IsSuccess())
@@ -441,11 +460,12 @@ namespace Meta.XR
 
                             sb.AppendLine($"\tSupportsParametricHaptics={hapticsParametricProperties.SupportsParametricHaptics}");
                             sb.AppendLine($"\tSupportsSimultaneousHandsAndControllers={simultaneousHandsAndControllers.SupportsSimultaneousHandsAndControllers}");
-
+                            sb.AppendLine($"\tColorSpace={colorSpaceProperties.ColorSpace}");
                             Debug.Log(sb);
 
                             _parametricHapticsSupported = hapticsParametricProperties.SupportsParametricHaptics;
                             _simultaneousHandsAndControllersSupported = simultaneousHandsAndControllers.SupportsSimultaneousHandsAndControllers;
+                            _nativeColorSpace = colorSpaceProperties.ColorSpace;
                         }
                     }
                 }
@@ -456,6 +476,10 @@ namespace Meta.XR
             GetInstanceDelegate(nameof(_command.xrGetDeviceSampleRateFB), out _command.xrGetDeviceSampleRateFB);
             GetInstanceDelegate(nameof(_command.xrResumeSimultaneousHandsAndControllersTrackingMETA), out _command.xrResumeSimultaneousHandsAndControllersTrackingMETA);
             GetInstanceDelegate(nameof(_command.xrPauseSimultaneousHandsAndControllersTrackingMETA), out _command.xrPauseSimultaneousHandsAndControllersTrackingMETA);
+            GetInstanceDelegate(nameof(_command.xrEnumerateDisplayRefreshRatesFB), out _command.xrEnumerateDisplayRefreshRatesFB);
+            GetInstanceDelegate(nameof(_command.xrGetDisplayRefreshRateFB), out _command.xrGetDisplayRefreshRateFB);
+            GetInstanceDelegate(nameof(_command.xrRequestDisplayRefreshRateFB), out _command.xrRequestDisplayRefreshRateFB);
+            GetInstanceDelegate(nameof(_command.xrSetColorSpaceFB), out _command.xrSetColorSpaceFB);
             BindSpatialEntityFunctionPointers();
         }
 
