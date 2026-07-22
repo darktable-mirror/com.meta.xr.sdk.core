@@ -165,21 +165,13 @@ internal class OVRConfigurationTaskUpdaterSummary
         }
     }
 
-    public string ComputeInfoMessage()
-    {
-        var highestLevel = HighestFixLevel;
-        var level = highestLevel ?? OVRProjectSetup.TaskLevel.Optional;
-        var count = GetNumberOfFixes(level);
-        if (count == 0)
-        {
-            return $"XR Ready for {_buildTargetGroup}";
-        }
-        else
-        {
-            var message = GetInfoMessage(level, count);
-            return message;
-        }
-    }
+    // Status-menu badge text for Required-level (error) issues — Figma node 4818-71850.
+    internal static string GetOutstandingIssuesMessage(int count) =>
+        $"{count} outstanding {OVREditorUtils.ChoosePlural(count, "issue", "issues")}";
+
+    // Status-menu badge text for Recommended-level (warning) issues — Figma node 4818-71850.
+    internal static string GetManuallyFixableMessage(int count) =>
+        $"{count} manually fixable {OVREditorUtils.ChoosePlural(count, "item", "items")}";
 
 
     public string ComputeLogMessage()
@@ -258,21 +250,6 @@ internal class OVRConfigurationTaskUpdaterSummary
 
             default:
                 return $"There are {count} outstanding {level.ToString()} fixes.";
-        }
-    }
-
-    private static string GetInfoMessage(OVRProjectSetup.TaskLevel level, int count)
-    {
-        switch (count)
-        {
-            case 0:
-                return $"No {level.ToString()} fixes available";
-
-            case 1:
-                return $"1 {level.ToString()} fix available";
-
-            default:
-                return $"{count} {level.ToString()} fixes available";
         }
     }
 

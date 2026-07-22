@@ -22,6 +22,9 @@ using System;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing the shared spatial anchor core building block into the scene.
+    /// </summary>
     public class SharedSpatialAnchorCoreBlockData : BlockData
     {
         protected override Type ComponentType => typeof(SharedSpatialAnchorCoreBuildingBlock);

@@ -217,11 +217,12 @@ class MetricAPI:
                 )
 
         except Exception as e:
-            self.trace_processor.close()
+            if hasattr(self, "trace_processor") and self.trace_processor is not None:
+                self.trace_processor.close()
             for proc in psutil.process_iter(["name"]):
                 if proc.info["name"] == "trace_processor_shell.exe":
                     proc.kill()
-            raise Exception("error open trace file:" + trace + e)
+            raise Exception("error open trace file:" + trace) from e
 
         # Check if GPU data is available in the trace
         self.has_gpu_data = self.check_gpu_data_availability()
@@ -383,18 +384,58 @@ class MetricAPI:
         all_passes = self.render_passes_df
         color_passes = self.main_color_pass_df
 
-        # Check if dataframes are empty to avoid indexing errors
+        # Render-stage decomposition unavailable (no Adreno surface# slices
+        # on Gpu* tracks). Fall back to per-frame GPU time samples written
+        # by the PIL/atrace counter `app_gpu_ms` — this is what hzdb's
+        # capture_perfetto_trace populates when called with
+        # gpu_metrics=True (D104276939). Returns the same shape as the
+        # render-stage path; render_passes_mean stays 0 because per-pass
+        # decomposition isn't possible without the slices.
         if all_passes.empty or color_passes.empty:
-            # Return default values when data is insufficient
-            json_result = {
+            try:
+                # LIKE 'app_gpu%ms' tolerates minor naming variation across
+                # Horizon OS / hzdb counter-track configs (observed forms:
+                # 'app_gpu_ms', 'app_gpu_time_ms'). The exact name is not
+                # guaranteed across Quest 2 (Adreno 650) vs Quest 3 (740).
+                counter_query = """
+                SELECT counter.value
+                FROM counter
+                JOIN counter_track ON counter.track_id = counter_track.id
+                WHERE counter_track.name LIKE 'app_gpu%ms'
+                ORDER BY counter.ts
+                """
+                qr_it = self.trace_processor.query(counter_query)
+                df = qr_it.as_pandas_dataframe()
+                if not df.empty:
+                    values = df["value"]
+                    # ddof=0 (population) matches np.std default used in
+                    # the primary render-stage path below — keeps the
+                    # 'std' field comparable across data sources.
+                    return {
+                        "entries": int(len(values)),
+                        "mean": float(values.mean()),
+                        "std": float(values.std(ddof=0) if len(values) > 1 else 0.0),
+                        "max": float(values.max()),
+                        "quantile_75": float(values.quantile(0.75)),
+                        "render_passes_mean": 0.0,
+                        "data_source": "app_gpu_ms_counter",
+                    }
+            except Exception as e:
+                MetricAPI.write_to_log(
+                    f"app_gpu_ms counter fallback failed: {e}",
+                    enable_logging=self.enable_logging,
+                    log_prefix=self.jsonName,
+                )
+            # No render-stage slices AND no app_gpu_ms counter — give up.
+            return {
                 "entries": 0,
                 "mean": 0.0,
                 "std": 0.0,
                 "max": 0.0,
                 "quantile_75": 0.0,
                 "render_passes_mean": 0.0,
+                "data_source": "none",
             }
-            return json_result
 
         all_color_ts = color_passes["ts"]
         start_time = all_color_ts.iloc[0]
@@ -502,6 +543,7 @@ class MetricAPI:
             "max": (np.max(frame_times) / 1000000).item(),
             "quantile_75": (np.quantile(frame_times, 0.75) / 1000000).item(),
             "render_passes_mean": np.mean(render_passes),
+            "data_source": "render_stage_slices",
         }
         return json_result
 
@@ -1676,7 +1718,7 @@ class MetricAPI:
             WHERE process.name NOT LIKE 'kworker%'
               AND process.name != ''
               AND process.name IS NOT NULL
-              AND (process.name NOT LIKE 'com.oculus%' OR process.name LIKE 'com.oculus.UOIAssets%')
+              AND (process.name NOT LIKE 'com.oculus%' OR process.name LIKE 'com.oculus.UOIAssets%' OR process.name LIKE 'com.oculus.samples%')
             GROUP BY process.name, process.upid
             ORDER BY has_xr_wait_frame DESC, thread_count DESC
             LIMIT 30
@@ -1970,21 +2012,41 @@ class MetricAPI:
     def check_gpu_data_availability(self):
         """
         Check if GPU data is available in the Perfetto trace.
-        Returns True if GPU trace data is found, False otherwise.
+        Returns True if any of the supported GPU signals are present:
+          (a) Adreno render-stage slices (surface# pattern on Gpu* tracks),
+              the historic primary signal — used by per-EID render pass
+              decomposition (gpu_time2 → render_passes_df).
+          (b) Per-frame GPU time counter samples (app_gpu_ms), populated
+              when hzdb's capture_perfetto_trace was called with
+              gpu_metrics=True. This is the new fallback signal for
+              traces captured by the PerfEx pipeline post-D104276939.
+        Returns False only when neither is present.
         """
         try:
-            query = """
+            slice_query = """
             SELECT COUNT(*) as gpu_count
             FROM slice
             LEFT JOIN track ON slice.track_id=track.id
             WHERE slice.name LIKE 'surface#%bit color%MSAA%' AND track.name LIKE 'Gpu%'
             LIMIT 1
             """
-            qr_it = self.trace_processor.query(query)
+            qr_it = self.trace_processor.query(slice_query)
             result_df = qr_it.as_pandas_dataframe()
-
             if not result_df.empty and result_df["gpu_count"].iloc[0] > 0:
                 return True
+
+            counter_query = """
+            SELECT COUNT(counter.id) as samples
+            FROM counter
+            JOIN counter_track ON counter.track_id = counter_track.id
+            WHERE counter_track.name LIKE 'app_gpu%ms'
+            LIMIT 1
+            """
+            qr_it = self.trace_processor.query(counter_query)
+            result_df = qr_it.as_pandas_dataframe()
+            if not result_df.empty and result_df["samples"].iloc[0] > 0:
+                return True
+
             return False
 
         except Exception as e:
@@ -3280,6 +3342,7 @@ def process_trace(tracePath, jsonPath, binPath="", enable_logging=False):
         )
         return {}
 
+    metric = None
     try:
         metric = MetricAPI(
             trace=tracePath,
@@ -4008,12 +4071,21 @@ def process_trace(tracePath, jsonPath, binPath="", enable_logging=False):
 
     except Exception as e:
         traceback_string = traceback.format_exc()
-        MetricAPI.write_to_error_log(e, log_prefix=metric.jsonName)
-        MetricAPI.write_to_error_log(traceback_string, log_prefix=metric.jsonName)
+        log_prefix = (
+            metric.jsonName if metric is not None else os.path.splitext(jsonPath)[0]
+        )
+        MetricAPI.write_to_error_log(e, log_prefix=log_prefix)
+        MetricAPI.write_to_error_log(traceback_string, log_prefix=log_prefix)
         remove_shell_process()
         remove_file(jsonPath)
+        if metric is not None and hasattr(metric, "trace_processor"):
+            try:
+                metric.trace_processor.subprocess.kill()
+                metric.trace_processor.subprocess.wait()
+                metric.trace_processor.close()
+            except Exception:
+                pass
         return
-    # print(json.dumps(json_result))
 
     try:
         # remove old json

@@ -483,6 +483,7 @@ namespace Meta.XR.Guides.Editor.About
         private ChangelogFetcher _changelogFetcher;
         private const string PackageName = "meta-xr-core-sdk";
         private Task<bool> _taskChangeLog;
+        private int _changelogFetchAttempts;
 
         private Tween _fader;
 
@@ -577,10 +578,25 @@ namespace Meta.XR.Guides.Editor.About
 
         private void DrawBefore()
         {
+            if (_changelogFetcher == null)
+            {
+                InitChangeLogFetcher();
+            }
+
             if (_taskChangeLog is { IsCompleted: true } && Event.current.type == EventType.Layout)
             {
                 UpdatePagesWithRemoteContent();
-                _taskChangeLog = null;
+
+                // If fetch failed and we haven't exhausted retries, try again
+                if (_changelogFetcher?.LatestVersion == null && _changelogFetchAttempts < 3)
+                {
+                    _changelogFetchAttempts++;
+                    _taskChangeLog = _changelogFetcher.Fetch(true);
+                }
+                else
+                {
+                    _taskChangeLog = null;
+                }
             }
 
             _repainter.Assess(_window);
@@ -637,8 +653,10 @@ namespace Meta.XR.Guides.Editor.About
 
         private void InitChangeLogFetcher()
         {
+            _changelogFetchAttempts = 0;
             _changelogFetcher = new ChangelogFetcher(PackageName);
             _taskChangeLog = _changelogFetcher.Fetch();
+            _changelogFetchAttempts++;
         }
 
         private void OnPackageListRefreshed()
@@ -703,8 +721,6 @@ namespace Meta.XR.Guides.Editor.About
                     HasCompletedActionDelegate = HasCompletedPage,
                 },
             };
-
-            InitChangeLogFetcher();
 
             var options = MultiPage.DefaultOptions;
             options.Height = Constants.PageHeight;
@@ -1204,7 +1220,7 @@ namespace Meta.XR.Guides.Editor.About
                 new AddSpace(DoubleMargin),
             };
 
-            var latestVersion = _changelogFetcher.LatestVersion;
+            var latestVersion = _changelogFetcher?.LatestVersion;
             if (latestVersion == null)
             {
                 if (_taskChangeLog != null && !_taskChangeLog.IsCompleted)

@@ -269,6 +269,10 @@ public static class SystemHaptics
         /// <summary>
         /// Use when the user releases a previously grabbed component or object.
         /// </summary>
-        Release
+        Release,
+        /// <summary>
+        /// Use to confirm that a press-and-hold met the required time threshold to trigger a long-press action.
+        /// </summary>
+        PressLong
     }
 }

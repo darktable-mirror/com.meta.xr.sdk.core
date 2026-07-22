@@ -30,6 +30,10 @@ using Meta.XR.Telemetry;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
+/// <summary>
+/// Wrapper around the Android Debug Bridge (ADB) command-line tool for communicating with connected Android/Quest devices.
+/// Use this to run ADB commands, query connected devices, forward ports, and read device system properties from the Unity Editor.
+/// </summary>
 public class OVRADBTool
 {
     public bool isReady;
@@ -38,6 +42,10 @@ public class OVRADBTool
     public string androidPlatformToolsPath;
     public string adbPath;
 
+    /// <summary>
+    /// Initializes the ADB tool with the given Android SDK root path and validates that the adb executable exists.
+    /// </summary>
+    /// <param name="androidSdkRoot">Absolute path to the Android SDK root directory containing the platform-tools folder.</param>
     public OVRADBTool(string androidSdkRoot)
     {
         if (!String.IsNullOrEmpty(androidSdkRoot))
@@ -63,14 +71,27 @@ public class OVRADBTool
         isReady = File.Exists(adbPath);
     }
 
+    /// <summary>
+    /// Checks whether the given Android SDK root path contains a valid ADB executable.
+    /// </summary>
+    /// <param name="androidSdkRoot">Absolute path to the Android SDK root directory.</param>
+    /// <returns><c>true</c> if the ADB executable exists at the expected location within the SDK root; otherwise <c>false</c>.</returns>
     public static bool IsAndroidSdkRootValid(string androidSdkRoot)
     {
         OVRADBTool tool = new OVRADBTool(androidSdkRoot);
         return tool.isReady;
     }
 
+    /// <summary>
+    /// Callback invoked periodically while waiting for an ADB process to exit, allowing callers to update progress UI or check for cancellation.
+    /// </summary>
     public delegate void WaitingProcessToExitCallback();
 
+    /// <summary>
+    /// Starts the ADB server process.
+    /// </summary>
+    /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit. May be <c>null</c>.</param>
+    /// <returns>The ADB process exit code. 0 indicates success.</returns>
     public int StartServer(WaitingProcessToExitCallback waitingProcessToExitCallback)
     {
         string outputString;
@@ -81,6 +102,11 @@ public class OVRADBTool
         return exitCode;
     }
 
+    /// <summary>
+    /// Kills the running ADB server process.
+    /// </summary>
+    /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit. May be <c>null</c>.</param>
+    /// <returns>The ADB process exit code. 0 indicates success.</returns>
     public int KillServer(WaitingProcessToExitCallback waitingProcessToExitCallback)
     {
         string outputString;
@@ -91,6 +117,12 @@ public class OVRADBTool
         return exitCode;
     }
 
+    /// <summary>
+    /// Forwards a TCP port from the host machine to the connected device.
+    /// </summary>
+    /// <param name="port">The TCP port number to forward (used for both host and device sides).</param>
+    /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit. May be <c>null</c>.</param>
+    /// <returns>The ADB process exit code. 0 indicates success.</returns>
     public int ForwardPort(int port, WaitingProcessToExitCallback waitingProcessToExitCallback)
     {
         string outputString;
@@ -103,6 +135,12 @@ public class OVRADBTool
         return exitCode;
     }
 
+    /// <summary>
+    /// Releases a previously forwarded TCP port.
+    /// </summary>
+    /// <param name="port">The TCP port number to release.</param>
+    /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit. May be <c>null</c>.</param>
+    /// <returns>The ADB process exit code. 0 indicates success.</returns>
     public int ReleasePort(int port, WaitingProcessToExitCallback waitingProcessToExitCallback)
     {
         string outputString;
@@ -115,11 +153,19 @@ public class OVRADBTool
         return exitCode;
     }
 
+    /// <summary>
+    /// Returns a list of serial numbers for all connected ADB devices.
+    /// </summary>
+    /// <returns>A list of device serial number strings. Empty if no devices are connected.</returns>
     public List<string> GetDevices()
     {
         return new List<string>(GetDevicesWithStatus().Keys);
     }
 
+    /// <summary>
+    /// Returns a dictionary mapping device serial numbers to their connection status (e.g., "device", "unauthorized").
+    /// </summary>
+    /// <returns>A dictionary where keys are device serial numbers and values are status strings. Empty if no devices are connected.</returns>
     public Dictionary<string, string> GetDevicesWithStatus()
     {
         string outputString;
@@ -157,6 +203,15 @@ public class OVRADBTool
     private StringBuilder outputStringBuilder = null;
     private StringBuilder errorStringBuilder = null;
 
+    /// <summary>
+    /// Executes an ADB command synchronously and returns the exit code, capturing stdout and stderr output.
+    /// </summary>
+    /// <param name="arguments">The ADB command arguments to execute.</param>
+    /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit. May be <c>null</c>.</param>
+    /// <param name="outputString">Receives the captured standard output from the ADB process.</param>
+    /// <param name="errorString">Receives the captured standard error from the ADB process.</param>
+    /// <param name="stdIn">Optional string to write to the process standard input. Pass <c>null</c> to skip.</param>
+    /// <returns>The ADB process exit code. 0 indicates success; -1 if the tool is not ready.</returns>
     public int RunCommand(string[] arguments, WaitingProcessToExitCallback waitingProcessToExitCallback,
         out string outputString, out string errorString, string stdIn = null)
     {
@@ -232,6 +287,12 @@ public class OVRADBTool
         return exitCode;
     }
 
+    /// <summary>
+    /// Executes an ADB command asynchronously, returning the running Process. Output is delivered via the provided event handler.
+    /// </summary>
+    /// <param name="arguments">The ADB command arguments to execute.</param>
+    /// <param name="outputDataRecievedHandler">Event handler called when output data is received from the process. May be <c>null</c>.</param>
+    /// <returns>The running <see cref="Process"/> instance, or <c>null</c> if the tool is not ready.</returns>
     public Process RunCommandAsync(string[] arguments, DataReceivedEventHandler outputDataRecievedHandler)
     {
         if (!isReady)
@@ -263,6 +324,14 @@ public class OVRADBTool
         return process;
     }
 
+    /// <summary>
+    /// Attempts to read a system property from the specified device via "adb shell getprop". Returns false and uses the default value on failure.
+    /// </summary>
+    /// <param name="device">The device serial number to target.</param>
+    /// <param name="property">The system property name to read (e.g., "ro.build.version.sdk").</param>
+    /// <param name="defaultValue">The value to use if the property cannot be read.</param>
+    /// <param name="value">Receives the property value, or <paramref name="defaultValue"/> on failure.</param>
+    /// <returns><c>true</c> if the property was successfully read; otherwise <c>false</c>.</returns>
     public bool TryGetSystemProperty(string device, string property, string defaultValue,
         out string value)
     {
@@ -281,6 +350,13 @@ public class OVRADBTool
         return true;
     }
 
+    /// <summary>
+    /// Attempts to read an integer system property from the specified device. Returns false if the property cannot be read or parsed.
+    /// </summary>
+    /// <param name="device">The device serial number to target.</param>
+    /// <param name="property">The system property name to read.</param>
+    /// <param name="value">Receives the parsed integer value, or 0 on failure.</param>
+    /// <returns><c>true</c> if the property was successfully read and parsed as an integer; otherwise <c>false</c>.</returns>
     public bool TryGetSystemProperty(string device, string property, out int value)
     {
         value = 0;

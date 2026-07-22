@@ -20,6 +20,7 @@
 
 using System;
 using Meta.XR.Editor.Id;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -70,7 +71,7 @@ namespace Meta.XR.Editor.UserInterface
         /// Constructor to use in UIToolkit based environment
         /// </summary>
         /// <param name="label">Label text to show</param>
-        /// <param name="typography"><see cref="RLDS.Props.Typography"/> for the typographic variants</param>
+        /// <param name="typography"><see cref="RLDSConstants.Typography"/> for the typographic variants</param>
         public Label(string label, string typography)
         {
             LabelContent = new GUIContent(label);

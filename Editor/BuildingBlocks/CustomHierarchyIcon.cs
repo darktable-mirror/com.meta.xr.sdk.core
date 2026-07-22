@@ -23,6 +23,9 @@ using UnityEditor;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Displays a custom icon in the Unity hierarchy window for GameObjects that contain a BuildingBlock component.
+    /// </summary>
     [InitializeOnLoad]
     public class CustomHierarchyIcon
     {

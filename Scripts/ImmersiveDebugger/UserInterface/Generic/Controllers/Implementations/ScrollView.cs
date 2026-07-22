@@ -39,7 +39,18 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         internal Flex Flex => _viewport.Flex;
 
         private float _previousProgress;
+        private float _previousContentOffset;
         private bool _preventScrollPreservation = false;
+
+        internal event Action OnUserScrolled;
+
+        /// <summary>
+        /// When true, a layout refresh preserves the absolute content offset instead of the normalized
+        /// scroll position. Use this when the view is not pinned to the bottom and content grows at the
+        /// bottom: preserving the normalized position would creep the view toward the top as the total
+        /// height increases, whereas the absolute offset keeps the same content in view.
+        /// </summary>
+        public bool PreserveAbsolutePosition { get; set; }
 
         /// <summary>
         /// The progress of the scroll view, specifically representing the normalized vertical position of the rectangle.
@@ -48,6 +59,25 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             get => _scrollRect.verticalNormalizedPosition;
             set => _scrollRect.verticalNormalizedPosition = value;
+        }
+
+        /// <summary>
+        /// The absolute vertical scroll offset of the content, in pixels and independent of content height.
+        /// </summary>
+        public float ContentVerticalOffset
+        {
+            get => _scrollRect.content != null ? _scrollRect.content.anchoredPosition.y : 0f;
+            set
+            {
+                if (_scrollRect.content == null)
+                {
+                    return;
+                }
+
+                var position = _scrollRect.content.anchoredPosition;
+                position.y = value;
+                _scrollRect.content.anchoredPosition = position;
+            }
         }
 
         protected override void Setup(Controller owner)
@@ -60,10 +90,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             _scrollRect.vertical = true;
             _scrollRect.inertia = true;
 
+            ((PanelScrollRect)_scrollRect).UserInteracted += HandleUserInteracted;
+
             _viewport = Append<ScrollViewport>("viewport");
             _viewport.LayoutStyle = Style.Load<LayoutStyle>("Fill");
 
             _scrollRect.content = _viewport.Flex.RectTransform;
+        }
+
+        private void HandleUserInteracted()
+        {
+            OnUserScrolled?.Invoke();
         }
 
         protected override void RefreshLayoutPreChildren()
@@ -71,6 +108,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
             if (!_preventScrollPreservation)
             {
                 _previousProgress = Progress;
+                _previousContentOffset = ContentVerticalOffset;
             }
 
             base.RefreshLayoutPreChildren();
@@ -80,7 +118,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             if (!_preventScrollPreservation)
             {
-                Progress = _previousProgress;
+                if (PreserveAbsolutePosition)
+                {
+                    ContentVerticalOffset = _previousContentOffset;
+                }
+                else
+                {
+                    Progress = _previousProgress;
+                }
             }
             else
             {

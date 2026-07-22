@@ -23,9 +23,18 @@ using UnityEditor;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Custom property drawer for the ControllerButtonsMapper.ButtonClickAction type that renders input manager and input system fields.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ControllerButtonsMapper.ButtonClickAction), useForChildren: true)]
     public class ButtonClickActionPropertyDrawer : PropertyDrawer
     {
+        /// <summary>
+        /// Draws the property GUI for a ButtonClickAction, including input manager and input system package sections.
+        /// </summary>
+        /// <param name="position">The rectangle on the screen to use for the property GUI.</param>
+        /// <param name="property">The SerializedProperty to make the custom GUI for.</param>
+        /// <param name="label">The label of the property.</param>
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
@@ -99,6 +108,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUI.indentLevel--;
         }
 
+        /// <summary>
+        /// Calculates the total height needed to draw the ButtonClickAction property in the inspector.
+        /// </summary>
+        /// <param name="property">The SerializedProperty to calculate the height for.</param>
+        /// <param name="label">The label of the property.</param>
+        /// <returns>The total height in pixels required to draw the property.</returns>
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             var totalHeight = 5 * (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing);

@@ -100,7 +100,7 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
         private readonly List<ChildType> _children = new();
         protected abstract bool CompareChildren(ChildTargetType lhs, ChildTargetType rhs);
         protected abstract ChildTargetType[] FetchExpectedChildren();
-        public override int ComputeNumberOfChildren() => FetchExpectedChildren().Length;
+        public override int ComputeNumberOfChildren() => Valid ? FetchExpectedChildren().Length : 0;
 
         private void MarkChildrenDirty()
         {
@@ -185,6 +185,8 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
 
         public override bool ComputeNeedsRefresh()
         {
+            if (!Valid) return true;
+
             foreach (var childTarget in FetchExpectedChildren())
             {
                 if (GetChild(childTarget) == null) return true;
@@ -198,13 +200,15 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
     {
         private readonly List<ComponentItem> _components = new();
 
-        public override string Label => _owner.name;
+        public override string Label => Valid ? _owner.name : string.Empty;
         public override bool Valid => _owner != null;
         protected override InstanceHandle BuildHandle() => new(typeof(GameObject), _owner);
 
         protected override bool CompareChildren(GameObject lhs, GameObject rhs) => lhs == rhs;
         protected override GameObject[] FetchExpectedChildren()
         {
+            if (_owner == null) return Array.Empty<GameObject>();
+
             var transform = _owner.transform;
             var childrenCount = transform.childCount;
             var children = new GameObject[childrenCount];

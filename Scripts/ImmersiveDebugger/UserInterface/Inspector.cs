@@ -69,7 +69,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                     : $"{_instanceHandle.Type.Name}";
                 Title = inspectorTitle;
 
-                UpdateInstanceState();
+                UpdateInstanceState(force: true);
             }
         }
 
@@ -216,6 +216,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private void Update()
         {
+            // If the inspected instance has been destroyed, hide this inspector
+            if (!_instanceHandle.Valid)
+            {
+                Hide();
+                return;
+            }
+
             UpdateInstanceState();
         }
 

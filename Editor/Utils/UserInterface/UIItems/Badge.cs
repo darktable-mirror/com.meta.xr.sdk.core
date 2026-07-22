@@ -74,24 +74,24 @@ namespace Meta.XR.Editor.UserInterface
         public VisualElement Build()
         {
             var badge = new VisualElement();
-            badge.AddToClassList(Props.Badge.Base);
+            badge.AddToClassList(RLDSConstants.Badge.Base);
 
             // Add variant-specific class
             string variantClass = _variant switch
             {
-                BadgeVariant.Positive => Props.Badge.Positive,
-                BadgeVariant.Negative => Props.Badge.Negative,
-                BadgeVariant.Warning => Props.Badge.Warning,
-                BadgeVariant.Disabled => Props.Badge.Disabled,
-                BadgeVariant.Privacy => Props.Badge.Privacy,
-                _ => Props.Badge.Default
+                BadgeVariant.Positive => RLDSConstants.Badge.Positive,
+                BadgeVariant.Negative => RLDSConstants.Badge.Negative,
+                BadgeVariant.Warning => RLDSConstants.Badge.Warning,
+                BadgeVariant.Disabled => RLDSConstants.Badge.Disabled,
+                BadgeVariant.Privacy => RLDSConstants.Badge.Privacy,
+                _ => RLDSConstants.Badge.Default
             };
 
             badge.AddToClassList(variantClass);
 
             // Add label
             var labelElement = new UnityEngine.UIElements.Label(_label);
-            labelElement.AddToClassList(Props.Badge.Label);
+            labelElement.AddToClassList(RLDSConstants.Badge.Label);
             badge.Add(labelElement);
 
             return badge;

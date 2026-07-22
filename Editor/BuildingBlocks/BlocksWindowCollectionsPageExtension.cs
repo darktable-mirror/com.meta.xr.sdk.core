@@ -35,6 +35,9 @@ using static Meta.XR.Editor.UserInterface.Telemetry;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Extends BuildingBlocksWindow with the collections page UI for browsing and filtering building block categories.
+    /// </summary>
     public partial class BuildingBlocksWindow
     {
         private class SessionStateCollection : CustomSetting<CollectionTagBehavior>

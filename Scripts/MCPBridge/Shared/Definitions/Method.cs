@@ -27,8 +27,7 @@ using Meta.MCPBridge.Attributes;
 using Meta.MCPBridge.Schemas;
 using Meta.MCPBridge.Services;
 using Meta.MCPBridge.Utils;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Definitions
 {
@@ -42,7 +41,7 @@ namespace Meta.MCPBridge.Definitions
 
         internal string ReturnType => MethodInfo.ReturnType.GetJsonSchemaType();
 
-        [JsonProperty("return type description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("return type description", NullHandling = McpJsonNullHandling.Ignore)]
         internal string ReturnTypeDescription => Attribute.Returns;
 
         private Tool Owner { get; }
@@ -54,12 +53,12 @@ namespace Meta.MCPBridge.Definitions
             set => throw new NotImplementedException();
         }
 
-        internal async Task<ToolCallResultSchema> Call(LocalExecutor executor, JObject arguments)
+        internal async Task<ToolCallResultSchema> Call(LocalExecutor executor, JsonObject arguments)
         {
             if (!Registry.TryGet(Owner.Type, out var service))
                 throw new InvalidOperationException($"Could not find service {Owner.Name}");
 
-            var argumentObjects = ArgumentConverter.ConvertJObjectToArguments(arguments, MethodInfo);
+            var argumentObjects = ArgumentConverter.ConvertJsonObjectToArguments(arguments, MethodInfo);
 
             object returnValue;
 
@@ -89,13 +88,13 @@ namespace Meta.MCPBridge.Definitions
                 throw; // Never reached
             }
 
-            var responseData = new JObject
+            var responseData = new JsonObject
             {
                 ["success"] = true
             };
 
             if (returnValue != null && MethodInfo.ReturnType != typeof(void))
-                responseData["return value"] = ReturnValueConverter.ConvertReturnValueToJObjectSimple(returnValue);
+                responseData["return value"] = ReturnValueConverter.ConvertReturnValueToJsonObjectSimple(returnValue);
 
             var result = new ToolCallResultSchema
             {
@@ -103,7 +102,7 @@ namespace Meta.MCPBridge.Definitions
                 {
                     new ToolCallDataSchema()
                     {
-                        Text = responseData.ToString(Formatting.None)
+                        Text = responseData.ToString(JsonFormatting.None)
                     }
                 }
             };

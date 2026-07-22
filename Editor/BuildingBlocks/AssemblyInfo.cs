@@ -30,5 +30,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.BuildingBlocks.DepthAPI.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.About")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.BuildingBlocks.AIBlocks")]
+[assembly: InternalsVisibleTo("meta.xr.ai.mcpbridge.editor")]
 
 

@@ -80,7 +80,7 @@ namespace Meta.XR.MetaWand.Editor
                 _promptHandlers.Add(preGenKey, new PromptHandler(_apiManager, this, contentPlaceholder, true));
             }
 
-            _ = PopulatePreGenSlots();
+            PopulatePreGenSlots().FireAndForget(nameof(PopulatePreGenSlots));
         }
 
         public Prompt(PromptData data, MetaWandApiManager apiManager, bool showLodsSelector)
@@ -101,7 +101,7 @@ namespace Meta.XR.MetaWand.Editor
                 var promptHandler = new PromptHandler(_apiManager, this, contentPlaceholder, true);
 
                 ContentPlaceholdersPreGenAssets.Add(contentPlaceholder);
-                _ = promptHandler.LoadFromAsset(asset);
+                promptHandler.LoadFromAsset(asset).FireAndForget(nameof(PromptHandler.LoadFromAsset));
                 _promptHandlers.Add(key, promptHandler);
             }
         }
@@ -219,7 +219,7 @@ namespace Meta.XR.MetaWand.Editor
         // Add mesh to active scene
         private void OnAddToSceneButton()
         {
-            _ = AddToScene();
+            AddToScene().FireAndForget(nameof(AddToScene));
         }
 
         private async Task AddToScene()
@@ -338,7 +338,7 @@ namespace Meta.XR.MetaWand.Editor
             var lodGroupObj = new GameObject(subDirName + "_LODGroup");
             var lodGroup = lodGroupObj.AddComponent<LODGroup>();
             var lods = new LOD[lodPrefabs.Count];
-            var lodScreenPercentages = new[] { 0.5f, 0.2f, 0.05f };
+            var lodScreenPercentages = Constants.LodScreenPercentages;
 
             for (int i = 0; i < lodPrefabs.Count; i++)
             {
@@ -371,10 +371,10 @@ namespace Meta.XR.MetaWand.Editor
             switch (_contentPlaceholder.GetPreviousState())
             {
                 case ContentState.Downloading:
-                    _ = RetryFailedDownload();
+                    RetryFailedDownload().FireAndForget(nameof(RetryFailedDownload));
                     break;
                 case ContentState.Downloaded or ContentState.Generated or ContentState.Saving:
-                    _ = AddToScene();
+                    AddToScene().FireAndForget(nameof(AddToScene));
                     break;
             }
         }
@@ -400,7 +400,7 @@ namespace Meta.XR.MetaWand.Editor
             }
             else // Failed to download the asset
             {
-                _ = AddToScene();
+                AddToScene().FireAndForget(nameof(AddToScene));
             }
         }
 
@@ -722,13 +722,10 @@ namespace Meta.XR.MetaWand.Editor
 
         #region Asset Feedback
 
-        private const string FeedbackToastMessage = "Thanks for your feedback!";
-        private const float FeedbackToastDuration = 2.0f;
-
         private async void OnAssetFeedback(MetaWandApiManager.AssetResultFeedback feedback)
         {
             if (string.IsNullOrEmpty(Asset.AssetId)) return;
-            Utils.ShowToast(FeedbackToastMessage, FeedbackToastDuration);
+            Utils.ShowToast(Constants.FeedbackToastMessage, Constants.FeedbackToastDuration);
             await _apiManager.AssetFeedback(Asset.AssetId, feedback, Prompt.Id);
         }
 

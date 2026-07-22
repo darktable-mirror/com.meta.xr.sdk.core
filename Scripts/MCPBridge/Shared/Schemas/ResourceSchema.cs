@@ -19,37 +19,37 @@
  */
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Schemas
 {
     internal class ResourceSchema : ISchema
     {
-        [JsonProperty("uri")] internal string Uri { get; set; }
+        [McpJsonProperty("uri")] internal string Uri { get; set; }
 
-        [JsonProperty("name")] internal string Name { get; set; }
+        [McpJsonProperty("name")] internal string Name { get; set; }
 
-        [JsonProperty("description")] internal string Description { get; set; }
+        [McpJsonProperty("description")] internal string Description { get; set; }
 
-        [JsonProperty("mimeType")] internal string MimeType { get; set; }
+        [McpJsonProperty("mimeType")] internal string MimeType { get; set; }
     }
 
     internal class ResourceListResultSchema : ResultSchema
     {
-        [JsonProperty("resources")] internal IEnumerable<ResourceSchema> Resources { get; set; }
+        [McpJsonProperty("resources")] internal IEnumerable<ResourceSchema> Resources { get; set; }
     }
 
     internal class ResourceGetResultSchema : ResultSchema
     {
-        [JsonProperty("contents")] internal IEnumerable<ResourceGetDataSchema> Content { get; set; }
+        [McpJsonProperty("contents")] internal IEnumerable<ResourceGetDataSchema> Content { get; set; }
     }
 
     internal class ResourceGetDataSchema : ISchema
     {
-        [JsonProperty("uri")] internal string Uri { get; set; }
+        [McpJsonProperty("uri")] internal string Uri { get; set; }
 
-        [JsonProperty("text")] internal string Text { get; set; }
+        [McpJsonProperty("text")] internal string Text { get; set; }
 
-        [JsonProperty("mimeType")] internal string MimeType => "text/markdown";
+        [McpJsonProperty("mimeType")] internal string MimeType => "text/markdown";
     }
 }

@@ -26,10 +26,9 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Meta.XR.Json;
 using Meta.MCPBridge.Schemas;
 using Meta.XR.AI.MCPBridge.Telemetry;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Debug = UnityEngine.Debug;
 
 namespace Meta.MCPBridge.Editor
@@ -214,7 +213,7 @@ namespace Meta.MCPBridge.Editor
         /// <returns>The result from the provider's execution</returns>
         internal async Task<ResultSchema> ForwardRequest(
             string method,
-            JObject parameters,
+            JsonObject parameters,
             int timeout = 30000)
         {
             ConnectedToolProvider provider;
@@ -257,10 +256,13 @@ namespace Meta.MCPBridge.Editor
         }
 
         /// <summary>
-        /// Forward a tool call to the connected Tool Provider.
-        /// If the local provider is connected, executes directly via LocalExecutor.
+        /// Forward a tool call to the appropriate Tool Provider. When a remote (device) provider is
+        /// connected and advertises the tool, the call routes to it so it acts on the running app's
+        /// scene. Tools the device does not provide (e.g. Editor-only tools such as
+        /// BuildingBlocksTools/CompilationTools) execute locally via LocalExecutor, which also keeps
+        /// them from timing out on a remote that lacks them and covers the no-device case.
         /// </summary>
-        internal async Task<ResultSchema> ForwardToolCall(string toolName, string methodName, JObject arguments)
+        internal async Task<ResultSchema> ForwardToolCall(string toolName, string methodName, JsonObject arguments)
         {
             ConnectedToolProvider provider;
             lock (_providerLock)
@@ -268,12 +270,20 @@ namespace Meta.MCPBridge.Editor
                 provider = _currentProvider;
             }
 
-            if (provider == null)
+            // Prefer the connected remote (device) provider for tools it advertises, so calls act
+            // on the running app's scene rather than the Editor. Fall back to local execution for
+            // tools the device doesn't provide (e.g. Editor-only tools, which would otherwise time
+            // out on a remote that lacks them) and when no device is connected.
+            var remoteProvidesTool = provider != null
+                && provider.ProviderId != LocalToolProvider.LocalProviderId
+                && ProviderAdvertisesTool(provider, toolName);
+
+            var isLocal = !remoteProvidesTool && LocalExecutor.instance.HasTool(toolName);
+
+            if (!isLocal && provider == null)
             {
                 throw new NoProviderConnectedException();
             }
-
-            var isLocal = provider.ProviderId == LocalToolProvider.LocalProviderId;
             var stopwatch = Stopwatch.StartNew();
 
             McpBridgeTelemetry.SendEvent(
@@ -297,7 +307,7 @@ namespace Meta.MCPBridge.Editor
                 else
                 {
                     // Remote provider - forward via SSE
-                    var parameters = new JObject
+                    var parameters = new JsonObject
                     {
                         ["name"] = toolName,
                         ["method"] = methodName,
@@ -339,6 +349,28 @@ namespace Meta.MCPBridge.Editor
         }
 
         /// <summary>
+        /// Whether the provider advertises a tool with the given class name in its capabilities.
+        /// </summary>
+        private static bool ProviderAdvertisesTool(ConnectedToolProvider provider, string toolName)
+        {
+            var tools = provider.Capabilities?.Tools;
+            if (tools == null)
+            {
+                return false;
+            }
+
+            foreach (var tool in tools)
+            {
+                if (tool != null && tool.Name == toolName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Classifies an exception into an error type for telemetry.
         /// </summary>
         private static string ClassifyError(Exception ex)
@@ -346,7 +378,7 @@ namespace Meta.MCPBridge.Editor
             return ex switch
             {
                 TimeoutException => McpBridgeTelemetryConstants.ErrorType.Timeout,
-                JsonException => McpBridgeTelemetryConstants.ErrorType.Serialization,
+                McpJsonException => McpBridgeTelemetryConstants.ErrorType.Serialization,
                 UnauthorizedAccessException => McpBridgeTelemetryConstants.ErrorType.Authentication,
                 NoProviderConnectedException => McpBridgeTelemetryConstants.ErrorType.NoProvider,
                 _ => McpBridgeTelemetryConstants.ErrorType.Execution
@@ -377,7 +409,7 @@ namespace Meta.MCPBridge.Editor
             }
 
             // Remote provider - forward via SSE
-            var parameters = new JObject
+            var parameters = new JsonObject
             {
                 ["uri"] = uri
             };
@@ -388,7 +420,7 @@ namespace Meta.MCPBridge.Editor
         /// Forward a prompt get to the connected Tool Provider.
         /// If the local provider is connected, executes directly via LocalExecutor.
         /// </summary>
-        internal async Task<ResultSchema> ForwardPromptGet(string name, JObject arguments)
+        internal async Task<ResultSchema> ForwardPromptGet(string name, JsonObject arguments)
         {
             ConnectedToolProvider provider;
             lock (_providerLock)
@@ -408,7 +440,7 @@ namespace Meta.MCPBridge.Editor
             }
 
             // Remote provider - forward via SSE
-            var parameters = new JObject
+            var parameters = new JsonObject
             {
                 ["name"] = name,
                 ["arguments"] = arguments
@@ -517,7 +549,7 @@ namespace Meta.MCPBridge.Editor
             await _writeLock.WaitAsync();
             try
             {
-                var json = JsonConvert.SerializeObject(request);
+                var json = McpJsonConvert.Serialize(request);
                 await _sseWriter.WriteLineAsync($"event: request");
                 await _sseWriter.WriteLineAsync($"data: {json}");
                 await _sseWriter.WriteLineAsync();
@@ -569,14 +601,14 @@ namespace Meta.MCPBridge.Editor
     /// </summary>
     internal class ProviderRequest
     {
-        [JsonProperty("requestId")]
+        [McpJsonProperty("requestId")]
         internal string RequestId { get; set; }
 
-        [JsonProperty("method")]
+        [McpJsonProperty("method")]
         internal string Method { get; set; }
 
-        [JsonProperty("params")]
-        internal JObject Params { get; set; }
+        [McpJsonProperty("params")]
+        internal JsonObject Params { get; set; }
     }
 
     /// <summary>
@@ -584,16 +616,16 @@ namespace Meta.MCPBridge.Editor
     /// </summary>
     internal class ProviderResponse
     {
-        [JsonProperty("requestId")]
+        [McpJsonProperty("requestId")]
         internal string RequestId { get; set; }
 
-        [JsonProperty("success")]
+        [McpJsonProperty("success")]
         internal bool Success { get; set; }
 
-        [JsonProperty("result")]
+        [McpJsonProperty("result")]
         internal ResultSchema Result { get; set; }
 
-        [JsonProperty("error")]
+        [McpJsonProperty("error")]
         internal string Error { get; set; }
     }
 }

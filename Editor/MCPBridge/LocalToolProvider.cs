@@ -53,11 +53,13 @@ namespace Meta.MCPBridge.Editor
         /// </summary>
         internal static void Register()
         {
-            if (_isRegistered)
+            if (ToolProviderManager.Instance.IsProviderConnected(LocalProviderId))
             {
                 Debug.Log("[LocalToolProvider] Already registered, skipping.");
                 return;
             }
+
+            _isRegistered = false;
 
             try
             {

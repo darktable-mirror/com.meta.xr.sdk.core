@@ -63,7 +63,7 @@ namespace Meta.XR.Editor.UserInterface
         /// Constructor to use in UIToolkit based environment
         /// </summary>
         /// <param name="label">Label to show</param>
-        /// <param name="typography"><see cref="Props.Typography"/> for the typographic variants</param>
+        /// <param name="typography"><see cref="RLDSConstants.Typography"/> for the typographic variants</param>
         /// <param name="contentStatusType">Status type to show</param>
         public BulletedLabel(string label, string typography,
             UIStyles.ContentStatusType contentStatusType = UIStyles.ContentStatusType.Normal)

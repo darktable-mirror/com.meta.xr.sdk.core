@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "Meta.XR.Editor.Callbacks",
+        "Meta.XR.Editor.Reflection",
         "Meta.XR.ImmersiveDebugger.Interface",
         "Oculus.VR",
         "Unity.InputSystem"

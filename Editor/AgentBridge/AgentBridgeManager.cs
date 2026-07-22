@@ -63,6 +63,10 @@ namespace Meta.XR.AI.AgentBridge
             AgentBridgeCoreService.GetCurrentServiceNameDelegate = GetCurrentServiceName;
             AgentBridgeCoreService.EnsureServiceInitializedDelegate = EnsureServiceInitialized;
             AgentBridgeCoreService.ClearErrorDelegate = ClearError;
+            AgentBridgeCoreService.GetSessionIdDelegate = GetSessionId;
+            AgentBridgeCoreService.GetSessionIdForCallerDelegate = GetSessionIdForCaller;
+            AgentBridgeCoreService.GetResumeCommandForCallerDelegate = GetResumeCommandForCaller;
+            AgentBridgeCoreService.OpenTerminalWithCommandDelegate = AIServiceBase.OpenTerminalWithCommand;
 
             // Register cleanup handlers
             AssemblyReloadEvents.beforeAssemblyReload += OnShutdown;
@@ -98,6 +102,7 @@ namespace Meta.XR.AI.AgentBridge
 
         private static void OnShutdown()
         {
+            RemoteAgentServer.SaveRunningState();
             Cleanup();
             RemoteAgentServer.Stop();
         }
@@ -189,7 +194,20 @@ namespace Meta.XR.AI.AgentBridge
                 SendPromptTelemetry(prompt, images, caller, isStart: true);
 
                 var service = GetOrCreateService();
+
+                // Clear any stale error before dispatch so the post-call check
+                // below reflects only this run, even if a service neglects to
+                // clear its own error on entry.
+                ConversationManager.ClearError();
                 await service.ProcessUserInputAsync(prompt, caller, images, cancellationToken, systemPrompt);
+
+                // A service can fail (timeout, non-zero exit, handled exception) by
+                // recording an error instead of throwing. Treat a recorded error as a
+                // failed send so callers don't render partial output as success.
+                if (!string.IsNullOrEmpty(ConversationManager.GetLastError()))
+                {
+                    return false;
+                }
 
                 success = true;
                 return true;
@@ -314,6 +332,38 @@ namespace Meta.XR.AI.AgentBridge
         public static bool HasActiveSession()
         {
             return _currentService?.HasActiveSession ?? false;
+        }
+
+        /// <summary>
+        /// Get the current session ID for the default conversation.
+        /// </summary>
+        public static string GetSessionId()
+        {
+            return ConversationManager.GetSessionId();
+        }
+
+        /// <summary>
+        /// Get the session ID for a specific caller's conversation.
+        /// </summary>
+        public static string GetSessionIdForCaller(CallerIdentity? caller)
+        {
+            return ConversationManager.GetSessionIdForCaller(caller);
+        }
+
+        /// <summary>
+        /// Get the shell command to resume the session for a specific caller in a terminal.
+        /// Returns null if the service does not support terminal resume or no session is active.
+        /// </summary>
+        public static string? GetResumeCommandForCaller(CallerIdentity? caller)
+        {
+            var sessionId = ConversationManager.GetSessionIdForCaller(caller);
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return null;
+            }
+
+            var service = _currentService as AIServiceBase;
+            return service?.GetResumeCommand(sessionId);
         }
 
         /// <summary>

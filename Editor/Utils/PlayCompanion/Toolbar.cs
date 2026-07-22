@@ -437,12 +437,10 @@ namespace Meta.XR.Editor.PlayCompanion
             {
                 toggle.SetValueWithoutNotify(button.Item1.IsSelected);
             }
-            else
-            {
-                button.Item2.style.backgroundColor = button.Item1.IsSelected
-                    ? new StyleColor(Styles.Colors.SelectedBackground)
-                    : new StyleColor(StyleKeyword.Null);
-            }
+
+            button.Item2.style.backgroundColor = button.Item1.IsSelected
+                ? new StyleColor(Styles.Colors.SelectedBackground)
+                : new StyleColor(StyleKeyword.Null);
 
             if (button.Item2.Children().FirstOrDefault() is not Image image) return;
 

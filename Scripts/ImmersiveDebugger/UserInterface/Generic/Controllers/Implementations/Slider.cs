@@ -120,7 +120,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private bool MayDrag(PointerEventData eventData)
         {
-            return Tweak != null && eventData.button == PointerEventData.InputButton.Left;
+            return Tweak is { Valid: true } && eventData.button == PointerEventData.InputButton.Left;
         }
 
         /// <summary>

@@ -26,15 +26,28 @@ using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
 {
+    /// <summary>
+    /// Provides helper methods for tracking hover state and creating hover-aware buttons in the editor GUI.
+    /// </summary>
     public static class HoverHelper
     {
         private static readonly Dictionary<string, bool> Hovers = new();
 
+        /// <summary>
+        /// Clears all tracked hover states.
+        /// </summary>
         public static void Reset()
         {
             Hovers.Clear();
         }
 
+        /// <summary>
+        /// Determines whether the specified UI element is currently being hovered over by the mouse.
+        /// </summary>
+        /// <param name="id">A unique identifier for the UI element.</param>
+        /// <param name="ev">The current GUI event, used to check mouse position during repaint.</param>
+        /// <param name="area">The rectangular area of the UI element to test against.</param>
+        /// <returns>True if the mouse is hovering over the element; otherwise, false.</returns>
         public static bool IsHover(string id, Event ev = null, Rect? area = null)
         {
             var hover = false;
@@ -49,6 +62,14 @@ namespace Meta.XR.Editor.UserInterface
             return hover;
         }
 
+        /// <summary>
+        /// Renders a GUILayout button and tracks its hover state.
+        /// </summary>
+        /// <param name="id">A unique identifier for hover tracking.</param>
+        /// <param name="content">The content to display on the button.</param>
+        /// <param name="style">The style to apply to the button.</param>
+        /// <param name="hover">Outputs whether the button is currently being hovered.</param>
+        /// <returns>True if the button was clicked; otherwise, false.</returns>
         public static bool Button(string id, GUIContent content, GUIStyle style, out bool hover)
         {
             var isClicked = GUILayout.Button(content, style);
@@ -56,6 +77,15 @@ namespace Meta.XR.Editor.UserInterface
             return isClicked;
         }
 
+        /// <summary>
+        /// Renders a GUI button at a specific position and tracks its hover state.
+        /// </summary>
+        /// <param name="id">A unique identifier for hover tracking.</param>
+        /// <param name="rect">The position and size of the button.</param>
+        /// <param name="content">The content to display on the button.</param>
+        /// <param name="style">The style to apply to the button.</param>
+        /// <param name="hover">Outputs whether the button is currently being hovered.</param>
+        /// <returns>True if the button was clicked; otherwise, false.</returns>
         public static bool Button(string id, Rect rect, GUIContent content, GUIStyle style, out bool hover)
         {
             var isClicked = GUI.Button(rect, content, style);
@@ -63,6 +93,16 @@ namespace Meta.XR.Editor.UserInterface
             return isClicked;
         }
 
+        /// <summary>
+        /// Renders a GUILayout button with an icon overlay and tracks its hover state.
+        /// </summary>
+        /// <param name="id">A unique identifier for hover tracking.</param>
+        /// <param name="label">The label content to display on the button.</param>
+        /// <param name="icon">The icon content to overlay on the button.</param>
+        /// <param name="buttonStyle">The style to apply to the button.</param>
+        /// <param name="iconStyle">The style to apply to the icon overlay.</param>
+        /// <param name="hover">Outputs whether the button is currently being hovered.</param>
+        /// <returns>True if the button was clicked; otherwise, false.</returns>
         public static bool Button(string id, GUIContent label, GUIContent icon, GUIStyle buttonStyle, GUIStyle iconStyle, out bool hover)
         {
             var isClicked = GUILayout.Button(label, buttonStyle);

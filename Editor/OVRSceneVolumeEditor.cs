@@ -22,6 +22,11 @@ using System;
 using UnityEditor;
 
 
+/// <summary>
+/// Custom inspector for OVRSceneVolume components. Displays read-only 3D dimensions and offset, and
+/// provides properties for controlling child object scaling and offset behavior.
+/// Deprecated: use the MR Utility Kit (MRUK) scene volume system instead.
+/// </summary>
 [CustomEditor(typeof(OVRSceneVolume))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
 public class OVRSceneVolumeEditor : UnityEditor.Editor
@@ -39,6 +44,9 @@ public class OVRSceneVolumeEditor : UnityEditor.Editor
         _offsetChildren = serializedObject.FindProperty(nameof(_object._offsetChildren));
     }
 
+    /// <summary>
+    /// Draws the OVRSceneVolume inspector with read-only dimensions/offset and editable scale/offset child properties.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         serializedObject.Update();

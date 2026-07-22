@@ -39,13 +39,35 @@ using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.ToolingSupport
 {
+    internal enum MenuCategory
+    {
+        None,
+        Resources,
+        Tools,
+        Header
+    }
+
     internal class ToolDescriptor : IIdentified
     {
         public delegate (string, Color?) TextDelegate();
 
         public delegate (TextureContent, Color?, bool) PillIconDelegate();
 
+        public delegate (bool enabled, string enablementText) EnablementDelegate();
+
+        // Provides a status-menu enablement caption split into a greyed prefix and a single
+        // clickable blue link (e.g. "Download from " + "developer center"). Consulted only
+        // when EnablementDescriptor reports the tool as disabled.
+        public delegate (string prefix, string linkText, Action<Origins> onClick) EnablementLinkDelegate();
+
+        // Provides one or more status badges shown under the description, each with its own text
+        // and color (e.g. the Project setup tool's red "{n} outstanding issues" and amber
+        // "{n} manually fixable items"). When set, this takes precedence over InfoTextDelegate.
+        public delegate System.Collections.Generic.IReadOnlyList<(string text, Color? color)> StatusBadgesDelegate();
+
         public string Name;
+        public string DisplayName;
+        public string Label => DisplayName ?? Name;
         public string Id => Name;
         public string RampUpKey => Id?.Replace(" ", "_");
         public string MqdhCategoryId;
@@ -58,14 +80,25 @@ namespace Meta.XR.Editor.ToolingSupport
         public TextureContent Icon;
         public List<LinkDescription> HeaderIcons;
         public PillIconDelegate PillIcon;
+        public Func<int?> AvailableVersionDelegate;
         public TextDelegate InfoTextDelegate;
+        public StatusBadgesDelegate StatusBadges;
+        public EnablementDelegate EnablementDescriptor;
+        public EnablementLinkDelegate EnablementLink;
         public Action<Origins> OnClickDelegate;
         public bool CloseOnClick = true;
         public bool Experimental = false;
         public bool DrawExperimentalInStatusMenu = false;
         public bool CanBeNew = false;
+        // When true, the InfoTextDelegate text renders as the trailing upper-right Info badge
+        // (e.g. Building Blocks' "N new blocks") instead of a status line under the description.
+        public bool ShowInfoTextAsBadge = false;
+        // When true, the tool is pinned to the bottom of its status-menu category, after both
+        // internal and non-internal tools (e.g. AI tools setup).
+        public bool ShowLastInStatusMenu = false;
         public bool ShowHeader = true;
         public bool AddToStatusMenu = false;
+        public MenuCategory MenuCategory = MenuCategory.None;
         public bool AddToMenu = true;
         public bool EnableRampUp = false;
         public string MenuPathShortcut;
@@ -87,6 +120,13 @@ namespace Meta.XR.Editor.ToolingSupport
                 SendTelemetry = false
             };
 
+        // Runtime "show the New badge" state: true only while the item is flagged new and the
+        // user has not yet opened it. Persisted per-user via the New flag above.
+        internal bool IsNew => New.Value;
+
+        // Clears the New badge once the user opens the item (persists across sessions).
+        internal void MarkSeen() => New.SetValue(false, Origins.Self, this);
+
         private CustomBool _showOverview;
 
         internal CustomBool ShowOverview => _showOverview ??=
@@ -101,7 +141,7 @@ namespace Meta.XR.Editor.ToolingSupport
 
         private string DefaultDocumentationUrl => Documentation?.FirstOrDefault()?.Url ?? null;
 
-        private string MenuPath => $"{Utils.MetaMenuPath}{Name}";
+        private string MenuPath => $"{Utils.MetaMenuPath}{Label}";
 
         private List<LinkDescription> _builtHeaderIcons;
 
@@ -314,7 +354,7 @@ namespace Meta.XR.Editor.ToolingSupport
             {
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.BeginHorizontal(GUIStyle.none);
-                var label = prependOpen ? $"Open {Name}" : Name;
+                var label = prependOpen ? $"Open {Label}" : Label;
                 var width = Styles.GUIStyles.Title.CalcSize(new GUIContent(label));
                 EditorGUILayout.LabelField(label, hover ? Styles.GUIStyles.TitleHover : Styles.GUIStyles.Title,
                     GUILayout.Width(width.x));
@@ -435,7 +475,7 @@ namespace Meta.XR.Editor.ToolingSupport
                         GUILayout.ExpandWidth(false));
                 }
 
-                EditorGUILayout.LabelField(Name, GUIStyles.HeaderLabel);
+                EditorGUILayout.LabelField(Label, GUIStyles.HeaderLabel);
 
                 EditorGUILayout.Space(0, true);
 
@@ -474,7 +514,7 @@ namespace Meta.XR.Editor.ToolingSupport
 
 
         private string ExperimentalNotice =>
-            $"<b>{Name}</b> is currently an experimental feature.";
+            $"<b>{Label}</b> is currently an experimental feature.";
 
         private void DrawExperimentalNotice()
         {

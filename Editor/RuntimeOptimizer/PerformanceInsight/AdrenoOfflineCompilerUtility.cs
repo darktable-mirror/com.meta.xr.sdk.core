@@ -32,9 +32,11 @@ using System.Text;
 
 namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 {
+    /// <summary>Provides utilities for analyzing shader performance using the Qualcomm Adreno Offline Compiler.</summary>
     public class AdrenoOfflineCompilerUtilityRO : EditorWindow
     {
 
+        /// <summary>Enumerates the shader performance statistics reported by the Adreno Offline Compiler.</summary>
         public enum ShaderStat
         {
             TotalInstructionCount,
@@ -62,6 +64,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             Count
         }
 
+        /// <summary>Defines threshold configuration for a shader statistic, including green and red limits per shader stage.</summary>
         public struct ShaderStatConfig
         {
             public readonly string inputKey;
@@ -84,6 +87,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             }
         }
 
+        /// <summary>Contains the compiled shader statistics and metadata for a single subshader pass.</summary>
         public class ShaderStatInfo
         {
             public int subShader;
@@ -103,6 +107,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             public int[] vertexStats;
             public int[] binningVertexStats;
 
+            /// <summary>Returns a formatted display name combining the subshader index, pass index, and relevant tag values.</summary>
+            /// <returns>A human-readable string identifying this shader pass.</returns>
             public string GetName()
             {
                 string lightModeString = string.IsNullOrEmpty(lightMode) ? string.Empty : $", LightMode: {lightMode}";
@@ -203,6 +209,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             }
         }
 
+        /// <summary>Draws the editor GUI for configuring the Adreno Offline Compiler executable path.</summary>
+        /// <param name="disabled">Whether the path text field should be disabled.</param>
         public static void ShowAOCPathUI(bool disabled)
         {
             EditorGUILayout.LabelField("Path To Adreno Offline Compiler Executable");
@@ -222,6 +230,9 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             }
         }
 
+        /// <summary>Initializes the Adreno Offline Compiler path from the default location or editor preferences.</summary>
+        /// <param name="disabled">Set to true if the default AOC path was found and the UI field should be disabled.</param>
+        /// <returns>True if a valid AOC executable path was resolved, false otherwise.</returns>
         public static bool InitAOCPath(out bool disabled)
         {
             {
@@ -269,11 +280,27 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             return shaderStat <= ShaderStat.MiscellaneousInstructionCount;
         }
 
+        /// <summary>Compiles and retrieves performance statistics for all passes of the specified shader.</summary>
+        /// <param name="s">The shader to analyze.</param>
+        /// <param name="keywords">The shader keywords to enable during compilation.</param>
+        /// <param name="shaderPlatform">The target shader compiler platform.</param>
+        /// <param name="arch">The optional GPU architecture string passed to AOC.</param>
+        /// <returns>A list of shader stat results, one per subshader pass.</returns>
         public static List<ShaderStatInfo> GetShaderStats(Shader s, string[] keywords, ShaderCompilerPlatform shaderPlatform, string arch = "")
         {
             return GetShaderStats2(s, s.name, -1, -1, keywords, shaderPlatform, arch);
         }
 
+        /// <summary>Compiles and retrieves performance statistics for shader passes with configurable subshader/pass limits and optional caching.</summary>
+        /// <param name="s">The shader to analyze.</param>
+        /// <param name="name">The shader name used for temporary file directory naming.</param>
+        /// <param name="maxSubShader">The maximum number of subshaders to process, or -1 to process all.</param>
+        /// <param name="maxPass">The maximum number of passes to process per subshader, or -1 to process all.</param>
+        /// <param name="keywords">The shader keywords to enable during compilation.</param>
+        /// <param name="shaderPlatform">The target shader compiler platform.</param>
+        /// <param name="arch">The optional GPU architecture string passed to AOC.</param>
+        /// <param name="statsCache">An optional dictionary for caching results by shader content hash to avoid recompilation.</param>
+        /// <returns>A list of shader stat results, one per subshader pass.</returns>
         public static List<ShaderStatInfo> GetShaderStats2(Shader s, string name, int maxSubShader, int maxPass, string[] keywords, ShaderCompilerPlatform shaderPlatform, string arch, Dictionary<string, ShaderStatInfo> statsCache = null)
         {
             List<ShaderStatInfo> statsList = new List<ShaderStatInfo>();
@@ -456,6 +483,11 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             return statsList;
         }
 
+        /// <summary>Returns an interpolated color between red, yellow, and green based on where a stat value falls between the red and green thresholds.</summary>
+        /// <param name="stat">The shader statistic value to evaluate.</param>
+        /// <param name="red">The threshold value corresponding to poor performance (red).</param>
+        /// <param name="green">The threshold value corresponding to good performance (green).</param>
+        /// <returns>A color interpolated from red through yellow to green based on the stat value.</returns>
         public static Color GetStatColor(int stat, int red, int green)
         {
             float t = Mathf.InverseLerp(red, green, stat);

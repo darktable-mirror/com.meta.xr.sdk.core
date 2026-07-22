@@ -235,23 +235,45 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             foreach (var kv in extra) req.SetRequestHeader(kv.Key, kv.Value);
         }
 
-        private static async Task<string> SendRequestAsync(UnityWebRequest req, CancellationToken ct = default)
+        private static Task<string> SendRequestAsync(UnityWebRequest req, CancellationToken ct = default)
         {
-            var op = req.SendWebRequest();
-            while (!op.isDone)
+            // Event-based wait instead of per-frame `await Task.Yield()` polling.
+            // The previous polling loop resumed on Unity's main-thread SynchronizationContext
+            // every frame for the duration of the request, contributing to perceptible
+            // editor / headset stalls during multi-second LLM responses. Using
+            // UnityWebRequestAsyncOperation.completed + TaskCompletionSource hands control back
+            // to Unity until the request is actually done, with zero per-frame main-thread cost.
+            var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            CancellationTokenRegistration ctRegistration = default;
+            if (ct.CanBeCanceled)
             {
-                if (ct.IsCancellationRequested)
+                ctRegistration = ct.Register(() =>
                 {
-                    req.Abort();
-                    ct.ThrowIfCancellationRequested();
-                }
-                await Task.Yield();
+                    try { req.Abort(); } catch { /* request may already be disposed */ }
+                    tcs.TrySetCanceled(ct);
+                });
             }
 
-            if (req.result != UnityWebRequest.Result.Success)
-                throw new Exception($"HTTP/{req.responseCode} {req.error}\n{req.downloadHandler.text}");
+            var op = req.SendWebRequest();
+            op.completed += _ =>
+            {
+                ctRegistration.Dispose();
 
-            return req.downloadHandler.text;
+                if (tcs.Task.IsCompleted) return; // already canceled
+
+                if (req.result != UnityWebRequest.Result.Success)
+                {
+                    tcs.TrySetException(new Exception(
+                        $"HTTP/{req.responseCode} {req.error}\n{req.downloadHandler.text}"));
+                }
+                else
+                {
+                    tcs.TrySetResult(req.downloadHandler.text);
+                }
+            };
+
+            return tcs.Task;
         }
     }
 }

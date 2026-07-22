@@ -81,11 +81,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             base.Setup(owner);
 
+            _debugInterface = owner as DebugInterface;
+            if (_debugInterface == null)
+            {
 #if UNITY_2022_1_OR_NEWER
-            _debugInterface = FindFirstObjectByType<DebugInterface>();
+                _debugInterface = FindFirstObjectByType<DebugInterface>(FindObjectsInactive.Include);
 #else
-            _debugInterface = FindObjectOfType<DebugInterface>();
+                _debugInterface = FindObjectOfType<DebugInterface>(true);
 #endif
+            }
 
             var div = Append<Flex>("div");
             div.LayoutStyle = Style.Load<LayoutStyle>("InspectorDivFlex");
@@ -216,6 +220,18 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
             if (_debugInterface != null)
             {
+                // Propagate to both scroll views; one may be "forgotten" from
+                // _categoryDiv._children and unreachable by the recursive tree walk.
+                if (_categoryScrollView != null)
+                {
+                    _debugInterface.SetTransparencyRecursive(_categoryScrollView, Transparent);
+                }
+
+                if (_hierarchyScrollView != null)
+                {
+                    _debugInterface.SetTransparencyRecursive(_hierarchyScrollView, Transparent);
+                }
+
                 foreach (var categoryRegistry in _registries.Values)
                 {
                     foreach (var typeRegistry in categoryRegistry.Values)
@@ -366,11 +382,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
             else
             {
-                var button = GetCategoryButton(category);
-                if (button)
-                {
-                    button.Counter--;
-                }
+                TryRemoveCategoryButton(category);
             }
         }
 
@@ -433,6 +445,30 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             }
 
             return button;
+        }
+
+        private void TryRemoveCategoryButton(Category category)
+        {
+            if (!_categories.TryGetValue(category, out var button) || !button)
+            {
+                return;
+            }
+
+            button.Counter--;
+            if (button.Counter != 0)
+            {
+                return;
+            }
+
+            if (_selectedCategory == button)
+            {
+                SelectCategoryButton(null);
+            }
+
+            if (_categories.Remove(category) && _categoryScrollView)
+            {
+                CategoryFlex.Remove(button, true);
+            }
         }
 
         private Controller ComputeIdealPreviousItem(Item item)

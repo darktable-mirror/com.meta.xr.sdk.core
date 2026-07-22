@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Meta.XR.Editor.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -41,6 +42,9 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>The registration attribute containing service metadata.</summary>
         public readonly RegisterAIServiceAttribute Attribute;
 
+        /// <summary>Initializes a new instance of the <see cref="RegisteredService"/> struct.</summary>
+        /// <param name="serviceType">The type that implements <see cref="IAIService"/>.</param>
+        /// <param name="attribute">The registration attribute containing service metadata.</param>
         public RegisteredService(Type serviceType, RegisterAIServiceAttribute attribute)
         {
             ServiceType = serviceType;
@@ -55,6 +59,12 @@ namespace Meta.XR.AI.AgentBridge
 
         /// <summary>Priority from the attribute.</summary>
         public int Priority => Attribute.Priority;
+
+        /// <summary>CLI executable name, falling back to the service ID.</summary>
+        public string ExecutableName => Attribute.ExecutableName ?? Id;
+
+        /// <summary>Relative path for skills installation.</summary>
+        public string SkillsSubPath => Attribute.SkillsSubPath;
     }
 
     /// <summary>
@@ -255,12 +265,7 @@ namespace Meta.XR.AI.AgentBridge
         private static void DiscoverServicesInAssembly(Assembly assembly)
         {
             // Skip system assemblies for performance
-            var assemblyName = assembly.GetName().Name;
-            if (assemblyName == null ||
-                assemblyName.StartsWith("System", StringComparison.Ordinal) ||
-                assemblyName.StartsWith("Microsoft", StringComparison.Ordinal) ||
-                assemblyName.StartsWith("mscorlib", StringComparison.Ordinal) ||
-                assemblyName.StartsWith("netstandard", StringComparison.Ordinal))
+            if (AssemblyFilter.IsSystemAssembly(assembly))
             {
                 return;
             }

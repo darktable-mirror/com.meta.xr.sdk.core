@@ -20,23 +20,28 @@
 
 #if UNITY_EDITOR_OSX
 
+using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Meta.XR.Simulator.Editor
 {
     /// <summary>
-    /// macOS-specific implementation for detecting Meta XR Simulator installation
+    /// macOS-specific implementation for detecting Meta XR Simulator installation.
+    /// Uses mdfind (Spotlight) to locate the app regardless of install location.
     /// </summary>
     internal class MacOSXRSimInstallationDetector : IXRSimInstallationDetector
     {
         private const string ApplicationsPath = "/Applications";
         private const string MetaXRSimulatorAppName = "MetaXRSimulator.app";
+        private static readonly string DefaultMetaXRSimulatorPath = Path.Combine(ApplicationsPath, MetaXRSimulatorAppName);
 
-        private static readonly string MetaXRSimulatorPath = Path.Combine(ApplicationsPath, MetaXRSimulatorAppName);
+        private static bool _cachedAppPathResolved;
+        private static string _cachedAppPath;
 
         public bool IsInstalled()
         {
-            return Directory.Exists(MetaXRSimulatorPath);
+            return !string.IsNullOrEmpty(GetOpenXRRuntimeDirectory());
         }
 
         /// <summary>
@@ -45,15 +50,69 @@ namespace Meta.XR.Simulator.Editor
         /// <returns>The installation directory path, or null if not found</returns>
         public string GetOpenXRRuntimeDirectory()
         {
-            if (Directory.Exists(MetaXRSimulatorPath))
+            var appPath = GetAppPath();
+            if (appPath != null && Directory.Exists(appPath))
             {
                 // We need to get in Contents/Resources/MetaXRSimulator as the calling methods are expecting to find
                 // meta_openxr_simulator.json in the root directory after calling this method
-                var appContents = Path.Join(MetaXRSimulatorPath, "Contents");
-                return Path.Join(appContents, "Resources", "MetaXRSimulator");
+                return Path.Combine(appPath, "Contents", "Resources", "MetaXRSimulator");
             }
 
             return null;
+        }
+
+        private static string GetAppPath()
+        {
+            if (_cachedAppPathResolved)
+            {
+                return _cachedAppPath;
+            }
+
+            if (Directory.Exists(DefaultMetaXRSimulatorPath))
+            {
+                _cachedAppPath = DefaultMetaXRSimulatorPath;
+                _cachedAppPathResolved = true;
+                return _cachedAppPath;
+            }
+
+            _cachedAppPath = FindAppWithMdfind();
+            _cachedAppPathResolved = true;
+            return _cachedAppPath;
+        }
+
+        private static string FindAppWithMdfind()
+        {
+            try
+            {
+                using (var process = new Process())
+                {
+                    process.StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "/usr/bin/mdfind",
+                        Arguments = $"-name '{MetaXRSimulatorAppName}' kind:App",
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    process.Start();
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    if (string.IsNullOrEmpty(output))
+                    {
+                        return null;
+                    }
+
+                    // mdfind returns one path per line; use the first match
+                    string firstResult = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                    return string.IsNullOrEmpty(firstResult) ? null : firstResult;
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }

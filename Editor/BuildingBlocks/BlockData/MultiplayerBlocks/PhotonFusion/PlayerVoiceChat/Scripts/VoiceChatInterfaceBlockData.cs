@@ -27,6 +27,9 @@ using UnityEngine;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing the Photon Voice chat interface building block with its dependencies.
+    /// </summary>
     public class VoiceChatInterfaceBlockData : InterfaceBlockData
     {
         internal override async Task<List<GameObject>> InstallWithDependencies(GameObject selectedGameObject = null)

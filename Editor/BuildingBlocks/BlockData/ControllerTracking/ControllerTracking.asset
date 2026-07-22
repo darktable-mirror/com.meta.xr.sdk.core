@@ -32,5 +32,5 @@ MonoBehaviour:
   packageDependencies: []
   isSingleton: 1
   usageInstructions:
-  featureDocumentationName:
-  featureDocumentationUrl:
+  featureDocumentationName: Controller Tracking
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/unity-ovrinput/

@@ -26,11 +26,20 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Shared.Editor
 {
+    /// <summary>
+    /// Installation routine for the networked avatar building block that instantiates the appropriate avatar prefab.
+    /// </summary>
     public class NetworkedAvatarInstallationRoutine : NetworkInstallationRoutine
     {
         [SerializeField] internal GameObject prefabV28Plus;
         private GameObject PrefabV28Plus => prefabV28Plus;
 
+        /// <summary>
+        /// Installs the networked avatar building block by instantiating the appropriate avatar prefab.
+        /// </summary>
+        /// <param name="block">The block data asset being installed.</param>
+        /// <param name="selectedGameObject">The optional GameObject to install the block onto.</param>
+        /// <returns>The list of GameObjects created during installation.</returns>
         public override List<GameObject> Install(BlockData block, GameObject selectedGameObject)
         {
             var instance = Instantiate(

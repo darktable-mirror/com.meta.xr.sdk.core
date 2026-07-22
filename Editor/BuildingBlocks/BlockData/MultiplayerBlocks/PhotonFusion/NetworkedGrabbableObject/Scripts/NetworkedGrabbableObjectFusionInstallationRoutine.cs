@@ -39,9 +39,18 @@ using Fusion.Addons.Physics;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
+    /// <summary>
+    /// Installation routine for the networked grabbable object building block using Photon Fusion.
+    /// </summary>
     public class NetworkedGrabbableObjectFusionInstallationRoutine : NetworkedGrabbableObjectInstallationRoutine
     {
         protected override bool UsesPrefab => false;
+        /// <summary>
+        /// Installs the networked grabbable object building block using Photon Fusion.
+        /// </summary>
+        /// <param name="blockData">The block data asset being installed.</param>
+        /// <param name="selectedGameObject">The optional GameObject to install the block onto.</param>
+        /// <returns>A task containing the list of GameObjects created during installation.</returns>
 #pragma warning disable CS1998
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
 #pragma warning restore CS1998

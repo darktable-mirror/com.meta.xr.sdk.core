@@ -22,8 +22,11 @@ oxx_python_library(
     ],
     visibility = [
         "fbsource//arvr/apps/mqdhmcp:hzosmcp_lib",
+        "fbsource//arvr/projects/runtime_optimizer/MCPPrototype/...",
     ],
     deps = [
+        "fbsource//third-party/pypi/numpy:numpy",
+        "fbsource//third-party/pypi/pandas:pandas",
         "fbsource//third-party/pypi/perfetto:perfetto",
         "//third-party/pypi/psutil:psutil",
     ],

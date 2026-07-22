@@ -21,7 +21,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Meta.MCPBridge.Schemas;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Definitions
 {
@@ -42,7 +42,7 @@ namespace Meta.MCPBridge.Definitions
             };
         }
 
-        internal PromptGetResultSchema Get(JObject arguments)
+        internal PromptGetResultSchema Get(JsonObject arguments)
         {
             // hardcoded
             return new PromptGetResultSchema

@@ -65,6 +65,19 @@ namespace Meta.XR.AI.AgentBridge
         public int Priority { get; set; } = 100;
 
         /// <summary>
+        /// CLI executable name for this service (e.g., "claude", "codex", "gemini").
+        /// Used for MCP registration commands and auto-setup.
+        /// When null, the service cannot be auto-registered with MCP servers.
+        /// </summary>
+        public string? ExecutableName { get; set; }
+
+        /// <summary>
+        /// Relative path under the project root where skills are installed
+        /// (e.g., ".claude/skills"). Defaults to ".ai/skills".
+        /// </summary>
+        public string SkillsSubPath { get; set; } = ".ai/skills";
+
+        /// <summary>
         /// Creates a new RegisterAIService attribute.
         /// </summary>
         /// <param name="id">Unique identifier for this service</param>

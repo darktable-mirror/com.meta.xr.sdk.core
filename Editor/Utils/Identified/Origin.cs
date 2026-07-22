@@ -20,6 +20,7 @@
 
 namespace Meta.XR.Editor.Id
 {
+    /// <summary>Enumerates the possible origin points from which a user action or event can be triggered.</summary>
     public enum Origins
     {
         Unknown = -1,

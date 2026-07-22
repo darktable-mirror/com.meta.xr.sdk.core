@@ -38,5 +38,5 @@ MonoBehaviour:
     select the desired eye and assign a unique material. Assign this same material
     to your mesh and at runtime the PassthroughCameraAccess component will display
     the selected eye on that mesh.
-  featureDocumentationName:
-  featureDocumentationUrl:
+  featureDocumentationName: Passthrough Camera API
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/unity-pca-overview

@@ -21,8 +21,7 @@
 #nullable enable
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.XR.AI.AgentBridge.Acp
 {
@@ -32,37 +31,37 @@ namespace Meta.XR.AI.AgentBridge.Acp
 
     internal class JsonRpcRequest
     {
-        [JsonProperty("jsonrpc")] public string Jsonrpc = "2.0";
-        [JsonProperty("id")] public int Id;
-        [JsonProperty("method")] public string Method = "";
-        [JsonProperty("params", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("jsonrpc")] public string Jsonrpc = "2.0";
+        [McpJsonProperty("id")] public int Id;
+        [McpJsonProperty("method")] public string Method = "";
+        [McpJsonProperty("params", NullHandling = McpJsonNullHandling.Ignore)]
         public object? Params;
     }
 
     internal class JsonRpcResponse
     {
-        [JsonProperty("jsonrpc")] public string Jsonrpc = "2.0";
-        [JsonProperty("id")] public int? Id;
-        [JsonProperty("result", NullValueHandling = NullValueHandling.Ignore)]
-        public JToken? Result;
-        [JsonProperty("error", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("jsonrpc")] public string Jsonrpc = "2.0";
+        [McpJsonProperty("id")] public int? Id;
+        [McpJsonProperty("result", NullHandling = McpJsonNullHandling.Ignore)]
+        public JsonNode? Result;
+        [McpJsonProperty("error", NullHandling = McpJsonNullHandling.Ignore)]
         public JsonRpcError? Error;
     }
 
     internal class JsonRpcNotification
     {
-        [JsonProperty("jsonrpc")] public string Jsonrpc = "2.0";
-        [JsonProperty("method")] public string Method = "";
-        [JsonProperty("params", NullValueHandling = NullValueHandling.Ignore)]
-        public JToken? Params;
+        [McpJsonProperty("jsonrpc")] public string Jsonrpc = "2.0";
+        [McpJsonProperty("method")] public string Method = "";
+        [McpJsonProperty("params", NullHandling = McpJsonNullHandling.Ignore)]
+        public JsonNode? Params;
     }
 
     internal class JsonRpcError
     {
-        [JsonProperty("code")] public int Code;
-        [JsonProperty("message")] public string Message = "";
-        [JsonProperty("data", NullValueHandling = NullValueHandling.Ignore)]
-        public JToken? Data;
+        [McpJsonProperty("code")] public int Code;
+        [McpJsonProperty("message")] public string Message = "";
+        [McpJsonProperty("data", NullHandling = McpJsonNullHandling.Ignore)]
+        public JsonNode? Data;
     }
 
     // -----------------------------------------------------------------------
@@ -71,87 +70,86 @@ namespace Meta.XR.AI.AgentBridge.Acp
 
     internal class InitializeParams
     {
-        [JsonProperty("protocolVersion")] public int ProtocolVersion = 1;
-        [JsonProperty("clientCapabilities", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("protocolVersion")] public int ProtocolVersion = 1;
+        [McpJsonProperty("clientCapabilities", NullHandling = McpJsonNullHandling.Ignore)]
         public ClientCapabilities? ClientCapabilities;
-        [JsonProperty("clientInfo", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("clientInfo", NullHandling = McpJsonNullHandling.Ignore)]
         public ClientInfo? ClientInfo;
     }
 
     internal class ClientCapabilities
     {
-        [JsonProperty("streaming", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("streaming", NullHandling = McpJsonNullHandling.Ignore)]
         public bool? Streaming;
     }
 
     internal class ClientInfo
     {
-        [JsonProperty("name")] public string Name = "";
-        [JsonProperty("version")] public string Version = "";
+        [McpJsonProperty("name")] public string Name = "";
+        [McpJsonProperty("version")] public string Version = "";
     }
 
     internal class InitializeResult
     {
-        [JsonProperty("protocolVersion")] public int ProtocolVersion;
-        [JsonProperty("agentCapabilities", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("protocolVersion")] public int ProtocolVersion;
+        [McpJsonProperty("agentCapabilities", NullHandling = McpJsonNullHandling.Ignore)]
         public AgentCapabilities? AgentCapabilities;
-        [JsonProperty("agentInfo", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("agentInfo", NullHandling = McpJsonNullHandling.Ignore)]
         public AgentInfo? AgentInfo;
     }
 
     internal class AgentCapabilities
     {
-        [JsonProperty("streaming", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("streaming", NullHandling = McpJsonNullHandling.Ignore)]
         public bool? Streaming;
     }
 
     internal class AgentInfo
     {
-        [JsonProperty("name")] public string Name = "";
-        [JsonProperty("version")] public string Version = "";
+        [McpJsonProperty("name")] public string Name = "";
+        [McpJsonProperty("version")] public string Version = "";
     }
 
     internal class NewSessionParams
     {
-        [JsonProperty("cwd")] public string Cwd = "";
-        [JsonProperty("mcpServers")] public List<object> McpServers = new();
+        [McpJsonProperty("cwd")] public string Cwd = "";
+        [McpJsonProperty("mcpServers")] public List<object> McpServers = new();
     }
 
     internal class NewSessionResult
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("sessionId")] public string SessionId = "";
     }
 
     internal class PromptParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("prompt")] public List<ContentBlock> Prompt = new();
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("prompt")] public List<ContentBlock> Prompt = new();
     }
 
     internal class PromptResult
     {
-        [JsonProperty("stopReason", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("stopReason", NullHandling = McpJsonNullHandling.Ignore)]
         public string? StopReason;
     }
 
     internal class CancelNotificationParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("sessionId")] public string SessionId = "";
     }
 
     // -----------------------------------------------------------------------
     //  Content blocks
     // -----------------------------------------------------------------------
 
-    [JsonConverter(typeof(ContentBlockConverter))]
-    internal abstract class ContentBlock
+    internal class ContentBlock
     {
-        [JsonProperty("type")] public string Type = "";
+        [McpJsonProperty("type")] public string Type = "";
     }
 
     internal class TextContentBlock : ContentBlock
     {
-        [JsonProperty("text")] public string Text = "";
+        [McpJsonProperty("text")] public string Text = "";
 
         public TextContentBlock()
         {
@@ -161,52 +159,12 @@ namespace Meta.XR.AI.AgentBridge.Acp
 
     internal class ImageContentBlock : ContentBlock
     {
-        [JsonProperty("data")] public string Data = "";
-        [JsonProperty("mimeType")] public string MimeType = "";
+        [McpJsonProperty("data")] public string Data = "";
+        [McpJsonProperty("mimeType")] public string MimeType = "";
 
         public ImageContentBlock()
         {
             Type = "image";
-        }
-    }
-
-    /// <summary>
-    /// JSON converter for ContentBlock polymorphism.
-    /// </summary>
-    internal class ContentBlockConverter : JsonConverter<ContentBlock>
-    {
-        public override ContentBlock? ReadJson(JsonReader reader, System.Type objectType,
-            ContentBlock? existingValue, bool hasExistingValue, JsonSerializer serializer)
-        {
-            var jo = JObject.Load(reader);
-            var type = jo["type"]?.ToString();
-            ContentBlock block = type switch
-            {
-                "image" => new ImageContentBlock(),
-                _ => new TextContentBlock()
-            };
-            serializer.Populate(jo.CreateReader(), block);
-            return block;
-        }
-
-        public override void WriteJson(JsonWriter writer, ContentBlock? value, JsonSerializer serializer)
-        {
-            // Use default serialization but bypass converter to avoid infinite loop
-            var jo = new JObject();
-            if (value != null)
-            {
-                jo["type"] = value.Type;
-                if (value is TextContentBlock text)
-                {
-                    jo["text"] = text.Text;
-                }
-                else if (value is ImageContentBlock img)
-                {
-                    jo["data"] = img.Data;
-                    jo["mimeType"] = img.MimeType;
-                }
-            }
-            jo.WriteTo(writer);
         }
     }
 
@@ -216,110 +174,110 @@ namespace Meta.XR.AI.AgentBridge.Acp
 
     internal class ReadTextFileParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("path")] public string Path = "";
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("path")] public string Path = "";
     }
 
     internal class ReadTextFileResult
     {
-        [JsonProperty("content")] public string Content = "";
+        [McpJsonProperty("content")] public string Content = "";
     }
 
     internal class WriteTextFileParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("path")] public string Path = "";
-        [JsonProperty("content")] public string Content = "";
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("path")] public string Path = "";
+        [McpJsonProperty("content")] public string Content = "";
     }
 
     internal class RequestPermissionParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("toolCall", NullValueHandling = NullValueHandling.Ignore)]
-        public JToken? ToolCall;
-        [JsonProperty("options")] public List<PermissionOption> Options = new();
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("toolCall", NullHandling = McpJsonNullHandling.Ignore)]
+        public JsonNode? ToolCall;
+        [McpJsonProperty("options")] public List<PermissionOption> Options = new();
     }
 
     internal class PermissionOption
     {
-        [JsonProperty("id")] public string Id = "";
-        [JsonProperty("label")] public string Label = "";
-        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("id")] public string Id = "";
+        [McpJsonProperty("label")] public string Label = "";
+        [McpJsonProperty("description", NullHandling = McpJsonNullHandling.Ignore)]
         public string? Description;
     }
 
     internal class RequestPermissionResult
     {
-        [JsonProperty("outcome")] public PermissionOutcome Outcome = new();
+        [McpJsonProperty("outcome")] public PermissionOutcome Outcome = new();
     }
 
     internal class PermissionOutcome
     {
-        [JsonProperty("outcome")] public string OutcomeType = "selected";
-        [JsonProperty("optionId")] public string OptionId = "";
+        [McpJsonProperty("outcome")] public string OutcomeType = "selected";
+        [McpJsonProperty("optionId")] public string OptionId = "";
     }
 
     internal class CreateTerminalParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("command")] public string Command = "";
-        [JsonProperty("args", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("command")] public string Command = "";
+        [McpJsonProperty("args", NullHandling = McpJsonNullHandling.Ignore)]
         public List<string>? Args;
-        [JsonProperty("cwd", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("cwd", NullHandling = McpJsonNullHandling.Ignore)]
         public string? Cwd;
     }
 
     internal class CreateTerminalResult
     {
-        [JsonProperty("terminalId")] public string TerminalId = "";
+        [McpJsonProperty("terminalId")] public string TerminalId = "";
     }
 
     internal class TerminalOutputParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("terminalId")] public string TerminalId = "";
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("terminalId")] public string TerminalId = "";
     }
 
     internal class TerminalOutputResult
     {
-        [JsonProperty("output")] public string Output = "";
-        [JsonProperty("truncated")] public bool Truncated;
-        [JsonProperty("exitStatus", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("output")] public string Output = "";
+        [McpJsonProperty("truncated")] public bool Truncated;
+        [McpJsonProperty("exitStatus", NullHandling = McpJsonNullHandling.Ignore)]
         public ExitStatus? ExitStatus;
     }
 
     internal class ExitStatus
     {
-        [JsonProperty("type")] public string Type = "";
-        [JsonProperty("code", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("type")] public string Type = "";
+        [McpJsonProperty("code", NullHandling = McpJsonNullHandling.Ignore)]
         public int? Code;
     }
 
     internal class KillTerminalParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("terminalId")] public string TerminalId = "";
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("terminalId")] public string TerminalId = "";
     }
 
     internal class ReleaseTerminalParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("terminalId")] public string TerminalId = "";
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("terminalId")] public string TerminalId = "";
     }
 
     internal class WaitForTerminalExitParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("terminalId")] public string TerminalId = "";
-        [JsonProperty("timeoutMs", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("terminalId")] public string TerminalId = "";
+        [McpJsonProperty("timeoutMs", NullHandling = McpJsonNullHandling.Ignore)]
         public int? TimeoutMs;
     }
 
     internal class WaitForTerminalExitResult
     {
-        [JsonProperty("exitStatus", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("exitStatus", NullHandling = McpJsonNullHandling.Ignore)]
         public ExitStatus? ExitStatus;
-        [JsonProperty("timedOut")] public bool TimedOut;
+        [McpJsonProperty("timedOut")] public bool TimedOut;
     }
 
     // -----------------------------------------------------------------------
@@ -328,8 +286,8 @@ namespace Meta.XR.AI.AgentBridge.Acp
 
     internal class SessionUpdateParams
     {
-        [JsonProperty("sessionId")] public string SessionId = "";
-        [JsonProperty("update")] public JObject Update = new();
+        [McpJsonProperty("sessionId")] public string SessionId = "";
+        [McpJsonProperty("update")] public JsonObject Update = new();
 
         /// <summary>
         /// Gets the session update type string from the update object.
@@ -343,52 +301,52 @@ namespace Meta.XR.AI.AgentBridge.Acp
 
     internal class AgentMessageChunk
     {
-        [JsonProperty("content")] public JToken? Content;
+        [McpJsonProperty("content")] public JsonNode? Content;
     }
 
     internal class AgentThoughtChunk
     {
-        [JsonProperty("content")] public JToken? Content;
+        [McpJsonProperty("content")] public JsonNode? Content;
     }
 
     internal class ToolCallStart
     {
-        [JsonProperty("toolCallId")] public string ToolCallId = "";
-        [JsonProperty("title")] public string Title = "";
-        [JsonProperty("kind", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("toolCallId")] public string ToolCallId = "";
+        [McpJsonProperty("title")] public string Title = "";
+        [McpJsonProperty("kind", NullHandling = McpJsonNullHandling.Ignore)]
         public string? Kind;
-        [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("status", NullHandling = McpJsonNullHandling.Ignore)]
         public string? Status;
     }
 
     internal class ToolCallProgress
     {
-        [JsonProperty("toolCallId")] public string ToolCallId = "";
-        [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("toolCallId")] public string ToolCallId = "";
+        [McpJsonProperty("status", NullHandling = McpJsonNullHandling.Ignore)]
         public string? Status;
-        [JsonProperty("content", NullValueHandling = NullValueHandling.Ignore)]
-        public JArray? Content;
+        [McpJsonProperty("content", NullHandling = McpJsonNullHandling.Ignore)]
+        public JsonArray? Content;
     }
 
     internal class ToolCallComplete
     {
-        [JsonProperty("toolCallId")] public string ToolCallId = "";
-        [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("toolCallId")] public string ToolCallId = "";
+        [McpJsonProperty("status", NullHandling = McpJsonNullHandling.Ignore)]
         public string? Status;
-        [JsonProperty("content", NullValueHandling = NullValueHandling.Ignore)]
-        public JArray? Content;
+        [McpJsonProperty("content", NullHandling = McpJsonNullHandling.Ignore)]
+        public JsonArray? Content;
     }
 
     internal class UsageUpdate
     {
-        [JsonProperty("inputTokens", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("inputTokens", NullHandling = McpJsonNullHandling.Ignore)]
         public int? InputTokens;
-        [JsonProperty("outputTokens", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("outputTokens", NullHandling = McpJsonNullHandling.Ignore)]
         public int? OutputTokens;
     }
 
     internal class PlanUpdate
     {
-        [JsonProperty("content")] public JToken? Content;
+        [McpJsonProperty("content")] public JsonNode? Content;
     }
 }

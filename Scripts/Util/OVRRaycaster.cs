@@ -176,7 +176,8 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
                     index = resultAppendList.Count,
                     depth = m_RaycastResults[index].graphic.depth,
 
-                    worldPosition = m_RaycastResults[index].worldPos
+                    worldPosition = m_RaycastResults[index].worldPos,
+                    worldNormal = m_RaycastResults[index].worldNormal
                 };
                 resultAppendList.Add(castResult);
             }
@@ -256,7 +257,8 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
             if (graphic.depth == -1 || (pointer == graphic.gameObject))
                 continue;
             Vector3 worldPos;
-            if (RayIntersectsRectTransform(graphic.rectTransform, ray, out worldPos))
+            Vector3 worldNormal;
+            if (RayIntersectsRectTransform(graphic.rectTransform, ray, out worldPos, out worldNormal))
             {
                 //Work out where this is on the screen for compatibility with existing Unity UI code
                 Vector2 screenPos = eventCamera.WorldToScreenPoint(worldPos);
@@ -266,6 +268,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
                     RaycastHit hit;
                     hit.graphic = graphic;
                     hit.worldPos = worldPos;
+                    hit.worldNormal = worldNormal;
                     hit.fromMouse = false;
                     s_SortedGraphics.Add(hit);
                 }
@@ -301,7 +304,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
     /// <param name="ray"></param>
     /// <param name="worldPos"></param>
     /// <returns></returns>
-    static bool RayIntersectsRectTransform(RectTransform rectTransform, Ray ray, out Vector3 worldPos)
+    static bool RayIntersectsRectTransform(RectTransform rectTransform, Ray ray, out Vector3 worldPos, out Vector3 worldNormal)
     {
         rectTransform.GetWorldCorners(_corners);
         Plane plane = new Plane(_corners[0], _corners[1], _corners[2]);
@@ -310,6 +313,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
         if (!plane.Raycast(ray, out enter))
         {
             worldPos = Vector3.zero;
+            worldNormal = Vector3.zero;
             return false;
         }
 
@@ -326,11 +330,13 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
         {
             worldPos = _corners[0] + LeftDot * LeftEdge / LeftEdge.sqrMagnitude +
                        BottomDot * BottomEdge / BottomEdge.sqrMagnitude;
+            worldNormal = plane.normal;
             return true;
         }
         else
         {
             worldPos = Vector3.zero;
+            worldNormal = Vector3.zero;
             return false;
         }
     }
@@ -340,6 +346,7 @@ public class OVRRaycaster : GraphicRaycaster, IPointerEnterHandler
     {
         public Graphic graphic;
         public Vector3 worldPos;
+        public Vector3 worldNormal;
         public bool fromMouse;
     };
 

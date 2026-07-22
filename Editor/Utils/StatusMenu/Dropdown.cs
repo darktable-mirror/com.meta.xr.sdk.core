@@ -27,11 +27,14 @@ using System.Linq;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Reflection;
 using Meta.XR.Editor.Settings;
+using Meta.XR.Editor.UserInterface.RLDS;
 using UnityEditor;
 using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.UIElements;
-using static Meta.XR.Editor.UserInterface.Styles.Constants;
+using SdkMenuButton = Meta.XR.Editor.UserInterface.SdkMenuButton;
+using SdkMenuButtonVariant = Meta.XR.Editor.UserInterface.SdkMenuButtonVariant;
+using UIStyles = Meta.XR.Editor.UserInterface.Styles;
 using Utils = Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.Editor.StatusMenu
@@ -54,12 +57,9 @@ namespace Meta.XR.Editor.StatusMenu
             };
 
         private static EditorToolbarButton _editorToolbarButton;
-        private static VisualElement _pill;
+        private static SdkMenuButton _sdkMenuButton;
+        private static SdkMenuButtonVariant _currentVariant = SdkMenuButtonVariant.Positive;
         private static Vector2 _rawPosition = Vector2.zero;
-        private static Color _hoverColor;
-        private static readonly StyleColor NullStyle = new StyleColor(StyleKeyword.Null);
-        private static readonly Color _invisibleColor = new Color(0, 0, 0, 0);
-        private static Color _pillColor = Color.black;
 
         static Dropdown()
         {
@@ -166,46 +166,45 @@ namespace Meta.XR.Editor.StatusMenu
 
         private static void CustomizeButton(EditorToolbarButton button)
         {
-            Styles.Contents.MetaIcon.RegisterToImageLoaded(loadedImage => button.icon = loadedImage as Texture2D);
             button.AddToClassList(ElementClass);
             button.RegisterCallback<GeometryChangedEvent>(evt => RefreshRawPosition());
-            button.clicked += () =>
+
+            button.text = "";
+            button.icon = null;
+
+            // Remove the Button's Clickable manipulator so pointer events propagate
+            // to SdkMenuButton's root element instead of being captured by the parent.
+            if (button.clickable != null)
             {
-                _hoverColor = button.resolvedStyle.backgroundColor;
+                button.RemoveManipulator(button.clickable);
+            }
+
+            // Strip EditorToolbarButton's visual chrome so SdkMenuButton
+            // renders directly without a wrapper appearance.
+            button.style.backgroundColor = Color.clear;
+            button.style.borderTopWidth = RLDSConstants.BorderWidth.None;
+            button.style.borderBottomWidth = RLDSConstants.BorderWidth.None;
+            button.style.borderLeftWidth = RLDSConstants.BorderWidth.None;
+            button.style.borderRightWidth = RLDSConstants.BorderWidth.None;
+            button.style.paddingTop = RLDSConstants.Spacing.None;
+            button.style.paddingBottom = RLDSConstants.Spacing.None;
+            button.style.paddingLeft = RLDSConstants.Spacing.None;
+            button.style.paddingRight = RLDSConstants.Spacing.None;
+
+            var styleSheet = RLDSUtils.LoadStyleSheet(!EditorGUIUtility.isProSkin);
+            if (styleSheet != null)
+            {
+                button.styleSheets.Add(styleSheet);
+            }
+
+            _sdkMenuButton = new SdkMenuButton(ComputeCurrentVariant());
+            _sdkMenuButton.Clicked += () =>
+            {
                 RefreshRawPosition();
                 ShowDropdown();
             };
-
-            var arrowIcon = new VisualElement();
-            arrowIcon.AddToClassList("unity-icon-arrow");
-            arrowIcon.style.marginLeft = Padding;
-            button.Add(arrowIcon);
-
-            _pill = new VisualElement
-            {
-                style =
-                {
-                    top = 4,
-                    width = 6,
-                    height = 6,
-                    marginRight = Padding,
-                    borderBottomLeftRadius = 50,
-                    borderBottomRightRadius = 50,
-                    borderTopLeftRadius = 50,
-                    borderTopRightRadius = 50,
-                    borderBottomWidth = 1,
-                    borderLeftWidth = 1,
-                    borderRightWidth = 1,
-                    borderTopWidth = 1
-                }
-            };
-            button.Insert(1, _pill);
-
-            if (button.Children().FirstOrDefault() is UnityEngine.UIElements.Image image)
-            {
-                image.style.marginRight = Margin;
-                image.tintColor = UserInterface.Styles.Colors.UnselectedWhite;
-            }
+            var sdkElement = _sdkMenuButton.Build();
+            button.Add(sdkElement);
         }
 
         private static void Initialize()
@@ -221,11 +220,6 @@ namespace Meta.XR.Editor.StatusMenu
             _editorToolbarButton = new EditorToolbarButton()
             {
                 text = Title,
-                style =
-                {
-                    paddingLeft = Margin,
-                    paddingRight = Padding
-                }
             };
 
             Attach(_editorToolbarButton);
@@ -240,55 +234,56 @@ namespace Meta.XR.Editor.StatusMenu
         private static void Update()
         {
 #if USE_MAINTOOLBAR
-            // Check if the button reference is stale (e.g., button was hidden/shown via toolbar menu)
             if (!IsButtonReferenceValid())
             {
                 ReinitializeButton();
             }
 #endif
-            UpdateHoverState();
-            UpdatePill();
+            UpdateVariant();
         }
 
-        private static void UpdateHoverState()
+        private static void UpdateVariant()
         {
-            if (_editorToolbarButton == null) return;
+            if (_sdkMenuButton == null) return;
 
-            _editorToolbarButton.style.backgroundColor = StatusMenu.Visible ? _hoverColor : NullStyle;
+            var variant = ComputeCurrentVariant();
+            if (variant == _currentVariant) return;
+            _currentVariant = variant;
+            _sdkMenuButton.Variant = variant;
         }
 
-        private static void UpdatePill()
-        {
-            if (_pill == null) return;
-
-            var pillColor = ComputePillColor();
-            if (pillColor == _pillColor) return;
-            _pillColor = pillColor;
-
-            _pill.style.backgroundColor = pillColor;
-
-            var borderColor = pillColor == _invisibleColor ? UserInterface.Styles.Colors.DarkerGray : pillColor;
-            _pill.style.borderTopColor = borderColor;
-            _pill.style.borderLeftColor = borderColor;
-            _pill.style.borderRightColor = borderColor;
-            _pill.style.borderBottomColor = borderColor;
-        }
-
-        private static Color ComputePillColor()
+        private static SdkMenuButtonVariant ComputeCurrentVariant()
         {
             var item = StatusMenu.GetHighestItem();
             if (item?.PillIcon == null)
             {
-                return _invisibleColor;
+                return SdkMenuButtonVariant.Positive;
             }
 
             var (_, color, showNotification) = item.PillIcon();
-            if (color != null && showNotification)
+            return ComputeVariantForColor(color, showNotification);
+        }
+
+        // The toolbar button has only three states (Figma node 2567-63486): Positive (all good),
+        // Warning, and Error. Anything that is not a warning or error status — including the
+        // Optional/Info color — maps to Positive; the button has no Info variant.
+        internal static SdkMenuButtonVariant ComputeVariantForColor(Color? color, bool showNotification)
+        {
+            if (!showNotification || color == null)
             {
-                return color ?? Color.white;
+                return SdkMenuButtonVariant.Positive;
             }
 
-            return _invisibleColor;
+            var c = color.Value;
+            var errorColor = UIStyles.Colors.ErrorColor;
+            if (Mathf.Abs(c.r - errorColor.r) < 0.1f && Mathf.Abs(c.g - errorColor.g) < 0.1f)
+                return SdkMenuButtonVariant.Error;
+
+            var warningColor = UIStyles.Colors.WarningColor;
+            if (Mathf.Abs(c.r - warningColor.r) < 0.1f && Mathf.Abs(c.g - warningColor.g) < 0.1f)
+                return SdkMenuButtonVariant.Warning;
+
+            return SdkMenuButtonVariant.Positive;
         }
 
         /// <summary>
@@ -365,8 +360,9 @@ namespace Meta.XR.Editor.StatusMenu
             if (newButton != null && newButton != _editorToolbarButton)
             {
                 _editorToolbarButton = newButton;
+                _sdkMenuButton = null;
                 CustomizeButton(_editorToolbarButton);
-                _pillColor = Color.clear;
+                _currentVariant = SdkMenuButtonVariant.Positive;
             }
         }
 #endif

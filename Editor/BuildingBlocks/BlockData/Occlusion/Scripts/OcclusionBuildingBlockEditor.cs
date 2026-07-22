@@ -30,6 +30,9 @@ using Color = UnityEngine.Color;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Custom inspector editor for the OcclusionBuildingBlock component that displays dependency status and setup information.
+    /// </summary>
     [CustomEditor(typeof(OcclusionBuildingBlock))]
     public class OcclusionBuildingBlockEditor : BuildingBlockEditor
     {

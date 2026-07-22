@@ -25,6 +25,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing spatial audio components onto a selected or new GameObject.
+    /// </summary>
     public class SpatialAudioBlockData : BlockData
     {
         protected override bool UsesPrefab => false;

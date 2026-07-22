@@ -60,6 +60,9 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             _debugInterface = (DebugInterface)target;
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the DebugInterface component.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             ShowHeaderGUI();

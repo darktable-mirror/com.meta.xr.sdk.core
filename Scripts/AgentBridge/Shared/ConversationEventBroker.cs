@@ -48,6 +48,12 @@ namespace Meta.XR.AI.AgentBridge
         public static event Action<bool>? ProcessingStateChanged;
 
         /// <summary>
+        /// Event fired when the session ID changes for any caller.
+        /// The string parameter is the new session ID.
+        /// </summary>
+        public static event Action<string>? SessionIdChanged;
+
+        /// <summary>
         /// Raise the MessageAdded event. Called by ConversationManager (Editor).
         /// </summary>
         public static void RaiseMessageAdded(ConversationMessage message)
@@ -72,6 +78,14 @@ namespace Meta.XR.AI.AgentBridge
         }
 
         /// <summary>
+        /// Raise the SessionIdChanged event. Called by ConversationManager (Editor).
+        /// </summary>
+        public static void RaiseSessionIdChanged(string sessionId)
+        {
+            SessionIdChanged?.Invoke(sessionId);
+        }
+
+        /// <summary>
         /// Clear all event subscriptions. Used for test cleanup.
         /// </summary>
         public static void ClearAllSubscriptions()
@@ -79,6 +93,7 @@ namespace Meta.XR.AI.AgentBridge
             MessageAdded = null;
             ConversationCleared = null;
             ProcessingStateChanged = null;
+            SessionIdChanged = null;
         }
     }
 }

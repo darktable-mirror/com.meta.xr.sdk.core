@@ -23,8 +23,16 @@ using Meta.XR.Editor.ToolingSupport;
 
 namespace Meta.XR.Guides.Editor
 {
+    /// <summary>
+    /// Provides a base class for creating guided setup wizard windows in the editor.
+    /// </summary>
     public abstract class GuidedSetup : IIdentified
     {
+        /// <summary>
+        /// Displays the guided setup wizard window.
+        /// </summary>
+        /// <param name="origin">The origin that triggered the window to be shown.</param>
+        /// <param name="forceShow">When true, the window is shown even if the user previously dismissed it.</param>
         public void ShowWindow(Origins origin, bool forceShow = false)
         {
             CreateWindow().Show(origin, forceShow);
@@ -32,6 +40,9 @@ namespace Meta.XR.Guides.Editor
 
         internal abstract GuideWindow CreateWindow();
 
+        /// <summary>
+        /// Gets the unique identifier for this guided setup instance, derived from the concrete type name.
+        /// </summary>
         public string Id => GetType().ToString();
     }
 }

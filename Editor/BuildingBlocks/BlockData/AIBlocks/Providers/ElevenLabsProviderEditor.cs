@@ -28,6 +28,9 @@ using UnityEngine.Networking;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the ElevenLabs AI provider.
+    /// </summary>
     [CustomEditor(typeof(ElevenLabsProvider))]
     public sealed class ElevenLabsProviderEditor : AIProviderEditorBase
     {
@@ -78,6 +81,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             InitializeModelCache("ElevenLabs", FetchModels);
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the ElevenLabs provider.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -373,6 +379,22 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
                     ParseModels(json, out var metas);
                     _modelMeta = metas ?? new List<ElModelMeta>();
+
+                    // The /v1/models API only returns TTS models. Synthesize metadata
+                    // for the STT model so the info box displays useful information
+                    // instead of "not yet fetched".
+                    if (FindModelMeta("scribe_v1") == null)
+                    {
+                        _modelMeta.Add(new ElModelMeta
+                        {
+                            model_id = "scribe_v1",
+                            name = "Scribe v1",
+                            can_do_text_to_speech = false,
+                            can_do_voice_conversion = false,
+                            description = "Speech-to-text transcription model. Use with the STT building block for audio transcription.",
+                            languages = new List<string> { "auto-detect", "en", "de", "es", "fr", "it", "pt", "ja", "ko", "zh" }
+                        });
+                    }
 
                     return ids;
                 });

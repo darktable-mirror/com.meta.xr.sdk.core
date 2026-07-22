@@ -21,6 +21,7 @@
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>Draws an inline documentation link button next to a property field in the Unity Inspector.</summary>
 [CustomPropertyDrawer(typeof(InlineLinkAttribute))]
 public class InlineLinkDrawer : DecoratorDrawer
 {
@@ -29,12 +30,16 @@ public class InlineLinkDrawer : DecoratorDrawer
         get { return ((InlineLinkAttribute)attribute); }
     }
 
+    /// <summary>Returns the height of the decorator, which is zero since the link is drawn inline.</summary>
+    /// <returns>A height of zero, as this decorator does not occupy additional vertical space.</returns>
     public override float GetHeight()
     {
         return 0f;
     }
 
 
+    /// <summary>Draws the inline link button in the Inspector at the specified position.</summary>
+    /// <param name="position">The rectangle area allocated for drawing this decorator.</param>
     public override void OnGUI(Rect position)
     {
         Rect originalPosition = position;

@@ -23,6 +23,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Provides context menu actions for building blocks in the Unity hierarchy.
+    /// </summary>
     public static class BlockContextMenu
     {
         private const string ItemPath = "GameObject/Building Blocks/Break Block Connection";

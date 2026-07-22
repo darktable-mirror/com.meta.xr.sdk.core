@@ -19,52 +19,52 @@
  */
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Schemas
 {
     internal class PromptArgumentSchema : ISchema
     {
-        [JsonProperty("name")] internal string Name { get; set; }
+        [McpJsonProperty("name")] internal string Name { get; set; }
 
-        [JsonProperty("description")] internal string Description { get; set; }
+        [McpJsonProperty("description")] internal string Description { get; set; }
 
-        [JsonProperty("required")] internal bool Required { get; set; }
+        [McpJsonProperty("required")] internal bool Required { get; set; }
     }
 
     // Prompts don't have a Definition right now, the definition is the schema
     internal class PromptSchema : ISchema
     {
-        [JsonProperty("name")] internal string Name { get; set; }
+        [McpJsonProperty("name")] internal string Name { get; set; }
 
-        [JsonProperty("description")] internal string Description { get; set; }
+        [McpJsonProperty("description")] internal string Description { get; set; }
 
-        [JsonProperty("arguments")] internal List<PromptArgumentSchema> Arguments { get; set; } = new();
+        [McpJsonProperty("arguments")] internal List<PromptArgumentSchema> Arguments { get; set; } = new();
     }
 
     internal class PromptMessageSchema : ISchema
     {
-        [JsonProperty("role")] internal string Role { get; set; }
+        [McpJsonProperty("role")] internal string Role { get; set; }
 
-        [JsonProperty("content")] internal PromptContentSchema Content { get; set; }
+        [McpJsonProperty("content")] internal PromptContentSchema Content { get; set; }
     }
 
     internal class PromptContentSchema : ISchema
     {
-        [JsonProperty("type")] internal string Type { get; set; }
+        [McpJsonProperty("type")] internal string Type { get; set; }
 
-        [JsonProperty("text")] internal string Text { get; set; }
+        [McpJsonProperty("text")] internal string Text { get; set; }
     }
 
     internal class PromptGetResultSchema : ResultSchema
     {
-        [JsonProperty("description")] internal string Description { get; set; }
+        [McpJsonProperty("description")] internal string Description { get; set; }
 
-        [JsonProperty("messages")] internal List<PromptMessageSchema> Messages { get; set; } = new();
+        [McpJsonProperty("messages")] internal List<PromptMessageSchema> Messages { get; set; } = new();
     }
 
     internal class PromptListResultSchema : ResultSchema
     {
-        [JsonProperty("prompts")] internal IEnumerable<PromptSchema> Prompts { get; set; }
+        [McpJsonProperty("prompts")] internal IEnumerable<PromptSchema> Prompts { get; set; }
     }
 }

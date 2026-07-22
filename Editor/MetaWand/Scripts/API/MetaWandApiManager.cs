@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Telemetry;
@@ -48,11 +49,11 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <summary>
         /// Get asset generation usage limit information
         /// </summary>
-        public async Task<UsageResult> CheckUsage(string usageFilter = "mesh_generation")
+        public async Task<UsageResult> CheckUsage(string usageFilter = "mesh_generation", CancellationToken cancellationToken = default)
         {
             try
             {
-                var response = await _client.CheckUsage(usageFilter);
+                var response = await _client.CheckUsage(usageFilter, cancellationToken);
                 return new UsageResult(response.success, response);
             }
             catch (Exception ex)
@@ -70,11 +71,11 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <param name="topK">Number of top results to return (default: 4)</param>
         /// <param name="polyCount">Target poly count for assets</param>
         /// <returns>Search result containing assets and similarity scores</returns>
-        public async Task<SearchResult> SearchAssets(string searchText, int topK = 4, int polyCount = 0, string requestId = null)
+        public async Task<SearchResult> SearchAssets(string searchText, int topK = 4, int polyCount = 0, string requestId = null, CancellationToken cancellationToken = default)
         {
             try
             {
-                var searchResponse = await _client.SearchAssets(searchText, topK, polyCount, requestId);
+                var searchResponse = await _client.SearchAssets(searchText, topK, polyCount, requestId, cancellationToken);
                 if (!searchResponse.success)
                 {
                     return new SearchResult(
@@ -130,9 +131,9 @@ namespace Meta.XR.MetaWand.Editor.API
             }
         }
 
-        public async Task<AssetResult> FetchLibraryAsset(string assetId, int polyCount, string requestId)
+        public async Task<AssetResult> FetchLibraryAsset(string assetId, int polyCount, string requestId, CancellationToken cancellationToken = default)
         {
-            var response = await _client.FetchLibraryAsset(assetId, polyCount, false, requestId);
+            var response = await _client.FetchLibraryAsset(assetId, polyCount, false, requestId, cancellationToken);
             if (!response.success)
             {
                 var hasErrorSubCode = ContainsErrorSubCode(response.error);
@@ -165,11 +166,11 @@ namespace Meta.XR.MetaWand.Editor.API
         /// </summary>
         /// <param name="requestId">(Optional) A unique id for request.</param>
         /// <returns>TelemetryResult indicating success or failure</returns>
-        public async Task<TelemetryResult> ShouldDisplayFeedbackUI(string requestId = null)
+        public async Task<TelemetryResult> ShouldDisplayFeedbackUI(string requestId = null, CancellationToken cancellationToken = default)
         {
             try
             {
-                var response = await _client.ShouldDisplayFeedbackUI(requestId);
+                var response = await _client.ShouldDisplayFeedbackUI(requestId, cancellationToken);
                 if (!response.success)
                 {
                     var hasErrorSubCode = ContainsErrorSubCode(response.error);
@@ -204,7 +205,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <param name="feedback">The feedback action</param>
         /// <param name="requestId">(Optional) A unique id for request.</param>
         /// <returns>TelemetryResult indicating success or failure</returns>
-        public async Task<TelemetryResult> AssetFeedback(string assetId, AssetResultFeedback feedback, string requestId = null)
+        public async Task<TelemetryResult> AssetFeedback(string assetId, AssetResultFeedback feedback, string requestId = null, CancellationToken cancellationToken = default)
         {
             var action = feedback switch
             {
@@ -213,7 +214,7 @@ namespace Meta.XR.MetaWand.Editor.API
             };
             try
             {
-                var response = await _client.AssetFeedback(assetId, action, requestId);
+                var response = await _client.AssetFeedback(assetId, action, requestId, cancellationToken);
                 if (!response.success)
                 {
                     var hasErrorSubCode = ContainsErrorSubCode(response.error);
@@ -249,7 +250,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <param name="feedback">The feedback action</param>
         /// <param name="requestId">(Optional) A unique id for request.</param>
         /// <returns>TelemetryResult indicating success or failure</returns>
-        public async Task<TelemetryResult> SearchFeedback(string targetRequestId, string originalSearchText, AssetResultFeedback feedback, string requestId = null)
+        public async Task<TelemetryResult> SearchFeedback(string targetRequestId, string originalSearchText, AssetResultFeedback feedback, string requestId = null, CancellationToken cancellationToken = default)
         {
             var action = feedback switch
             {
@@ -259,7 +260,7 @@ namespace Meta.XR.MetaWand.Editor.API
 
             try
             {
-                var response = await _client.SearchFeedback(targetRequestId, originalSearchText, action, requestId);
+                var response = await _client.SearchFeedback(targetRequestId, originalSearchText, action, requestId, cancellationToken);
                 if (!response.success)
                 {
                     var hasErrorSubCode = ContainsErrorSubCode(response.error);
@@ -360,9 +361,19 @@ namespace Meta.XR.MetaWand.Editor.API
         }
     }
 
+    /// <summary>
+    /// Defines the contract for API operation results with success status and error information.
+    /// </summary>
     public interface IResult
     {
+        /// <summary>
+        /// Gets a value indicating whether the operation completed successfully.
+        /// </summary>
         public bool Success { get; }
+
+        /// <summary>
+        /// Gets the error message if the operation failed.
+        /// </summary>
         public string ErrorMessage { get; }
     }
 

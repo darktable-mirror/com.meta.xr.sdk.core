@@ -30,6 +30,9 @@ using static Meta.XR.BuildingBlocks.Editor.VariantAttribute;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Defines the installation routine used by interface building blocks to instantiate and configure prefabs.
+    /// </summary>
     public class InstallationRoutine : ScriptableObject, IIdentified
     {
         internal virtual IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
@@ -45,19 +48,34 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         internal static readonly CachedIdDictionary<InstallationRoutine> Registry = new();
 
+        /// <summary>
+        /// Gets the unique identifier for this installation routine.
+        /// </summary>
         [SerializeField, OVRReadOnly] internal string id = Guid.NewGuid().ToString();
         public string Id => id;
 
+        /// <summary>
+        /// Gets the identifier of the block data this routine installs.
+        /// </summary>
         [SerializeField] internal string targetBlockDataId;
         public string TargetBlockDataId => targetBlockDataId;
 
+        /// <summary>
+        /// Gets the user-facing display name of this installation routine.
+        /// </summary>
         [SerializeField] internal string displayName;
         public string DisplayName => displayName;
 
+        /// <summary>
+        /// Gets the text description of this installation routine.
+        /// </summary>
         [TextArea(5, 40)]
         [SerializeField] internal string description;
         public string Description => description;
 
+        /// <summary>
+        /// Gets the resolved block data for the target block ID.
+        /// </summary>
         public BlockData TargetBlockData => Utils.GetBlockData(TargetBlockDataId);
 
         protected virtual bool UsesPrefab => true;
@@ -66,6 +84,9 @@ namespace Meta.XR.BuildingBlocks.Editor
         [SerializeField] internal GameObject prefab;
         internal GameObject Prefab => prefab;
 
+        /// <summary>
+        /// Gets the package identifiers required by this installation routine.
+        /// </summary>
         [SerializeField] internal List<string> packageDependencies;
         public IEnumerable<string> PackageDependencies => packageDependencies;
         [SerializeField] internal int selectedGuidedSetupIndex;
@@ -136,6 +157,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
+        /// <summary>
+        /// Installs the building block by instantiating its prefab into the scene.
+        /// </summary>
+        /// <param name="block">The block data describing the block to install.</param>
+        /// <param name="selectedGameObject">The optionally selected target GameObject.</param>
+        /// <returns>A list of GameObjects created during the installation.</returns>
         public virtual List<GameObject> Install(BlockData block, GameObject selectedGameObject)
         {
             if (!UsesPrefab)
@@ -149,6 +176,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             return new List<GameObject> { instance };
         }
 
+        /// <summary>
+        /// Asynchronously installs the building block, including optional dependencies.
+        /// </summary>
+        /// <param name="block">The block data describing the block to install.</param>
+        /// <param name="selectedGameObject">The optionally selected target GameObject.</param>
+        /// <returns>A task that resolves to a list of GameObjects created during the installation.</returns>
         public async virtual Task<List<GameObject>> InstallAsync(BlockData block, GameObject selectedGameObject)
         {
             foreach (var blockData in ComputeOptionalDependencies())

@@ -65,6 +65,9 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
             _panel = (LLMDialogPanel)target;
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the LLMDialogPanel component.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             ShowHeaderGUI();

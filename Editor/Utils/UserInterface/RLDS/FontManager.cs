@@ -37,6 +37,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         private static string _fontsRootPath;
 
 
+
         /// <summary>
         /// Gets the appropriate font based on weight and style.
         /// </summary>
@@ -65,6 +66,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
                 // Load the font asset
                 font = AssetDatabase.LoadAssetAtPath<Font>(fontPath);
             }
+
 
 
             FontCache[fontName] = font;
@@ -153,6 +155,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
             rootPath = _fontsRootPath;
             return rootPath != null;
         }
+
 
 
         /// <summary>

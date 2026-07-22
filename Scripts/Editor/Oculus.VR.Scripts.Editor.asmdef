@@ -64,11 +64,6 @@
             "define": "OCULUS_XR_3_3_0_OR_NEWER"
         },
         {
-            "name": "com.meta.xr.simulator",
-            "expression": "",
-            "define": "USING_META_XR_SIMULATOR"
-        },
-        {
             "name": "com.unity.textmeshpro",
             "expression": "",
             "define": "UNITY_TEXTMESHPRO"

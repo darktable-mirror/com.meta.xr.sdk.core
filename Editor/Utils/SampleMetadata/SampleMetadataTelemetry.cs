@@ -29,6 +29,7 @@ using UnityEngine;
 
 namespace Meta.XR.Samples.Editor
 {
+    /// <summary>Tracks and sends telemetry events when Meta code sample usage changes in the project.</summary>
     [InitializeOnLoad]
     public class SampleMetadataTelemetry : IPreprocessBuildWithReport
     {
@@ -44,13 +45,20 @@ namespace Meta.XR.Samples.Editor
             EditorApplication.quitting += OnEditorQuitting;
         }
 
+        /// <summary>
+        /// Gets the execution order for this build preprocessor callback.
+        /// </summary>
         public int callbackOrder => 0;
 
+        /// <summary>Sends sample telemetry data before the build process begins.</summary>
+        /// <param name="report">The build report provided by Unity.</param>
         public void OnPreprocessBuild(BuildReport report)
         {
             CheckAndSendSampleTelemetryIfChanged(EventNameCodeSampleUpdated, true);
         }
 
+        /// <summary>Returns a JSON-formatted string listing all Meta code samples found in the project.</summary>
+        /// <returns>A JSON string mapping sample names to their associated class names.</returns>
         public static string GetSamplesListJson()
         {
             var allSamplesData = UpdateManifestWithCodeSample.FindAllMetaCodeSamplesAttributes();

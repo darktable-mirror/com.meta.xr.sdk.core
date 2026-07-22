@@ -37,8 +37,14 @@ using UnityEngine.SceneManagement;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Represents the data and installation logic for a single building block.
+    /// </summary>
     public class BlockData : BlockBaseData
     {
+        /// <summary>
+        /// Gets the prefab GameObject that is instantiated when this block is installed.
+        /// </summary>
         [SerializeField] internal GameObject prefab;
         public GameObject Prefab => prefab;
         protected virtual bool UsesPrefab => true;
@@ -75,12 +81,18 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
 
 
+        /// <summary>
+        /// Gets the other blocks that must be installed before this block.
+        /// </summary>
         public IEnumerable<BlockData> Dependencies =>
             (dependencies ?? Enumerable.Empty<string>())
             .Concat(externalBlockDependencies ?? Enumerable.Empty<string>())
             .Select(Utils.GetBlockData);
 
         [SerializeField] internal List<string> packageDependencies;
+        /// <summary>
+        /// Gets the collection of package dependency identifiers required by this block.
+        /// </summary>
         public virtual IEnumerable<string> PackageDependencies => packageDependencies ?? Enumerable.Empty<string>();
 
         [Tooltip("Indicates whether only one instance of this block can be installed per scene.")]
@@ -99,10 +111,21 @@ namespace Meta.XR.BuildingBlocks.Editor
         [Tooltip("(Optional) Link to the feature documentation")]
         [SerializeField]
         internal string featureDocumentationUrl;
-
+        /// <summary>
+        /// Gets the optional instructions describing how to use this block.
+        /// </summary>
         public string UsageInstructions => usageInstructions;
+        /// <summary>
+        /// Gets the optional name of the associated feature documentation page.
+        /// </summary>
         public string FeatureDocumentationName => featureDocumentationName;
+        /// <summary>
+        /// Gets the optional URL to the feature documentation page.
+        /// </summary>
         public string FeatureDocumentationUrl => featureDocumentationUrl;
+        /// <summary>
+        /// Gets whether only one instance of this block can exist per scene.
+        /// </summary>
         public bool IsSingleton => isSingleton;
 
 

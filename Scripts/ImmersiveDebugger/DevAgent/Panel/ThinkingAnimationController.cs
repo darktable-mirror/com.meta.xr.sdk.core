@@ -94,6 +94,17 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         }
 
         /// <summary>
+        /// Move the thinking container to the end of the parent's children list,
+        /// ensuring it appears after all conversation entries in the flex layout.
+        /// </summary>
+        internal void EnsureLastChild()
+        {
+            if (_thinkingContainer == null || !_isThinking) return;
+            _parentContainer.Forget(_thinkingContainer);
+            _parentContainer.Remember(_thinkingContainer);
+        }
+
+        /// <summary>
         /// Force cleanup of the animation (useful for panel destruction)
         /// </summary>
         internal void ForceCleanup()

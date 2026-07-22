@@ -32,6 +32,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     /// </summary>
     public static class ProviderValidationHelper
     {
+        /// <summary>
+        /// Represents the possible states of a provider connection validation check.
+        /// </summary>
         public enum ValidationState
         {
             NotChecked,
@@ -43,6 +46,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             NetworkError
         }
 
+        /// <summary>
+        /// Contains the result of a provider connection validation, including the state, message, and HTTP status code.
+        /// </summary>
         public struct ValidationResult
         {
             public ValidationState State;
@@ -290,6 +296,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             EditorApplication.update += updateTick;
         }
 
+        /// <summary>
+        /// Aborts and disposes an active validation web request and removes its editor update callback.
+        /// </summary>
+        /// <param name="activeRequest">A reference to the active web request to clean up.</param>
+        /// <param name="updateTick">A reference to the editor update callback to unregister.</param>
         public static void CleanupRequest(
             ref UnityWebRequest activeRequest,
             ref EditorApplication.CallbackFunction updateTick)
@@ -776,6 +787,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             return string.IsNullOrEmpty(str) ? str : str.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
 
+        /// <summary>
+        /// Returns the color associated with the given validation state for use in status badge rendering.
+        /// </summary>
+        /// <param name="state">The validation state to get a color for.</param>
+        /// <returns>A color representing the validation state.</returns>
         public static Color GetBadgeColor(ValidationState state)
         {
             return state switch
@@ -791,6 +807,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             };
         }
 
+        /// <summary>
+        /// Draws a small colored circle badge in the inspector GUI, optionally displaying a tooltip.
+        /// </summary>
+        /// <param name="color">The color of the badge circle.</param>
+        /// <param name="content">The GUI content containing the tooltip text to display on hover.</param>
         public static void DrawBadge(Color color, GUIContent content)
         {
             var rect = GUILayoutUtility.GetRect(14, 14, GUILayout.Width(14), GUILayout.Height(14));

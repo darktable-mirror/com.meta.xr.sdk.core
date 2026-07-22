@@ -25,8 +25,16 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System;
 
+/// <summary>
+/// Synchronizes the contents of a source directory to a target directory, supporting file filtering via regex,
+/// cancellation tokens, and change notifications. Used internally for OVR plugin file synchronization.
+/// </summary>
 public class DirectorySyncer
 {
+    /// <summary>
+    /// Callback invoked with the result of a directory sync operation.
+    /// </summary>
+    /// <param name="syncResult">The result describing which files were added, updated, or removed.</param>
     public delegate void SyncResultDelegate(SyncResult syncResult);
 
     public readonly string Source;
@@ -34,7 +42,9 @@ public class DirectorySyncer
     public SyncResultDelegate WillPerformOperations;
     private readonly Regex _ignoreExpression;
 
-    // helper classes to simplify transition beyond .NET runtime 3.5
+    /// <summary>
+    /// Abstract cancellation token for cooperative cancellation of sync operations. Predates .NET CancellationToken availability in older Unity runtimes.
+    /// </summary>
     public abstract class CancellationToken
     {
         protected abstract bool _IsCancellationRequested();
@@ -44,6 +54,9 @@ public class DirectorySyncer
             get { return _IsCancellationRequested(); }
         }
 
+        /// <summary>
+        /// Throws an exception if cancellation has been requested.
+        /// </summary>
         public void ThrowIfCancellationRequested()
         {
             if (IsCancellationRequested)
@@ -63,6 +76,9 @@ public class DirectorySyncer
         }
     }
 
+    /// <summary>
+    /// Provides a cancellation token that can be triggered by calling Cancel(). Pass its Token property to Synchronize().
+    /// </summary>
     public class CancellationTokenSource : CancellationToken
     {
         private bool _isCancelled;
@@ -72,6 +88,9 @@ public class DirectorySyncer
             return _isCancelled;
         }
 
+        /// <summary>
+        /// Signals cancellation, causing any in-progress Synchronize() call to stop.
+        /// </summary>
         public void Cancel()
         {
             _isCancelled = true;
@@ -102,6 +121,12 @@ public class DirectorySyncer
         return EnsureTrailingDirectorySeparator(directory);
     }
 
+    /// <summary>
+    /// Creates a new DirectorySyncer that will sync files from source to target, optionally ignoring paths matching the regex pattern.
+    /// </summary>
+    /// <param name="source">Absolute path to the source directory. Must exist.</param>
+    /// <param name="target">Absolute path to the target directory. Must exist. Cannot overlap with <paramref name="source"/>.</param>
+    /// <param name="ignoreRegExPattern">Optional regex pattern for file/directory paths to exclude from sync. Pass <c>null</c> to include all files.</param>
     public DirectorySyncer(string source, string target, string ignoreRegExPattern = null)
     {
         Source = CheckedDirectory("source", source);
@@ -117,12 +142,21 @@ public class DirectorySyncer
         _ignoreExpression = new Regex(ignoreRegExPattern, RegexOptions.IgnoreCase);
     }
 
+    /// <summary>
+    /// Contains the results of a directory synchronization: lists of created, updated, and deleted relative file paths.
+    /// </summary>
     public class SyncResult
     {
         public readonly IEnumerable<string> Created;
         public readonly IEnumerable<string> Updated;
         public readonly IEnumerable<string> Deleted;
 
+        /// <summary>
+        /// Creates a new SyncResult with the given file change lists.
+        /// </summary>
+        /// <param name="created">Relative paths of files that exist in source but not in target.</param>
+        /// <param name="updated">Relative paths of files that exist in both source and target.</param>
+        /// <param name="deleted">Relative paths of files that exist in target but not in source.</param>
         public SyncResult(IEnumerable<string> created, IEnumerable<string> updated, IEnumerable<string> deleted)
         {
             Created = created;
@@ -131,11 +165,21 @@ public class DirectorySyncer
         }
     }
 
+    /// <summary>
+    /// Returns true if the given relative file path is not excluded by the ignore regex pattern.
+    /// </summary>
+    /// <param name="relativeFilename">The relative file path to check against the ignore pattern.</param>
+    /// <returns><c>true</c> if the file path does not match the ignore pattern; otherwise <c>false</c>.</returns>
     public bool RelativeFilePathIsRelevant(string relativeFilename)
     {
         return !_ignoreExpression.IsMatch(relativeFilename);
     }
 
+    /// <summary>
+    /// Returns true if the given relative directory path is not excluded by the ignore regex pattern.
+    /// </summary>
+    /// <param name="relativeDirName">The relative directory path to check against the ignore pattern.</param>
+    /// <returns><c>true</c> if the directory path does not match the ignore pattern; otherwise <c>false</c>.</returns>
     public bool RelativeDirectoryPathIsRelevant(string relativeDirName)
     {
         // Since our ignore patterns look at file names, they may contain trailing path separators
@@ -158,6 +202,10 @@ public class DirectorySyncer
             .Select(p => PathHelper.MakeRelativePath(path, p)).Where(RelativeDirectoryPathIsRelevant));
     }
 
+    /// <summary>
+    /// Synchronizes the source directory to the target directory without cancellation support.
+    /// </summary>
+    /// <returns>A <see cref="SyncResult"/> containing lists of created, updated, and deleted relative file paths.</returns>
     public SyncResult Synchronize()
     {
         return Synchronize(CancellationToken.None);
@@ -215,6 +263,11 @@ public class DirectorySyncer
         }
     }
 
+    /// <summary>
+    /// Synchronizes the source directory to the target: deletes outdated files, removes empty directories, creates new directories, and moves new/updated files.
+    /// </summary>
+    /// <param name="cancellationToken">Token to cooperatively cancel the sync operation. Use <see cref="CancellationToken.None"/> to run without cancellation.</param>
+    /// <returns>A <see cref="SyncResult"/> containing lists of created, updated, and deleted relative file paths.</returns>
     public SyncResult Synchronize(CancellationToken cancellationToken)
     {
         var sourceDirs = RelevantRelativeDirectoriesBeneathDirectory(Source, cancellationToken);

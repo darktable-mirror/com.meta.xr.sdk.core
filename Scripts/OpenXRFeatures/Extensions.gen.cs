@@ -1214,6 +1214,69 @@ namespace Meta.XR
     }
 #endregion
 
+#region XR_METAX1_agentic_external_tool
+    [Flags]
+    public enum XrAgenticExternalToolCallbackInfoFlagsMETAX1 : ulong
+    {
+        /// <summary>
+        /// Receiving the callback on the thread which is doing time critical CPU tasks
+        /// </summary>
+        ApplicationMainThreadBit = 1 << 0,
+
+        /// <summary>
+        /// Receiving the callback on the thread which is doing time critical rendering tasks
+        /// </summary>
+        RenderingMainThreadBit = 1 << 1,
+    }
+
+    public enum XrAgenticExternalToolParameterTypeMETAX1
+    {
+        String = 1,
+        Number = 2,
+        Boolean = 3,
+        Array = 4,
+        Object = 5,
+    }
+
+    public partial struct XrAgenticExternalToolParameterMETAX1
+    {
+        public const int MaxObjectPropertiesLength = 4096;
+        public const int MaxDescriptionLength = 1024;
+        public const int MaxNameLength = 64;
+        public const XrStructureType StructureType = (XrStructureType)1000679000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public unsafe fixed byte ParamName[MaxNameLength];
+        public unsafe fixed byte ParamDescription[MaxDescriptionLength];
+        public XrAgenticExternalToolParameterTypeMETAX1 ParamType;
+        public XrBool32 IsRequired;
+        public XrAgenticExternalToolParameterTypeMETAX1 ArrayItemType;
+        public unsafe fixed byte ObjectProperties[MaxObjectPropertiesLength];
+    }
+
+    public partial struct XrAgenticExternalToolRegisterInfoMETAX1
+    {
+        public const int MaxDescriptionLength = 1024;
+        public const int MaxNameLength = 64;
+        public const XrStructureType StructureType = (XrStructureType)1000679001;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public unsafe fixed byte ToolName[MaxNameLength];
+        public unsafe fixed byte ToolDescription[MaxDescriptionLength];
+        public uint ToolParameterCount;
+        public unsafe XrAgenticExternalToolParameterMETAX1* ToolParameters;
+        public PFN_xrAgenticExternalToolCallbackMETAX1 ToolCallback;
+        public XrAgenticExternalToolCallbackInfoFlagsMETAX1 ToolCallbackInfoFlags;
+        public unsafe void* ToolUserData;
+    }
+
+    partial class OpenXRNativeFuncs
+    {
+        public delegate XrResult xrAgenticRegisterExternalToolMETAX1(
+            XrInstance instance,
+            in XrAgenticExternalToolRegisterInfoMETAX1 registerInfo);
+    }
+#endregion
 
 #region XR_FB_color_space
     public enum XrColorSpaceFB

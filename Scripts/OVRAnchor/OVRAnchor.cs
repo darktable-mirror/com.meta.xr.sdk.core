@@ -1146,6 +1146,24 @@ public readonly partial struct OVRAnchor : IEquatable<OVRAnchor>, IDisposable
     internal static unsafe OVRTask<OVRResult<ShareResult>> ShareAsyncInternal(ReadOnlySpan<ulong> anchors,
         ReadOnlySpan<Guid> groupUuids)
     {
+        for (int i = 0; i < anchors.Length; i++)
+        {
+            if (anchors[i] == 0)
+            {
+                Debug.LogError($"Cannot share uninitialized anchor w/ ID 0. ({nameof(anchors)}[{i}])");
+                return OVRTask.FromResult(OVRResult.From(ShareResult.FailureHandleInvalid));
+            }
+        }
+
+        for (int i = 0; i < groupUuids.Length; i++)
+        {
+            if (groupUuids[i] == Guid.Empty)
+            {
+                Debug.LogError($"Cannot share to empty/default group UUID. ({nameof(groupUuids)}[{i}])");
+                return OVRTask.FromResult(OVRResult.From(ShareResult.FailureInvalidParameter));
+            }
+        }
+
         var info = new OVRPlugin.ShareSpacesInfo();
         info.RecipientType = OVRPlugin.ShareSpacesRecipientType.Group;
 

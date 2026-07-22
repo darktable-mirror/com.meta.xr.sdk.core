@@ -30,6 +30,10 @@ using System;
 // used to serialize path data. When the serialized fields were no longer
 // needed, we kept the ScriptableObject inheritence so as to not break backwards
 // compatibility for existing projects that upgrade OVRPlugin versions.
+/// <summary>
+/// Singleton ScriptableObject providing helper methods to locate Android SDK, Gradle, and JDK paths.
+/// Used by build tools and ADB utilities to resolve platform tool paths from Unity Editor preferences or environment variables.
+/// </summary>
 #if UNITY_EDITOR
 [UnityEditor.InitializeOnLoad]
 #endif
@@ -63,13 +67,22 @@ public class OVRConfig : ScriptableObject
         set { instance = value; }
     }
 
+    /// <summary>
+    /// Returns the Android SDK root path. Delegates to GetAndroidSDKPathLocation. Kept for backward compatibility.
+    /// </summary>
+    /// <param name="throwError">If <c>true</c>, displays an error dialog when the SDK path is not found.</param>
+    /// <returns>The Android SDK root path, or an empty string if not found.</returns>
     public string GetAndroidSDKPath(bool throwError = true)
     {
         // kept only for backward compatibility. Should be deleted later on.
         return GetAndroidSDKPathLocation(throwError);
     }
 
-    // Returns the path to the base directory of the Android SDK
+    /// <summary>
+    /// Returns the path to the base directory of the Android SDK.
+    /// </summary>
+    /// <param name="throwError">If <c>true</c>, displays an error dialog when the SDK path is not found.</param>
+    /// <returns>The Android SDK root path, or an empty string if not found.</returns>
     public static string GetAndroidSDKPathLocation(bool throwError = true)
     {
         string androidSDKPath = "";
@@ -112,7 +125,11 @@ public class OVRConfig : ScriptableObject
         return androidSDKPath;
     }
 
-    // Returns the path to the gradle-launcher-*.jar
+    /// <summary>
+    /// Returns the path to the gradle-launcher-*.jar.
+    /// </summary>
+    /// <param name="throwError">If <c>true</c>, displays an error dialog when Gradle is not found.</param>
+    /// <returns>The absolute path to the Gradle launcher JAR, or an empty string if not found.</returns>
     public string GetGradlePath(bool throwError = true)
     {
         string gradlePath = "";
@@ -162,7 +179,11 @@ public class OVRConfig : ScriptableObject
         return gradlePath;
     }
 
-    // Returns path to the Java executable in the JDK
+    /// <summary>
+    /// Returns path to the Java executable in the JDK.
+    /// </summary>
+    /// <param name="throwError">If <c>true</c>, displays an error dialog when the JDK is not found.</param>
+    /// <returns>The absolute path to the Java executable, or an empty string if not found.</returns>
     public string GetJDKPath(bool throwError = true)
     {
         string jdkPath = "";

@@ -24,10 +24,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Meta.XR.Util;
 using UnityEngine;
 using Assembly = System.Reflection.Assembly;
 #if UNITY_EDITOR
 using Meta.XR.Editor.Callbacks;
+using Meta.XR.Editor.Reflection;
 using UnityEditor;
 #endif // UNITY_EDITOR
 
@@ -132,6 +134,14 @@ namespace Meta.XR.ImmersiveDebugger.Utils
             var assemblies = _assembliesDelegate.Invoke();
             foreach (Assembly assembly in assemblies)
             {
+#if UNITY_EDITOR
+                // Skip system/platform assemblies for performance
+                if (AssemblyFilter.IsSystemAssembly(assembly))
+                {
+                    continue;
+                }
+#endif
+
                 if (_prebakedRuntimeSettings != null)
                 {
                     if (!_prebakedRuntimeSettings.debugTypesDict.ContainsKey(assembly.GetName().Name))
@@ -152,10 +162,13 @@ namespace Meta.XR.ImmersiveDebugger.Utils
                 }
                 else
                 {
-                    var types = assembly.GetTypes().Where(
+                    var types = assembly.TryGetTypes().Where(
                         t => typeof(UnityEngine.Object).IsAssignableFrom(t) &&  // Must be a Unity Object
                              t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Any(
-                            m => m.GetCustomAttribute<DebugMember>() != null));
+                            m =>
+                            {
+                                return m.GetCustomAttribute<DebugMember>() != null;
+                            }));
                     foreach (Type type in types)
                     {
                         _types.Add(type);

@@ -29,6 +29,11 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 
+/// <summary>
+/// Manages building, deploying, and managing asset bundles for the OVR Scene Quick Preview workflow on Quest.
+/// Handles the transition APK build, scene bundle creation, ADB transfers, and on-device bundle lifecycle.
+/// Only available on Windows Editor targeting Android.
+/// </summary>
 public class OVRBundleManager
 {
     public const string TRANSITION_APK_VERSION_NAME = "OVRTransitionAPKVersion";
@@ -52,6 +57,9 @@ public class OVRBundleManager
     private static ManagedStrippingLevel projectManagedStrippingLevel;
     private static bool projectStripEngineCode;
 
+    /// <summary>
+    /// Builds and deploys the transition APK that supports hot-reloading scene bundles on the connected Quest device.
+    /// </summary>
     public static void BuildDeployTransitionAPK()
     {
         OVRBundleTool.PrintLog("Building and deploying transition APK  . . .\n", true);
@@ -79,6 +87,9 @@ public class OVRBundleManager
         PostbuildProjectSettingUpdate();
     }
 
+    /// <summary>
+    /// Saves current project settings and applies temporary overrides (ARMv7, Mono, no stripping) required for the transition APK build.
+    /// </summary>
     public static void PrebuildProjectSettingUpdate()
     {
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -130,6 +141,10 @@ public class OVRBundleManager
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 
+    /// <summary>
+    /// Calculates the BuildPlayerOptions for the transition APK, locating the transition scene and configuring the output path.
+    /// </summary>
+    /// <returns>The configured <see cref="BuildPlayerOptions"/>, or <c>null</c> if the transition scene cannot be found.</returns>
     public static BuildPlayerOptions? CalculateBundleBuildPlayerOptions()
     {
         if (!Directory.Exists(BUNDLE_MANAGER_OUTPUT_PATH))
@@ -188,6 +203,9 @@ public class OVRBundleManager
         };
     }
 
+    /// <summary>
+    /// Restores project settings (app identifier, version, scripting backend, stripping, architecture) to their pre-build values.
+    /// </summary>
     public static void PostbuildProjectSettingUpdate()
     {
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -226,8 +244,12 @@ public class OVRBundleManager
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 
-    // Build and deploy a list of scenes. It's suggested to only build and deploy one active scene that's being modified and
-    // its dependencies such as scenes that are loaded additively
+    /// <summary>
+    /// Builds asset bundles for the specified scenes and deploys them to the connected device.
+    /// Optionally restarts the application after deployment. Best used for iterating on one active scene and its additive dependencies.
+    /// </summary>
+    /// <param name="sceneList">The list of scenes to build and deploy. Only scenes with <c>shouldDeploy</c> set to <c>true</c> are processed.</param>
+    /// <param name="forceRestart">If <c>true</c>, the application is relaunched on the device after deployment.</param>
     public static void BuildDeployScenes(List<OVRBundleTool.EditorSceneInfo> sceneList, bool forceRestart)
     {
         externalSceneCache =
@@ -619,6 +641,10 @@ public class OVRBundleManager
         return true;
     }
 
+    /// <summary>
+    /// Launches the transition APK on the connected Quest device via ADB.
+    /// </summary>
+    /// <returns><c>true</c> if the application was successfully launched; otherwise <c>false</c>.</returns>
     public static bool LaunchApplication()
     {
         OVRBundleTool.PrintLog("Launching Application . . . ");
@@ -662,6 +688,10 @@ public class OVRBundleManager
         return false;
     }
 
+    /// <summary>
+    /// Uninstalls the transition APK from the connected Quest device.
+    /// </summary>
+    /// <returns><c>true</c> if the APK was successfully uninstalled; otherwise <c>false</c>.</returns>
     public static bool UninstallAPK()
     {
         OVRBundleTool.PrintLog("Uninstalling Application . . .");
@@ -692,6 +722,9 @@ public class OVRBundleManager
         return false;
     }
 
+    /// <summary>
+    /// Deletes all deployed scene asset bundles from the connected device's external storage cache.
+    /// </summary>
     public static void DeleteRemoteAssetBundles()
     {
         OVRADBTool adbTool = new OVRADBTool(OVRConfig.Instance.GetAndroidSDKPath());
@@ -732,6 +765,10 @@ public class OVRBundleManager
         }
     }
 
+    /// <summary>
+    /// Lists the names of all asset bundles currently stored on the connected device.
+    /// </summary>
+    /// <returns>An array of bundle file names on the device, or <c>null</c> if the device is not reachable or the command fails.</returns>
     public static string[] ListRemoteAssetBundleNames()
     {
         OVRADBTool adbTool = new OVRADBTool(OVRConfig.Instance.GetAndroidSDKPath());
@@ -754,6 +791,9 @@ public class OVRBundleManager
         return null;
     }
 
+    /// <summary>
+    /// Deletes the local asset bundle output directory from the project root.
+    /// </summary>
     public static void DeleteLocalAssetBundles()
     {
         try

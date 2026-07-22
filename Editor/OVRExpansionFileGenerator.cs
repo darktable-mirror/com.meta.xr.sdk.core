@@ -25,8 +25,16 @@ using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEditor;
 
+/// <summary>
+/// Editor utility for building Android expansion files (OBB) as asset bundles.
+/// Accessed via the menu: Meta > Tools > Build Mobile-Quest Expansion File.
+/// Builds chunk-based compressed asset bundles and renames the output to the standard OBB naming convention.
+/// </summary>
 public class BuildAssetBundles : MonoBehaviour
 {
+    /// <summary>
+    /// Builds asset bundles for Android and renames the output to the standard OBB expansion file format.
+    /// </summary>
     [MenuItem("Meta/Tools/Build Mobile-Quest Expansion File", false, 100000)]
     public static void BuildBundles()
     {

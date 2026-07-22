@@ -72,8 +72,11 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             if (_instance != null)
             {
                 DebugManager.OnReady -= _instance.OnReady;
+                _instance.OnDestroyInternal();
             }
         }
+
+        protected virtual void OnDestroyInternal() { }
 
         private void InitSubManagers()
         {

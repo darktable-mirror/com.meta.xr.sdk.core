@@ -53,8 +53,11 @@ namespace Meta.XR.MetaWand.Editor
         {
             Icon = AssetLibraryIcon,
             Name = Constants.AssetLibraryPublicName,
+            DisplayName = "Asset Library",
             MenuDescription = RemoteContent.GetText(Constants.AssetLibraryMenuDescriptionKey, Constants.AssetLibraryMenuDescription),
             AddToStatusMenu = true,
+            MenuCategory = MenuCategory.Resources,
+            Order = 2,
             AddToMenu = true,
             OnClickDelegate = ShowAssetLibrary,
             IsStatusMenuItemDarker = true,
@@ -167,7 +170,7 @@ namespace Meta.XR.MetaWand.Editor
             return currentGridSize;
         }
 
-        public static string TruncateText(string text, int maxLength = 42)
+        public static string TruncateText(string text, int maxLength = Constants.MaxDisplayTextLength)
         {
             if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
             {

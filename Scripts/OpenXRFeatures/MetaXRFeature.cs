@@ -148,6 +148,7 @@ namespace Meta.XR
             "XR_META_hand_tracking_frequency_hint",
             "XR_META_hand_tracking_unextrapolated_poses",
             "XR_META_hand_tracking_wide_motion_mode2",
+            "XR_METAX1_agentic_external_tool",
         })]
 #endif
     public partial class MetaXRFeature : MetaFeatureBase<MetaXRFeature>
@@ -207,6 +208,7 @@ namespace Meta.XR
             public OpenXRNativeFuncs.xrShareSpacesMETA xrShareSpacesMETA;
             public OpenXRNativeFuncs.xrDestroySpace xrDestroySpace;
             public OpenXRNativeFuncs.xrRequestSceneCaptureFB xrRequestSceneCaptureFB;
+            public OpenXRNativeFuncs.xrAgenticRegisterExternalToolMETAX1 xrAgenticRegisterExternalToolMETAX1;
             public OpenXRNativeFuncs.xrSetColorSpaceFB xrSetColorSpaceFB;
         }
 
@@ -249,6 +251,7 @@ namespace Meta.XR
         private bool _hapticsAmplitudeEnvelopeEnabled = false;
         private bool _hapticPcmEnabled = false;
         private bool _simultaneousHandsAndControllersEnabled = false;
+        private bool _agenticExternalToolEnabled = false;
         private bool _displayRefreshRateEnabled = false;
         private bool _colorSpaceEnabled = false;
 
@@ -256,6 +259,8 @@ namespace Meta.XR
         private bool _parametricHapticsSupported = false;
         private bool _simultaneousHandsAndControllersSupported = false;
         private XrColorSpaceFB _nativeColorSpace = XrColorSpaceFB.Unmanaged;
+
+        internal bool AgenticExternalToolEnabled => _agenticExternalToolEnabled;
 
         /// <inheritdoc />
         protected override IntPtr HookGetInstanceProcAddr(IntPtr func)
@@ -395,6 +400,18 @@ namespace Meta.XR
             _hapticPcmEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_haptic_pcm");
             _hapticsAmplitudeEnvelopeEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_haptic_amplitude_envelope");
             _simultaneousHandsAndControllersEnabled = OpenXRRuntime.IsExtensionEnabled("XR_META_simultaneous_hands_and_controllers");
+#if UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER
+            var agenticLayerEnabled = false;
+            var apiLayersFeature = OpenXRSettings.Instance.GetFeature<ApiLayersFeature>();
+            if (apiLayersFeature != null && apiLayersFeature.enabled)
+            {
+                agenticLayerEnabled =
+                    apiLayersFeature.apiLayers.IsEnabled("XR_APILAYER_METAX_operator", RuntimeInformation.ProcessArchitecture);
+            }
+            _agenticExternalToolEnabled = OpenXRRuntime.IsExtensionEnabled("XR_METAX1_agentic_external_tool") || agenticLayerEnabled;
+#else
+            _agenticExternalToolEnabled = OpenXRRuntime.IsExtensionEnabled("XR_METAX1_agentic_external_tool");
+#endif
             _displayRefreshRateEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_display_refresh_rate");
             _colorSpaceEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_color_space");
 
@@ -476,6 +493,7 @@ namespace Meta.XR
             GetInstanceDelegate(nameof(_command.xrGetDeviceSampleRateFB), out _command.xrGetDeviceSampleRateFB);
             GetInstanceDelegate(nameof(_command.xrResumeSimultaneousHandsAndControllersTrackingMETA), out _command.xrResumeSimultaneousHandsAndControllersTrackingMETA);
             GetInstanceDelegate(nameof(_command.xrPauseSimultaneousHandsAndControllersTrackingMETA), out _command.xrPauseSimultaneousHandsAndControllersTrackingMETA);
+            GetInstanceDelegate(nameof(_command.xrAgenticRegisterExternalToolMETAX1), out _command.xrAgenticRegisterExternalToolMETAX1);
             GetInstanceDelegate(nameof(_command.xrEnumerateDisplayRefreshRatesFB), out _command.xrEnumerateDisplayRefreshRatesFB);
             GetInstanceDelegate(nameof(_command.xrGetDisplayRefreshRateFB), out _command.xrGetDisplayRefreshRateFB);
             GetInstanceDelegate(nameof(_command.xrRequestDisplayRefreshRateFB), out _command.xrRequestDisplayRefreshRateFB);

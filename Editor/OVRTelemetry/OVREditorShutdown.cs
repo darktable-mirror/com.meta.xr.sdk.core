@@ -21,6 +21,9 @@
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Handles cleanup and shutdown procedures when the Unity Editor is quitting.
+/// </summary>
 [InitializeOnLoad]
 public static class OVREditorShutdown
 {

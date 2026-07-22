@@ -145,7 +145,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
             var lobby = await LobbyService.Instance.QuickJoinLobbyAsync();
             var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode: lobby.Data[JoinCodeKey].Value);
 
-            FindObjectOfType<UnityTransport>().SetClientRelayData(joinAllocation.RelayServer.IpV4, (ushort)joinAllocation.RelayServer.Port,
+            FindAnyObjectByType<UnityTransport>().SetClientRelayData(joinAllocation.RelayServer.IpV4, (ushort)joinAllocation.RelayServer.Port,
                 joinAllocation.AllocationIdBytes, joinAllocation.Key, joinAllocation.ConnectionData, joinAllocation.HostConnectionData);
 
             NetworkManager.Singleton.StartClient();
@@ -163,7 +163,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
                 IsPrivate = false
             });
 
-            FindObjectOfType<UnityTransport>().SetHostRelayData(allocation.RelayServer.IpV4, (ushort)allocation.RelayServer.Port, allocation.AllocationIdBytes, allocation.Key, allocation.ConnectionData);
+            FindAnyObjectByType<UnityTransport>().SetHostRelayData(allocation.RelayServer.IpV4, (ushort)allocation.RelayServer.Port, allocation.AllocationIdBytes, allocation.Key, allocation.ConnectionData);
             NetworkManager.Singleton.StartHost();
             return lobby;
         }

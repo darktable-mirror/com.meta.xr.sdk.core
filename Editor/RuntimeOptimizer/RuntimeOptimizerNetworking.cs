@@ -32,6 +32,7 @@ using Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight;
 
 namespace Meta.XR.RuntimeOptimizer.Editor
 {
+    /// <summary>Provides networking functionality for communicating with a connected Quest device.</summary>
     public partial class RuntimeOptimizerWindow
     {
         private const float kEmptyFrameThreshold = 0.01f;
@@ -129,6 +130,9 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             }
         }
 
+        /// <summary>Sends a binary payload to the connected Quest device over the TCP network client.</summary>
+        /// <param name="payloadType">The integer identifier for the type of payload being sent.</param>
+        /// <param name="payload">The binary data to transmit.</param>
         public void Send(int payloadType, byte[] payload)
         {
             if (client != null && client.Connected)

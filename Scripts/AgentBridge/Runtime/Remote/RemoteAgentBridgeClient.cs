@@ -26,7 +26,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Meta.XR.Json;
 using UnityEngine;
 
 namespace Meta.XR.AI.AgentBridge
@@ -169,8 +169,8 @@ namespace Meta.XR.AI.AgentBridge
             var (status, error) = await GetStatusAsync(_connectionCts.Token);
             if (status == null)
             {
-                Log.Error($"Server not reachable at {BaseUrl}: {error}");
-                SetConnected(false);
+                Debug.LogWarning($"[AgentBridge] Server not reachable at {BaseUrl}: {error}, will retry in background");
+                _sseTask = RetryInitialConnectionAsync(_connectionCts.Token);
                 return false;
             }
 
@@ -227,7 +227,7 @@ namespace Meta.XR.AI.AgentBridge
         {
             if (_disposed) throw new ObjectDisposedException(nameof(RemoteAgentBridgeClient));
 
-            var (responseBody, error) = await PostRequestAsync("prompt", JsonConvert.SerializeObject(request), cancellationToken);
+            var (responseBody, error) = await PostRequestAsync("prompt", McpJsonConvert.Serialize(request), cancellationToken);
             if (error != null)
             {
                 Log.Error($"SendPrompt failed: {error}");
@@ -249,7 +249,7 @@ namespace Meta.XR.AI.AgentBridge
         {
             if (_disposed) throw new ObjectDisposedException(nameof(RemoteAgentBridgeClient));
 
-            var (responseBody, error) = await PostRequestAsync("cancel", JsonConvert.SerializeObject(request), cancellationToken);
+            var (responseBody, error) = await PostRequestAsync("cancel", McpJsonConvert.Serialize(request), cancellationToken);
             if (error != null)
             {
                 Log.Error($"Cancel failed: {error}");
@@ -271,7 +271,7 @@ namespace Meta.XR.AI.AgentBridge
         {
             if (_disposed) throw new ObjectDisposedException(nameof(RemoteAgentBridgeClient));
 
-            var (responseBody, error) = await PostRequestAsync("clear", JsonConvert.SerializeObject(request), cancellationToken);
+            var (responseBody, error) = await PostRequestAsync("clear", McpJsonConvert.Serialize(request), cancellationToken);
             if (error != null)
             {
                 Log.Error($"Clear failed: {error}");
@@ -305,7 +305,7 @@ namespace Meta.XR.AI.AgentBridge
                 }
 
                 var body = await response.Content.ReadAsStringAsync();
-                var status = JsonConvert.DeserializeObject<RemoteAgentStatus>(body);
+                var status = McpJsonConvert.Deserialize<RemoteAgentStatus>(body);
                 return (status, null);
             }
             catch (OperationCanceledException)
@@ -405,7 +405,7 @@ namespace Meta.XR.AI.AgentBridge
                 switch (sseEvent.EventType)
                 {
                     case SseEventType.Message:
-                        var message = JsonConvert.DeserializeObject<ConversationMessage>(sseEvent.Data);
+                        var message = McpJsonConvert.Deserialize<ConversationMessage>(sseEvent.Data);
                         if (message != null)
                         {
                             OnMessageReceived?.Invoke(message);
@@ -413,7 +413,7 @@ namespace Meta.XR.AI.AgentBridge
                         break;
 
                     case SseEventType.Status:
-                        var processingState = JsonConvert.DeserializeObject<RemoteProcessingState>(sseEvent.Data);
+                        var processingState = McpJsonConvert.Deserialize<RemoteProcessingState>(sseEvent.Data);
                         if (processingState != null)
                         {
                             OnProcessingStateChanged?.Invoke(processingState.IsProcessing);
@@ -425,7 +425,7 @@ namespace Meta.XR.AI.AgentBridge
                         break;
 
                     case SseEventType.Error:
-                        var error = JsonConvert.DeserializeObject<RemoteSseError>(sseEvent.Data);
+                        var error = McpJsonConvert.Deserialize<RemoteSseError>(sseEvent.Data);
                         if (error != null)
                         {
                             OnErrorReceived?.Invoke(error);
@@ -475,6 +475,14 @@ namespace Meta.XR.AI.AgentBridge
         #endregion
 
         #region Reconnection
+
+        private async Task RetryInitialConnectionAsync(CancellationToken ct)
+        {
+            await ReconnectAsync(ct);
+            if (ct.IsCancellationRequested || !_isConnected) return;
+            _sseTask = RunSseStreamAsync(ct);
+            _healthCheckTask = RunHealthCheckLoopAsync(ct);
+        }
 
         private async Task ReconnectAsync(CancellationToken ct)
         {
@@ -563,7 +571,7 @@ namespace Meta.XR.AI.AgentBridge
         {
             try
             {
-                var result = JsonConvert.DeserializeObject<RemoteOperationResult>(json);
+                var result = McpJsonConvert.Deserialize<RemoteOperationResult>(json);
                 return (result?.Success ?? false, result?.Error);
             }
             catch (Exception ex)

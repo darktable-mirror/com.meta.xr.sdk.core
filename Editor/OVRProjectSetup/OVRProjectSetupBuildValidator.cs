@@ -44,6 +44,20 @@ internal class OVRProjectSetupBuildValidator : IPreprocessBuildWithReport
 
         OVRProjectSetup.UpdateTasks(buildTargetGroup, onCompleted: OnUpdated(reportOutputPath));
 
+        // Log telemetry for ALL rules (including conditionally invalid ones)
+        foreach (var task in OVRProjectSetup.Registry.GetTasks(buildTargetGroup))
+        {
+            var unifiedEvent = new OVRPlugin.UnifiedEventData(OVRTelemetryConstants.Editor.FalcoEventName.FeaturesInScene)
+            {
+                isEssential = OVRPlugin.Bool.False,
+                productType = OVRPlugin.ProductType.Editor,
+                result = task.IsDone(buildTargetGroup) ? OVRPlugin.UnifiedEventResult.SUCCESS : OVRPlugin.UnifiedEventResult.FAIL
+            };
+            unifiedEvent.SetMetadata(OVRTelemetryConstants.Editor.FalcoEventName.FeatureActive, task.GetLogMessage(buildTargetGroup));
+            unifiedEvent.Send();
+        }
+
+        // Validate only valid tasks
         foreach (var task in OVRProjectSetup.GetTasks(buildTargetGroup))
         {
             ValidateTask(task, buildTargetGroup);

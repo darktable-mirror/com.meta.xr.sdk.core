@@ -66,6 +66,12 @@ using UnityEngine.Rendering.Universal;
 using Meta.XR;
 using Meta.XR.Editor.Utils;
 
+/// <summary>
+/// Central build processor for Meta Quest Android builds. Handles XR plugin validation, Gradle project patching,
+/// Android manifest generation, splash screen configuration, telemetry reporting for build settings,
+/// and post-build APK deployment timing. Implements IPreprocessBuildWithReport, IPostprocessBuildWithReport,
+/// and IPostGenerateGradleAndroidProject.
+/// </summary>
 [InitializeOnLoad]
 public class OVRGradleGeneration
     : IPreprocessBuildWithReport, IPostprocessBuildWithReport
@@ -115,6 +121,9 @@ public class OVRGradleGeneration
     }
 
 #if UNITY_ANDROID
+    /// <summary>
+    /// Toggles the auto-increment version code setting via the Meta > Options menu.
+    /// </summary>
     [MenuItem(menuItemAutoIncVersion)]
     public static void ToggleUtilities()
     {
@@ -158,6 +167,10 @@ public class OVRGradleGeneration
         return false;
     }
 
+    /// <summary>
+    /// Validates XR plugin configuration, graphics API settings, target devices, and color space before an Android build begins. Fails the build on invalid configurations.
+    /// </summary>
+    /// <param name="report">The build report containing build target and configuration details.</param>
     public void OnPreprocessBuild(BuildReport report)
     {
         // Early return if no plugin loader is active at all
@@ -332,6 +345,10 @@ public class OVRGradleGeneration
         SendOVRManagerSettingsTelemetry();
     }
 
+    /// <summary>
+    /// Called after the Gradle project is generated. Copies the system splash screen and patches the AndroidManifest.xml with Quest-specific tags.
+    /// </summary>
+    /// <param name="path">The root path of the generated Gradle project.</param>
     public void OnPostGenerateGradleAndroidProject(string path)
     {
         UnityEngine.Debug.Log("OVRGradleGeneration triggered.");
@@ -390,6 +407,10 @@ public class OVRGradleGeneration
         PatchAndroidManifest(path);
     }
 
+    /// <summary>
+    /// Patches the AndroidManifest.xml in the generated Gradle project with OVR-specific tags, network security config, and feature flags.
+    /// </summary>
+    /// <param name="path">The root path of the generated Gradle project containing src/main/AndroidManifest.xml.</param>
     public void PatchAndroidManifest(string path)
     {
         string manifestFolder = Path.Combine(path, "src/main");
@@ -464,6 +485,10 @@ public class OVRGradleGeneration
         return File.Exists(manifestPath);
     }
 
+    /// <summary>
+    /// Called after the build completes. Sends telemetry, auto-increments version code if enabled, and starts APK deployment timing via ADB logcat.
+    /// </summary>
+    /// <param name="report">The build report containing build results, steps, and output path.</param>
     public void OnPostprocessBuild(BuildReport report)
     {
 #if UNITY_ANDROID
@@ -556,6 +581,9 @@ public class OVRGradleGeneration
 #endif
     }
 
+    /// <summary>
+    /// Sends telemetry for OVRManager scene settings including dynamic resolution, color gamut, tracking origin, and late latching.
+    /// </summary>
     public void SendOVRManagerSettingsTelemetry()
     {
         var ovrManager = OVRProjectSetupUtils.FindComponentInScene<OVRManager>();
@@ -577,6 +605,9 @@ public class OVRGradleGeneration
         }
     }
 
+    /// <summary>
+    /// Sends telemetry for XR plugin settings including foveated rendering, depth submission, symmetric projection, and buffer discard configuration.
+    /// </summary>
     public void SendXRPluginSettingsTelemetry()
     {
 #if USING_XR_MANAGEMENT
@@ -755,6 +786,9 @@ public class OVRGradleGeneration
 #endif
     }
 
+    /// <summary>
+    /// Sends telemetry for Unity project settings including render threading mode, URP configuration, graphics jobs, and installed package versions.
+    /// </summary>
     public void SendProjectSettingsTelemetry()
     {
         OVRTelemetryConstants.ProjectSettings.RenderThreadingMode mode = OVRTelemetryConstants.ProjectSettings.RenderThreadingMode.Unknown;
@@ -882,7 +916,9 @@ public class OVRGradleGeneration
                 urpPipelineEvt.SetMetadata("depth_texture", urpPipelineAsset.supportsCameraDepthTexture);
                 urpPipelineEvt.SetMetadata("color_texture", urpPipelineAsset.supportsCameraOpaqueTexture);
                 urpPipelineEvt.SetMetadata("srp_batcher", urpPipelineAsset.useSRPBatcher);
+#if !URP_17_5_OR_NEWER
                 urpPipelineEvt.SetMetadata("dynamic_batching", urpPipelineAsset.supportsDynamicBatching);
+#endif
                 urpPipelineEvt.SetMetadata("hdr", urpPipelineAsset.supportsHDR);
                 urpPipelineEvt.SetMetadata("hdr_precision", urpPipelineAsset.hdrColorBufferPrecision.ToString());
                 urpPipelineEvt.SetMetadata("msaa", urpPipelineAsset.msaaSampleCount);
@@ -994,6 +1030,12 @@ public class OVRGradleGeneration
 #endif
 
 #if USING_XR_MANAGEMENT
+    /// <summary>
+    /// Returns the active XR loader of type T for the given build target group, or null if not found.
+    /// </summary>
+    /// <typeparam name="T">The XR loader type to search for (e.g., <c>OculusLoader</c> or <c>OpenXRLoader</c>).</typeparam>
+    /// <param name="group">The build target group to query active loaders for.</param>
+    /// <returns>The matching <see cref="UnityEngine.XR.Management.XRLoader"/>, or <c>null</c> if no loader of type <typeparamref name="T"/> is active.</returns>
     public UnityEngine.XR.Management.XRLoader GetActiveLoader<T>(BuildTargetGroup group)
     {
         var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(group);
@@ -1015,6 +1057,9 @@ public class OVRGradleGeneration
     public DateTime UploadEnd;
     public DateTime InstallEnd;
 
+    /// <summary>
+    /// Monitors ADB logcat to time the APK upload and install phases on the connected device. Runs on a background thread.
+    /// </summary>
     public void TimeDeploy()
     {
         if (adbTool != null)

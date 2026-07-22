@@ -70,17 +70,17 @@ namespace Meta.XR.Editor.UserInterface
         public VisualElement Build()
         {
             var indicator = new VisualElement();
-            indicator.AddToClassList(Props.Indicator.Base);
+            indicator.AddToClassList(RLDSConstants.Indicator.Base);
 
             // Add variant-specific class
             string variantClass = _variant switch
             {
-                IndicatorVariant.Positive => Props.Indicator.Positive,
-                IndicatorVariant.Negative => Props.Indicator.Negative,
-                IndicatorVariant.Warning => Props.Indicator.Warning,
-                IndicatorVariant.Disabled => Props.Indicator.Disabled,
-                IndicatorVariant.Privacy => Props.Indicator.Privacy,
-                _ => Props.Indicator.Default
+                IndicatorVariant.Positive => RLDSConstants.Indicator.Positive,
+                IndicatorVariant.Negative => RLDSConstants.Indicator.Negative,
+                IndicatorVariant.Warning => RLDSConstants.Indicator.Warning,
+                IndicatorVariant.Disabled => RLDSConstants.Indicator.Disabled,
+                IndicatorVariant.Privacy => RLDSConstants.Indicator.Privacy,
+                _ => RLDSConstants.Indicator.Default
             };
 
             indicator.AddToClassList(variantClass);

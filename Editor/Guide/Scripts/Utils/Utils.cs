@@ -22,6 +22,9 @@ using Meta.XR.Editor.UserInterface;
 
 namespace Meta.XR.Guides.Editor
 {
+    /// <summary>
+    /// Provides utility resources and texture categories used by the guided setup system.
+    /// </summary>
     public static class Utils
     {
         internal static readonly TextureContent.Category GuidedAccountSetupIcons =

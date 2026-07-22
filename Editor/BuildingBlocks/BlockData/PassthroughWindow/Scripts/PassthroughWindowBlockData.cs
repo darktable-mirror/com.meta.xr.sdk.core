@@ -25,6 +25,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Provides block data and installation logic for the surface-projected passthrough window building block.
+    /// </summary>
     [Obsolete("Surface projected passthrough is being deprecated and support for it will be removed in a future release.")]
     public class PassthroughWindowBlockData : BlockData
     {

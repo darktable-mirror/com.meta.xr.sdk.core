@@ -26,7 +26,7 @@ using Meta.MCPBridge;
 using Meta.MCPBridge.Attributes;
 using Meta.MCPBridge.Schemas;
 using Meta.MCPBridge.Services;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace MCPServices.Tools
 {
@@ -55,7 +55,7 @@ namespace MCPServices.Tools
             Description = "Get comprehensive documentation for a specific tool, including all method signatures, " +
                           "parameter types, return values, and usage guidance. Optionally filter to a specific method.",
             Returns = "Detailed tool documentation as structured JSON with methods, parameters, remarks, and examples.")]
-        internal JObject GetHelp(string toolName, string methodName = null)
+        internal JsonObject GetHelp(string toolName, string methodName = null)
         {
             var executor = LocalExecutor.instance;
             executor.EnsureInitialized();
@@ -66,14 +66,14 @@ namespace MCPServices.Tools
 
             if (toolSchema == null)
             {
-                return new JObject
+                return new JsonObject
                 {
                     ["error"] = $"Tool '{toolName}' not found.",
-                    ["availableTools"] = new JArray(schemas.Select(t => t.Name))
+                    ["availableTools"] = new JsonArray(schemas.Select(t => t.Name))
                 };
             }
 
-            var result = new JObject
+            var result = new JsonObject
             {
                 ["name"] = toolSchema.Name,
                 ["description"] = toolSchema.Description
@@ -82,13 +82,13 @@ namespace MCPServices.Tools
             // Add remarks if available
             if (toolSchema.Remarks != null && toolSchema.Remarks.Length > 0)
             {
-                result["remarks"] = new JArray(toolSchema.Remarks);
+                result["remarks"] = new JsonArray(toolSchema.Remarks);
             }
 
             // Add method details
             if (toolSchema.Methods != null && toolSchema.Methods.Count > 0)
             {
-                var methodsObj = new JObject();
+                var methodsObj = new JsonObject();
 
                 foreach (KeyValuePair<string, MethodDetailSchema> methodEntry in toolSchema.Methods)
                 {
@@ -102,7 +102,7 @@ namespace MCPServices.Tools
                         continue;
                     }
 
-                    var methodObj = new JObject
+                    var methodObj = new JsonObject
                     {
                         ["description"] = methodDetail.Description
                     };
@@ -119,23 +119,23 @@ namespace MCPServices.Tools
 
                     if (methodDetail.Remarks != null && methodDetail.Remarks.Length > 0)
                     {
-                        methodObj["remarks"] = new JArray(methodDetail.Remarks);
+                        methodObj["remarks"] = new JsonArray(methodDetail.Remarks);
                     }
 
                     // Add parameter details
                     if (methodDetail.Parameters != null && methodDetail.Parameters.Count > 0)
                     {
-                        var paramsObj = new JObject();
+                        var paramsObj = new JsonObject();
                         foreach (KeyValuePair<string, ParameterDetailSchema> paramEntry in methodDetail.Parameters)
                         {
                             var paramName = paramEntry.Key;
                             var paramDetail = paramEntry.Value;
-                            paramsObj[paramName] = new JObject
+                            paramsObj[paramName] = new JsonObject
                             {
                                 ["type"] = paramDetail.Type,
                                 ["csharpType"] = paramDetail.CSharpType,
                                 ["required"] = paramDetail.Required ?? false,
-                                ["default"] = paramDetail.Default != null ? JToken.FromObject(paramDetail.Default) : null
+                                ["default"] = paramDetail.Default != null ? JsonNode.FromObject(paramDetail.Default) : null
                             };
                         }
                         methodObj["parameters"] = paramsObj;
@@ -151,14 +151,14 @@ namespace MCPServices.Tools
                 else if (!string.IsNullOrEmpty(methodName))
                 {
                     result["error"] = $"Method '{methodName}' not found in tool '{toolName}'.";
-                    result["availableMethods"] = new JArray(toolSchema.Methods.Keys);
+                    result["availableMethods"] = new JsonArray(toolSchema.Methods.Keys);
                 }
             }
 
             // Add input schema summary for parameter cross-reference
             if (toolSchema.InputSchema?.Properties != null)
             {
-                var paramsUsage = new JObject();
+                var paramsUsage = new JsonObject();
                 foreach (KeyValuePair<string, ToolPropertySchema> propEntry in toolSchema.InputSchema.Properties)
                 {
                     var propName = propEntry.Key;
@@ -166,7 +166,7 @@ namespace MCPServices.Tools
 
                     if (propName == "method") continue; // Skip the method enum itself
 
-                    var paramInfo = new JObject
+                    var paramInfo = new JsonObject
                     {
                         ["type"] = propSchema.Type
                     };
@@ -178,12 +178,12 @@ namespace MCPServices.Tools
 
                     if (propSchema.UsedBy != null && propSchema.UsedBy.Length > 0)
                     {
-                        paramInfo["usedByMethods"] = new JArray(propSchema.UsedBy);
+                        paramInfo["usedByMethods"] = new JsonArray(propSchema.UsedBy);
                     }
 
                     if (propSchema.Enum != null && propSchema.Enum.Length > 0)
                     {
-                        paramInfo["allowedValues"] = new JArray(propSchema.Enum);
+                        paramInfo["allowedValues"] = new JsonArray(propSchema.Enum);
                     }
 
                     if (!string.IsNullOrEmpty(propSchema.Remark))
@@ -207,17 +207,17 @@ namespace MCPServices.Tools
             Description = "List all available MCP tools with brief descriptions. " +
                           "Use this to get an overview of capabilities before diving into specific tools.",
             Returns = "Array of tool summaries with name, description, and method count.")]
-        internal JArray ListTools()
+        internal JsonArray ListTools()
         {
             var executor = LocalExecutor.instance;
             executor.EnsureInitialized();
 
             var schemas = executor.GetToolSchemas();
-            var result = new JArray();
+            var result = new JsonArray();
 
             foreach (var schema in schemas.OrderBy(s => s.Name))
             {
-                var toolSummary = new JObject
+                var toolSummary = new JsonObject
                 {
                     ["name"] = schema.Name,
                     ["description"] = schema.Description
@@ -227,7 +227,7 @@ namespace MCPServices.Tools
                 if (schema.Methods != null)
                 {
                     toolSummary["methodCount"] = schema.Methods.Count;
-                    toolSummary["methods"] = new JArray(schema.Methods.Keys);
+                    toolSummary["methods"] = new JsonArray(schema.Methods.Keys);
                 }
 
                 // Add first remark as a hint (if available)
@@ -246,14 +246,16 @@ namespace MCPServices.Tools
             Description = "Search for tools by keyword in their names, descriptions, or method names. " +
                           "Useful for finding tools that match specific capabilities.",
             Returns = "Array of matching tools with relevance information.")]
-        internal JArray SearchTools(string query)
+        internal JsonArray SearchTools(string query)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
-                return new JArray(new JObject
+                var errorArr = new JsonArray();
+                errorArr.Add(new JsonObject
                 {
                     ["error"] = "Search query cannot be empty."
                 });
+                return errorArr;
             }
 
             var executor = LocalExecutor.instance;
@@ -324,10 +326,10 @@ namespace MCPServices.Tools
                 }
             }
 
-            var resultArray = new JArray();
+            var resultArray = new JsonArray();
             foreach (var (schema, score, matchType) in results.OrderByDescending(r => r.score))
             {
-                resultArray.Add(new JObject
+                resultArray.Add(new JsonObject
                 {
                     ["name"] = schema.Name,
                     ["description"] = schema.Description,
@@ -339,7 +341,7 @@ namespace MCPServices.Tools
 
             if (resultArray.Count == 0)
             {
-                resultArray.Add(new JObject
+                resultArray.Add(new JsonObject
                 {
                     ["message"] = $"No tools found matching '{query}'.",
                     ["suggestion"] = "Try a broader search term or use ListTools() to see all available tools."

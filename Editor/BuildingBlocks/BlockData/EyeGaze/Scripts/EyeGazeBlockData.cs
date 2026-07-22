@@ -26,6 +26,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing left and right eye gaze tracking building blocks into the scene.
+    /// </summary>
     public class EyeGazeBlockData : BlockData
     {
         internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps =>

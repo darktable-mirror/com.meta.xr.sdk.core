@@ -56,18 +56,22 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         internal static readonly ToolDescriptor ToolDescriptor = new()
         {
             Name = PublicName,
+            DisplayName = "Immersive debugger",
             MqdhCategoryId = "1062327272563816",
-            MenuDescription = "Debug in headset",
+            MenuDescription = "Debug your app inside the headset",
             Description = Description,
             Color = Styles.Colors.AccentColor,
             Icon = StatusIcon,
             InfoTextDelegate = ComputeInfoText,
+            EnablementDescriptor = ComputeEnablement,
+            EnablementLink = () => ("Enable in ", "project settings", OnStatusMenuClick),
             PillIcon = ComputePillIcon,
             OnClickDelegate = OnStatusMenuClick,
-            Order = 11,
+            Order = 5,
             Experimental = false,
             CanBeNew = true,
             AddToStatusMenu = true,
+            MenuCategory = MenuCategory.Tools,
             OnProjectSettingsGUI = Settings.OnGUI,
             Documentation = new List<Documentation>()
             {
@@ -80,14 +84,15 @@ namespace Meta.XR.ImmersiveDebugger.Editor
         };
 
         public static (TextureContent, Color?, bool) ComputePillIcon() =>
-            RuntimeSettings.Instance.ImmersiveDebuggerEnabled
-                ? (CheckIcon, XR.Editor.UserInterface.Styles.Colors.SuccessColor, false)
-                : (null, XR.Editor.UserInterface.Styles.Colors.DisabledColor, false);
+            (null, null, false);
 
         public static (string, Color?) ComputeInfoText() =>
+            (null, null);
+
+        public static (bool, string) ComputeEnablement() =>
             RuntimeSettings.Instance.ImmersiveDebuggerEnabled
-                ? ("Enabled", XR.Editor.UserInterface.Styles.Colors.SuccessColor)
-                : ("Disabled", XR.Editor.UserInterface.Styles.Colors.DisabledColor);
+                ? (true, null)
+                : (false, "Enable in project settings");
 
         public static bool IsEnabled => RuntimeSettings.Instance.ImmersiveDebuggerEnabled;
 

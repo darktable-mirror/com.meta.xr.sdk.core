@@ -25,6 +25,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing left and right controller tracking building blocks into the scene.
+    /// </summary>
     public class ControllerTrackingBlockData : BlockData
     {
         protected override bool IsBlockPresentInScene()

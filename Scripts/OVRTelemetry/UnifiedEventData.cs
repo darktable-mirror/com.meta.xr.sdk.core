@@ -84,47 +84,19 @@ namespace Meta.XR.Telemetry
     }
 
     /// <summary>
-    /// Extension methods for converting between telemetry types and OVRPlugin types.
-    /// These are used at the boundary when calling OVRPlugin methods.
+    /// Well-known annotation keys used by the telemetry system.
+    /// These were previously in OVRTelemetryConstants but are now decoupled.
     /// </summary>
-    internal static class TelemetryTypeConversions
+    internal static class TelemetryAnnotations
     {
-        internal static OVRPlugin.ProductType ToOVRPluginProductType(this TelemetryProductType value)
-        {
-            return value switch
-            {
-                TelemetryProductType.None => OVRPlugin.ProductType.None,
-                TelemetryProductType.Editor => OVRPlugin.ProductType.Editor,
-                TelemetryProductType.XRFeature => OVRPlugin.ProductType.XRFeature,
-                TelemetryProductType.Pst => OVRPlugin.ProductType.Pst,
-                TelemetryProductType.MetaWand => OVRPlugin.ProductType.MetaWand,
-                TelemetryProductType.CoreSdk => OVRPlugin.ProductType.CoreSdk,
-                TelemetryProductType.XrSim => OVRPlugin.ProductType.XrSim,
-                TelemetryProductType.BuildingBlocks => OVRPlugin.ProductType.BuildingBlocks,
-                TelemetryProductType.Mruk => OVRPlugin.ProductType.Mruk,
-                TelemetryProductType.ImmersiveDebugger => OVRPlugin.ProductType.ImmersiveDebugger,
-                TelemetryProductType.PlatformSdk => OVRPlugin.ProductType.PlatformSdk,
-                TelemetryProductType.HapticsSdk => OVRPlugin.ProductType.HapticsSdk,
-                TelemetryProductType.MovementSdk => OVRPlugin.ProductType.MovementSdk,
-                _ => OVRPlugin.ProductType.None
-            };
-        }
-
-        internal static TelemetryResult FromOVRPluginResult(OVRPlugin.Result result)
-        {
-            return result switch
-            {
-                OVRPlugin.Result.Success => TelemetryResult.Success,
-                OVRPlugin.Result.Failure_NotInitialized => TelemetryResult.Failure_NotInitialized,
-                OVRPlugin.Result.Failure_Unsupported => TelemetryResult.Failure_Unsupported,
-                _ => TelemetryResult.Failure
-            };
-        }
+        public const string ProcessorType = "processor_type";
+        public const string ProjectNameHash = "project_name_hash";
     }
 
     /// <summary>
     /// Unified event data for Falco telemetry.
-    /// This struct provides a decoupled API in the Meta.XR.Telemetry namespace.
+    /// This struct provides a fully decoupled API in the Meta.XR.Telemetry namespace.
+    /// All platform-specific operations are routed through the registered TelemetryBackend.
     /// </summary>
     public struct UnifiedEventData
     {
@@ -164,33 +136,40 @@ namespace Meta.XR.Telemetry
             is_runtime = null;
             MetadataDictionary = null;
 
-#if UNITY_EDITOR
-            project_guid = Meta.XR.Editor.Callbacks.InitializeOnLoad.EditorReady
-                ? OVRRuntimeSettings.Instance.TelemetryProjectGuid
+            var backend = TelemetryBackend.Instance;
+
+            project_guid = backend != null && backend.IsEditorReady()
+                ? backend?.GetProjectGuid() ?? string.Empty
                 : string.Empty;
 
             if (batch_mode == null)
             {
+#if UNITY_EDITOR
                 batch_mode = UnityEngine.Application.isBatchMode;
+#endif
             }
 
-#else
-            project_guid = OVRRuntimeSettings.Instance.TelemetryProjectGuid;
-#endif
-
-            is_internal_build = false;
+            is_internal_build = backend?.IsInternalBuild() ?? false;
 
             if (string.IsNullOrEmpty(project_name))
             {
-                var hasConsent = OVRPlugin.UnifiedConsent.GetUnifiedConsent();
+                var hasConsent = backend?.GetConsent();
                 if (hasConsent == true)
                 {
                     project_name = UnityEngine.Application.identifier;
                 }
             }
 
-            SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProcessorType, UnityEngine.SystemInfo.processorType);
-            SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.FalcoMigrationCentral, "9");
+            SetMetadata(TelemetryAnnotations.ProcessorType, UnityEngine.SystemInfo.processorType);
+
+            // project_name_hash is essential — always populated regardless of consent
+            // since a hash cannot be reversed to reveal the actual project name.
+            var hash = OVRTelemetry.GetProjectNameHash(UnityEngine.Application.identifier);
+            if (hash != null)
+            {
+                SetMetadata(TelemetryAnnotations.ProjectNameHash, hash);
+            }
+
             is_runtime = UnityEngine.Application.isPlaying;
         }
 
@@ -201,13 +180,16 @@ namespace Meta.XR.Telemetry
                 return true;
             }
 
-            OVRPlugin.Result createResult = OVRPlugin.TelemetryCreateMetadataHandle(out metadataHandle);
-            return createResult == OVRPlugin.Result.Success;
+            var backend = TelemetryBackend.Instance;
+            if (backend == null)
+                return false;
+            return backend.CreateMetadataHandle(out metadataHandle);
         }
 
         public bool SetMetadata(string key, string value)
         {
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataHandleMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataHandle)
             {
                 MetadataDictionary ??= new Dictionary<string, string>();
                 MetadataDictionary[key] = value;
@@ -219,13 +201,13 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadata(key, value, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadata(key, value, metadataHandle);
         }
 
         public bool SetMetadata(string key, int value)
         {
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataHandleMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataHandle)
             {
                 return SetMetadata(key, value.ToString());
             }
@@ -235,13 +217,13 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataInt(key, value, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadata(key, value, metadataHandle);
         }
 
         public bool SetMetadata(string key, float value)
         {
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataHandleMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataHandle)
             {
                 return SetMetadata(key, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
@@ -251,13 +233,13 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataFloat(key, value, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadata(key, value, metadataHandle);
         }
 
         public bool SetMetadata(string key, double value)
         {
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataHandleMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataHandle)
             {
                 return SetMetadata(key, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
@@ -267,15 +249,15 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataDouble(key, value, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadata(key, value, metadataHandle);
         }
 
         public bool SetMetadata(string key, bool value)
         {
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataHandleMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataHandle)
             {
-                return SetMetadata(key, value.ToString());
+                return SetMetadata(key, value ? "true" : "false");
             }
 
             if (!EnsureMetadataHandle())
@@ -283,13 +265,13 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataBool(key, value, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadata(key, value, metadataHandle);
         }
 
         public bool SetMetadata(string key, long value)
         {
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataArrayMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataArray)
             {
                 return SetMetadata(key, value.ToString());
             }
@@ -299,8 +281,7 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataLong(key, value, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadata(key, value, metadataHandle);
         }
 
         public unsafe bool SetMetadata(string key, int[] values)
@@ -310,7 +291,8 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataArrayMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataArray)
             {
                 return SetMetadata(key, string.Join(",", values));
             }
@@ -322,8 +304,7 @@ namespace Meta.XR.Telemetry
 
             fixed (int* ptr = values)
             {
-                OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataIntArray(key, ptr, values.Length, metadataHandle);
-                return result == OVRPlugin.Result.Success;
+                return backend.SetMetadataArray(key, ptr, values.Length, metadataHandle);
             }
         }
 
@@ -334,7 +315,8 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataArrayMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataArray)
             {
                 return SetMetadata(key, string.Join(",", values));
             }
@@ -346,8 +328,7 @@ namespace Meta.XR.Telemetry
 
             fixed (long* ptr = values)
             {
-                OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataLongArray(key, ptr, values.Length, metadataHandle);
-                return result == OVRPlugin.Result.Success;
+                return backend.SetMetadataArray(key, ptr, values.Length, metadataHandle);
             }
         }
 
@@ -358,7 +339,8 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataArrayMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataArray)
             {
                 return false;
             }
@@ -368,8 +350,7 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataLongArray(key, values, count, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadataArray(key, values, count, metadataHandle);
         }
 
         public unsafe bool SetMetadata(string key, double[] values)
@@ -379,7 +360,8 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataArrayMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataArray)
             {
                 return SetMetadata(key, string.Join(",", values.Select(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture))));
             }
@@ -391,8 +373,7 @@ namespace Meta.XR.Telemetry
 
             fixed (double* ptr = values)
             {
-                OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataDoubleArray(key, ptr, values.Length, metadataHandle);
-                return result == OVRPlugin.Result.Success;
+                return backend.SetMetadataArray(key, ptr, values.Length, metadataHandle);
             }
         }
 
@@ -403,7 +384,8 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataArrayMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataArray)
             {
                 return SetMetadata(key, string.Join(",", values));
             }
@@ -413,13 +395,13 @@ namespace Meta.XR.Telemetry
                 return false;
             }
 
-            OVRPlugin.Result result = OVRPlugin.TelemetrySetMetadataStringArray(key, values, values.Length, metadataHandle);
-            return result == OVRPlugin.Result.Success;
+            return backend.SetMetadataArray(key, values, values.Length, metadataHandle);
         }
 
         public string GetMetadata()
         {
-            if (OVRPlugin.version < OVRPlugin.TelemetryMetadataHandleMinVersion)
+            var backend = TelemetryBackend.Instance;
+            if (backend == null || !backend.SupportsMetadataHandle)
             {
                 if (!string.IsNullOrEmpty(metadata_json))
                 {
@@ -466,18 +448,14 @@ namespace Meta.XR.Telemetry
 
 
         /// <summary>
-        /// Sends a unified telemetry event.
+        /// Sends a unified telemetry event via the registered backend.
         /// </summary>
-        /// <param name="eventData">The event data to send.</param>
-        /// <returns>The result of the send operation.</returns>
         public static TelemetryResult SendUnifiedEvent(UnifiedEventData eventData)
         {
-#if OVRPLUGIN_UNSUPPORTED_PLATFORM
-            return TelemetryResult.Failure_Unsupported;
-#else
-            var result = OVRPlugin.SendUnifiedEvent(eventData);
-            return TelemetryTypeConversions.FromOVRPluginResult(result);
-#endif
+            var backend = TelemetryBackend.Instance;
+            if (backend == null)
+                return TelemetryResult.Failure;
+            return backend.SendEvent(eventData);
         }
     }
 }

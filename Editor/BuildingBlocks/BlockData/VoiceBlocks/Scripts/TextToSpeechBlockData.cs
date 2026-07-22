@@ -29,6 +29,9 @@ using Meta.WitAi.TTS;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing the text-to-speech building block using the Voice SDK.
+    /// </summary>
     public class TextToSpeechBlockData : Meta.XR.BuildingBlocks.Editor.BlockData
     {
         protected override bool UsesPrefab => false;

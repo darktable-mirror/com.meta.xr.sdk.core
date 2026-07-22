@@ -100,6 +100,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         protected virtual void UpdateBackground()
         {
+            if (_background == null) return;
+
             if (_backgroundStyle != null && _backgroundStyle.enabled)
             {
                 _background.Show();
@@ -114,6 +116,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         protected virtual void UpdateIcon()
         {
+            if (_icon == null) return;
+
             if (_iconStyle != null && _iconStyle.enabled)
             {
                 _icon.Show();

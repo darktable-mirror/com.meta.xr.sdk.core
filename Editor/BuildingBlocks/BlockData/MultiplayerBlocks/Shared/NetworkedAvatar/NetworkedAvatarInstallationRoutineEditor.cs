@@ -23,6 +23,9 @@ using UnityEditor;
 
 namespace Meta.XR.BuildingBlocks.Shared.Editor
 {
+    /// <summary>
+    /// Custom inspector editor for the NetworkedAvatarInstallationRoutine that exposes the networked avatar prefab field.
+    /// </summary>
     [CustomEditor(typeof(NetworkedAvatarInstallationRoutine))]
     public class NetworkedAvatarInstallationRoutineEditor : InstallationRoutineEditor
     {

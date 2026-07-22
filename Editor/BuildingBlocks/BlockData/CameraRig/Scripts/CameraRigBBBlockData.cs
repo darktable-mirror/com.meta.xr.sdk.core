@@ -25,6 +25,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing the VR camera rig building block into the scene.
+    /// </summary>
     public class CameraRigBBBlockData : BlockData
     {
 

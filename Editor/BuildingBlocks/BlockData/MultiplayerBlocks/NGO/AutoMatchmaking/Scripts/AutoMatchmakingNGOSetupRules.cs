@@ -26,6 +26,9 @@ using Meta.XR.BuildingBlocks.Editor;
 
 namespace Meta.XR.MultiplayerBlocks.NGO.Editor
 {
+    /// <summary>
+    /// Registers project setup rules for the NGO auto matchmaking building block.
+    /// </summary>
     [InitializeOnLoad]
     public static class AutoMatchmakingNGOSetupRules
     {

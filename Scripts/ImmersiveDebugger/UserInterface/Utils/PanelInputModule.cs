@@ -53,6 +53,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private static OVRPlugin.HandState _handState = new();
 
+        // Tracks previous pinch state for detecting press/release transitions
+        // when using direct hand pinch detection (see ComputeHandPinchState).
+        private static bool _wasPinching;
+
         private static bool IsEditorPlayMode => Application.isEditor && Application.isPlaying
 #if USING_XR_SDK
                                                 && OVRManager.GetCurrentDisplaySubsystem() == null
@@ -112,6 +116,23 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // We want this input module to be always off.
             // This way it will never disrupt any of the possibly already existing input modules from the user.
             return false;
+        }
+
+        /// <summary>
+        /// Prevent external systems (such as InputSystemUIInputModule) from disabling
+        /// this module. The PanelInputModule processes input independently and must
+        /// remain enabled to function.
+        /// </summary>
+        protected override void OnDisable()
+        {
+            // Do not call base.OnDisable() as it would unregister us from the EventSystem.
+            // If something tries to disable us, we re-enable ourselves so that Update()
+            // continues to be called. The module is designed to be passive and never
+            // interfere with other input modules.
+            if (gameObject.activeInHierarchy)
+            {
+                enabled = true;
+            }
         }
 
         private void Update()
@@ -288,7 +309,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 return PointerEventData.FramePressState.NotChanged;
             }
 
-            // Original VR controller logic
+            if (controller is OVRInput.Controller.LHand or OVRInput.Controller.RHand)
+            {
+                return ComputeHandPinchState();
+            }
+
+            // VR controller logic
             var button = RuntimeSettings.Instance.ClickButton;
 
             var pressed_vr = OVRInput.GetDown(button, controller);
@@ -303,6 +329,34 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (released_vr)
                 return PointerEventData.FramePressState.Released;
 
+            return PointerEventData.FramePressState.NotChanged;
+        }
+
+        /// <summary>
+        /// Detects index finger pinch press/release from the hand tracking state.
+        /// The legacy OVRInput.GetDown(Button.One) path for hands is deprecated
+        /// (see OVR_DISABLE_HAND_PINCH_BUTTON_MAPPING). The recommended replacement is
+        /// OVRHand.GetFingerIsPinching(), but the Immersive Debugger is scene-independent
+        /// and cannot rely on an OVRHand MonoBehaviour existing. Instead we read
+        /// HandState.Pinches directly (same underlying data).
+        /// The _handState is populated by UpdateRayTransform() before this is called.
+        /// </summary>
+        private static PointerEventData.FramePressState ComputeHandPinchState()
+        {
+            var isTracked = (_handState.Status & OVRPlugin.HandStatus.HandTracked) != 0;
+            var isPinching = isTracked
+                && (_handState.Pinches & OVRPlugin.HandFingerPinch.Index) != 0;
+
+            var pressed = isPinching && !_wasPinching;
+            var released = !isPinching && _wasPinching;
+            _wasPinching = isPinching;
+
+            if (pressed && released)
+                return PointerEventData.FramePressState.PressedAndReleased;
+            if (pressed)
+                return PointerEventData.FramePressState.Pressed;
+            if (released)
+                return PointerEventData.FramePressState.Released;
             return PointerEventData.FramePressState.NotChanged;
         }
 
@@ -423,6 +477,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 OVRInput.Controller.LHand => _handState.PointerPose.Orientation.FromFlippedZQuatf(),
                 _ => OVRInput.GetLocalControllerRotation(controller)
             };
+
+            // Guard against invalid quaternion from untracked controllers.
+            // When XR Sim is active but no controller is tracked, the native layer may return
+            // an uninitialized quaternion (all zeros), which causes "Quaternion To Matrix
+            // conversion failed" in Matrix4x4.TRS(). Skip the frame and keep previous ray transform.
+            if (localRotation == default || !OVRInput.GetControllerOrientationValid(controller))
+            {
+                return;
+            }
 
             var ovrPose = new OVRPose() { position = localPosition, orientation = localRotation };
 

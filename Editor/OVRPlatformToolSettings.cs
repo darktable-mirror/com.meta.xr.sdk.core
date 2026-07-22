@@ -32,6 +32,10 @@ namespace Assets.Oculus.VR.Editor
 #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoad]
 #endif
+    /// <summary>
+    /// Persisted settings for the OVR Platform Tool upload window. Stores app IDs, release channels, build paths,
+    /// expansion file configs, and other upload parameters as a singleton ScriptableObject backed by EditorPrefs.
+    /// </summary>
     public sealed class OVRPlatformToolSettings : ScriptableObject
     {
         private const string DEFAULT_RELEASE_CHANNEL = "Alpha";
@@ -443,6 +447,10 @@ namespace Assets.Oculus.VR.Editor
         [FormerlySerializedAs("runOvrLint")]
         private bool runProjectSetupTool = true;
 
+        /// <summary>
+        /// Attempts to load or create the singleton settings instance. Safe to call during builds (avoids asset creation while building).
+        /// </summary>
+        /// <returns><c>true</c> if the settings instance was successfully loaded or created; otherwise <c>false</c>.</returns>
         public static bool TryInitialize()
         {
             // If not initialized and Build Player is current running, UnityEditor.AssetDatabase.CreateAsset
@@ -514,21 +522,32 @@ namespace Assets.Oculus.VR.Editor
         }
     }
 
-    // Wrapper for asset config list so that it can be serialized properly
+    /// <summary>
+    /// Serializable wrapper around a list of <see cref="AssetConfig"/> entries for the Platform Tool upload settings.
+    /// </summary>
     [System.Serializable]
     public class AssetConfigList
     {
         public List<AssetConfig> configList;
 
+        /// <summary>
+        /// Initializes a new AssetConfigList with an empty configuration list.
+        /// </summary>
         public AssetConfigList()
         {
             configList = new List<AssetConfig>();
         }
     }
 
+    /// <summary>
+    /// Represents a single asset file configuration for the Platform Tool upload, including its name, type, SKU, and required flag.
+    /// </summary>
     [System.Serializable]
     public class AssetConfig
     {
+        /// <summary>
+        /// Categorizes the asset for the Platform Tool upload: default content, store asset, or language pack.
+        /// </summary>
         public enum AssetType
         {
             DEFAULT,
@@ -543,22 +562,37 @@ namespace Assets.Oculus.VR.Editor
 
         private bool foldout;
 
+        /// <summary>
+        /// Creates a new AssetConfig with the given name.
+        /// </summary>
+        /// <param name="assetName">The display name of the asset.</param>
         public AssetConfig(string assetName)
         {
             name = assetName;
         }
 
+        /// <summary>
+        /// Returns the current foldout state for this asset config in the editor UI.
+        /// </summary>
+        /// <returns><c>true</c> if the foldout is expanded; otherwise <c>false</c>.</returns>
         public bool GetFoldoutState()
         {
             return foldout;
         }
 
+        /// <summary>
+        /// Sets the foldout expansion state for this asset config in the editor UI.
+        /// </summary>
+        /// <param name="state"><c>true</c> to expand the foldout; <c>false</c> to collapse it.</param>
         public void SetFoldoutState(bool state)
         {
             foldout = state;
         }
     }
 
+    /// <summary>
+    /// Represents a redistributable package that can be included in a Platform Tool upload.
+    /// </summary>
     [System.Serializable]
     public class RedistPackage
     {
@@ -566,6 +600,11 @@ namespace Assets.Oculus.VR.Editor
         public string name;
         public string id;
 
+        /// <summary>
+        /// Creates a new RedistPackage with the given name and identifier.
+        /// </summary>
+        /// <param name="pkgName">The display name of the redistributable package.</param>
+        /// <param name="pkgId">The unique identifier of the redistributable package.</param>
         public RedistPackage(string pkgName, string pkgId)
         {
             name = pkgName;

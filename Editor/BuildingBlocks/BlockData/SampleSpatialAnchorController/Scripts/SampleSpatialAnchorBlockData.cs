@@ -28,6 +28,9 @@ using UnityEngine.Events;
 
 namespace Meta.XR.BuildingBlocks
 {
+    /// <summary>
+    /// BlockData that handles installing the sample spatial anchor controller and binding its input actions.
+    /// </summary>
     public class SampleSpatialAnchorBlockData : BlockData
     {
         internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps => new List<InstallationStepInfo>

@@ -29,8 +29,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.XR.AI.AgentBridge.Acp
 {
@@ -76,9 +75,9 @@ namespace Meta.XR.AI.AgentBridge.Acp
         /// Route an incoming agent request to the appropriate handler.
         /// </summary>
         /// <param name="method">The JSON-RPC method name</param>
-        /// <param name="paramsToken">The params JToken from the request</param>
+        /// <param name="paramsToken">The params JsonNode from the request</param>
         /// <returns>The result object to serialize back as the response</returns>
-        public Task<object> HandleRequestAsync(string method, JToken? paramsToken)
+        public Task<object> HandleRequestAsync(string method, JsonNode? paramsToken)
         {
             return method switch
             {
@@ -104,7 +103,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
             };
         }
 
-        private object HandleReadTextFile(JToken? paramsToken)
+        private object HandleReadTextFile(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<ReadTextFileParams>()
                 ?? throw new ArgumentException("Missing params for fs/read_text_file");
@@ -113,7 +112,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
             return new ReadTextFileResult { Content = content };
         }
 
-        private object HandleWriteTextFile(JToken? paramsToken)
+        private object HandleWriteTextFile(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<WriteTextFileParams>()
                 ?? throw new ArgumentException("Missing params for fs/write_text_file");
@@ -126,10 +125,10 @@ namespace Meta.XR.AI.AgentBridge.Acp
             }
 
             File.WriteAllText(p.Path, p.Content);
-            return new JObject();
+            return new JsonObject();
         }
 
-        private object HandleRequestPermission(JToken? paramsToken)
+        private object HandleRequestPermission(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<RequestPermissionParams>()
                 ?? throw new ArgumentException("Missing params for session/request_permission");
@@ -148,7 +147,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
             };
         }
 
-        private object HandleCreateTerminal(JToken? paramsToken)
+        private object HandleCreateTerminal(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<CreateTerminalParams>()
                 ?? throw new ArgumentException("Missing params for terminal/create");
@@ -216,7 +215,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
             return new CreateTerminalResult { TerminalId = terminalId };
         }
 
-        private object HandleTerminalOutput(JToken? paramsToken)
+        private object HandleTerminalOutput(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<TerminalOutputParams>()
                 ?? throw new ArgumentException("Missing params for terminal/output");
@@ -258,7 +257,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
             return result;
         }
 
-        private object HandleKillTerminal(JToken? paramsToken)
+        private object HandleKillTerminal(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<KillTerminalParams>()
                 ?? throw new ArgumentException("Missing params for terminal/kill");
@@ -278,10 +277,10 @@ namespace Meta.XR.AI.AgentBridge.Acp
                 }
             }
 
-            return new JObject();
+            return new JsonObject();
         }
 
-        private object HandleReleaseTerminal(JToken? paramsToken)
+        private object HandleReleaseTerminal(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<ReleaseTerminalParams>()
                 ?? throw new ArgumentException("Missing params for terminal/release");
@@ -303,10 +302,10 @@ namespace Meta.XR.AI.AgentBridge.Acp
             }
 
             _terminalOutputs.TryRemove(p.TerminalId, out _);
-            return new JObject();
+            return new JsonObject();
         }
 
-        private async Task<object> HandleWaitForTerminalExitAsync(JToken? paramsToken)
+        private async Task<object> HandleWaitForTerminalExitAsync(JsonNode? paramsToken)
         {
             var p = paramsToken?.ToObject<WaitForTerminalExitParams>()
                 ?? throw new ArgumentException("Missing params for terminal/wait_for_exit");

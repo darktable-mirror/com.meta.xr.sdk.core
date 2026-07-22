@@ -18,8 +18,7 @@
  * limitations under the License.
  */
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Schemas
 {
@@ -29,26 +28,26 @@ namespace Meta.MCPBridge.Schemas
 
     internal class BaseSchema : ISchema
     {
-        [JsonProperty("id")] internal string Id { get; set; }
+        [McpJsonProperty("id")] internal string Id { get; set; }
 
-        [JsonProperty("jsonrpc")] internal string JsonRPC => "2.0";
+        [McpJsonProperty("jsonrpc")] internal string JsonRPC => "2.0";
     }
 
     internal class InitializationSchema : ResponseSchema
     {
-        [JsonProperty("serverInfo")]
-        internal JObject ServerInfo = new()
+        [McpJsonProperty("serverInfo")]
+        internal JsonObject ServerInfo = new()
         {
             ["name"] = "Unity MCP Server",
             ["version"] = "1.0.0"
         };
 
-        [JsonProperty("protocolVersion")] internal string ProtocolVersion => "2024-11-05";
+        [McpJsonProperty("protocolVersion")] internal string ProtocolVersion => "2025-11-25";
 
-        [JsonProperty("capabilities")]
-        internal JObject Capabilities => new()
+        [McpJsonProperty("capabilities")]
+        internal JsonObject Capabilities => new()
         {
-            ["tools"] = new JObject()
+            ["tools"] = new JsonObject()
         };
     }
 }

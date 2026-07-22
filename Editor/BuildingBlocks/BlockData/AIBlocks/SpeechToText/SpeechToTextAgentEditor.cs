@@ -24,6 +24,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the speech-to-text agent component.
+    /// </summary>
     [CustomEditor(typeof(SpeechToTextAgent))]
     public class SpeechToTextAgentEditor : UnityEditor.Editor
     {
@@ -84,6 +87,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 }
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the speech-to-text agent.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

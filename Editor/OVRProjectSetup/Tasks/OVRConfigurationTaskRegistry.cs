@@ -78,7 +78,8 @@ internal class OVRConfigurationTaskRegistry
             return;
         }
 
-        if (task.Level.GetValue(targetGroup) == OVRProjectSetup.TaskLevel.Optional)
+        if (task.Level.GetValue(targetGroup) == OVRProjectSetup.TaskLevel.Optional
+            || task.Level.GetValue(targetGroup) == OVRProjectSetup.TaskLevel.Hidden)
         {
             return;
         }
@@ -120,7 +121,9 @@ internal class OVRConfigurationTaskRegistry
 
     internal IEnumerable<OVRConfigurationTask> GetValidTasks(BuildTargetGroup buildTargetGroup)
     {
-        return GetTasks(buildTargetGroup).Where(task => task.Valid.GetValue(buildTargetGroup));
+        return GetTasks(buildTargetGroup).Where(task =>
+            task.Valid.GetValue(buildTargetGroup)
+            && task.Level.GetValue(buildTargetGroup) != OVRProjectSetup.TaskLevel.Hidden);
     }
 
     internal IEnumerable<OVRConfigurationTask> GetTasks(BuildTargetGroup buildTargetGroup)

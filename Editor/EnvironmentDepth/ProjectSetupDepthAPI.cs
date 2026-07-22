@@ -112,7 +112,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
 #endif
             );
 #endif
-#if USING_XR_SDK_OCULUS && !OPEN_XR_META_2_1_OR_NEWER // We've got oculus package only
+#if USING_XR_SDK_OCULUS && !OPEN_XR_META_2_1_OR_NEWER // Only the Oculus XR package is installed; validate Oculus settings.
             // Multiview option
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,
@@ -131,7 +131,7 @@ namespace Meta.XR.EnvironmentDepth.Editor
                 fixMessage: "Set Stereo Rendering Mode to Multiview."
             );
 #endif
-#if OPEN_XR_META_2_1_OR_NEWER // We've got OpenXR Meta package (Regardless of whether we have oculus. We prioritize OpenXR)
+#if OPEN_XR_META_2_1_OR_NEWER // OpenXR Meta package is installed; validate OpenXR settings. NOTE: This is intentionally install-time gated and prioritizes OpenXR over Oculus XR even when both packages are installed (project-setup design choice).
             // Occlusion feature enabled
             OVRProjectSetup.AddTask(
                 level: OVRProjectSetup.TaskLevel.Required,

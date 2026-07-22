@@ -645,7 +645,10 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             _enableDynamicResolution = value;
 
 #if USING_XR_SDK_OPENXR && UNITY_ANDROID
-            OVRPlugin.SetExternalLayerDynresEnabled(value ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+            if (IsOpenXRLoaderActive())
+            {
+                OVRPlugin.SetExternalLayerDynresEnabled(value ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+            }
 #endif
         }
     }
@@ -1842,7 +1845,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             {
                 if (GetCurrentInputSubsystem() == null)
                 {
-                    Debug.LogError("InputSubsystem not found");
+                    Debug.LogWarning("InputSubsystem not found");
+                    _trackingOriginType = value;
                     return;
                 }
 
@@ -1968,7 +1972,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     /// Experimental: Defines if hand poses leverage a higher frequency capture rate.
     /// </summary>
     public bool fastMotionModeHandPosesEnabled = false;
-
 
     public bool IsSimultaneousHandsAndControllersSupported
     {
@@ -2382,7 +2385,10 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         if (enableDynamicResolution)
         {
 #if USING_XR_SDK_OPENXR
-            OVRPlugin.SetExternalLayerDynresEnabled(enableDynamicResolution ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+            if (IsOpenXRLoaderActive())
+            {
+                OVRPlugin.SetExternalLayerDynresEnabled(enableDynamicResolution ? OVRPlugin.Bool.True : OVRPlugin.Bool.False);
+            }
 #endif
 
             XRSettings.eyeTextureResolutionScale = maxDynamicResolutionScale;
@@ -2454,6 +2460,13 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         {
             metrics.EnableMetrics(coreMetricVisibility);
         }
+
+#if USING_XR_SDK_OPENXR
+        if (MetaXRFeature.TryGet(out var feature) && feature.AgenticExternalToolEnabled)
+        {
+            Meta.XR.MetaXROperatorDefaultTools.RegisterAll();
+        }
+#endif
 
         OVRManagerinitialized = true;
         unifiedEvent.Send();
@@ -2619,8 +2632,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         }
 #endif
 
-#if !USING_XR_SDK_OPENXR && (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_1_OR_NEWER)
-        if (enableDynamicResolution && SystemInfo.graphicsDeviceType == GraphicsDeviceType.Vulkan)
+#if (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_1_OR_NEWER)
+        if (enableDynamicResolution && SystemInfo.graphicsDeviceType == GraphicsDeviceType.Vulkan && IsOculusLoaderActive())
         {
             Debug.LogError("Vulkan Dynamic Resolution is not supported on your current build version. Ensure you are on Unity 2021+ with the Oculus XR plugin v3.3.0+ or the Unity OpenXR plugin v1.12.1+");
             enableDynamicResolution = false;
@@ -2628,7 +2641,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 #endif
 
 #if USING_XR_SDK_OPENXR && !UNITY_Y_FLIP_FIX
-        if (enableDynamicResolution)
+        if (enableDynamicResolution && IsOpenXRLoaderActive())
         {
 #if UNITY_2021
             Debug.LogError("Dynamic Resolution is not supported on your current build version. Ensure you are using Unity 2021.3.45f1 or greater.");
@@ -3022,7 +3035,6 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             _readOnlyFastMotionModeHandPosesEnabled = fastMotionModeHandPosesEnabled;
             OVRPlugin.RequestFastMotionMode(_readOnlyFastMotionModeHandPosesEnabled);
         }
-
 
         OVRInput.Update();
         metrics.Update();

@@ -12,6 +12,8 @@
         "Oculus.VR",
         "Meta.XR.Editor.StatusMenu",
         "Meta.XR.Editor.RemoteContent",
+        "Meta.XR.Editor.Guide.Nux",
+        "Meta.XR.Editor.Guide.Welcome",
         "Meta.XR.Editor.PlayCompanion",
         "Meta.XR.ImmersiveDebugger.Editor",
         "MetaXRSimulatorCore.Editor"

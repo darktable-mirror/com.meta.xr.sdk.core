@@ -34,6 +34,7 @@ using RO = Meta.XR.RuntimeOptimizer.Core;
 
 namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 {
+    /// <summary>Aggregates runtime performance data including textures, meshes, materials, and triggered insights.</summary>
     public class InsightData
     {
 
@@ -51,6 +52,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
         private Dictionary<string, (UnityInsight, List<InsightTrigger>)> insightMap = UnityInsightsHelper.ProcessInsights();
         public Dictionary<string, InsightTrigger> insightTriggersMap = UnityInsightsHelper.ProcessTriggers();
 
+        /// <summary>Returns the number of insight categories that have at least one active trigger.</summary>
+        /// <returns>The count of triggered insight categories.</returns>
         public int NumOfTriggeredInsights()
         {
             int activeInsights = 0;
@@ -61,6 +64,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             return activeInsights;
         }
 
+        /// <summary>Returns the list of insights whose categories have at least one active trigger.</summary>
+        /// <returns>A list of triggered <see cref="UnityInsight"/> instances.</returns>
         public List<UnityInsight> GetTriggeredInsights()
         {
             List<UnityInsight> activeInsights = new List<UnityInsight>();
@@ -74,6 +79,9 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             return activeInsights;
         }
 
+        /// <summary>Adds a trigger to the specified insight category, logging a warning if the category does not exist.</summary>
+        /// <param name="category">The insight category key to add the trigger to.</param>
+        /// <param name="trigger">The <see cref="InsightTrigger"/> to associate with the category.</param>
         public void AddTriggerToCategory(string category, InsightTrigger trigger)
         {
             if (insightMap.ContainsKey(category))
@@ -86,6 +94,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             }
         }
 
+        /// <summary>Clears all collected runtime data arrays and resets all insight trigger lists.</summary>
         public void Clear()
         {
             meshVertArray.Clear();

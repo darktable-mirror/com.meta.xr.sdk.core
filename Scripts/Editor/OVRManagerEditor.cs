@@ -574,7 +574,6 @@ public class OVRManagerEditor : Editor
                 "Experimental: Defines if hand poses leverage a higher frequency capture rate."),
             ref manager.fastMotionModeHandPosesEnabled, ref modified);
 
-
         EditorGUILayout.Space();
         // Hand Tracking Settings
         OVRHandSkeletonVersion handSkeletonVersion = runtimeSettings.HandSkeletonVersion;
@@ -821,8 +820,8 @@ public class OVRManagerEditor : Editor
             );
             dynamicResolutionAvailable = false;
         }
-#if !USING_XR_SDK_OPENXR && (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_1_OR_NEWER)
-        if (!PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android))
+#if (!OCULUS_XR_3_3_0_OR_NEWER || !UNITY_2021_1_OR_NEWER)
+        if (OVRManifestPreprocessor.IsOculusLoaderActive() && !PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android))
         {
             UnityEngine.Rendering.GraphicsDeviceType[] apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.Android);
             if (apis.Length >= 1 && apis[0] == UnityEngine.Rendering.GraphicsDeviceType.Vulkan)

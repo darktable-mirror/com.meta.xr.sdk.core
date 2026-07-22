@@ -44,6 +44,7 @@ public class SystemHapticsClipImporter : ScriptedImporter
     /// Loads the raw JSON encoded string data from a <c>.systemhaptic</c> file into a <see cref="SystemHapticsClipData"/>
     /// object and imports the <see cref="SystemHapticsClipData"/> ScriptableObject into the <c>AssetDatabase</c>.
     /// </summary>
+    /// <param name="ctx">The asset import context providing the asset path and methods to register imported objects.</param>
     public override void OnImportAsset(AssetImportContext ctx)
     {
         var jsonString = File.ReadAllText(ctx.assetPath);

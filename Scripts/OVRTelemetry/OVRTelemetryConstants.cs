@@ -44,6 +44,7 @@ internal static class OVRTelemetryConstants
             public const string BatchMode = "BatchMode";
             public const string ProcessorType = "ProcessorType";
             public const string FeatureRampUpValues = "FeatureRampUpValues";
+            public const string ProjectNameHash = "project_name_hash";
             public const string FalcoMigration = "FalcoMigration";
             public const string FalcoMigrationCentral = "FalcoMigrationCentral";
             public const string FalcoMigrationEventID = "FalcoMigrationEventID";
@@ -79,6 +80,7 @@ internal static class OVRTelemetryConstants
             public const string SceneActivity = "SCENE_ACTIVITY";
             public const string SceneInactivity = "SCENE_INACTIVTY";
             public const string EditorShutdown = "EDITOR_SHUTDOWN";
+            public const string FeatureActive = "FEATURE_ACTIVE";
         }
 
         public static class AnnotationType

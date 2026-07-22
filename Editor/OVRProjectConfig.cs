@@ -32,13 +32,21 @@ using System.Linq;
 using Meta.XR.Editor.Callbacks;
 #endif // UNITY_EDITOR
 
+/// <summary>
+/// Singleton ScriptableObject storing all Meta Quest project-level settings. Controls target devices, feature support flags
+/// (hand tracking, passthrough, body/face/eye tracking, anchors, scene, etc.), Android manifest generation options,
+/// build optimizations (IL2CPP LTO, shader stripping), and splash screen configuration. Referenced by build processors
+/// and manifest generators throughout the Oculus SDK Editor tooling.
+/// </summary>
 [System.Serializable]
 #if UNITY_EDITOR
 [UnityEditor.InitializeOnLoad]
 #endif
 public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
 {
-    // Consider targetDeviceTypes when modifying
+    /// <summary>
+    /// Identifies a Meta Quest headset model for build targeting. Used by <see cref="targetDeviceTypes"/> and manifest generation.
+    /// </summary>
     public enum DeviceType
     {
         //GearVrOrGo = 0, // DEPRECATED
@@ -49,6 +57,9 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         Quest3S = 5,
     }
 
+    /// <summary>
+    /// Specifies the level of hand tracking support. Controls whether the hand tracking manifest entries are added and their required attribute.
+    /// </summary>
     public enum HandTrackingSupport
     {
         ControllersOnly = 0,
@@ -56,6 +67,9 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         HandsOnly = 2
     }
 
+    /// <summary>
+    /// Controls the hand tracking update frequency. Higher frequencies improve fast-motion tracking at the cost of additional processing.
+    /// </summary>
     public enum HandTrackingFrequency
     {
         [InspectorName("Low (Default)")]
@@ -75,18 +89,27 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         MAX = 2
     }
 
+    /// <summary>
+    /// Enables or disables spatial anchor API support. When enabled, the USE_ANCHOR_API permission is added to the Android manifest.
+    /// </summary>
     public enum AnchorSupport
     {
         Disabled = 0,
         Enabled = 1,
     }
 
+    /// <summary>
+    /// Enables or disables controller render model support. When enabled, the RENDER_MODEL feature and permission are added to the Android manifest.
+    /// </summary>
     public enum RenderModelSupport
     {
         Disabled = 0,
         Enabled = 1,
     }
 
+    /// <summary>
+    /// Specifies the level of tracked keyboard support. Controls whether the tracked keyboard manifest entries are added and their required attribute.
+    /// </summary>
     public enum TrackedKeyboardSupport
     {
         None = 0,
@@ -94,6 +117,9 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         Required = 2
     }
 
+    /// <summary>
+    /// Controls the CPU/GPU processing trade-off hint written to the Android manifest. Used by the Quest OS to optimize thermal and clock management.
+    /// </summary>
     public enum ProcessorFavor
     {
         FavorEqually = 0,
@@ -101,6 +127,10 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         FavorGPU = 1
     }
 
+    /// <summary>
+    /// Generic three-level support flag used for body tracking, face tracking, eye tracking, scene, passthrough, and other optional Quest features.
+    /// None omits the manifest entry; Supported adds it with required="false"; Required adds it with required="true".
+    /// </summary>
     public enum FeatureSupport
     {
         None = 0,
@@ -114,7 +144,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public static readonly int[] skippedSdkVersions = { 70, 73, 75, 80 };
     public static int currentSdkVersion = (OVRPlugin.wrapperVersion == null || OVRPlugin.wrapperVersion == new Version(0, 0, 0)) ? minSdkVersion : OVRPlugin.wrapperVersion.Minor;
     public static int[] horizonOsSdkVersions = Enumerable.Range(minSdkVersion, finalSdkVersion - minSdkVersion + 1)
-        .Concat(Enumerable.Range(version2Start, currentSdkVersion - version2Start + 1))
+        .Concat(currentSdkVersion >= version2Start ? Enumerable.Range(version2Start, currentSdkVersion - version2Start + 1) : Enumerable.Empty<int>())
         .Except(skippedSdkVersions)
         .ToArray();
 
@@ -186,12 +216,18 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     [SerializeField]
     internal ProcessorFavor _processorFavor = ProcessorFavor.FavorEqually;
 
+    /// <summary>
+    /// Specifies whether the system splash screen texture is mono (single image) or stereo (side-by-side for each eye).
+    /// </summary>
     public enum SystemSplashScreenType
     {
         Mono = 0,
         Stereo = 1,
     }
 
+    /// <summary>
+    /// Specifies the background environment shown during the system loading screen: solid black or contextual passthrough.
+    /// </summary>
     public enum SystemLoadingScreenBackground
     {
         Black = 0,
@@ -215,10 +251,21 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     //public const string OculusProjectConfigAssetPath = "Assets/Oculus/OculusProjectConfig.asset";
 
     private static OVRProjectConfig _cachedProjectConfig;
+    private static bool _hasReportedConfigLoadFailure;
+
+    /// <summary>
+    /// Returns the cached singleton instance of the project config, loading or creating it on first access.
+    /// </summary>
     public static OVRProjectConfig CachedProjectConfig
     {
         get
         {
+#if UNITY_EDITOR
+            if (!InitializeOnLoad.EditorReady)
+            {
+                return null;
+            }
+#endif
             if (_cachedProjectConfig == null)
             {
                 _cachedProjectConfig = GetOrCreateProjectConfig();
@@ -290,8 +337,18 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         {
             if (File.Exists(Path.GetFullPath(oculusProjectConfigAssetPath)))
             {
-                IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-project-config-exists-but-not-loaded-v2",
-                    "OVRProjectConfig exists but could not be loaded. Config values may not be available until restart.");
+                // The file exists on disk but AssetDatabase couldn't load it — try reimporting first.
+                AssetDatabase.ImportAsset(oculusProjectConfigAssetPath, ImportAssetOptions.ForceSynchronousImport);
+                projectConfig =
+                    AssetDatabase.LoadAssetAtPath(oculusProjectConfigAssetPath, typeof(OVRProjectConfig)) as
+                        OVRProjectConfig;
+
+                if (projectConfig == null && !_hasReportedConfigLoadFailure)
+                {
+                    _hasReportedConfigLoadFailure = true;
+                    IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-project-config-exists-but-not-loaded-v2",
+                        "OVRProjectConfig exists but could not be loaded. Config values may not be available until restart.");
+                }
             }
             else
             {
@@ -371,6 +428,10 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
         return projectConfig;
     }
 
+    /// <summary>
+    /// Marks the project config asset as dirty so Unity will save it on the next asset save pass.
+    /// </summary>
+    /// <param name="projectConfig">The project config instance to commit.</param>
     public static void CommitProjectConfig(OVRProjectConfig projectConfig)
     {
         string oculusProjectConfigAssetPath = ComputeOculusProjectConfigAssetPath();

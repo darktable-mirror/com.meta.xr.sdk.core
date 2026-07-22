@@ -48,7 +48,8 @@ internal static class OVREditorUtils
         Order = 99,
         AddToStatusMenu = true,
         AddToMenu = false,
-        ShowHeader = false
+        ShowHeader = false,
+        MenuCategory = MenuCategory.Header
     };
 
     static OVREditorUtils()

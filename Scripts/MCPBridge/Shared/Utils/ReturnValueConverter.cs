@@ -23,18 +23,18 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 using UnityEngine;
 
 namespace Meta.MCPBridge.Utils
 {
     internal static class ReturnValueConverter
     {
-        internal static JObject ConvertReturnValueToJObject(object returnValue)
+        internal static JsonObject ConvertReturnValueToJsonObject(object returnValue)
         {
-            if (returnValue == null) return new JObject { ["value"] = null, ["type"] = "null" };
+            if (returnValue == null) return new JsonObject { ["value"] = null, ["type"] = "null" };
 
-            var result = new JObject();
+            var result = new JsonObject();
             var valueType = returnValue.GetType();
 
             // Add type information
@@ -42,37 +42,37 @@ namespace Meta.MCPBridge.Utils
             result["fullType"] = valueType.FullName;
 
             // Convert the actual value
-            result["value"] = ConvertToJToken(returnValue);
+            result["value"] = ConvertToJsonNode(returnValue);
 
             return result;
         }
 
-        internal static JToken ConvertReturnValueToJObjectSimple(object returnValue)
+        internal static JsonNode ConvertReturnValueToJsonObjectSimple(object returnValue)
         {
-            return ConvertToJToken(returnValue);
+            return ConvertToJsonNode(returnValue);
         }
 
-        private static JToken ConvertToJToken(object value)
+        private static JsonNode ConvertToJsonNode(object value)
         {
             if (value == null)
-                return JValue.CreateNull();
+                return JsonValue.Null;
 
             var valueType = value.GetType();
 
             // Handle primitive types and strings
-            if (IsPrimitiveType(valueType)) return JToken.FromObject(value);
+            if (IsPrimitiveType(valueType)) return JsonNode.FromObject(value);
 
             // Handle DateTime specially for better serialization
-            if (valueType == typeof(DateTime) || valueType == typeof(DateTime?)) return JToken.FromObject(value);
+            if (valueType == typeof(DateTime) || valueType == typeof(DateTime?)) return JsonNode.FromObject(value);
 
             // Handle Guid
-            if (valueType == typeof(Guid) || valueType == typeof(Guid?)) return JToken.FromObject(value.ToString());
+            if (valueType == typeof(Guid) || valueType == typeof(Guid?)) return JsonNode.FromObject(value.ToString());
 
             if (valueType == typeof(Vector3) || valueType == typeof(Vector3?)) return JsonUtility.ToJson(value);
 
             // Handle enums
             if (valueType.IsEnum)
-                return new JObject
+                return new JsonObject
                 {
                     ["name"] = value.ToString(),
                     ["value"] = Convert.ToInt32(value)
@@ -82,7 +82,7 @@ namespace Meta.MCPBridge.Utils
             {
                 if (value is TypeInfo type)
                 {
-                    return JToken.FromObject(type.FullName);
+                    return JsonNode.FromObject(type.FullName);
                 }
             }
 
@@ -90,7 +90,7 @@ namespace Meta.MCPBridge.Utils
             {
                 if (value is MethodInfo type)
                 {
-                    return JToken.FromObject(type.Name);
+                    return JsonNode.FromObject(type.Name);
                 }
             }
 
@@ -98,7 +98,7 @@ namespace Meta.MCPBridge.Utils
             {
                 if (value is FieldInfo type)
                 {
-                    return JToken.FromObject(type.Name);
+                    return JsonNode.FromObject(type.Name);
                 }
             }
 
@@ -106,7 +106,7 @@ namespace Meta.MCPBridge.Utils
             {
                 if (value is MemberInfo type)
                 {
-                    return JToken.FromObject(type.Name);
+                    return JsonNode.FromObject(type.Name);
                 }
             }
 
@@ -115,7 +115,7 @@ namespace Meta.MCPBridge.Utils
                                         && Nullable.GetUnderlyingType(valueType).IsEnum)
             {
                 var underlyingType = Nullable.GetUnderlyingType(valueType);
-                return new JObject
+                return new JsonObject
                 {
                     ["name"] = value.ToString(),
                     ["value"] = Convert.ToInt32(value)
@@ -125,8 +125,8 @@ namespace Meta.MCPBridge.Utils
             // Handle collections (arrays, lists, etc.)
             if (value is IEnumerable enumerable && !(value is string))
             {
-                var jArray = new JArray();
-                foreach (var item in enumerable) jArray.Add(ConvertToJToken(item));
+                var jArray = new JsonArray();
+                foreach (var item in enumerable) jArray.Add(ConvertToJsonNode(item));
 
                 return jArray;
             }
@@ -134,11 +134,11 @@ namespace Meta.MCPBridge.Utils
             // Handle dictionaries
             if (value is IDictionary dictionary)
             {
-                var jObject = new JObject();
+                var jObject = new JsonObject();
                 foreach (DictionaryEntry entry in dictionary)
                 {
                     var key = entry.Key?.ToString() ?? "null";
-                    jObject[key] = ConvertToJToken(entry.Value);
+                    jObject[key] = ConvertToJsonNode(entry.Value);
                 }
 
                 return jObject;
@@ -149,7 +149,7 @@ namespace Meta.MCPBridge.Utils
                 (valueType.GetGenericTypeDefinition() == typeof(Dictionary<,>) ||
                  valueType.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
             {
-                var jObject = new JObject();
+                var jObject = new JsonObject();
                 var keysProperty = valueType.GetProperty("Keys");
                 var valuesProperty = valueType.GetProperty("Values");
                 var indexer = valueType.GetProperty("Item");
@@ -161,7 +161,7 @@ namespace Meta.MCPBridge.Utils
                     {
                         var keyStr = key?.ToString() ?? "null";
                         var val = indexer.GetValue(value, new[] { key });
-                        jObject[keyStr] = ConvertToJToken(val);
+                        jObject[keyStr] = ConvertToJsonNode(val);
                     }
                 }
 
@@ -169,12 +169,12 @@ namespace Meta.MCPBridge.Utils
             }
 
             // Handle complex objects using reflection
-            return ConvertComplexObjectToJObject(value);
+            return ConvertComplexObjectToJsonObject(value);
         }
 
-        private static JObject ConvertComplexObjectToJObject(object obj)
+        private static JsonObject ConvertComplexObjectToJsonObject(object obj)
         {
-            var jObject = new JObject();
+            var jObject = new JsonObject();
             var type = obj.GetType();
 
             // Get all internal properties
@@ -190,7 +190,7 @@ namespace Meta.MCPBridge.Utils
                     // Use camelCase for JSON property names
                     var jsonPropertyName = char.ToLowerInvariant(propertyName[0]) + propertyName.Substring(1);
 
-                    jObject[jsonPropertyName] = ConvertToJToken(propertyValue);
+                    jObject[jsonPropertyName] = ConvertToJsonNode(propertyValue);
                 }
                 catch (Exception ex)
                 {
@@ -211,7 +211,7 @@ namespace Meta.MCPBridge.Utils
                         // Use camelCase for JSON field names
                         var jsonFieldName = char.ToLowerInvariant(fieldName[0]) + fieldName.Substring(1);
 
-                        jObject[jsonFieldName] = ConvertToJToken(fieldValue);
+                        jObject[jsonFieldName] = ConvertToJsonNode(fieldValue);
                     }
                     catch (Exception ex)
                     {

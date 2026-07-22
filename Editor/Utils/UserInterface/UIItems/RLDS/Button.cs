@@ -29,13 +29,15 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         public bool Hide { get; set; }
         public bool Disable { get; set; }
         public bool Invisible { get; set; }
+        public TextureContent LeftIcon { get; set; }
+        public TextureContent RightIcon { get; set; }
 
         private readonly GUIStyle _containerStyle;
         private readonly ButtonStyle _buttonStyle;
         private readonly GUIStyle _textStyle;
         private readonly ActionLinkDescription _action;
-        private readonly Props.ButtonVariant _variant;
-        private readonly Props.ButtonSize _size;
+        private readonly RLDSConstants.ButtonVariant _variant;
+        private readonly RLDSConstants.ButtonSize _size;
         private UnityEngine.UIElements.Button _button;
 
         public Button(ActionLinkDescription action, ButtonStyle buttonStyle, int fixedWidth = 0)
@@ -77,7 +79,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
                 RLDS.Styles.Spacing.Space3XS, RLDS.Styles.Spacing.Space3XS);
         }
 
-        public Button(ActionLinkDescription action, Props.ButtonVariant variant, Props.ButtonSize size)
+        public Button(ActionLinkDescription action, RLDSConstants.ButtonVariant variant, RLDSConstants.ButtonSize size)
         {
             _action = action;
             _variant = variant;
@@ -100,6 +102,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
                 Vector4.zero, _buttonStyle.CornerRadius);
             if (GUI.Button(rect, _action.Content, _textStyle))
             {
+                SendClickTelemetry();
                 _action.Action?.Invoke();
             }
 
@@ -119,13 +122,42 @@ namespace Meta.XR.Editor.UserInterface.RLDS
                 return _button;
             }
 
-            _button = new UnityEngine.UIElements.Button(() => _action.Action?.Invoke())
+            _button = new UnityEngine.UIElements.Button(() =>
             {
-                text = _action.Content.text
-            };
+                SendClickTelemetry();
+                _action.Action?.Invoke();
+            });
 
             var cssClass = GetRLDSStyleClass();
             _button.AddToClassList(cssClass);
+
+            var hasLeftIcon = LeftIcon != null;
+            var hasRightIcon = RightIcon != null;
+
+            if (hasLeftIcon || hasRightIcon)
+            {
+                _button.AddToClassList(RLDSConstants.Button.WithIcon);
+
+                if (hasLeftIcon)
+                {
+                    AddIconElement(_button, LeftIcon, RLDSConstants.Button.IconLeft);
+                }
+
+                if (!string.IsNullOrEmpty(_action.Content.text))
+                {
+                    var label = new UnityEngine.UIElements.Label(_action.Content.text);
+                    _button.Add(label);
+                }
+
+                if (hasRightIcon)
+                {
+                    AddIconElement(_button, RightIcon, RLDSConstants.Button.IconRight);
+                }
+            }
+            else
+            {
+                _button.text = _action.Content.text;
+            }
 
             if (Disable)
             {
@@ -133,6 +165,28 @@ namespace Meta.XR.Editor.UserInterface.RLDS
             }
 
             return _button;
+        }
+
+        // Emits the generic RLDS click event. The legacy IMGUI path bypassed LinkDescription.Click(),
+        // so without this the UIToolkit Button produced no EDITOR_LINK_CLICKED telemetry at all.
+        private void SendClickTelemetry()
+        {
+            RLDSTelemetry.SendInteraction(
+                _button,
+                GetType().Name,
+                _action.Id,
+                _action.Label,
+                _action.Origin,
+                _action.OriginData?.Id,
+                actionData: _action.ActionData?.Id);
+        }
+
+        private void AddIconElement(VisualElement parent, TextureContent icon, string positionClass)
+        {
+            var iconElement = new VisualElement();
+            iconElement.AddToClassList(positionClass);
+            icon.RegisterToImageLoaded(tex => iconElement.style.backgroundImage = tex as Texture2D);
+            parent.Add(iconElement);
         }
 
         /// <summary>

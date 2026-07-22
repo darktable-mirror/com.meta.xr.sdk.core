@@ -22,14 +22,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Meta.MCPBridge.Attributes;
 using Meta.MCPBridge.Definitions;
 using Meta.MCPBridge.Registries;
 using Meta.MCPBridge.Schemas;
 using Meta.MCPBridge.Services;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 using UnityEngine;
 
 namespace Meta.MCPBridge
@@ -50,6 +50,22 @@ namespace Meta.MCPBridge
         private Dictionary<string, Type> _toolTypes;
         private Dictionary<string, object> _toolInstances;
         private bool _initialized;
+        private SynchronizationContext _mainThreadContext;
+
+        // Captured once on the main thread before background work begins.
+        // This survives regardless of which thread first accesses the singleton.
+        private static SynchronizationContext s_unitySyncContext;
+
+        /// <summary>
+        /// Captures the current thread's SynchronizationContext for later use
+        /// when EnsureInitialized() is called from background threads.
+        /// Must be called from the main thread before background work begins.
+        /// Called by HttpMcpServer.Start() (Editor) and ToolProviderClient.ConnectAsync() (Runtime).
+        /// </summary>
+        internal static void CaptureMainThreadContext()
+        {
+            s_unitySyncContext = SynchronizationContext.Current;
+        }
 
         /// <summary>
         /// Gets the registry of all available MCP tools that can be called by AI assistants.
@@ -71,6 +87,13 @@ namespace Meta.MCPBridge
         /// </summary>
         public void EnsureInitialized()
         {
+            // Prefer the context captured at startup via RuntimeInitializeOnLoadMethod.
+            // Fall back to SynchronizationContext.Current when called from the main thread.
+            if (_mainThreadContext == null)
+            {
+                _mainThreadContext = s_unitySyncContext ?? SynchronizationContext.Current;
+            }
+
             if (_initialized)
                 return;
 
@@ -184,7 +207,7 @@ namespace Meta.MCPBridge
         /// <summary>
         /// Execute a tool method with the given arguments.
         /// </summary>
-        public async Task<ResultSchema> ExecuteToolCall(string toolName, string methodName, JObject arguments)
+        public async Task<ResultSchema> ExecuteToolCall(string toolName, string methodName, JsonObject arguments)
         {
             EnsureInitialized();
 
@@ -206,32 +229,11 @@ namespace Meta.MCPBridge
 
             var parameters = BuildParameters(method, arguments);
 
-            object result;
-            try
+            using (OVRSilentMode.Enter())
             {
-                result = method.Invoke(instance, parameters);
+                var result = await InvokeOnMainThread(method, instance, parameters);
+                return ConvertToResultSchema(result);
             }
-            catch (TargetInvocationException ex)
-            {
-                throw ex.InnerException ?? ex;
-            }
-
-            if (result is Task task)
-            {
-                await task;
-                var taskType = task.GetType();
-                if (taskType.IsGenericType)
-                {
-                    var resultProperty = taskType.GetProperty("Result");
-                    result = resultProperty?.GetValue(task);
-                }
-                else
-                {
-                    result = null;
-                }
-            }
-
-            return ConvertToResultSchema(result);
         }
 
         #endregion
@@ -260,7 +262,7 @@ namespace Meta.MCPBridge
         /// <summary>
         /// Get a prompt by name with arguments using the PromptRegistry.
         /// </summary>
-        public async Task<ResultSchema> ExecutePromptGet(string name, JObject arguments)
+        public async Task<ResultSchema> ExecutePromptGet(string name, JsonObject arguments)
         {
             if (string.IsNullOrEmpty(name))
                 throw new ArgumentNullException(nameof(name));
@@ -277,6 +279,91 @@ namespace Meta.MCPBridge
 
         #endregion
 
+        /// <summary>
+        /// Invokes a method on the Unity main thread via SynchronizationContext.
+        /// MCP tool calls arrive on background HTTP threads, but most Unity APIs
+        /// (EditorUserBuildSettings, AssetDatabase, etc.) are main-thread-only.
+        ///
+        /// If the invoked method returns a Task (i.e. it is async), that Task is
+        /// awaited on the main thread so that continuations which require the main
+        /// thread (e.g. Unity Editor API calls inside async methods) can execute
+        /// without deadlocking.
+        /// </summary>
+        private Task<object> InvokeOnMainThread(MethodInfo method, object instance, object[] parameters)
+        {
+            if (_mainThreadContext == null)
+            {
+                Debug.LogWarning("[LocalExecutor] No main thread SynchronizationContext captured — " +
+                    $"executing {method.DeclaringType?.Name}.{method.Name} on calling thread. " +
+                    "Unity APIs may fail if this is not the main thread.");
+                return InvokeAndUnwrap(method, instance, parameters);
+            }
+
+            var tcs = new TaskCompletionSource<object>();
+            _mainThreadContext.Post(async _ =>
+            {
+                try
+                {
+                    var result = method.Invoke(instance, parameters);
+                    if (result is Task task)
+                    {
+                        await task;
+                        tcs.TrySetResult(GetTaskResult(task));
+                    }
+                    else
+                    {
+                        tcs.TrySetResult(result);
+                    }
+                }
+                catch (TargetInvocationException ex)
+                {
+                    tcs.TrySetException(ex.InnerException ?? ex);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            }, null);
+            return tcs.Task;
+        }
+
+        /// <summary>
+        /// Fallback path when no SynchronizationContext is available.
+        /// Invokes the method directly and unwraps any Task result.
+        /// </summary>
+        private static async Task<object> InvokeAndUnwrap(MethodInfo method, object instance, object[] parameters)
+        {
+            try
+            {
+                var result = method.Invoke(instance, parameters);
+                if (result is Task task)
+                {
+                    await task;
+                    return GetTaskResult(task);
+                }
+                return result;
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw ex.InnerException ?? ex;
+            }
+        }
+
+        /// <summary>
+        /// Extracts the result value from a completed Task.
+        /// Returns null for non-generic Task (void-returning async methods).
+        /// </summary>
+        private static object GetTaskResult(Task task)
+        {
+            var taskType = task.GetType();
+            if (taskType.IsGenericType)
+            {
+                var resultProperty = taskType.GetProperty("Result");
+                return resultProperty?.GetValue(task);
+            }
+            return null;
+        }
+
         #region Internal Helpers
 
         private object GetOrCreateInstance(string toolName, Type toolType)
@@ -286,7 +373,19 @@ namespace Meta.MCPBridge
                 return existing;
             }
 
-            var instanceProperty = toolType.GetProperty("instance",
+            var concreteType = toolType;
+            if (toolType.IsInterface || toolType.IsAbstract)
+            {
+                concreteType = FindConcreteImplementation(toolType);
+                if (concreteType == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Tool '{toolName}' is defined on {(toolType.IsInterface ? "interface" : "abstract class")} " +
+                        $"'{toolType.Name}' but no concrete implementation was found.");
+                }
+            }
+
+            var instanceProperty = concreteType.GetProperty("instance",
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
             if (instanceProperty != null)
             {
@@ -298,9 +397,40 @@ namespace Meta.MCPBridge
                 }
             }
 
-            var newInstance = Activator.CreateInstance(toolType);
+            var newInstance = Activator.CreateInstance(concreteType);
             _toolInstances[toolName] = newInstance;
             return newInstance;
+        }
+
+        private static Type FindConcreteImplementation(Type interfaceOrAbstractType)
+        {
+            var definingAssembly = interfaceOrAbstractType.Assembly;
+            Type fallback = null;
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    foreach (var type in assembly.GetTypes())
+                    {
+                        if (!type.IsInterface && !type.IsAbstract &&
+                            interfaceOrAbstractType.IsAssignableFrom(type))
+                        {
+                            if (assembly == definingAssembly)
+                            {
+                                return type;
+                            }
+
+                            fallback ??= type;
+                        }
+                    }
+                }
+                catch (ReflectionTypeLoadException)
+                {
+                }
+            }
+
+            return fallback;
         }
 
         private MethodInfo FindMethod(Type toolType, string methodName)
@@ -319,7 +449,7 @@ namespace Meta.MCPBridge
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
         }
 
-        private object[] BuildParameters(MethodInfo method, JObject arguments)
+        private object[] BuildParameters(MethodInfo method, JsonObject arguments)
         {
             var paramInfos = method.GetParameters();
             var parameters = new object[paramInfos.Length];
@@ -329,7 +459,7 @@ namespace Meta.MCPBridge
                 var paramInfo = paramInfos[i];
                 var paramName = paramInfo.Name;
 
-                JToken argValue = null;
+                JsonNode argValue = null;
                 foreach (var prop in arguments.Properties())
                 {
                     if (string.Equals(prop.Name, paramName, StringComparison.OrdinalIgnoreCase))
@@ -339,7 +469,7 @@ namespace Meta.MCPBridge
                     }
                 }
 
-                if (argValue == null || argValue.Type == JTokenType.Null)
+                if (argValue == null || argValue.Type == JsonNodeType.Null)
                 {
                     if (paramInfo.HasDefaultValue)
                     {
@@ -358,7 +488,8 @@ namespace Meta.MCPBridge
                 {
                     try
                     {
-                        parameters[i] = argValue.ToObject(paramInfo.ParameterType);
+                        parameters[i] = Utils.ArgumentConverter.ConvertJsonNodeToType(
+                            argValue, paramInfo.ParameterType);
                     }
                     catch (Exception ex)
                     {
@@ -373,7 +504,7 @@ namespace Meta.MCPBridge
 
         private ToolCallResultSchema ConvertToResultSchema(object result)
         {
-            var responseData = new JObject
+            var responseData = new JsonObject
             {
                 ["success"] = true
             };
@@ -386,11 +517,11 @@ namespace Meta.MCPBridge
                 }
                 else if (result.GetType().IsPrimitive)
                 {
-                    responseData["return value"] = JToken.FromObject(result);
+                    responseData["return value"] = JsonNode.FromObject(result);
                 }
                 else
                 {
-                    responseData["return value"] = JToken.FromObject(result);
+                    responseData["return value"] = JsonNode.FromObject(result);
                 }
             }
 
@@ -400,13 +531,22 @@ namespace Meta.MCPBridge
                 {
                     new ToolCallDataSchema
                     {
-                        Text = responseData.ToString(Formatting.None)
+                        Text = responseData.ToString(JsonFormatting.None)
                     }
                 }
             };
         }
 
         #endregion
+
+        /// <summary>
+        /// Check if a tool with the given name exists locally.
+        /// </summary>
+        public bool HasTool(string toolName)
+        {
+            EnsureInitialized();
+            return _toolTypes.ContainsKey(toolName);
+        }
 
         /// <summary>
         /// Get the list of available tools (for debugging/status).

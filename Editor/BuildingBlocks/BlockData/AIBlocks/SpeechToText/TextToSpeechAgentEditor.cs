@@ -23,6 +23,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the text-to-speech agent component.
+    /// </summary>
     [CustomEditor(typeof(TextToSpeechAgent))]
     public sealed class TextToSpeechAgentEditor : UnityEditor.Editor
     {
@@ -41,6 +44,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _onSpeakFinished = serializedObject.FindProperty("onSpeakFinished");
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the text-to-speech agent.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             var agent = (TextToSpeechAgent)target;

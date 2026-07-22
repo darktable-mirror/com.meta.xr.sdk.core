@@ -47,5 +47,5 @@ MonoBehaviour:
 
     More troubleshooting
     guide in https://developer.oculus.com/documentation/unity/unity-ssa-ts/.'
-  featureDocumentationName: Multiplayer Building Blocks Setup Guide
-  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/bb-multiplayer-blocks
+  featureDocumentationName: Colocation Overview
+  featureDocumentationUrl: https://developers.meta.com/horizon/documentation/unity/unity-colocation-overview/

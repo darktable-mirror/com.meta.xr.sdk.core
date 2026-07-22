@@ -22,8 +22,6 @@
 using Meta.XR.ImmersiveDebugger;
 using Oculus.Voice.Dictation;
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.DevAgent
@@ -39,6 +37,11 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         private string _partial;
         [DebugMember(Category = "Voice Integration")]
         private string _concatenatedFull = "";
+        private readonly DictationTranscriptAccumulator _accumulator = new DictationTranscriptAccumulator();
+        // Tracks the logical push-to-talk session, independent of experience.Active, so a release
+        // still finalizes after the SDK auto-stops (timeout/inactivity) and so transcription
+        // callbacks that arrive between sessions are ignored.
+        private bool _sessionActive;
         [DebugMember(Category = "Voice Integration")]
         private bool micActive => experience.MicActive;
         [DebugMember(Category = "Voice Integration")]
@@ -52,8 +55,8 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         // Events for live transcription
         internal event Action<string> OnPartialTranscriptionUpdate;
         internal event Action<string> OnTranscriptionFinalized;
-
-        private TaskCompletionSource<string> _transcriptionCompletionSource;
+        // Fired when the dictation service / Wit request fails (e.g. auth/quota/network).
+        internal event Action<string> OnDictationError;
 
         [DebugMember(Category = "Voice Integration")]
         private string _lastEvent;
@@ -79,6 +82,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             experience.DictationEvents.OnStoppedListeningDueToInactivity.AddListener(() => { LastEvent = "OnStoppedListeningDueToInactivity"; });
             experience.DictationEvents.OnStoppedListeningDueToTimeout.AddListener(() => { LastEvent = "OnStoppedListeningDueToTimeout"; });
             experience.DictationEvents.OnMicAudioLevelChanged.AddListener(OnMicAudioLevelChanged);
+            experience.DictationEvents.OnError.AddListener(OnDictationServiceError);
         }
 
         private void OnMicAudioLevelChanged(float level)
@@ -86,68 +90,107 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             _currentMicLevel = level;
         }
 
+        private void OnDictationServiceError(string errorType, string errorMessage)
+        {
+            LastEvent = "OnError";
+            // The request failed (auth/quota/network) — end the logical session so a later release
+            // doesn't try to finalize, and surface the reason to the UI.
+            _sessionActive = false;
+            _accumulator.Reset();
+            var detail = !string.IsNullOrEmpty(errorMessage) ? errorMessage : errorType;
+            OnDictationError?.Invoke(detail);
+        }
+
         [DebugMember(Category = "Voice Integration")]
+        internal void Toggle()
+        {
+            Toggle(!_sessionActive);
+        }
+
         internal void Toggle(bool activate)
         {
-            if (activate && !experience.Active)
+            if (activate)
             {
+                if (_sessionActive)
+                {
+                    return;
+                }
+                _sessionActive = true;
                 // activating it, resetting all transcriptions
                 _full = "";
                 _partial = "";
                 _concatenatedFull = "";
-                experience.ActivateImmediately();
+                _accumulator.Reset();
+                if (!experience.Active)
+                {
+                    experience.ActivateImmediately();
+                }
             }
-            else if (!activate && experience.Active)
+            else
+            {
+                if (!_sessionActive)
+                {
+                    return;
+                }
+                _sessionActive = false;
+                if (experience.Active)
+                {
+                    experience.Deactivate();
+                }
+                // stopping, finalize the transcription (falls back to the last partial if no final
+                // arrived before release, so a quick utterance is sent rather than dropped). Driven by
+                // the logical session, not experience.Active, so a release after the SDK auto-stops
+                // (timeout/inactivity) still finalizes instead of leaving the prompt stuck.
+                OnTranscriptionFinalized?.Invoke(_accumulator.GetFinalTranscript());
+            }
+        }
+
+        /// <summary>
+        /// Abandon the current session without emitting a transcript — used when the conversation is
+        /// cleared or the headset is doffed mid-dictation, so a stale utterance is not sent and the
+        /// session does not stay stuck active.
+        /// </summary>
+        internal void Cancel()
+        {
+            if (!_sessionActive)
+            {
+                return;
+            }
+            _sessionActive = false;
+            if (experience.Active)
             {
                 experience.Deactivate();
-                // stopping, finalize the transcription
-                OnTranscriptionFinalized?.Invoke(_concatenatedFull);
             }
+            _accumulator.Reset();
         }
 
         private void OnPartialTranscription(string transcription)
         {
+            // Ignore callbacks that arrive outside an active session (e.g. a late emission from the
+            // previous utterance after a quick re-press) so they don't leak into the next prompt.
+            if (!_sessionActive)
+            {
+                return;
+            }
+
             _partial = transcription;
 
             // Notify listeners of partial transcription update
             // This will be the full message with all previous full concatenated + current partial
-            string combined = _concatenatedFull + transcription;
+            string combined = _accumulator.OnPartial(transcription);
             OnPartialTranscriptionUpdate?.Invoke(combined);
         }
 
         private void OnFullTranscription(string transcription)
         {
+            if (!_sessionActive)
+            {
+                return;
+            }
+
             _full = transcription;
-            _concatenatedFull += transcription + ". ";
-            _transcriptionCompletionSource?.SetResult(transcription);
-        }
-
-        internal async Task<string> FetchTranscription(CancellationToken cancellationToken = default)
-        {
-            // If we already have a full transcription, return it immediately
-            if (!string.IsNullOrEmpty(_full))
-            {
-                return _full;
-            }
-
-            // Create a new TaskCompletionSource to wait for the transcription
-            _transcriptionCompletionSource = new TaskCompletionSource<string>();
-
-            // Register cancellation callback
-            using (cancellationToken.Register(() => _transcriptionCompletionSource?.TrySetCanceled()))
-            {
-                try
-                {
-                    // Wait for the transcription to complete without busy looping
-                    return await _transcriptionCompletionSource.Task;
-                }
-                catch (OperationCanceledException)
-                {
-                    // Clean up and re-throw
-                    _transcriptionCompletionSource = null;
-                    throw;
-                }
-            }
+            _accumulator.CommitFull(transcription);
+            _concatenatedFull = _accumulator.GetFinalTranscript();
         }
     }
 }

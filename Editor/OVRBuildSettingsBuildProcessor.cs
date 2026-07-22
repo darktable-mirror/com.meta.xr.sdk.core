@@ -26,9 +26,16 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.Compilation;
 using UnityEditor;
 
+/// <summary>
+/// Build preprocessor that manages IL2CPP Link-Time Optimization (LTO) flags for Android release builds.
+/// Automatically adds or removes the -flto=thin compiler flag based on the OVRProjectConfig.enableIL2CPPLTO setting.
+/// </summary>
 public class OVRBuildSettingsBuildProcessor : IPreprocessBuildWithReport
 
 {
+    /// <summary>
+    /// Gets the execution order for this build preprocessor callback.
+    /// </summary>
     public int callbackOrder => 0;
 
     // Spaces were added here to make this string unique, so we do not overwrite what devs set themselves.
@@ -60,6 +67,10 @@ public class OVRBuildSettingsBuildProcessor : IPreprocessBuildWithReport
         return args;
     }
 
+    /// <summary>
+    /// Called before a build starts. Adds or removes IL2CPP LTO compiler flags depending on project configuration and build target.
+    /// </summary>
+    /// <param name="report">The build report containing build target and configuration details.</param>
     public void OnPreprocessBuild(BuildReport report)
     {
         var projectConfig = OVRProjectConfig.CachedProjectConfig;

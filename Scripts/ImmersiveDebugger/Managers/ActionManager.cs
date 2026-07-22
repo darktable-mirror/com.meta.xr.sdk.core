@@ -49,7 +49,9 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             foreach (var method in methods)
             {
                 var actionAttribute = method.GetCustomAttribute<DebugMember>();
-                if (actionAttribute != null)
+                if (actionAttribute != null
+                    && method.GetParameters().Length == 0
+                    && method.ReturnType == typeof(void))
                 {
                     actionList.Add((method, actionAttribute));
                 }

@@ -146,6 +146,11 @@
             "define": "URP_17_OR_NEWER"
         },
         {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.5.0",
+            "define": "URP_17_5_OR_NEWER"
+        },
+        {
             "name": "com.unity.xr.openxr",
             "expression": "1.11.0",
             "define": "UNITY_OPENXR_PLUGIN_1_11_0_OR_NEWER"
@@ -172,7 +177,7 @@
         },
         {
             "name": "com.unity.xr.openxr",
-            "expression": "1.17.0",
+            "expression": "1.17.0-pre.2",
             "define": "UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER"
         },
         {

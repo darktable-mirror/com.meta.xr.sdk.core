@@ -250,14 +250,7 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 foreach (var p in predictions)
                 {
                     if (p.score < minConfidence || p.box == null || p.box.Length < 4) continue;
-
-                    _batch.Add(new BoxData
-                    {
-                        position = new Vector3(p.box[0] * scaleX, p.box[1] * scaleY, 0),
-                        scale = new Vector3(p.box[2] * scaleX, p.box[3] * scaleY, 0),
-                        rotation = Quaternion.identity,
-                        label = $"{p.label} {p.score:0.00}"
-                    });
+                    _batch.Add(BuildBoxData(p, scaleX, scaleY));
                 }
 
                 OnBoxesUpdated?.Invoke(_batch);
@@ -267,5 +260,25 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         }
 #endif
 
+        /// <summary>
+        /// Builds a <see cref="BoxData"/> from a single provider prediction.
+        /// Provider boxes are in corner format (xmin, ymin, xmax, ymax) in camera-texture
+        /// pixel coords; <c>scaleX</c>/<c>scaleY</c> apply any encoded-resolution rescale used
+        /// by the cloud path. Exposed as static so the format invariant can be unit-tested
+        /// without instantiating the MonoBehaviour.
+        /// </summary>
+        internal static BoxData BuildBoxData(
+            AIProviderBase.ObjectDetectionPrediction p,
+            float scaleX,
+            float scaleY)
+        {
+            return new BoxData
+            {
+                position = new Vector3(p.box[0] * scaleX, p.box[1] * scaleY, 0),
+                scale = new Vector3(p.box[2] * scaleX, p.box[3] * scaleY, 0),
+                rotation = Quaternion.identity,
+                label = $"{p.label} {p.score:0.00}"
+            };
+        }
     }
 }

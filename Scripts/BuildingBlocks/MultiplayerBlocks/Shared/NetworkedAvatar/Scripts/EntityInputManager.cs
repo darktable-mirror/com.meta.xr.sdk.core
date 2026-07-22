@@ -29,10 +29,12 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 #if META_AVATAR_SDK_28_OR_NEWER
         protected override void OnTrackingInitialized()
         {
+#pragma warning disable CS0618 // OvrAvatarBodyTrackingContext is obsolete in SDK 31+ but still functional
             if (BodyTrackingContext is not OvrAvatarBodyTrackingContext bodyTracking)
             {
                 return;
             }
+#pragma warning restore CS0618
 
             bodyTracking.InputTrackingDelegate = new InputTrackingDelegate(null);
             bodyTracking.InputControlDelegate = new InputControlDelegate();

@@ -157,7 +157,7 @@ namespace Meta.XR.Editor.UserInterface
                         marginLeft = 4
                     }
                 };
-                label.AddToClassList(Props.Typography.Body2SupportingText);
+                label.AddToClassList(RLDSConstants.Typography.Body2SupportingText);
                 _container.Add(label);
             }
 

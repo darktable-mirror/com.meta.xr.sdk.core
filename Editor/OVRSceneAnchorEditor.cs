@@ -22,6 +22,10 @@ using System;
 using UnityEditor;
 
 
+/// <summary>
+/// Custom inspector for OVRSceneAnchor components. Displays read-only UUID and tracking state.
+/// Deprecated: use the MR Utility Kit (MRUK) scene anchor system instead.
+/// </summary>
 [CustomEditor(typeof(OVRSceneAnchor))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
 public class OVRSceneAnchorEditor : UnityEditor.Editor
@@ -35,6 +39,9 @@ public class OVRSceneAnchorEditor : UnityEditor.Editor
         _script = MonoScript.FromMonoBehaviour(_object);
     }
 
+    /// <summary>
+    /// Draws the OVRSceneAnchor inspector showing UUID and tracking status as read-only fields.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         serializedObject.Update();

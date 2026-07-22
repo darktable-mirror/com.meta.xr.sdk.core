@@ -38,6 +38,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     /// </summary>
     public static class CredentialEditorUtil
     {
+        /// <summary>
+        /// Gets the existing credential storage asset in the project, or null if none exists.
+        /// </summary>
         public static CredentialStorage StorageOrNull => FindExistingOrNull();
 
         /// <summary>
@@ -162,6 +165,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             return entry;
         }
 
+        /// <summary>
+        /// Ensures that a credential entry exists in the storage for the specified provider, creating one if missing.
+        /// </summary>
+        /// <param name="storage">The credential storage to check and update.</param>
+        /// <param name="providerId">The identifier of the provider to ensure an entry for.</param>
         public static void EnsureProviderEntry(CredentialStorage storage, string providerId)
         {
             if (!storage)
@@ -179,6 +187,12 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             EditorUtility.SetDirty(storage);
         }
 
+        /// <summary>
+        /// Sets the API key for a provider entry in the storage, but only if the entry's key is currently empty.
+        /// </summary>
+        /// <param name="storage">The credential storage containing the provider entry.</param>
+        /// <param name="providerId">The identifier of the provider whose key to seed.</param>
+        /// <param name="key">The API key value to set if the existing key is empty.</param>
         public static void SeedKeyIfEmpty(CredentialStorage storage, string providerId, string key)
         {
             if (!storage || string.IsNullOrEmpty(key))
@@ -201,6 +215,11 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             EditorUtility.SetDirty(storage);
         }
 
+        /// <summary>
+        /// Retrieves the stored API key for the given provider asset from credential storage, performing legacy ID migration if needed.
+        /// </summary>
+        /// <param name="providerAsset">The provider asset to look up the key for.</param>
+        /// <returns>The stored API key, or an empty string if not found.</returns>
         public static string GetStorageKey(AIProviderBase providerAsset)
         {
             var pid = GetProviderId(providerAsset);
@@ -208,6 +227,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             return e != null ? e.apiKey : string.Empty;
         }
 
+        /// <summary>
+        /// Selects and highlights the credential storage asset in the Unity Project window.
+        /// </summary>
         public static void PingStorageAsset()
         {
             var storage = StorageOrNull;

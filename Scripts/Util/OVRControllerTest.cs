@@ -227,7 +227,7 @@ public class OVRControllerTest : MonoBehaviour
         Quaternion rot = OVRInput.GetLocalControllerRotation(activeController);
         data.AppendFormat("Orientation: ({0:F2}, {1:F2}, {2:F2}, {3:F2})\n", rot.x, rot.y, rot.z, rot.w);
 
-        Vector3 angVel = OVRInput.GetLocalControllerAngularVelocity(activeController);
+        Vector3 angVel = OVRInput.GetLocalControllerAngularVelocityCw(activeController);
         data.AppendFormat("AngVel: ({0:F2}, {1:F2}, {2:F2})\n", angVel.x, angVel.y, angVel.z);
 
 #pragma warning disable CS0618 // Type or member is obsolete

@@ -353,11 +353,16 @@ public class OVROverlayCanvasEditor : Editor
         {
             bool depthSubmissionEnabled = false;
 #if USING_XR_SDK_OPENXR && UNITY_ANDROID
-            depthSubmissionEnabled = (UnityEngine.XR.OpenXR.OpenXRSettings.Instance.depthSubmissionMode !=
-                                      UnityEngine.XR.OpenXR.OpenXRSettings.DepthSubmissionMode.None);
-#elif USING_XR_SDK_OCULUS
-            if (UnityEditor.EditorBuildSettings.TryGetConfigObject<Unity.XR.Oculus.OculusSettings>(
-                "Unity.XR.Oculus.Settings", out var settings))
+            if (OVRManifestPreprocessor.IsOpenXRLoaderActive())
+            {
+                depthSubmissionEnabled = (UnityEngine.XR.OpenXR.OpenXRSettings.Instance.depthSubmissionMode !=
+                                          UnityEngine.XR.OpenXR.OpenXRSettings.DepthSubmissionMode.None);
+            }
+#endif
+#if USING_XR_SDK_OCULUS
+            if (OVRManifestPreprocessor.IsOculusLoaderActive() &&
+                UnityEditor.EditorBuildSettings.TryGetConfigObject<Unity.XR.Oculus.OculusSettings>(
+                    "Unity.XR.Oculus.Settings", out var settings))
             {
                 depthSubmissionEnabled = settings.DepthSubmission;
             }

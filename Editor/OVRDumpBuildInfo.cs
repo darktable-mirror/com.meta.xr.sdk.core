@@ -28,21 +28,39 @@ using UnityEditor;
 using UnityEngine;
 
 
+/// <summary>
+/// Build processor that writes build metadata (timestamp, revision hash) to a runtime-loadable text asset and
+/// manages input action binding files in StreamingAssets. Prepares bindings before build and cleans up after.
+/// </summary>
 public class OVRDumpBuildInfo : IPreprocessBuildWithReport, IPostprocessBuildWithReport
 {
+    /// <summary>
+    /// Gets the execution order for this build preprocessor callback.
+    /// </summary>
     public int callbackOrder => 0;
 
+    /// <summary>
+    /// Called before a build. Writes build info (internal builds only) and prepares runtime input action bindings on disk.
+    /// </summary>
+    /// <param name="report">The build report containing build target and configuration details.</param>
     public void OnPreprocessBuild(BuildReport report)
     {
         PrepareRuntimeActionBindings();
     }
 
+    /// <summary>
+    /// Writes runtime input action bindings to the StreamingAssets directory so they are available at runtime.
+    /// </summary>
     public static void PrepareRuntimeActionBindings()
     {
         // Save to streaming assets dir.
         Meta.XR.InputActions.RuntimeSettings.UpdateBindingsOnDisk();
     }
 
+    /// <summary>
+    /// Called after a build completes. Cleans up generated binding files from StreamingAssets and copies them to the standalone build output on PC.
+    /// </summary>
+    /// <param name="report">The build report containing the output path and platform group.</param>
     public void OnPostprocessBuild(BuildReport report)
     {
         // Copy path from streaming assets folder to root directory.

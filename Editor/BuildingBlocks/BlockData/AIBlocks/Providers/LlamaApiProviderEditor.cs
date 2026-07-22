@@ -23,6 +23,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the Llama API provider.
+    /// </summary>
     [CustomEditor(typeof(LlamaApiProvider))]
     public class LlamaApiProviderEditor : AIProviderEditorBase
     {
@@ -71,6 +74,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             TestConnection(config.Endpoint, config.Model, config.ProviderId);
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the Llama API provider.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

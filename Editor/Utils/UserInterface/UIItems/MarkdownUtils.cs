@@ -166,31 +166,31 @@ namespace Meta.XR.Editor.UserInterface
                 if (line.StartsWith("### "))
                 {
                     var headingText = line.Substring(4).Trim();
-                    items.Add(new Label(headingText, Props.Typography.Heading4));
+                    items.Add(new Label(headingText, RLDSConstants.Typography.Heading4));
                 }
                 else if (line.StartsWith("## "))
                 {
                     var headingText = line.Substring(3).Trim();
-                    items.Add(new Label(headingText, Props.Typography.Heading3));
+                    items.Add(new Label(headingText, RLDSConstants.Typography.Heading3));
                 }
                 else if (line.StartsWith("# "))
                 {
                     var headingText = line.Substring(2).Trim();
-                    items.Add(new Label(headingText, Props.Typography.Heading2));
+                    items.Add(new Label(headingText, RLDSConstants.Typography.Heading2));
                 }
                 else if (line.StartsWith("-- "))
                 {
                     var bulletText = "    ◦ " + line.Substring(3);
-                    items.Add(new Label(bulletText, Props.Typography.Body1Text));
+                    items.Add(new Label(bulletText, RLDSConstants.Typography.Body1Text));
                 }
                 else if (line.StartsWith("- "))
                 {
                     var bulletText = "• " + line.Substring(2);
-                    items.Add(new Label(bulletText, Props.Typography.Body1Text));
+                    items.Add(new Label(bulletText, RLDSConstants.Typography.Body1Text));
                 }
                 else
                 {
-                    items.Add(new Label(line, Props.Typography.Body1Text));
+                    items.Add(new Label(line, RLDSConstants.Typography.Body1Text));
                 }
             }
 
@@ -308,15 +308,17 @@ namespace Meta.XR.Editor.UserInterface
     {
         private readonly string _code;
         private readonly string _language;
+        private readonly bool _selectable;
         private VisualElement _visualElement;
         private const int ToastDisplayDurationMs = 2000;
 
         public bool Hide { get; set; }
 
-        public CodeBlockItem(string code, string language = null)
+        public CodeBlockItem(string code, string language = null, bool selectable = false)
         {
             _code = code;
             _language = language;
+            _selectable = selectable;
         }
 
         public void Draw()
@@ -335,16 +337,21 @@ namespace Meta.XR.Editor.UserInterface
             if (!string.IsNullOrEmpty(_language))
             {
                 var languageLabel = new UnityEngine.UIElements.Label(_language);
-                languageLabel.AddToClassList(Props.CodeBlock.Language);
+                languageLabel.AddToClassList(RLDSConstants.CodeBlock.Language);
                 _visualElement.Add(languageLabel);
             }
 
             var codeContainer = new VisualElement();
-            codeContainer.AddToClassList(Props.CodeBlock.Container);
+            codeContainer.AddToClassList(RLDSConstants.CodeBlock.Container);
             codeContainer.style.position = Position.Relative;
 
             var codeLabel = new UnityEngine.UIElements.Label(_code);
-            codeLabel.AddToClassList(Props.CodeBlock.Label);
+            codeLabel.AddToClassList(RLDSConstants.CodeBlock.Label);
+            if (_selectable)
+            {
+                codeLabel.selection.isSelectable = true;
+                codeLabel.focusable = true;
+            }
 
             var monoFont = Resources.Load<Font>("Inconsolata");
             if (monoFont != null)
@@ -358,7 +365,7 @@ namespace Meta.XR.Editor.UserInterface
             }
 
             var toast = new UnityEngine.UIElements.Label("Code copied!");
-            toast.AddToClassList(Props.Toast.Root);
+            toast.AddToClassList(RLDSConstants.Toast.Root);
 
             var copyButton = new UnityEngine.UIElements.Button();
             copyButton.clicked += () =>
@@ -370,21 +377,13 @@ namespace Meta.XR.Editor.UserInterface
                 toast.schedule.Execute(() =>
                 {
                     toast.style.display = DisplayStyle.None;
+                    copyButton.style.display = DisplayStyle.Flex;
                 }).ExecuteLater(ToastDisplayDurationMs);
             };
-            copyButton.AddToClassList(Props.IconButton.Root);
-            copyButton.AddToClassList(Props.IconButton.Absolute);
+            copyButton.AddToClassList(RLDSConstants.IconButton.Root);
+            copyButton.AddToClassList(RLDSConstants.IconButton.Absolute);
             copyButton.style.backgroundImage = new StyleBackground(Background.FromTexture2D(UIStyles.Contents.CopyIcon.Image as Texture2D));
             copyButton.tooltip = "Copy code";
-
-            codeContainer.RegisterCallback<MouseEnterEvent>(evt =>
-            {
-                copyButton.style.display = DisplayStyle.Flex;
-            });
-            codeContainer.RegisterCallback<MouseLeaveEvent>(evt =>
-            {
-                copyButton.style.display = DisplayStyle.None;
-            });
 
             codeContainer.Add(codeLabel);
             codeContainer.Add(copyButton);

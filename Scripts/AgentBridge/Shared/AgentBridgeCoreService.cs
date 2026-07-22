@@ -47,6 +47,10 @@ namespace Meta.XR.AI.AgentBridge
         public static Func<string>? GetCurrentServiceNameDelegate;
         public static Action? EnsureServiceInitializedDelegate;
         public static Action<CallerIdentity>? ClearErrorDelegate;
+        public static Func<string>? GetSessionIdDelegate;
+        public static Func<CallerIdentity?, string>? GetSessionIdForCallerDelegate;
+        public static Func<CallerIdentity?, string?>? GetResumeCommandForCallerDelegate;
+        public static Action<string>? OpenTerminalWithCommandDelegate;
 
         /// <summary>
         /// Send a prompt to the currently configured AI service.
@@ -176,6 +180,61 @@ namespace Meta.XR.AI.AgentBridge
                 return "None";
             }
             return GetCurrentServiceNameDelegate();
+        }
+
+        /// <summary>
+        /// Get the current session ID for the default conversation.
+        /// Returns empty string if no session is active.
+        /// </summary>
+        public static string GetSessionId()
+        {
+            if (GetSessionIdDelegate == null)
+            {
+                UnityEngine.Debug.LogError("[AgentBridge] Core service not initialized. Make sure you are running in Unity Editor.");
+                return string.Empty;
+            }
+            return GetSessionIdDelegate();
+        }
+
+        /// <summary>
+        /// Get the session ID for a specific caller's conversation.
+        /// Returns empty string if no session is active for the caller.
+        /// </summary>
+        public static string GetSessionIdForCaller(CallerIdentity? caller)
+        {
+            if (GetSessionIdForCallerDelegate == null)
+            {
+                UnityEngine.Debug.LogError("[AgentBridge] Core service not initialized. Make sure you are running in Unity Editor.");
+                return string.Empty;
+            }
+            return GetSessionIdForCallerDelegate(caller);
+        }
+
+        /// <summary>
+        /// Get the shell command to resume the current session in a terminal for a specific caller.
+        /// Returns null if the service does not support terminal resume or no session is active.
+        /// </summary>
+        public static string? GetResumeCommandForCaller(CallerIdentity? caller)
+        {
+            if (GetResumeCommandForCallerDelegate == null)
+            {
+                UnityEngine.Debug.LogError("[AgentBridge] Core service not initialized. Make sure you are running in Unity Editor.");
+                return null;
+            }
+            return GetResumeCommandForCallerDelegate(caller);
+        }
+
+        /// <summary>
+        /// Open a terminal window and run the given command.
+        /// </summary>
+        public static void OpenTerminalWithCommand(string command)
+        {
+            if (OpenTerminalWithCommandDelegate == null)
+            {
+                UnityEngine.Debug.LogError("[AgentBridge] Core service not initialized. Make sure you are running in Unity Editor.");
+                return;
+            }
+            OpenTerminalWithCommandDelegate(command);
         }
 
         /// <summary>

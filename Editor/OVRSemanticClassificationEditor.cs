@@ -22,6 +22,10 @@ using System;
 using UnityEditor;
 
 
+/// <summary>
+/// Custom inspector for OVRSemanticClassification components. Displays the semantic labels assigned to a scene anchor as a read-only comma-separated list.
+/// Deprecated: use the MR Utility Kit (MRUK) semantic classification system instead.
+/// </summary>
 [CustomEditor(typeof(OVRSemanticClassification))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
 public class OVRSemanticClassificationEditor : UnityEditor.Editor
@@ -35,6 +39,9 @@ public class OVRSemanticClassificationEditor : UnityEditor.Editor
         _script = MonoScript.FromMonoBehaviour(_object);
     }
 
+    /// <summary>
+    /// Draws the OVRSemanticClassification inspector showing semantic labels as a read-only text field.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         serializedObject.Update();

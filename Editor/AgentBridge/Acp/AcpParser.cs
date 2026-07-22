@@ -21,7 +21,7 @@
 #nullable enable
 
 using System;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.XR.AI.AgentBridge.Acp
 {
@@ -111,7 +111,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
                     {
                         var toolCallId = update.Update["toolCallId"]?.ToString() ?? "";
                         var status = update.Update["status"]?.ToString();
-                        var contentArr = update.Update["content"] as JArray;
+                        var contentArr = update.Update["content"] as JsonArray;
 
                         // Extract text from content blocks if present
                         var resultText = "";
@@ -202,14 +202,14 @@ namespace Meta.XR.AI.AgentBridge.Acp
         }
 
         /// <summary>
-        /// Extract text from an ACP content block (which may be a JObject with type/text or a plain string).
+        /// Extract text from an ACP content block (which may be a JsonObject with type/text or a plain string).
         /// </summary>
-        private static string? ExtractTextFromAcpContent(JToken? content)
+        private static string? ExtractTextFromAcpContent(JsonNode? content)
         {
             if (content == null) return null;
 
             // Content can be a single content block object
-            if (content is JObject obj)
+            if (content is JsonObject obj)
             {
                 var type = obj["type"]?.ToString();
                 if (type == "text")
@@ -221,13 +221,13 @@ namespace Meta.XR.AI.AgentBridge.Acp
             }
 
             // Or it can be a string directly
-            if (content.Type == JTokenType.String)
+            if (content.Type == JsonNodeType.String)
             {
                 return content.ToString();
             }
 
             // Or it can be an array of content blocks
-            if (content is JArray arr)
+            if (content is JsonArray arr)
             {
                 var sb = new System.Text.StringBuilder();
                 foreach (var block in arr)

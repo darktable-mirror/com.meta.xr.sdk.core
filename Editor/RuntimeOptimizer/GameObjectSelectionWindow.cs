@@ -33,6 +33,9 @@ using Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight;
 
 namespace Meta.XR.RuntimeOptimizer.Editor
 {
+    /// <summary>
+    /// Provides an editor window for selecting GameObjects to include in performance analysis.
+    /// </summary>
     public class GameObjectSelectionWindow : EditorWindow
     {
         internal class TreeNode
@@ -84,6 +87,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         private bool toggleWasChanged = false;
         private const int kMaxSelectableGameObjects = 200;
 
+        /// <summary>
+        /// Opens the GameObject selection window using captured data from the most recent trace.
+        /// </summary>
+        /// <param name="parent">The parent RuntimeOptimizerWindow that owns this selection window.</param>
         public static void ShowWindow(RuntimeOptimizerWindow parent)
         {
             var window = GetWindow<GameObjectSelectionWindow>(true, "Select Game Objects to Test", true);
@@ -94,6 +101,11 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             window.Show();
         }
 
+        /// <summary>
+        /// Opens the GameObject selection window with a pre-populated list of GameObject paths.
+        /// </summary>
+        /// <param name="parent">The parent RuntimeOptimizerWindow that owns this selection window.</param>
+        /// <param name="gameObjectPaths">The list of GameObject paths to display for selection.</param>
         public static void ShowWindow(RuntimeOptimizerWindow parent, List<string> gameObjectPaths)
         {
             var window = GetWindow<GameObjectSelectionWindow>(true, "Select Game Objects to Test", true);

@@ -67,6 +67,8 @@ public class OVRBody : MonoBehaviour,
     /// </summary>
     private bool _hasData;
 
+    private bool _hasValidBonePoses;
+
     /// <summary>
     /// This field is private. Do not use it in your app logic.
     /// </summary>
@@ -176,7 +178,7 @@ public class OVRBody : MonoBehaviour,
 
     private void OnDisable()
     {
-
+        _hasValidBonePoses = false;
         if (--_trackingInstanceCount == 0)
         {
             OVRPlugin.StopBodyTracking();
@@ -300,12 +302,27 @@ public class OVRBody : MonoBehaviour,
                 }
             }
 
+            // Report `SkeletonPoseData.IsDataValid == true` only when all bones were valid at least once
+            if (!_hasValidBonePoses)
+            {
+                bool allValid = true;
+                foreach (var jointLocation in _bodyState.JointLocations)
+                {
+                    if (!jointLocation.OrientationValid || !jointLocation.PositionValid)
+                    {
+                        allValid = false;
+                        break;
+                    }
+                }
+                _hasValidBonePoses = allValid;
+            }
+
             _dataChangedSinceLastQuery = false;
         }
 
         return new OVRSkeleton.SkeletonPoseData
         {
-            IsDataValid = true,
+            IsDataValid = _hasValidBonePoses,
             IsDataHighConfidence = _bodyState.Confidence > .5f,
             RootPose = _bodyState.JointLocations[(int)OVRPlugin.BoneId.Body_Root].Pose,
             RootScale = 1.0f,

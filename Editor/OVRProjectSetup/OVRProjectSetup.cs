@@ -32,6 +32,9 @@ using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using Styles = Meta.XR.Editor.UserInterface.Styles;
 using Meta.XR.Guides.Editor;
 
+/// <summary>
+/// Base class for guided setup workflows used by the Unity Project Setup Tool.
+/// </summary>
 public abstract class UPSTGuidedSetup : GuidedSetup
 {
 }
@@ -45,13 +48,20 @@ public abstract class UPSTGuidedSetup : GuidedSetup
 /// </remarks>
 public static class OVRProjectSetup
 {
+    /// <summary>
+    /// Defines the severity level of a configuration task.
+    /// </summary>
     public enum TaskLevel
     {
+        Hidden = -1,
         Optional = 0,
         Recommended = 1,
         Required = 2
     }
 
+    /// <summary>
+    /// Defines the category group for a configuration task.
+    /// </summary>
     public enum TaskGroup
     {
         All = 0,
@@ -63,8 +73,12 @@ public static class OVRProjectSetup
         Features = 6,
         Miscellaneous = 7,
         Headset = 8,
+        HandReadiness = 9,
     }
 
+    /// <summary>
+    /// Defines metadata tags that modify how a configuration task is processed.
+    /// </summary>
     [Flags]
     public enum TaskTags
     {
@@ -79,7 +93,7 @@ public static class OVRProjectSetup
     internal static OVRConfigurationTaskRegistry Registry { get; private set; }
     internal static OVRConfigurationTaskProcessorQueue ProcessorQueue { get; }
 
-    private static readonly HashSet<BuildTargetGroup> SupportedPlatforms = new HashSet<BuildTargetGroup>
+    internal static readonly HashSet<BuildTargetGroup> SupportedPlatforms = new HashSet<BuildTargetGroup>
         { BuildTargetGroup.Android, BuildTargetGroup.Standalone };
 
 
@@ -94,15 +108,17 @@ public static class OVRProjectSetup
     internal static readonly ToolDescriptor ToolDescriptor = new()
     {
         Name = PublicName,
-        MenuDescription = "Setup your project",
+        DisplayName = "Project setup tool",
+        MenuDescription = "Configure your Unity project for XR development",
         MqdhCategoryId = "482296384788650",
         Color = BrightGray,
         Icon = StatusIcon,
-        InfoTextDelegate = ComputeInfoText,
+        StatusBadges = ComputeStatusBadges,
         PillIcon = ComputePillIcon,
         OnClickDelegate = OnStatusMenuClick,
-        Order = 0,
+        Order = 3,
         AddToStatusMenu = true,
+        MenuCategory = MenuCategory.Tools,
         Documentation = new List<Documentation>
         {
             new Documentation
@@ -121,7 +137,7 @@ public static class OVRProjectSetup
         ConsoleLinkEventHandler.OnConsoleLink += OnConsoleLink;
         RestoreRegistry();
 
-        ProcessorQueue.OnProcessorCompleted += RefreshBuildStatusMenuSubText;
+        ProcessorQueue.OnProcessorCompleted += RefreshLatestSummary;
     }
 
     internal static Setting<bool> Enabled;
@@ -155,24 +171,69 @@ public static class OVRProjectSetup
             SendTelemetry = true
         };
 
-    private static string _statusMenuSubText;
     internal static OVRConfigurationTaskUpdaterSummary LatestSummary { get; private set; }
 
-    private static void RefreshBuildStatusMenuSubText(OVRConfigurationTaskProcessor processor)
+    private static void RefreshLatestSummary(OVRConfigurationTaskProcessor processor)
     {
         var updater = processor as OVRConfigurationTaskUpdater;
         var summary = updater?.Summary;
-        _statusMenuSubText = summary?.ComputeInfoMessage();
+
+        // Only reflect the active build target group's summary in the status-menu badges and
+        // toolbar pill. Updaters also run for other groups (e.g. Standalone); without this guard
+        // LatestSummary would show whichever group finished last instead of the platform the user
+        // is targeting.
+        if (summary != null &&
+            summary.BuildTargetGroup != BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget))
+        {
+            return;
+        }
+
         LatestSummary = summary;
     }
 
-    private static (string, Color?) ComputeInfoText() => LatestSummary?.HighestFixLevel switch
+    // The status menu shows up to two severity badges (Figma node 4818-71850): a red
+    // "{n} outstanding issues" for Required-level issues and an amber "{n} manually fixable items"
+    // for Recommended-level issues, both shown when both are present. Optional-level issues are
+    // treated as all-good and show no badge.
+    private static IReadOnlyList<(string text, Color? color)> ComputeStatusBadges()
     {
-        TaskLevel.Optional => (_statusMenuSubText, InfoColor),
-        TaskLevel.Recommended => (_statusMenuSubText, WarningColor),
-        TaskLevel.Required => (_statusMenuSubText, ErrorColor),
-        _ => (null, null)
-    };
+        var summary = LatestSummary;
+        if (summary == null)
+        {
+            return null;
+        }
+
+        return ComputeStatusBadges(
+            summary.GetNumberOfFixes(TaskLevel.Required),
+            summary.GetNumberOfFixes(TaskLevel.Recommended));
+    }
+
+    internal static IReadOnlyList<(string text, Color? color)> ComputeStatusBadges(
+        int requiredCount,
+        int recommendedCount)
+    {
+        var hasRequired = requiredCount > 0;
+        var hasRecommended = recommendedCount > 0;
+        var badges = new List<(string, Color?)>();
+
+        // Mixed state shows count-only badges (amber warning then red error) since the full text
+        // would not fit; a single severity shows the full descriptive text (Figma node 3364-96652).
+        if (hasRequired && hasRecommended)
+        {
+            badges.Add((recommendedCount.ToString(), WarningColor));
+            badges.Add((requiredCount.ToString(), ErrorColor));
+        }
+        else if (hasRequired)
+        {
+            badges.Add((OVRConfigurationTaskUpdaterSummary.GetOutstandingIssuesMessage(requiredCount), ErrorColor));
+        }
+        else if (hasRecommended)
+        {
+            badges.Add((OVRConfigurationTaskUpdaterSummary.GetManuallyFixableMessage(recommendedCount), WarningColor));
+        }
+
+        return badges;
+    }
 
     private static (TextureContent, Color?, bool) ComputePillIcon()
     {
@@ -489,6 +550,11 @@ public static class OVRProjectSetup
 
     private const int LoopExitCount = 4;
 
+    /// <summary>
+    /// Asynchronously fixes all outstanding configuration tasks for the specified build target group.
+    /// </summary>
+    /// <param name="buildTargetGroup">The build target group for which to fix all tasks.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous fix operation.</returns>
     public static Task FixAllAsync(BuildTargetGroup buildTargetGroup)
     {
         return FixTasksAsync(buildTargetGroup);

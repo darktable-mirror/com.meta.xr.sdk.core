@@ -54,27 +54,40 @@ namespace Meta.XR.Simulator
             "Set Play mode to use Meta XR Simulator\nSimulates Meta Quest headset and features on desktop";
 #endif
 
+        private const string XRSimDownloadUrl =
+            "https://developer.oculus.com/documentation/unity/unity-xr-simulator/";
+
         internal static readonly ToolDescriptor ToolDescriptor = new()
         {
             Name = XRSimConstants.PublicName,
-            MenuDescription = "Iterate faster in Editor",
+            MenuDescription = "Test your app without a physical device",
             Color = Meta.XR.Editor.UserInterface.Styles.Colors.Meta,
             Icon = Styles.Contents.MetaXRSimulator,
             MqdhCategoryId = XRSimConstants.MqdhCategoryId,
             AddToStatusMenu = true,
+            MenuCategory = MenuCategory.Tools,
             AddToMenu = false,
-            PillIcon = () =>
-                Utils.XRSimUtils.IsSimulatorActivated()
-                    ? (Meta.XR.Editor.UserInterface.Styles.Contents.CheckIcon,
-                        Meta.XR.Editor.UserInterface.Styles.Colors.Meta,
-                        false)
-                    : (null, null, false),
-            InfoTextDelegate = () => Utils.XRSimUtils.IsSimulatorActivated() ?
-                ("Enabled", Meta.XR.Editor.UserInterface.Styles.Colors.SuccessColor) :
-                ("Disabled", Meta.XR.Editor.UserInterface.Styles.Colors.DisabledColor),
-            OnClickDelegate = origin => Utils.XRSimUtils.ToggleSimulator(true, origin.ToString().ToSimulatorOrigin()),
-            Order = 10,
-            CloseOnClick = false
+            PillIcon = () => (null, null, false),
+            InfoTextDelegate = () => (null, null),
+            EnablementDescriptor = () => XRSimInstallationDetector.IsXRSim2Installed()
+                ? (true, null)
+                : (false, "Download from developer center"),
+            EnablementLink = () => ("Download from ", "developer center",
+                _ => Application.OpenURL(XRSimDownloadUrl)),
+            OnClickDelegate = _ =>
+            {
+                if (XRSimInstallationDetector.IsXRSim2Installed())
+                {
+                    // Launch the installed Meta XR Simulator app via its URL scheme.
+                    Application.OpenURL("xrsim://");
+                }
+                else
+                {
+                    Application.OpenURL(XRSimDownloadUrl);
+                }
+            },
+            Order = 4,
+            CloseOnClick = true
         };
 
         static ToolbarItem()

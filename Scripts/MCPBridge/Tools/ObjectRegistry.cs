@@ -22,7 +22,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -189,8 +189,8 @@ namespace MCPServices.Tools
         /// Get information about a registered object
         /// </summary>
         /// <param name="id">The ID of the object</param>
-        /// <returns>A JObject containing information about the object</returns>
-        internal JObject GetObjectInfo(string id)
+        /// <returns>A JsonObject containing information about the object</returns>
+        internal JsonObject GetObjectInfo(string id)
         {
             if (string.IsNullOrEmpty(id))
                 throw new ArgumentNullException(nameof(id));
@@ -202,7 +202,7 @@ namespace MCPServices.Tools
 
             Type type = obj.GetType();
 
-            var info = new JObject
+            var info = new JsonObject
             {
                 ["id"] = id,
                 ["type"] = type.FullName,
@@ -228,7 +228,7 @@ namespace MCPServices.Tools
             var interfaces = type.GetInterfaces();
             if (interfaces.Length > 0)
             {
-                var interfaceArray = new JArray();
+                var interfaceArray = new JsonArray();
                 foreach (var iface in interfaces)
                 {
                     interfaceArray.Add(iface.FullName);
@@ -243,21 +243,21 @@ namespace MCPServices.Tools
                 info["active"] = gameObject.activeSelf;
                 info["layer"] = gameObject.layer;
                 info["tag"] = gameObject.tag;
-                info["transform"] = new JObject
+                info["transform"] = new JsonObject
                 {
-                    ["position"] = new JObject
+                    ["position"] = new JsonObject
                     {
                         ["x"] = gameObject.transform.position.x,
                         ["y"] = gameObject.transform.position.y,
                         ["z"] = gameObject.transform.position.z
                     },
-                    ["rotation"] = new JObject
+                    ["rotation"] = new JsonObject
                     {
                         ["x"] = gameObject.transform.rotation.eulerAngles.x,
                         ["y"] = gameObject.transform.rotation.eulerAngles.y,
                         ["z"] = gameObject.transform.rotation.eulerAngles.z
                     },
-                    ["scale"] = new JObject
+                    ["scale"] = new JsonObject
                     {
                         ["x"] = gameObject.transform.localScale.x,
                         ["y"] = gameObject.transform.localScale.y,
@@ -266,12 +266,12 @@ namespace MCPServices.Tools
                 };
 
                 // Add components
-                var components = new JArray();
+                var components = new JsonArray();
                 foreach (var component in gameObject.GetComponents<Component>())
                 {
                     if (component != null)
                     {
-                        var componentInfo = new JObject
+                        var componentInfo = new JsonObject
                         {
                             ["type"] = component.GetType().FullName,
                             ["typeName"] = component.GetType().Name

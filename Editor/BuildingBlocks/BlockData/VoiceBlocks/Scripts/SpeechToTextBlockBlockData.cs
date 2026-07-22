@@ -30,6 +30,9 @@ using Oculus.Voice.Dictation.Data;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Provides the installation routine for the Speech-to-Text building block using the Meta Voice SDK dictation service.
+    /// </summary>
     public class SpeechToTextBlockBlockData : Meta.XR.BuildingBlocks.Editor.BlockData
     {
         protected override bool UsesPrefab => false;
@@ -43,7 +46,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             // care of finding the config and adding it to AppDictationDataCreation.
             await VoiceBlocksUtils.GetWitConfig();
             AppDictationDataCreation.AddVoiceCommandServiceToScene();
-            var instance = FindAnyObjectByType<AppDictationExperience>().gameObject;
+            var instance = FindFirstObjectByType<AppDictationExperience>().gameObject;
             instance.name = $"{Utils.BlockPublicTag} {BlockName}";
             return new List<GameObject> { instance };
 #else

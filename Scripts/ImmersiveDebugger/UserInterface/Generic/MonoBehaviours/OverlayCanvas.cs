@@ -18,6 +18,10 @@
  * limitations under the License.
  */
 
+#if USING_XR_MANAGEMENT && (USING_XR_SDK_OCULUS || USING_XR_SDK_OPENXR)
+#define USING_XR_SDK
+#endif
+
 using UnityEngine;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
@@ -30,22 +34,33 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     public class OverlayCanvas : OVROverlayCanvas
     {
         /// <summary>
-        /// Gets or sets whether imposter rendering should be enabled.
-        /// True in editor (no os-level overlay),
-        /// False in builds (as we'll rely on the actual overlay))
+        /// Gets whether imposter rendering should be used.
+        /// In editor without XR display: true (no os-level overlay available).
+        /// In editor with XR display (Link mode): false (use overlay rendering to
+        /// ensure correct compositing with other overlay layers like passthrough).
+        /// In builds: false (always use overlay rendering).
         /// </summary>
-        public static bool ShouldRenderImposters =
+        public static bool ShouldRenderImposters
+        {
+            get
+            {
 #if UNITY_EDITOR
-            true;
-#else
-            false;
+#if USING_XR_SDK
+                if (Application.isPlaying && OVRManager.GetCurrentDisplaySubsystem() != null)
+                    return false;
 #endif
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
 
         /// <summary>
         /// Gets whether this canvas should be rendered with priority.
         /// Returns the inverse of ShouldRenderImposters.
-        /// In editor, we don't need to render with priority as the overlay is not active anyway.
-        /// In builds, we always render with priority.
+        /// In editor without XR, we don't need to render with priority as the overlay is not active anyway.
+        /// In editor with XR (Link) and in builds, we always render with priority.
         /// </summary>
         public override bool IsCanvasPriority => !ShouldRenderImposters;
     }

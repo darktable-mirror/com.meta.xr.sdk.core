@@ -89,7 +89,7 @@ namespace Meta.XR.Editor.UserInterface
         public VisualElement Build()
         {
             var container = new VisualElement();
-            container.AddToClassList(Props.Radio.Item);
+            container.AddToClassList(RLDSConstants.Radio.Item);
 
             var radioButton = new UnityEngine.UIElements.RadioButton
             {

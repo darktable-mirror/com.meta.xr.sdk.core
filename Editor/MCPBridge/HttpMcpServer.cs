@@ -25,10 +25,9 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Meta.XR.Json;
 using Meta.MCPBridge.Schemas;
 using Meta.XR.AI.MCPBridge.Telemetry;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -70,6 +69,10 @@ namespace Meta.MCPBridge.Editor
         [InitializeOnLoadMethod]
         private static void InitializeOnLoad()
         {
+            // Expose the MCP port to the shared firewall utility (in the AgentBridge editor assembly)
+            // so a single inbound rule can cover both bridges without a circular assembly reference.
+            Meta.XR.AI.AgentBridge.WindowsFirewallUtility.McpPortProvider = () => McpBridgeSettings.Port.Value;
+
             // Register cleanup handlers immediately — lightweight event subscriptions.
             EditorApplication.quitting += () => Instance.Stop();
             AssemblyReloadEvents.beforeAssemblyReload += () => Instance.Stop();
@@ -87,12 +90,15 @@ namespace Meta.MCPBridge.Editor
                 }
             });
 
-            // When the user enables AI Agent Bridge mid-session, initialize MCPBridge too.
-            Meta.XR.AI.AgentBridge.Settings.Activated += StartIfEnabled;
+            // When the user enables AI Agent Bridge mid-session (settings toggle or AI Tools Setup
+            // install), turn on the MCP HTTP server's auto-start and start it — enabling the bridge is
+            // the explicit opt-in.
+            Meta.XR.AI.AgentBridge.Settings.Activated += OnAgentBridgeActivated;
         }
 
         /// <summary>
         /// Initialize the MCPBridge service registry and start the server if AutoStart is enabled.
+        /// Used at editor load (when AI Agent Bridge is already enabled) to honor the persisted setting.
         /// </summary>
         internal static void StartIfEnabled()
         {
@@ -104,12 +110,25 @@ namespace Meta.MCPBridge.Editor
             }
         }
 
-        private static void StartMcpBridgeServer()
+        /// <summary>
+        /// Called when the user enables AI Agent Bridge. Enabling the bridge is the explicit opt-in to
+        /// running the servers, so turn on the MCP HTTP server's auto-start (persists across sessions) and
+        /// start it now — rather than only starting when auto-start was already on.
+        /// </summary>
+        private static void OnAgentBridgeActivated()
+        {
+            Meta.MCPBridge.Services.Registry.Initialize();
+            McpBridgeSettings.EnableAutoStart();
+            StartMcpBridgeServer();
+        }
+
+        internal static void StartMcpBridgeServer()
         {
             Instance.Start(McpBridgeSettings.Port.Value, () =>
             {
                 LocalToolProvider.Register();
                 ExternalDiscovery.WriteDiscoveryFiles();
+                McpRegistration.AutoRegisterIfNeeded(McpBridgeSettings.Port.Value);
             });
         }
 
@@ -158,10 +177,19 @@ namespace Meta.MCPBridge.Editor
             _isRunning = true;
             _serverUptime = Stopwatch.StartNew();
 
+            // Capture the main-thread SynchronizationContext before spawning the
+            // background listener. This ensures LocalExecutor can marshal tool
+            // calls back to the main thread even if EnsureInitialized() is first
+            // reached from the HTTP listener thread.
+            LocalExecutor.CaptureMainThreadContext();
+
             _listenerThread = new Thread(ListenLoop) { IsBackground = true, Name = "HttpMcpServer" };
             _listenerThread.Start();
 
             Debug.Log($"[HttpMcpServer] Started on port {port}");
+
+            // Surface a one-time hint if the Windows Firewall would block inbound device connections.
+            Meta.XR.AI.AgentBridge.WindowsFirewallUtility.WarnIfNotConfigured();
 
             McpBridgeTelemetry.SendEvent(
                             McpBridgeTelemetryConstants.FalcoEventName.ServerStarted,
@@ -326,7 +354,7 @@ namespace Meta.MCPBridge.Editor
             RequestSchema request;
             try
             {
-                request = JsonConvert.DeserializeObject<RequestSchema>(body);
+                request = McpJsonConvert.Deserialize<RequestSchema>(body);
             }
             catch (Exception ex)
             {
@@ -413,7 +441,7 @@ namespace Meta.MCPBridge.Editor
             return ex switch
             {
                 TimeoutException => McpBridgeTelemetryConstants.ErrorType.Timeout,
-                JsonException => McpBridgeTelemetryConstants.ErrorType.Serialization,
+                McpJsonException => McpBridgeTelemetryConstants.ErrorType.Serialization,
                 UnauthorizedAccessException => McpBridgeTelemetryConstants.ErrorType.Authentication,
                 NoProviderConnectedException => McpBridgeTelemetryConstants.ErrorType.NoProvider,
                 _ => McpBridgeTelemetryConstants.ErrorType.Execution
@@ -558,7 +586,7 @@ namespace Meta.MCPBridge.Editor
                 body = await reader.ReadToEndAsync();
             }
 
-            var capabilities = JsonConvert.DeserializeObject<ProviderCapabilities>(body);
+            var capabilities = McpJsonConvert.Deserialize<ProviderCapabilities>(body);
             if (capabilities == null)
             {
                 context.Response.StatusCode = 400;
@@ -599,7 +627,7 @@ namespace Meta.MCPBridge.Editor
                 body = await reader.ReadToEndAsync();
             }
 
-            var result = JsonConvert.DeserializeObject<ProviderResponse>(body);
+            var result = McpJsonConvert.Deserialize<ProviderResponse>(body);
             if (result == null || string.IsNullOrEmpty(result.RequestId))
             {
                 context.Response.StatusCode = 400;
@@ -715,14 +743,14 @@ namespace Meta.MCPBridge.Editor
                 parameters.Arguments);
         }
 
-        private static readonly JsonSerializerSettings SerializerSettings = new()
+        private static readonly McpJsonSettings SerializerSettings = new()
         {
-            NullValueHandling = NullValueHandling.Ignore
+            NullHandling = McpJsonNullHandling.Ignore
         };
 
         private static async Task WriteJsonRpcResult(HttpListenerResponse response, string id, object result)
         {
-            var responseObj = new JObject
+            var responseObj = new JsonObject
             {
                 ["jsonrpc"] = "2.0",
                 ["id"] = id
@@ -730,8 +758,8 @@ namespace Meta.MCPBridge.Editor
 
             if (result is InitializationSchema initSchema)
             {
-                var serialized = JObject.FromObject(initSchema, JsonSerializer.CreateDefault(SerializerSettings));
-                var resultObj = new JObject
+                var serialized = JsonObject.FromObject(initSchema, SerializerSettings);
+                var resultObj = new JsonObject
                 {
                     ["serverInfo"] = serialized["serverInfo"],
                     ["protocolVersion"] = serialized["protocolVersion"],
@@ -741,20 +769,20 @@ namespace Meta.MCPBridge.Editor
             }
             else
             {
-                responseObj["result"] = JObject.FromObject(result, JsonSerializer.CreateDefault(SerializerSettings));
+                responseObj["result"] = JsonObject.FromObject(result, SerializerSettings);
             }
 
             response.StatusCode = 200;
-            await WriteResponse(response, responseObj.ToString(Formatting.None));
+            await WriteResponse(response, responseObj.ToString(JsonFormatting.None));
         }
 
         private static async Task WriteJsonRpcError(HttpListenerResponse response, string id, int code, string message)
         {
-            var responseObj = new JObject
+            var responseObj = new JsonObject
             {
                 ["jsonrpc"] = "2.0",
                 ["id"] = id,
-                ["error"] = new JObject
+                ["error"] = new JsonObject
                 {
                     ["code"] = code,
                     ["message"] = message
@@ -762,7 +790,7 @@ namespace Meta.MCPBridge.Editor
             };
 
             response.StatusCode = 200;
-            await WriteResponse(response, responseObj.ToString(Formatting.None));
+            await WriteResponse(response, responseObj.ToString(JsonFormatting.None));
         }
 
         private static async Task WriteResponse(HttpListenerResponse response, string json)

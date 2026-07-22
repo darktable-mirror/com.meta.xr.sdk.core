@@ -82,8 +82,27 @@ namespace Meta.XR.Editor.UserInterface
 
         public class GUIStylesContainer
         {
-            // In batch mode, EditorStyles are not initialized and accessing them throws NullReferenceException
-            private static readonly bool IsBatchMode = Application.isBatchMode;
+            // EditorStyles.s_Current is null in batchmode AND during early domain reload
+            // (before Unity repopulates the internal style cache). Accessing any property
+            // in that state throws NRE. This property is evaluated per field-initializer
+            // access (not cached as static readonly) so that a container built during
+            // domain reload gets fallback styles without poisoning later constructions.
+            internal static bool IsBatchMode
+            {
+                get
+                {
+                    if (!Utils.ShouldRenderEditorUI()) return true;
+                    try
+                    {
+                        _ = EditorStyles.label;
+                        return false;
+                    }
+                    catch (System.NullReferenceException)
+                    {
+                        return true;
+                    }
+                }
+            }
 
             public class ColorStates
             {
@@ -888,6 +907,59 @@ namespace Meta.XR.Editor.UserInterface
             public static readonly TextureContent SpinnerIcon =
                 TextureContent.CreateContent("spinner.png", TextureContent.Categories.Generic);
 
+            public static readonly TextureContent TickIcon =
+                TextureContent.CreateContent("check.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent DownArrowIcon =
+                TextureContent.CreateContent("chevron-down.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent CoverBg = TextureContent.CreateContent("cover_bg.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent SdkCoverIcon = TextureContent.CreateContent("sdk_cover_icon.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleIbeamCursorIcon = TextureContent.CreateContent("role_ibeam_cursor.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleHeadsetAltIcon = TextureContent.CreateContent("role_headset_alt.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleVrObjectIcon = TextureContent.CreateContent("role_vr_object.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleGamepadIcon = TextureContent.CreateContent("role_gamepad.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleMediaImmersivePhotoIcon = TextureContent.CreateContent("role_media_immersive_photo.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleEditorIcon = TextureContent.CreateContent("role_editor.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleGraphsIcon = TextureContent.CreateContent("role_graphs.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleAvatarEmoteIcon = TextureContent.CreateContent("role_avatar_emote.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RoleCategoryBasicIcon = TextureContent.CreateContent("role_category_basic.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent FeatureDefaultAppIcon = TextureContent.CreateContent("feature_default_app.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent FeatureToolsIcon = TextureContent.CreateContent("feature_tools.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent FeatureAiAgentIcon = TextureContent.CreateContent("feature_ai_agent.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent FeatureListCheckedIcon = TextureContent.CreateContent("feature_list_checked.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent CheckMaskIcon =
+                TextureContent.CreateContent("rlds_icon_check_mask.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent InfoMaskIcon =
+                TextureContent.CreateContent("rlds_icon_info_mask.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent ErrorMaskIcon =
+                TextureContent.CreateContent("rlds_icon_error_mask.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent WarningMaskIcon =
+                TextureContent.CreateContent("rlds_icon_warning_mask.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent RemoveCircleMaskIcon =
+                TextureContent.CreateContent("rlds_icon_remove_circle_mask.png", TextureContent.Categories.Generic);
+
+            public static readonly TextureContent SdkUpdaterIcon =
+                TextureContent.CreateContent("sdk_update_assistant_icon.png", TextureContent.Categories.Generic);
         }
 
         public static class Constants
@@ -924,6 +996,17 @@ namespace Meta.XR.Editor.UserInterface
         }
 
         private static GUIStylesContainer _guiStyles;
-        public static GUIStylesContainer GUIStyles => _guiStyles ??= new GUIStylesContainer();
+
+        public static GUIStylesContainer GUIStyles
+        {
+            get
+            {
+                if (_guiStyles != null) return _guiStyles;
+                var container = new GUIStylesContainer();
+                if (!GUIStylesContainer.IsBatchMode)
+                    _guiStyles = container;
+                return container;
+            }
+        }
     }
 }

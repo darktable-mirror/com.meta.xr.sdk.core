@@ -338,7 +338,10 @@ public class OVROverlayCanvas : OVRRayTransformer
 
         var centerPos = rectTransformWorldCenter;
         _camera = overlayCamera.AddComponent<Camera>();
-        _camera.stereoTargetEye = StereoTargetEyeMask.None;
+        if (OVROverlayCanvasSettings.UsingBuiltInRenderPipeline())
+        {
+            _camera.stereoTargetEye = StereoTargetEyeMask.None;
+        }
         _camera.transform.position = centerPos - _camera.transform.forward;
         _camera.orthographic = true;
         _camera.enabled = false;
@@ -981,6 +984,16 @@ public class OVROverlayCanvas : OVRRayTransformer
             // switch all targeted renderers to another layer, so we don't render things outside of this object
             _camera.cullingMask = 1 << CanvasRenderLayer;
 
+            // Editor-only optional vertical flip (OVROverlayCanvasSettings.FlipOverlayCanvasYInEditor,
+            // default off): the Meta XR Simulator (Editor-only) can sample the layer render texture with
+            // the opposite vertical convention and show the canvas upside down. Applied per-render in
+            // RenderCameraOnce so the per-mip orthographic size/aspect adjustments below are preserved.
+            // Has no effect in player builds — the read and the flip are both compiled out.
+            bool flipY = false;
+#if UNITY_EDITOR
+            flipY = OVROverlayCanvasSettings.Instance.FlipOverlayCanvasYInEditor;
+#endif
+
             var rect = _camera.rect;
             float orthoSize = _camera.orthographicSize;
             float orthoAspect = _camera.aspect;
@@ -1013,7 +1026,7 @@ public class OVROverlayCanvas : OVRRayTransformer
                     _camera.rect = new Rect(0, 0, 1, 1);
                     _camera.orthographicSize = orthoSize * adjHeight;
                     _camera.aspect = orthoAspect * (adjWidth / adjHeight);
-                    _camera.Render();
+                    RenderCameraOnce(flipY);
 
                     // Copy to our original render texture, then release the temporary texture
                     Graphics.CopyTexture(tempRT, 0, 0, 0, 0, pixWidth, pixHeight, _renderTexture, 0, mip, xOffset, yOffset);
@@ -1027,7 +1040,7 @@ public class OVROverlayCanvas : OVRRayTransformer
                 }
                 else
                 {
-                    _camera.Render();
+                    RenderCameraOnce(flipY);
                 }
             }
         }
@@ -1036,6 +1049,35 @@ public class OVROverlayCanvas : OVRRayTransformer
             // Swap object layers back to the orignal layer
             SwapTransformLayers(CanvasRenderLayer, originalLayer);
         }
+    }
+
+    // Renders the camera once into the current target. The Y-flip is Editor-only (compiled out of
+    // player builds): when flipY is set, the projection is read AFTER the per-mip orthographic
+    // size/aspect have been applied (so those adjustments are preserved), its Y axis is inverted,
+    // then reset afterwards so the camera returns to auto-projection mode for the next render.
+    // GL.invertCulling keeps face winding correct.
+    private void RenderCameraOnce(bool flipY)
+    {
+#if UNITY_EDITOR
+        if (flipY)
+        {
+            var proj = _camera.projectionMatrix;
+            proj[1, 1] *= -1;
+            _camera.projectionMatrix = proj;
+            GL.invertCulling = true;
+            try
+            {
+                _camera.Render();
+            }
+            finally
+            {
+                _camera.ResetProjectionMatrix();
+                GL.invertCulling = false;
+            }
+            return;
+        }
+#endif
+        _camera.Render();
     }
 
     // Calculate a billboard rotation of our rect based on the curve parameters and the current camera position

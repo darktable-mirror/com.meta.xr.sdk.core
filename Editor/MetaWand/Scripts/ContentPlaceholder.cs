@@ -151,7 +151,7 @@ namespace Meta.XR.MetaWand.Editor
             if (previewState == Editor.PreviewState.Error)
             {
                 EditorGUILayout.HelpBox(
-                    string.IsNullOrEmpty(_currentMessage) ? "Something went wrong." : _currentMessage,
+                    string.IsNullOrEmpty(_currentMessage) ? Constants.SomethingWrong : _currentMessage,
                     MessageType.Error);
             }
 
@@ -285,7 +285,7 @@ namespace Meta.XR.MetaWand.Editor
             _currentMessage = state switch
             {
                 ContentState.Requesting or ContentState.Downloading => state + "...",
-                ContentState.Error => "Something went wrong.",
+                ContentState.Error => Constants.SomethingWrong,
                 _ => ""
             };
 

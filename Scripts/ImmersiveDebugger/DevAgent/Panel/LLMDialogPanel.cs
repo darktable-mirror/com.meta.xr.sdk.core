@@ -36,12 +36,14 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
     internal class LLMDialogPanel : UserInterface.DebugPanel
     {
         private const int NumberOfLines = 10;
-        private const int FullConversationPanelBottomMargin = 80;
+        // Sits just above the panel's bottom bar (88u, see Bar.asset) with a small gap, so the last
+        // line clears the title/grab handle without leaving a large empty margin.
+        private const int FullConversationPanelBottomMargin = 100;
         private const int ContractedConversationPanelBottomMargin = 180;
 
         // Re-export status enums for backward compatibility
         internal enum ConnectionStatus { Disconnected, Connected }
-        internal enum VoiceStatus { Waiting, Listening, Processing }
+        internal enum VoiceStatus { Waiting, Listening, Processing, Error }
 
         internal static event Action OnLLMDialogPanelReady;
 
@@ -91,6 +93,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         private Flex _voiceStatusContainer;
         private Toggle _voiceStatusPill;
         private Label _voiceStatusLabel;
+        private Color _voiceStatusDefaultColor = Color.white;
 
         // Message details panel components
         private Label _messageDetailLabel;
@@ -139,6 +142,8 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         protected override void Setup(Controller owner)
         {
             base.Setup(owner);
+
+            UnsubscribeFromManagerEvents();
 
             // Initialize DevAgentController (creates ConversationManager + AgentBridgeIntegration)
             _controller = gameObject.AddComponent<DevAgentController>();
@@ -194,6 +199,8 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             _conversationScrollView = mainFlex.Append<ScrollView>("conversation");
             _conversationScrollView.LayoutStyle = Style.Instantiate<LayoutStyle>("ConversationLogsScrollView");
             _conversationScrollView.Flex.LayoutStyle = Style.Load<LayoutStyle>("ConversationLogs");
+            _conversationScrollView.OnUserScrolled += OnUserScrollDetected;
+            _conversationScrollView.PreserveAbsolutePosition = !_autoScrollEnabled;
 
             // Use the scroll view's flex directly instead of ProxyFlex to avoid virtualization issues
             _conversationFlex = _conversationScrollView.Flex;
@@ -251,7 +258,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             }
         }
 
-        private void OnDestroy()
+        private void UnsubscribeFromManagerEvents()
         {
             if (_conversationManager != null)
             {
@@ -264,11 +271,20 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
                 _conversationManager.OnConversationActiveChanged -= OnConversationActiveChanged;
             }
 
-            // Unsubscribe from MCP Bridge connection state changes
             if (_controller?.McpIntegration != null)
             {
                 _controller.McpIntegration.OnConnectionStateChanged -= OnMcpBridgeConnectionStateChanged;
             }
+
+            if (_conversationScrollView != null)
+            {
+                _conversationScrollView.OnUserScrolled -= OnUserScrollDetected;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromManagerEvents();
         }
 
         #region Event Handlers from ConversationManager
@@ -277,7 +293,17 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         {
             HideWelcomeWatermark();
 
+            // A new user message (dictation or typed) is the user starting a turn they want to follow,
+            // so re-assert auto-scroll. The assistant's streaming reply also arrives as entries, but if
+            // the user scrolled up / turned auto-scroll off mid-response, those must not yank the view
+            // back to the bottom — so only the user's own message re-enables it.
+            if (entry != null && entry.Type == ConversationEntry.MessageType.User)
+            {
+                SetAutoScrollEnabled(true);
+            }
+
             CreateConversationLineUI(entry);
+            _thinkingAnimationController?.EnsureLastChild();
             ScrollToBottom();
         }
 
@@ -302,11 +328,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         private void OnEntriesCleared()
         {
             ClearConversationUI();
-            _autoScrollEnabled = true;
-            if (_autoScrollToggle != null)
-            {
-                _autoScrollToggle.State = true;
-            }
+            SetAutoScrollEnabled(true);
         }
 
         private void OnConnectionStatusChanged(ConversationManager.ConnectionStatus status)
@@ -333,6 +355,10 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
             if (isActive)
             {
+                // Don't force auto-scroll back on here: this fires whenever processing (re)starts,
+                // including between tool calls mid-response, which would override the user turning
+                // auto-scroll off while the agent streams. A genuine new turn re-enables it via the
+                // user's own message in OnEntryAdded instead. ScrollToBottom is a no-op while disabled.
                 _thinkingAnimationController?.StartAnimation();
                 ScrollToBottom();
             }
@@ -491,12 +517,21 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             label.RectTransform.offsetMin = Vector2.zero;
             label.RectTransform.offsetMax = Vector2.zero;
 
+#if HAS_META_VOICE_SDK
             var gestureName = GetGestureDisplayName(RuntimeSettings.Instance.HandPushToTalkGesture);
             var buttonName = GetButtonDisplayName(RuntimeSettings.Instance.PushToTalkButton);
             label.Content =
                 "[Experimental] AI Assistant\n\n" +
                 $"Connect to AI Agents on your Unity Editor,\npinch with <b>{gestureName}</b> " +
                 $"or press controller <b>{buttonName}</b> button to talk";
+#else
+            // Voice input is compiled out without the Voice SDK, so the pinch/press instructions would
+            // do nothing with no error to explain why. Tell the user what's missing instead.
+            label.Content =
+                "[Experimental] AI Assistant\n\n" +
+                "Voice input requires the <b>Meta XR Voice SDK</b>\n(com.meta.xr.sdk.voice), which is not installed.\n" +
+                "Install it via the Package Manager to talk to AI Agents from your headset.";
+#endif
             label.Text.alignment = TextAnchor.MiddleCenter;
             label.Text.color = new Color(1f, 1f, 1f, 0.25f);
             label.Text.fontSize = 18;
@@ -505,6 +540,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             label.Text.supportRichText = true;
         }
 
+#if HAS_META_VOICE_SDK
         private static string GetGestureDisplayName(HandPinchGesture gesture)
         {
             return gesture switch
@@ -527,6 +563,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
                 _ => "A/X"
             };
         }
+#endif
 
         private void ShowWelcomeWatermark()
         {
@@ -556,7 +593,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             // Force scroll to bottom every frame if auto-scroll is enabled
             if (_autoScrollEnabled && _conversationScrollView != null && _conversationScrollView.Progress > 0.01f)
             {
-                _conversationScrollView.Progress = 0.0f;
+                _conversationScrollView.SetProgressWithoutPreservation(0.0f);
             }
         }
 
@@ -564,7 +601,25 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         {
             if (_autoScrollEnabled && _conversationScrollView != null)
             {
-                _conversationScrollView.Progress = 0.0f;
+                _conversationScrollView.SetProgressWithoutPreservation(0.0f);
+            }
+        }
+
+        private void SetAutoScrollEnabled(bool enabled)
+        {
+            _autoScrollEnabled = enabled;
+
+            if (_autoScrollToggle != null)
+            {
+                _autoScrollToggle.State = enabled;
+            }
+
+            if (_conversationScrollView != null)
+            {
+                // While following the latest message the view is pinned to the bottom; once the user
+                // scrolls away, hold their absolute position so a streaming reply growing at the bottom
+                // doesn't creep the view toward the top.
+                _conversationScrollView.PreserveAbsolutePosition = !enabled;
             }
         }
 
@@ -589,10 +644,13 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         private void RefreshAllEntries()
         {
-            float savedScrollProgress = 0f;
+            // Preserve the absolute offset (not the normalized position) so a rebuild while the user
+            // has scrolled away keeps the same content in view instead of creeping toward the top as
+            // the conversation grows.
+            float savedContentOffset = 0f;
             if (!_autoScrollEnabled && _conversationScrollView != null)
             {
-                savedScrollProgress = _conversationScrollView.Progress;
+                savedContentOffset = _conversationScrollView.ContentVerticalOffset;
             }
 
             ClearConversationUI();
@@ -601,20 +659,21 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             {
                 CreateConversationLineUI(entry);
             }
+            _thinkingAnimationController?.EnsureLastChild();
 
             if (!_autoScrollEnabled && _conversationScrollView != null)
             {
-                StartCoroutine(RestoreScrollPositionCoroutine(savedScrollProgress));
+                StartCoroutine(RestoreScrollPositionCoroutine(savedContentOffset));
             }
         }
 
-        private IEnumerator RestoreScrollPositionCoroutine(float targetProgress)
+        private IEnumerator RestoreScrollPositionCoroutine(float targetContentOffset)
         {
             yield return null;
 
             if (_conversationScrollView != null && !_autoScrollEnabled)
             {
-                _conversationScrollView.Progress = targetProgress;
+                _conversationScrollView.ContentVerticalOffset = targetContentOffset;
             }
         }
 
@@ -666,6 +725,10 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             _voiceStatusLabel.LayoutStyle = Style.Load<LayoutStyle>("StatusPillLabel");
             _voiceStatusLabel.TextStyle = Style.Load<TextStyle>("StatusPillText");
             _voiceStatusLabel.Content = "Voice: Waiting";
+            if (_voiceStatusLabel.Text != null)
+            {
+                _voiceStatusDefaultColor = _voiceStatusLabel.Text.color;
+            }
 
             UpdateVoiceStatusPill(_conversationManager?.CurrentVoiceStatus ?? ConversationManager.VoiceStatus.Waiting);
         }
@@ -708,6 +771,13 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             _voiceStatusPill.Icon = pillStyle.icon;
             _voiceStatusPill.State = isActive;
 
+            if (_voiceStatusLabel.Text != null)
+            {
+                _voiceStatusLabel.Text.color = status == ConversationManager.VoiceStatus.Error
+                    ? new Color(0.9f, 0.3f, 0.3f)
+                    : _voiceStatusDefaultColor;
+            }
+
             _voiceStatusLabel.Content = $"Voice: {status}";
         }
 
@@ -722,17 +792,19 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         private void OnAutoScrollToggleClicked()
         {
-            _autoScrollEnabled = !_autoScrollEnabled;
-
-            if (_autoScrollToggle != null)
-            {
-                _autoScrollToggle.State = _autoScrollEnabled;
-            }
+            SetAutoScrollEnabled(!_autoScrollEnabled);
 
             if (_autoScrollEnabled)
             {
                 ScrollToBottom();
             }
+        }
+
+        private void OnUserScrollDetected()
+        {
+            if (!_autoScrollEnabled) return;
+
+            SetAutoScrollEnabled(false);
         }
 
         private void OnCancelButtonClicked()

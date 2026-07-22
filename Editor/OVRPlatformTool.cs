@@ -33,8 +33,15 @@ using UnityEngine.Networking;
 
 namespace Assets.Oculus.VR.Editor
 {
+    /// <summary>
+    /// Editor window for uploading builds to the Meta Horizon Store using the Oculus Platform Utility CLI.
+    /// Supports Quest and Rift target platforms, APK/OBB uploads, expansion files, debug symbols, and release channel management.
+    /// </summary>
     public class OVRPlatformTool : EditorWindow
     {
+        /// <summary>
+        /// Identifies the target platform for a Platform Tool upload (Rift PC or Quest mobile).
+        /// </summary>
         public enum TargetPlatform
         {
             Rift = 0,
@@ -44,6 +51,9 @@ namespace Assets.Oculus.VR.Editor
             None = 3,
         };
 
+        /// <summary>
+        /// Gamepad emulation modes for the Platform Tool upload configuration.
+        /// </summary>
         public enum GamepadType
         {
             OFF,
@@ -584,6 +594,7 @@ namespace Assets.Oculus.VR.Editor
             }
 
             string uploadCommand;
+            string logBefore = OVRPlatformTool.log ?? string.Empty;
             if (genUploadCommand(targetPlatform, out uploadCommand))
             {
                 var thread = new Thread(delegate ()
@@ -601,8 +612,12 @@ namespace Assets.Oculus.VR.Editor
             }
             else
             {
+                string currentLog = OVRPlatformTool.log ?? string.Empty;
+                string validationErrors = currentLog.Length > logBefore.Length
+                    ? currentLog.Substring(logBefore.Length).Trim()
+                    : string.Empty;
                 IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-platform-upload-command-generation-failed",
-                    "Failed to generated upload command.");
+                    $"Failed to generate upload command. {validationErrors}");
             }
         }
 
@@ -1288,7 +1303,7 @@ namespace Assets.Oculus.VR.Editor
             if (webRequest.isNetworkError || webRequest.isHttpError)
 #endif
             {
-                var networkErrorMsg = "Failed to provision Oculus Platform Util\n";
+                var networkErrorMsg = $"Failed to provision Oculus Platform Util: {webRequest.error}\n";
                 IssueTracker.TrackError(IssueTracker.SDK.Core, "ovr-platform-util-provision-failed", networkErrorMsg);
                 OVRPlatformTool.log += networkErrorMsg;
             }
@@ -1410,6 +1425,11 @@ namespace Assets.Oculus.VR.Editor
                 }
             }
 
+            /// <summary>
+            /// Wraps the delegate's output in a horizontal layout indented by the specified number of pixels.
+            /// </summary>
+            /// <param name="pixels">The number of pixels to indent from the left.</param>
+            /// <param name="worker">The delegate whose GUI content will be drawn inside the indented area.</param>
             public static void HInset(int pixels, Worker worker)
             {
                 InOut(
@@ -1442,8 +1462,16 @@ namespace Assets.Oculus.VR.Editor
             }
         }
 
+        /// <summary>
+        /// Lightweight coroutine runner for the Unity Editor that pumps an IEnumerator via EditorApplication.update.
+        /// </summary>
         public class EditorCoroutine
         {
+            /// <summary>
+            /// Creates and starts a new editor coroutine from the given enumerator.
+            /// </summary>
+            /// <param name="routine">The coroutine enumerator to execute.</param>
+            /// <returns>The running <see cref="EditorCoroutine"/> instance.</returns>
             public static EditorCoroutine Start(IEnumerator routine)
             {
                 EditorCoroutine coroutine = new EditorCoroutine(routine);
@@ -1465,12 +1493,19 @@ namespace Assets.Oculus.VR.Editor
                 EditorApplication.update += Update;
             }
 
+            /// <summary>
+            /// Stops the coroutine by unsubscribing from EditorApplication.update and marking it as completed.
+            /// </summary>
             public void Stop()
             {
                 EditorApplication.update -= Update;
                 completed = true;
             }
 
+            /// <summary>
+            /// Returns whether the coroutine has finished executing.
+            /// </summary>
+            /// <returns><c>true</c> if the coroutine has completed or was stopped; otherwise <c>false</c>.</returns>
             public bool GetCompleted()
             {
                 return completed;

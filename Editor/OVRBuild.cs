@@ -417,6 +417,9 @@ partial class OculusBuildApp : EditorWindow
         OnBuildComplete();
     }
 
+    /// <summary>
+    /// Initiates the full build-and-run pipeline: exports the Unity project to Gradle, runs the Gradle build, and optionally deploys to the connected device.
+    /// </summary>
     public void StartBuild()
     {
         showCancel = false;
@@ -703,6 +706,10 @@ partial class OculusBuildApp : EditorWindow
         return sceneList;
     }
 
+    /// <summary>
+    /// Copies the built APK from the Gradle output directory to the configured output path and opens the containing folder.
+    /// </summary>
+    /// <returns><c>true</c> if the APK was successfully copied; otherwise <c>false</c>.</returns>
     public static bool CopyAPK()
     {
         string buildFlavor = isDevelopmentBuild ? "debug" : "release";
@@ -728,6 +735,10 @@ partial class OculusBuildApp : EditorWindow
         return false;
     }
 
+    /// <summary>
+    /// Deploys the built APK to the connected Android device via ADB install.
+    /// </summary>
+    /// <returns><c>true</c> if the APK was successfully installed on the device; otherwise <c>false</c>.</returns>
     public static bool DeployAPK()
     {
         // Create new instance of ADB Tool

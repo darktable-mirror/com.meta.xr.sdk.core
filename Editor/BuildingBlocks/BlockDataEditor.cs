@@ -145,6 +145,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
+        /// <summary>
+        /// Draws the inspector UI for an installation routine with optional pill color styling.
+        /// </summary>
+        /// <param name="installationRoutine">The installation routine to display.</param>
+        /// <param name="pillColor">An optional color for the pill indicator.</param>
+        /// <param name="offset">The horizontal offset for the foldout control.</param>
         public static void DrawInstallRoutine(InstallationRoutine installationRoutine, Color? pillColor, float offset)
         {
             EditorGUILayout.BeginHorizontal();

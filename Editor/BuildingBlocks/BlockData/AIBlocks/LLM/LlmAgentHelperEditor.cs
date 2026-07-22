@@ -25,6 +25,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the LlmAgentHelper component.
+    /// </summary>
     [CustomEditor(typeof(LlmAgentHelper))]
     public class LlmAgentHelperEditor : UnityEditor.Editor
     {
@@ -38,17 +41,24 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
 
         private void OnEnable()
         {
-            _userInput = serializedObject.FindProperty("userInput");
-            _selectedPrompt = serializedObject.FindProperty("selectedPrompt");
-            _includeImage = serializedObject.FindProperty("includeImage");
-            _imageSource = serializedObject.FindProperty("imageSource");
-            _promptImage = serializedObject.FindProperty("promptImage");
-            _promptImageUrl = serializedObject.FindProperty("promptImageUrl");
-            _useEditorFakeCameraPreview = serializedObject.FindProperty("useEditorFakeCameraPreview");
+            EnsureProperties();
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the LLM agent helper.
+        /// </summary>
         public override void OnInspectorGUI()
         {
+            if (target == null) return;
+
+            // SerializedProperty handles cached in OnEnable can become invalid after a
+            // domain reload, prefab edit / play-mode swap, or undo of object create.
+            // Drawing with a null SerializedProperty throws NullReferenceException from
+            // inside Unity's PropertyField (the "null ref on ID" reported when clicking
+            // the prompt enum). Re-fetching any null property is cheap and makes the
+            // inspector robust to those races.
+            EnsureProperties();
+
             var helper = (LlmAgentHelper)target;
             serializedObject.Update();
 
@@ -96,6 +106,21 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        // Re-fetches any SerializedProperty handle that has gone null. Safe to call
+        // every OnInspectorGUI; FindProperty on an already-set field is a no-op here
+        // because each call only runs when the cached field is null.
+        private void EnsureProperties()
+        {
+            if (serializedObject == null) return;
+            if (_userInput == null) _userInput = serializedObject.FindProperty("userInput");
+            if (_selectedPrompt == null) _selectedPrompt = serializedObject.FindProperty("selectedPrompt");
+            if (_includeImage == null) _includeImage = serializedObject.FindProperty("includeImage");
+            if (_imageSource == null) _imageSource = serializedObject.FindProperty("imageSource");
+            if (_promptImage == null) _promptImage = serializedObject.FindProperty("promptImage");
+            if (_promptImageUrl == null) _promptImageUrl = serializedObject.FindProperty("promptImageUrl");
+            if (_useEditorFakeCameraPreview == null) _useEditorFakeCameraPreview = serializedObject.FindProperty("useEditorFakeCameraPreview");
         }
     }
 }

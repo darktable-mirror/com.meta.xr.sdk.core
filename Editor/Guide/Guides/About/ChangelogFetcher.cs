@@ -51,12 +51,33 @@ namespace Meta.XR.Guides.Editor.About
 
         public async Task<bool> Fetch(bool forceRedownload = false)
         {
-            var downloader = new RemoteJsonContentDownloader(cacheFile: $"{_packageName}_changelog.json",
-                    url:
-                    $"https://developers.meta.com/horizon/changelog/package/{_packageName}{(_maxVersions.HasValue ? $"?max_versions={_maxVersions}" : "")}")
-                .WithCacheDuration(TimeSpan.FromHours(6))
-                .WithMachineIdUrlParameter()
-                .WithSDKVersionUrlParameter();
+            var downloader = new RemoteJsonContentDownloader(
+                    cacheFile: $"{_packageName}_changelog.json",
+                    url: $"https://developers.meta.com/horizon/changelog/package/{_packageName}")
+                .WithCacheDuration(TimeSpan.FromHours(6));
+
+            if (_maxVersions.HasValue)
+            {
+                downloader.WithUrlParameter("max_versions", _maxVersions.Value.ToString());
+            }
+
+            try
+            {
+                downloader.WithMachineIdUrlParameter();
+            }
+            catch (Exception)
+            {
+                // Machine ID may not be available on all platforms (e.g., Mac)
+            }
+
+            try
+            {
+                downloader.WithSDKVersionUrlParameter();
+            }
+            catch (Exception)
+            {
+                // SDK version may not be available on all platforms
+            }
 
             if (forceRedownload)
             {

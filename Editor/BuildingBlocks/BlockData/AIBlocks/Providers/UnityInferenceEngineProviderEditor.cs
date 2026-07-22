@@ -27,6 +27,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the Unity Inference Engine provider.
+    /// </summary>
     [CustomEditor(typeof(UnityInferenceEngineProvider))]
     public class UnityInferenceEngineProviderEditor : UnityEditor.Editor
     {
@@ -93,6 +96,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             LoadClassLabels();
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the Unity Inference Engine provider.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

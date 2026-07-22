@@ -28,7 +28,7 @@ using Meta.MCPBridge;
 using Meta.MCPBridge.Attributes;
 using Meta.MCPBridge.Services;
 using Meta.MCPBridge.Utils;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -52,38 +52,38 @@ namespace MCPServices.Tools
     internal interface IReflectionService : IService
     {
         [Tool(Description = "Create a new instance of a type by name using JSON arguments and register it in the object registry. Use full namespace (e.g., 'UnityEngine.GameObject', not 'GameObject').")]
-        public string CreateInstanceFromJsonAndRegister(string typeName, JObject arguments);
+        public string CreateInstanceFromJsonAndRegister(string typeName, JsonObject arguments);
 
         [Tool(Description = "Get information about an object in the registry")]
-        public JObject GetObjectInfo(string objectId);
+        public JsonObject GetObjectInfo(string objectId);
 
         [Tool(Description = "List all objects in the registry")]
-        public Dictionary<string, JObject> ListObjects();
+        public Dictionary<string, JsonObject> ListObjects();
 
         [Tool(Description = "List all objects of a specific type in the registry")]
-        public Dictionary<string, JObject> ListObjectsOfType(string typeName);
+        public Dictionary<string, JsonObject> ListObjectsOfType(string typeName);
 
         [Tool(Description = "Get a property value from an object by ID")]
         public object GetPropertyById(string objectId, string propertyName);
 
         [Tool(Description = "Set a property value on an object by ID using a JSON value")]
-        public void SetPropertyFromJsonById(string objectId, string propertyName, JToken value);
+        public void SetPropertyFromJsonById(string objectId, string propertyName, JsonNode value);
 
         [Tool(Description = "Get a field value from an object by ID")]
         public object GetFieldById(string objectId, string fieldName);
 
         [Tool(Description = "Set a field value on an object by ID using a JSON value")]
-        public void SetFieldFromJsonById(string objectId, string fieldName, JToken value);
+        public void SetFieldFromJsonById(string objectId, string fieldName, JsonNode value);
 
         [Tool("Invoke a method on an object by ID using JSON arguments",
             "Never use generic methods, use the equivalent methods that accept type parameters",
             "Make sure to use the expected parameter names")]
-        public object InvokeMethodFromJsonById(string objectId, string methodName, JObject arguments);
+        public object InvokeMethodFromJsonById(string objectId, string methodName, JsonObject arguments);
 
         [Tool("Invoke a static method on a type using JSON arguments",
             "Never use generic methods, use the equivalent methods that accept type parameters",
             "Make sure to use the expected parameter names")]
-        public object InvokeStaticMethodFromJson(string typeName, string methodName, JObject arguments);
+        public object InvokeStaticMethodFromJson(string typeName, string methodName, JsonObject arguments);
 
         [Tool(Description = "Get a type by name from Unity assemblies")]
         public Type GetType(string typeName);
@@ -104,16 +104,16 @@ namespace MCPServices.Tools
         public IEnumerable<Type> GetTypesInNamespace(string namespaceName);
 
         [Tool(Description = "Find GameObjects by name and register them in the object registry. Returns registry IDs for all matching GameObjects.")]
-        public Dictionary<string, JObject> FindGameObjectsAndRegister(string gameObjectName, bool exactMatch = false, bool includeInactive = false);
+        public Dictionary<string, JsonObject> FindGameObjectsAndRegister(string gameObjectName, bool exactMatch = false, bool includeInactive = false);
 
-        [Tool(Description = "Register an existing Unity Object (GameObject, Component, etc.) in the object registry using its Unity instance ID. Returns the registry ID.")]
-        public string RegisterUnityObjectById(int unityInstanceId);
+        [Tool(Description = "Register an existing Unity Object (GameObject, Component, etc.) in the object registry using its Unity object ID. Returns the registry ID.")]
+        public string RegisterUnityObjectById(ulong unityInstanceId);
 
-        [Tool(Description = "Get the Unity instance ID of a registered object. Useful for cross-referencing with other Unity tools.")]
-        public int? GetUnityInstanceId(string registryId);
+        [Tool(Description = "Get the Unity object ID of a registered object. Useful for cross-referencing with other Unity tools.")]
+        public ulong? GetUnityInstanceId(string registryId);
 
         [Tool(Description = "Find all GameObjects with a specific component type and register them. Use full namespace for componentTypeName (e.g., 'UnityEngine.Rigidbody', not 'Rigidbody'). Returns registry IDs for GameObjects that have the component.")]
-        public Dictionary<string, JObject> FindGameObjectsByComponentAndRegister(string componentTypeName, bool includeInactive = false);
+        public Dictionary<string, JsonObject> FindGameObjectsByComponentAndRegister(string componentTypeName, bool includeInactive = false);
 
         [Tool(Description = "Add a component to a GameObject by registry ID. Use full namespace for componentTypeName (e.g., 'UnityEngine.BoxCollider', not 'BoxCollider'). Returns the registry ID of the new component.")]
         public string AddComponentById(string gameObjectRegistryId, string componentTypeName);
@@ -122,7 +122,7 @@ namespace MCPServices.Tools
         public bool RemoveComponentById(string gameObjectRegistryId, string componentTypeName);
 
         [Tool(Description = "Get all components of a GameObject by registry ID and register them. Returns a dictionary of component registry IDs.")]
-        public Dictionary<string, JObject> GetComponentsAndRegister(string gameObjectRegistryId);
+        public Dictionary<string, JsonObject> GetComponentsAndRegister(string gameObjectRegistryId);
 
         // NOTE: GameObject active state manipulation is fully supported through existing methods:
         // - Use SetPropertyFromJsonById(gameObjectId, "activeSelf", true/false) to enable/disable GameObjects
@@ -241,7 +241,7 @@ namespace MCPServices.Tools
             return _objectRegistry.RegisterObject(instance);
         }
 
-        public string CreateInstanceFromJsonAndRegister(string typeName, JObject arguments)
+        public string CreateInstanceFromJsonAndRegister(string typeName, JsonObject arguments)
         {
             // Create the instance using the existing method
             object instance = CreateInstanceFromJson(typeName, arguments);
@@ -253,7 +253,7 @@ namespace MCPServices.Tools
         /// <summary>
         /// Helper method to process return values from reflection methods.
         /// If the value is a reference type (not a primitive, enum, or struct), it registers it in the ObjectRegistry and returns the ID.
-        /// Otherwise, it converts the value to a JObject representation.
+        /// Otherwise, it converts the value to a JsonObject representation.
         /// </summary>
         private object ProcessReturnValue(object value)
         {
@@ -264,8 +264,8 @@ namespace MCPServices.Tools
 
             Type type = value.GetType();
 
-            // If the value is already a JObject or JToken, return it as is
-            if (value is JObject || value is JToken)
+            // If the value is already a JsonObject or JsonNode, return it as is
+            if (value is JsonObject || value is JsonNode)
             {
                 return value;
             }
@@ -282,14 +282,14 @@ namespace MCPServices.Tools
                 return value;
             }
 
-            // If the value is a Unity struct like Vector3, Quaternion, etc., convert it to a JObject
+            // If the value is a Unity struct like Vector3, Quaternion, etc., convert it to a JsonObject
             if (type.IsValueType)
             {
                 try
                 {
-                    // Try to convert to JObject using JSON serialization
+                    // Try to convert to JsonObject using JSON serialization
                     string json = JsonUtility.ToJson(value);
-                    return JObject.Parse(json);
+                    return JsonObject.Parse(json);
                 }
                 catch
                 {
@@ -307,14 +307,14 @@ namespace MCPServices.Tools
             return _objectRegistry.GetObject(objectId);
         }
 
-        public JObject GetObjectInfo(string objectId)
+        public JsonObject GetObjectInfo(string objectId)
         {
             return _objectRegistry.GetObjectInfo(objectId);
         }
 
-        public Dictionary<string, JObject> ListObjects()
+        public Dictionary<string, JsonObject> ListObjects()
         {
-            var result = new Dictionary<string, JObject>();
+            var result = new Dictionary<string, JsonObject>();
 
             foreach (var kvp in _objectRegistry.GetAllObjects())
             {
@@ -324,9 +324,9 @@ namespace MCPServices.Tools
             return result;
         }
 
-        public Dictionary<string, JObject> ListObjectsOfType(string typeName)
+        public Dictionary<string, JsonObject> ListObjectsOfType(string typeName)
         {
-            var result = new Dictionary<string, JObject>();
+            var result = new Dictionary<string, JsonObject>();
             Type targetType = GetType(typeName);
 
             if (targetType == null)
@@ -365,7 +365,7 @@ namespace MCPServices.Tools
             SetProperty(target, propertyName, value);
         }
 
-        public void SetPropertyFromJsonById(string objectId, string propertyName, JToken value)
+        public void SetPropertyFromJsonById(string objectId, string propertyName, JsonNode value)
         {
             object target = GetObject(objectId);
             SetPropertyFromJson(target, propertyName, value);
@@ -384,7 +384,7 @@ namespace MCPServices.Tools
             SetField(target, fieldName, value);
         }
 
-        public void SetFieldFromJsonById(string objectId, string fieldName, JToken value)
+        public void SetFieldFromJsonById(string objectId, string fieldName, JsonNode value)
         {
             object target = GetObject(objectId);
             SetFieldFromJson(target, fieldName, value);
@@ -401,7 +401,7 @@ namespace MCPServices.Tools
             return ProcessReturnValue(result);
         }
 
-        public object InvokeMethodFromJsonById(string objectId, string methodName, JObject arguments)
+        public object InvokeMethodFromJsonById(string objectId, string methodName, JsonObject arguments)
         {
             object target = GetObject(objectId);
             object result = InvokeMethodFromJson(target, methodName, arguments);
@@ -412,9 +412,9 @@ namespace MCPServices.Tools
 
         #region Unity GameObject Integration Methods
 
-        public Dictionary<string, JObject> FindGameObjectsAndRegister(string gameObjectName, bool exactMatch = false, bool includeInactive = false)
+        public Dictionary<string, JsonObject> FindGameObjectsAndRegister(string gameObjectName, bool exactMatch = false, bool includeInactive = false)
         {
-            var result = new Dictionary<string, JObject>();
+            var result = new Dictionary<string, JsonObject>();
             var foundObjects = new List<GameObject>();
 
             // Search through all loaded scenes
@@ -440,28 +440,23 @@ namespace MCPServices.Tools
             return result;
         }
 
-        public string RegisterUnityObjectById(int unityInstanceId)
+        public string RegisterUnityObjectById(ulong unityInstanceId)
         {
-            // Find the Unity object by its instance ID
             Object unityObject = FindUnityObjectByInstanceId(unityInstanceId);
             if (unityObject == null)
-                throw new ArgumentException($"Unity Object with instance ID '{unityInstanceId}' not found");
+                throw new ArgumentException($"Unity Object with ID '{unityInstanceId}' not found");
 
             return _objectRegistry.RegisterObject(unityObject);
         }
 
-        public int? GetUnityInstanceId(string registryId)
+        public ulong? GetUnityInstanceId(string registryId)
         {
             try
             {
                 object obj = _objectRegistry.GetObject(registryId);
                 if (obj is Object unityObject)
                 {
-#if UNITY_6000_5_OR_NEWER
-                    return unityObject.GetEntityId();
-#else
-                    return unityObject.GetInstanceID();
-#endif
+                    return UnityObjectId.From(unityObject);
                 }
                 return null;
             }
@@ -471,9 +466,9 @@ namespace MCPServices.Tools
             }
         }
 
-        public Dictionary<string, JObject> FindGameObjectsByComponentAndRegister(string componentTypeName, bool includeInactive = false)
+        public Dictionary<string, JsonObject> FindGameObjectsByComponentAndRegister(string componentTypeName, bool includeInactive = false)
         {
-            var result = new Dictionary<string, JObject>();
+            var result = new Dictionary<string, JsonObject>();
             var foundObjects = new List<GameObject>();
 
             // Resolve the component type (aliases → exact lookup → partial match)
@@ -559,13 +554,13 @@ namespace MCPServices.Tools
             }
         }
 
-        public Dictionary<string, JObject> GetComponentsAndRegister(string gameObjectRegistryId)
+        public Dictionary<string, JsonObject> GetComponentsAndRegister(string gameObjectRegistryId)
         {
             GameObject gameObject = (GameObject)GetObject(gameObjectRegistryId);
             if (gameObject == null)
                 throw new ArgumentException($"Object with registry ID '{gameObjectRegistryId}' is not a GameObject");
 
-            var result = new Dictionary<string, JObject>();
+            var result = new Dictionary<string, JsonObject>();
             Component[] components = gameObject.GetComponents<Component>();
 
             foreach (var component in components)
@@ -618,10 +613,8 @@ namespace MCPServices.Tools
             }
         }
 
-        private Object FindUnityObjectByInstanceId(int instanceId)
+        private Object FindUnityObjectByInstanceId(ulong instanceId)
         {
-            // Search through all loaded scenes for GameObjects and their Components.
-            // This covers all scene objects the AI agent interacts with.
             for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
             {
                 var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
@@ -635,37 +628,21 @@ namespace MCPServices.Tools
                 }
             }
 
-            // Non-scene objects (assets like textures, materials, ScriptableObjects) are not
-            // searched. The previous fallback used Resources.FindObjectsOfTypeAll<Object>()
-            // which iterates every object in memory — catastrophic on Quest (seconds of stall,
-            // massive GC pressure). The AI agent works with GameObjects and Components; looking
-            // up assets by instance ID is not a supported workflow.
             return null;
         }
 
-        private Object FindUnityObjectByInstanceIdRecursive(GameObject obj, int instanceId)
+        private Object FindUnityObjectByInstanceIdRecursive(GameObject obj, ulong instanceId)
         {
-            // Check the GameObject itself
-#if UNITY_6000_5_OR_NEWER
-            if (obj.GetEntityId() == instanceId)
-#else
-            if (obj.GetInstanceID() == instanceId)
-#endif
+            if (UnityObjectId.Matches(obj, instanceId))
                 return obj;
 
-            // Check all components on this GameObject
             Component[] components = obj.GetComponents<Component>();
             foreach (var component in components)
             {
-#if UNITY_6000_5_OR_NEWER
-                if (component != null && component.GetEntityId() == instanceId)
-#else
-                if (component != null && component.GetInstanceID() == instanceId)
-#endif
+                if (component != null && UnityObjectId.Matches(component, instanceId))
                     return component;
             }
 
-            // Check children recursively
             foreach (Transform child in obj.transform)
             {
                 var result = FindUnityObjectByInstanceIdRecursive(child.gameObject, instanceId);
@@ -725,7 +702,7 @@ namespace MCPServices.Tools
             }
         }
 
-        private object CreateInstanceFromJson(string typeName, JObject arguments)
+        private object CreateInstanceFromJson(string typeName, JsonObject arguments)
         {
             Type type = GetType(typeName);
             if (type == null)
@@ -733,13 +710,13 @@ namespace MCPServices.Tools
 
             try
             {
-                // Ensure arguments is a valid JObject
-                JObject argsObj = EnsureJObject(arguments);
+                // Ensure arguments is a valid JsonObject
+                JsonObject argsObj = EnsureJsonObject(arguments);
 
                 // Special case for handling {"args": [...]} format
-                if (argsObj.TryGetValue("args", out JToken argsToken) && argsToken is JArray argsArray)
+                if (argsObj.TryGetValue("args", out JsonNode argsToken) && argsToken is JsonArray argsArray)
                 {
-                    // Convert JArray to object[] and use the regular CreateInstance method
+                    // Convert JsonArray to object[] and use the regular CreateInstance method
                     object[] args = argsArray.Select(token => token.ToObject<object>()).ToArray();
                     return CreateInstance(typeName, args);
                 }
@@ -777,7 +754,7 @@ namespace MCPServices.Tools
                             var param = parameters[i];
                             if (argsObj.TryGetValue(param.Name, StringComparison.OrdinalIgnoreCase, out var token))
                             {
-                                args[i] = ArgumentConverter.ConvertJTokenToType(token, param.ParameterType);
+                                args[i] = ArgumentConverter.ConvertJsonNodeToType(token, param.ParameterType);
                             }
                             else if (param.IsOptional)
                             {
@@ -820,7 +797,7 @@ namespace MCPServices.Tools
                     {
                         try
                         {
-                            var value = ArgumentConverter.ConvertJTokenToType(prop.Value, property.PropertyType);
+                            var value = ArgumentConverter.ConvertJsonNodeToType(prop.Value, property.PropertyType);
                             property.SetValue(instance, value);
                         }
                         catch
@@ -887,7 +864,7 @@ namespace MCPServices.Tools
             }
         }
 
-        private void SetPropertyFromJson(object target, string propertyName, JToken value)
+        private void SetPropertyFromJson(object target, string propertyName, JsonNode value)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
@@ -905,7 +882,7 @@ namespace MCPServices.Tools
             try
             {
                 // Convert the JSON value to the property type
-                object convertedValue = ArgumentConverter.ConvertJTokenToType(value, property.PropertyType);
+                object convertedValue = ArgumentConverter.ConvertJsonNodeToType(value, property.PropertyType);
                 property.SetValue(target, convertedValue);
             }
             catch (Exception ex)
@@ -960,7 +937,7 @@ namespace MCPServices.Tools
             }
         }
 
-        private void SetFieldFromJson(object target, string fieldName, JToken value)
+        private void SetFieldFromJson(object target, string fieldName, JsonNode value)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
@@ -975,7 +952,7 @@ namespace MCPServices.Tools
             try
             {
                 // Convert the JSON value to the field type
-                object convertedValue = ArgumentConverter.ConvertJTokenToType(value, field.FieldType);
+                object convertedValue = ArgumentConverter.ConvertJsonNodeToType(value, field.FieldType);
                 field.SetValue(target, convertedValue);
             }
             catch (Exception ex)
@@ -1010,20 +987,20 @@ namespace MCPServices.Tools
             }
         }
 
-        private object InvokeMethodFromJson(object target, string methodName, JObject arguments)
+        private object InvokeMethodFromJson(object target, string methodName, JsonObject arguments)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
 
             Type type = target.GetType();
 
-            // Ensure arguments is a valid JObject
-            JObject argsObj = EnsureJObject(arguments);
+            // Ensure arguments is a valid JsonObject
+            JsonObject argsObj = EnsureJsonObject(arguments);
 
             // Special case for handling {"args": [...]} format
-            if (argsObj.TryGetValue("args", out JToken argsToken) && argsToken is JArray argsArray)
+            if (argsObj.TryGetValue("args", out JsonNode argsToken) && argsToken is JsonArray argsArray)
             {
-                // Convert JArray to object[] and use the regular InvokeMethod method
+                // Convert JsonArray to object[] and use the regular InvokeMethod method
                 object[] args = argsArray.Select(token => token.ToObject<object>()).ToArray();
                 return InvokeMethod(target, methodName, args);
             }
@@ -1043,7 +1020,7 @@ namespace MCPServices.Tools
                 try
                 {
                     // Convert JSON arguments to method parameters
-                    object[] args = ArgumentConverter.ConvertJObjectToArguments(argsObj, method);
+                    object[] args = ArgumentConverter.ConvertJsonObjectToArguments(argsObj, method);
                     object result = method.Invoke(target, args);
                     return ProcessReturnValue(result);
                 }
@@ -1082,19 +1059,19 @@ namespace MCPServices.Tools
             }
         }
 
-        public object InvokeStaticMethodFromJson(string typeName, string methodName, JObject arguments)
+        public object InvokeStaticMethodFromJson(string typeName, string methodName, JsonObject arguments)
         {
             Type type = GetType(typeName);
             if (type == null)
                 throw new ArgumentException($"Type '{typeName}' not found");
 
-            // Ensure arguments is a valid JObject
-            JObject argsObj = EnsureJObject(arguments);
+            // Ensure arguments is a valid JsonObject
+            JsonObject argsObj = EnsureJsonObject(arguments);
 
             // Special case for handling {"args": [...]} format
-            if (argsObj.TryGetValue("args", out JToken argsToken) && argsToken is JArray argsArray)
+            if (argsObj.TryGetValue("args", out JsonNode argsToken) && argsToken is JsonArray argsArray)
             {
-                // Convert JArray to object[] and use the regular InvokeStaticMethod method
+                // Convert JsonArray to object[] and use the regular InvokeStaticMethod method
                 object[] args = argsArray.Select(token => token.ToObject<object>()).ToArray();
                 return InvokeStaticMethod(typeName, methodName, args);
             }
@@ -1113,7 +1090,7 @@ namespace MCPServices.Tools
                 try
                 {
                     // Convert JSON arguments to method parameters
-                    object[] args = ArgumentConverter.ConvertJObjectToArguments(argsObj, method);
+                    object[] args = ArgumentConverter.ConvertJsonObjectToArguments(argsObj, method);
                     object result = method.Invoke(null, args);
                     return ProcessReturnValue(result);
                 }
@@ -1459,14 +1436,14 @@ namespace MCPServices.Tools
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
-        // Helper method to ensure we have a valid JObject
-        private JObject EnsureJObject(JObject obj)
+        // Helper method to ensure we have a valid JsonObject
+        private JsonObject EnsureJsonObject(JsonObject obj)
         {
             if (obj == null)
-                return new JObject();
+                return new JsonObject();
 
             // If the object is actually a string (happens when JSON is double-serialized)
-            if (obj.Count == 1 && obj.Properties().First().Value.Type == JTokenType.String)
+            if (obj.Count == 1 && obj.Properties().First().Value.Type == JsonNodeType.String)
             {
                 var prop = obj.Properties().First();
                 if (prop.Name == "arguments" || prop.Name == "args")
@@ -1475,7 +1452,7 @@ namespace MCPServices.Tools
                     {
                         // Try to parse the string value as JSON
                         string jsonStr = prop.Value.ToString();
-                        return JObject.Parse(jsonStr);
+                        return JsonObject.Parse(jsonStr);
                     }
                     catch
                     {

@@ -114,7 +114,7 @@ namespace Meta.MCPBridge.Editor
             finally
             {
                 _isCheckingClaudeCode = false;
-                EditorApplication.QueuePlayerLoopUpdate();
+                EditorApplication.delayCall += UnityEditorInternal.InternalEditorUtility.RepaintAllViews;
             }
         }
 
@@ -128,7 +128,7 @@ namespace Meta.MCPBridge.Editor
                 var configPath = System.IO.Path.Combine(home, ".claude.json");
                 if (System.IO.File.Exists(configPath))
                 {
-                    var json = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(configPath));
+                    var json = Meta.XR.Json.JsonObject.Parse(System.IO.File.ReadAllText(configPath));
                     // Normalize path to forward slashes to match .claude.json format (cross-platform)
                     // Windows: C:\foo\bar -> C:/foo/bar; Mac/Linux: /foo/bar -> /foo/bar (no-op)
                     var projectPath = ProjectDirectory.Replace('\\', '/');
@@ -163,11 +163,33 @@ namespace Meta.MCPBridge.Editor
         }
 
         private static string ServerUrl(int port) =>
-            $"http://localhost:{port}/mcpbridge/";
+            $"http://127.0.0.1:{port}/mcpbridge/";
 
         private const string McpName = "meta-xr-unity-runtime";
 
-        internal static async void RegisterWithClaudeCodeAsync(int port)
+        /// <summary>
+        /// Automatically register with all available AI agent CLIs if not already registered.
+        /// Called during server startup to ensure the MCP server is usable immediately.
+        /// </summary>
+        internal static async void AutoRegisterIfNeeded(int port)
+        {
+            try
+            {
+                var status = await Task.Run(() => CheckClaudeCodeStatusSync(port));
+                if (status == McpRegistrationStatus.NotRegistered)
+                {
+                    // Remove stale registration first (e.g. old port) before re-adding
+                    await Task.Run(() => RunProcess("claude", $"mcp remove {McpName}"));
+                    _ = RegisterWithClaudeCodeAsync(port);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[McpRegistration] Auto-registration check failed: {ex.Message}");
+            }
+        }
+
+        internal static async Task RegisterWithClaudeCodeAsync(int port)
         {
             _claudeCodeStatus = McpRegistrationStatus.Checking;
             _isCheckingClaudeCode = true;
@@ -195,7 +217,7 @@ namespace Meta.MCPBridge.Editor
             finally
             {
                 _isCheckingClaudeCode = false;
-                EditorApplication.QueuePlayerLoopUpdate();
+                EditorApplication.delayCall += UnityEditorInternal.InternalEditorUtility.RepaintAllViews;
             }
         }
 
@@ -217,28 +239,70 @@ namespace Meta.MCPBridge.Editor
             finally
             {
                 _isCheckingClaudeCode = false;
-                EditorApplication.QueuePlayerLoopUpdate();
+                EditorApplication.delayCall += UnityEditorInternal.InternalEditorUtility.RepaintAllViews;
             }
         }
 
-        internal static bool RegisterWithDevMate(int port)
+        /// <summary>
+        /// Returns whether the given AI service supports automatic MCP registration.
+        /// Any service that declares an ExecutableName in its attribute can be auto-registered.
+        /// </summary>
+        internal static bool CanAutoRegister(string serviceId)
+        {
+            var service = AIServiceRegistry.GetService(serviceId);
+            return service != null && !string.IsNullOrEmpty(service.Value.Attribute.ExecutableName);
+        }
+
+        /// <summary>
+        /// Registers the MCP server with the AI service identified by <paramref name="serviceId"/>.
+        /// Claude Code uses a specialized path with status tracking; all other services
+        /// use a generic CLI-based registration via their declared ExecutableName.
+        /// </summary>
+        internal static async Task<bool> RegisterWithServiceAsync(string serviceId, int port)
+        {
+            if (serviceId == ClaudeCodeService.ServiceId)
+            {
+                await RegisterWithClaudeCodeAsync(port);
+                return _claudeCodeStatus == McpRegistrationStatus.Registered;
+            }
+
+            var service = AIServiceRegistry.GetService(serviceId);
+            if (service == null || string.IsNullOrEmpty(service.Value.Attribute.ExecutableName))
+                return false;
+
+            return await RegisterWithCliAsync(service.Value.ExecutableName, port);
+        }
+
+        private static async Task<bool> RegisterWithCliAsync(string executable, int port)
         {
             var token = McpBridgeSettings.EnsureToken();
-            var result = RunProcessWithOutput("devmate", $"mcp add {McpName} --transport http {ServerUrl(port)} --header \"Authorization:Bearer {token}\"");
+            var url = ServerUrl(port);
+            var args = $"mcp add {McpName} --transport http {url} --header \"Authorization:Bearer {token}\"";
 
-            // If failed due to "already exists", remove and re-add
-            if (!result.success && (result.error.Contains("already exists") || result.output.Contains("already exists")))
+            var result = await Task.Run(() => RunProcessWithOutput(executable, args));
+
+            if (result.error.Contains("already exists") || result.output.Contains("already exists"))
             {
-                RunProcess("devmate", $"mcp remove {McpName}");
-                return RunProcess("devmate", $"mcp add {McpName} --transport http {ServerUrl(port)} --header \"Authorization:Bearer {token}\"");
+                await Task.Run(() => RunProcess(executable, $"mcp remove {McpName}"));
+                result = await Task.Run(() => RunProcessWithOutput(executable, args));
             }
 
             return result.success;
         }
 
-        internal static bool UnregisterFromDevMate()
+        /// <summary>
+        /// Returns the CLI command string a user would run to manually register the MCP server
+        /// with the given service, or null if the service has no declared executable.
+        /// </summary>
+        internal static string GetRegistrationCommand(string serviceId, int port)
         {
-            return RunProcess("devmate", $"mcp remove {McpName}");
+            var service = AIServiceRegistry.GetService(serviceId);
+            if (service == null || string.IsNullOrEmpty(service.Value.Attribute.ExecutableName))
+                return null;
+
+            var token = McpBridgeSettings.EnsureToken();
+            var url = ServerUrl(port);
+            return $"{service.Value.ExecutableName} mcp add {McpName} --transport http {url} --header \"Authorization:Bearer {token}\"";
         }
 
         /// <summary>

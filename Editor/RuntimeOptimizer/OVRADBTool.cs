@@ -31,6 +31,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Meta.XR.RuntimeOptimizer.Editor
 {
+    /// <summary>Provides a wrapper around the Android Debug Bridge (ADB) command-line tool for managing devices and executing commands.</summary>
     public class OVRADBTool
     {
         public bool isReady;
@@ -64,14 +65,21 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             isReady = File.Exists(adbPath);
         }
 
+        /// <summary>Checks whether the given Android SDK root path contains a valid ADB executable.</summary>
+        /// <param name="androidSdkRoot">The root path of the Android SDK installation.</param>
+        /// <returns><c>true</c> if the ADB executable exists at the expected location within the SDK root; otherwise, <c>false</c>.</returns>
         public static bool IsAndroidSdkRootValid(string androidSdkRoot)
         {
             OVRADBTool tool = new OVRADBTool(androidSdkRoot);
             return tool.isReady;
         }
 
+        /// <summary>Callback invoked repeatedly while waiting for an ADB process to exit, allowing the caller to perform work such as updating UI.</summary>
         public delegate void WaitingProcessToExitCallback();
 
+        /// <summary>Starts the ADB server by running the <c>start-server</c> command.</summary>
+        /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit.</param>
+        /// <returns>The exit code of the ADB process.</returns>
         public int StartServer(WaitingProcessToExitCallback waitingProcessToExitCallback)
         {
             string outputString;
@@ -82,6 +90,9 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             return exitCode;
         }
 
+        /// <summary>Stops the ADB server by running the <c>kill-server</c> command.</summary>
+        /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit.</param>
+        /// <returns>The exit code of the ADB process.</returns>
         public int KillServer(WaitingProcessToExitCallback waitingProcessToExitCallback)
         {
             string outputString;
@@ -92,6 +103,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             return exitCode;
         }
 
+        /// <summary>Forwards a local TCP port to the same port on the connected device using <c>adb forward</c>.</summary>
+        /// <param name="port">The TCP port number to forward.</param>
+        /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit.</param>
+        /// <returns>The exit code of the ADB process.</returns>
         public int ForwardPort(int port, WaitingProcessToExitCallback waitingProcessToExitCallback)
         {
             string outputString;
@@ -104,6 +119,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             return exitCode;
         }
 
+        /// <summary>Removes a previously forwarded TCP port using <c>adb forward --remove</c>.</summary>
+        /// <param name="port">The TCP port number to stop forwarding.</param>
+        /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit.</param>
+        /// <returns>The exit code of the ADB process.</returns>
         public int ReleasePort(int port, WaitingProcessToExitCallback waitingProcessToExitCallback)
         {
             string outputString;
@@ -116,11 +135,17 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             return exitCode;
         }
 
+        /// <summary>Returns a list of serial numbers for all connected ADB devices.</summary>
+        /// <returns>A list of device serial number strings.</returns>
         public List<string> GetDevices()
         {
             return new List<string>(GetDevicesWithStatus().Keys);
         }
 
+        /// <summary>
+        /// Returns a dictionary mapping device serial numbers to their connection status strings.
+        /// </summary>
+        /// <returns>A dictionary of device serial numbers to status strings (e.g., "device", "offline").</returns>
         public Dictionary<string, string> GetDevicesWithStatus()
         {
             string outputString;
@@ -158,6 +183,13 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         private StringBuilder outputStringBuilder = null;
         private StringBuilder errorStringBuilder = null;
 
+        /// <summary>Runs an ADB command synchronously and captures its standard output and error streams.</summary>
+        /// <param name="arguments">The command-line arguments to pass to ADB.</param>
+        /// <param name="waitingProcessToExitCallback">Optional callback invoked repeatedly while waiting for the process to exit.</param>
+        /// <param name="outputString">The captured standard output of the process.</param>
+        /// <param name="errorString">The captured standard error of the process.</param>
+        /// <param name="stdIn">Optional string to write to the process standard input.</param>
+        /// <returns>The exit code of the ADB process, or <c>-1</c> if the tool is not ready.</returns>
         public int RunCommand(string[] arguments, WaitingProcessToExitCallback waitingProcessToExitCallback,
             out string outputString, out string errorString, string stdIn = null)
         {
@@ -230,6 +262,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             return exitCode;
         }
 
+        /// <summary>Runs an ADB command asynchronously, returning the running process for the caller to manage.</summary>
+        /// <param name="arguments">The command-line arguments to pass to ADB.</param>
+        /// <param name="outputDataRecievedHandler">Optional handler invoked when a line of output data is received from the process.</param>
+        /// <returns>The started <see cref="Process"/>, or <c>null</c> if the tool is not ready.</returns>
         public Process RunCommandAsync(string[] arguments, DataReceivedEventHandler outputDataRecievedHandler)
         {
             if (!isReady)
@@ -260,6 +296,12 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             return process;
         }
 
+        /// <summary>Attempts to retrieve a system property from a device using <c>adb shell getprop</c>, returning a default value on failure.</summary>
+        /// <param name="device">The serial number of the target device.</param>
+        /// <param name="property">The name of the system property to retrieve.</param>
+        /// <param name="defaultValue">The value to return if the property cannot be retrieved.</param>
+        /// <param name="value">The retrieved property value, or <paramref name="defaultValue"/> if the command fails or returns empty.</param>
+        /// <returns><c>true</c> if the ADB command executed successfully; otherwise, <c>false</c>.</returns>
         public bool TryGetSystemProperty(string device, string property, string defaultValue,
             out string value)
         {
@@ -278,6 +320,11 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             return true;
         }
 
+        /// <summary>Attempts to retrieve a system property from a device as an integer using <c>adb shell getprop</c>.</summary>
+        /// <param name="device">The serial number of the target device.</param>
+        /// <param name="property">The name of the system property to retrieve.</param>
+        /// <param name="value">The parsed integer value of the property, or <c>0</c> if retrieval or parsing fails.</param>
+        /// <returns><c>true</c> if the property was successfully retrieved and parsed as an integer; otherwise, <c>false</c>.</returns>
         public bool TryGetSystemProperty(string device, string property, out int value)
         {
             value = 0;

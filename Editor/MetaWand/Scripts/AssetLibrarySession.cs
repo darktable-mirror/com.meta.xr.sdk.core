@@ -73,7 +73,7 @@ namespace Meta.XR.MetaWand.Editor
 
         private static void OnRemoteContentReady() => RemoteContentReady = true;
 
-        private static void OnBeforeAssemblyReload() => _ = SaveSession();
+        private static void OnBeforeAssemblyReload() => SaveSession().FireAndForget(nameof(SaveSession));
 
         public static void PerformSearch(string searchText)
         {

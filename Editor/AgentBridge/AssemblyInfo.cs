@@ -23,6 +23,8 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("meta.xr.ai.agentbridge.tests.editmode")]
-[assembly: InternalsVisibleTo("Meta.XR.LomaReadinessTool.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.HandReadinessTool.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.ImmersiveDebugger.DevAgent.Editor")]
 [assembly: InternalsVisibleTo("meta.xr.ai.mcpbridge.editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.MetaXROperator")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.AIToolsSetup")]

@@ -54,6 +54,9 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         private AppDictationExperience _dictationExperience;
         private DictationController _dictationController;
         private bool _isRuntimeCreatedConfiguration;
+        // Optional client access token used to build a runtime config when no WitConfiguration asset is
+        // assigned — lets users supply just a token instead of a full Wit configuration.
+        private string _clientAccessTokenOverride;
 
         /// <summary>
         /// Event invoked when the DictationController is ready to use.
@@ -100,9 +103,12 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         {
             if (witConfiguration == null)
             {
+                var token = !string.IsNullOrWhiteSpace(_clientAccessTokenOverride)
+                    ? _clientAccessTokenOverride
+                    : DemoClientAccessToken;
                 witConfiguration = ScriptableObject.CreateInstance<WitConfiguration>();
-                witConfiguration.SetClientAccessToken(DemoClientAccessToken);
-                witConfiguration.isDemoOnly = true;
+                witConfiguration.SetClientAccessToken(token);
+                witConfiguration.isDemoOnly = string.Equals(token, DemoClientAccessToken, StringComparison.Ordinal);
                 witConfiguration.useConduit = false;
                 _isRuntimeCreatedConfiguration = true;
             }
@@ -182,7 +188,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             _dictationExperience.enabled = true;
         }
 
-        public static VoiceSetupController CreateVoiceSetupAsChild(GameObject parent, WitConfiguration witConfig = null)
+        public static VoiceSetupController CreateVoiceSetupAsChild(GameObject parent, WitConfiguration witConfig = null, string clientAccessToken = null)
         {
             if (parent == null)
             {
@@ -191,6 +197,11 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             }
 
             var voiceSetupObject = new GameObject("VoiceSetup");
+            // Deactivate before AddComponent so Awake() is deferred until the WitConfiguration and client
+            // token below are assigned. On an active GameObject, AddComponent runs Awake synchronously —
+            // which calls SetupVoiceComponents() and reads these fields while they're still null, silently
+            // falling back to the demo token and ignoring the user's configuration.
+            voiceSetupObject.SetActive(false);
             voiceSetupObject.transform.SetParent(parent.transform);
             voiceSetupObject.transform.localPosition = Vector3.zero;
             voiceSetupObject.transform.localRotation = Quaternion.identity;
@@ -200,6 +211,10 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             {
                 setup.witConfiguration = witConfig;
             }
+            setup._clientAccessTokenOverride = clientAccessToken;
+
+            // Now that the configuration is in place, activate to run Awake() → SetupVoiceComponents().
+            voiceSetupObject.SetActive(true);
 
             return setup;
         }

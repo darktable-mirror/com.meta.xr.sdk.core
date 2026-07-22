@@ -35,7 +35,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         // Status enums
         internal enum ConnectionStatus { Disconnected, Connected }
-        internal enum VoiceStatus { Waiting, Listening, Processing }
+        internal enum VoiceStatus { Waiting, Listening, Processing, Error }
 
         // Events for UI to subscribe to
         internal event Action<ConversationEntry> OnEntryAdded;
@@ -132,8 +132,27 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
                 OnEntryUpdated?.Invoke(_liveTranscriptionEntry);
                 _liveTranscriptionEntry = null;
 
-                StartProcessing();
+                if (!string.IsNullOrWhiteSpace(finalText))
+                {
+                    StartProcessing();
+                }
             }
+        }
+
+        /// <summary>
+        /// Remove the in-progress live transcription entry without committing it, e.g. when the
+        /// conversation is cleared or dictation is cancelled mid-utterance.
+        /// </summary>
+        internal void RemoveLiveTranscriptionEntry()
+        {
+            if (_liveTranscriptionEntry == null)
+            {
+                return;
+            }
+
+            _entries.Remove(_liveTranscriptionEntry);
+            OnEntryRemoved?.Invoke(_liveTranscriptionEntry);
+            _liveTranscriptionEntry = null;
         }
 
         /// <summary>

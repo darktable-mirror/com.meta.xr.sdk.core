@@ -156,6 +156,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get the current queue size (for debugging purposes).
         /// </summary>
+        /// <returns>The number of pending actions in the queue.</returns>
         public static int GetQueueSize()
         {
             lock (_lock)

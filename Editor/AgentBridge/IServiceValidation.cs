@@ -52,9 +52,9 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>Human-readable message describing the validation result.</summary>
         public string Message;
 
-        /// <summary>
-        /// Creates a new validation result.
-        /// </summary>
+        /// <summary>Creates a new validation result.</summary>
+        /// <param name="status">The validation status.</param>
+        /// <param name="message">Human-readable message describing the result.</param>
         public ValidationResult(ValidationStatus status, string message)
         {
             Status = status;
@@ -62,22 +62,30 @@ namespace Meta.XR.AI.AgentBridge
         }
 
         /// <summary>Creates a successful validation result.</summary>
+        /// <param name="message">Optional message describing the result.</param>
+        /// <returns>A <see cref="ValidationResult"/> with <see cref="ValidationStatus.Valid"/> status.</returns>
         public static ValidationResult Valid(string message = "Configuration is valid")
             => new ValidationResult(ValidationStatus.Valid, message);
 
         /// <summary>Creates a failed validation result.</summary>
+        /// <param name="message">Message describing why validation failed.</param>
+        /// <returns>A <see cref="ValidationResult"/> with <see cref="ValidationStatus.Invalid"/> status.</returns>
         public static ValidationResult Invalid(string message)
             => new ValidationResult(ValidationStatus.Invalid, message);
 
         /// <summary>Creates an error validation result.</summary>
+        /// <param name="message">Message describing the error.</param>
+        /// <returns>A <see cref="ValidationResult"/> with <see cref="ValidationStatus.Error"/> status.</returns>
         public static ValidationResult Error(string message)
             => new ValidationResult(ValidationStatus.Error, message);
 
         /// <summary>Creates an unknown validation result.</summary>
+        /// <returns>A <see cref="ValidationResult"/> with <see cref="ValidationStatus.Unknown"/> status.</returns>
         public static ValidationResult Unknown()
             => new ValidationResult(ValidationStatus.Unknown, "Validation not performed");
 
         /// <summary>Creates a validating-in-progress result.</summary>
+        /// <returns>A <see cref="ValidationResult"/> with <see cref="ValidationStatus.Validating"/> status.</returns>
         public static ValidationResult Validating()
             => new ValidationResult(ValidationStatus.Validating, "Validating...");
     }

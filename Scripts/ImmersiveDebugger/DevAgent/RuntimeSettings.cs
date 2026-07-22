@@ -65,7 +65,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         [Header("Enable")]
         [Tooltip("Enable the AI Assistant panel in Immersive Debugger.")]
-        [SerializeField] private bool enabled = true;
+        [SerializeField] private bool enabled = false;
 
         internal bool Enabled
         {
@@ -89,6 +89,9 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             get => serverPort;
             set => serverPort = value;
         }
+
+        internal bool HasValidConnectionSettings =>
+            !string.IsNullOrWhiteSpace(serverAddress) && serverPort > 0;
 
         [Header("MCP Bridge")]
         [Tooltip("Port number for the MCP Bridge HTTP server (default: 48736).")]
@@ -114,6 +117,16 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         {
             get => witConfiguration;
             set => witConfiguration = value;
+        }
+
+        [Tooltip("Optional: paste a Wit.ai Client Access Token (from your app's Settings at https://wit.ai) to " +
+            "use your own Wit app for dictation instead of the shared demo token — higher request quota. " +
+            "Ignored if a WitConfiguration asset is assigned above.")]
+        [SerializeField] private string witClientAccessToken = "";
+        internal string WitClientAccessToken
+        {
+            get => witClientAccessToken;
+            set => witClientAccessToken = value;
         }
 
         [Tooltip("Controller button used for push-to-talk voice input (when using controllers).")]

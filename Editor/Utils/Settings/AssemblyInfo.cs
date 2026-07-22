@@ -32,7 +32,8 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.Editor.TelemetryUI")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.About")]
-[assembly: InternalsVisibleTo("MetaXrSimulator.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.Nux")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.Guide.Welcome")]
 [assembly: InternalsVisibleTo("Oculus.VR.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.Editor.UPST.Notifications")]
 [assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer.Editor")]
@@ -42,5 +43,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("meta.xr.mrutilitykit.tests")]
 [assembly: InternalsVisibleTo("meta.xr.ai.agentbridge.editor")]
 [assembly: InternalsVisibleTo("Meta.XR.ImmersiveDebugger.DevAgent.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.MetaXROperator")]
+[assembly: InternalsVisibleTo("Meta.XR.Editor.AIToolsSetup")]
 
 

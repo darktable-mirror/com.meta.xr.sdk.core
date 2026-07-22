@@ -25,6 +25,10 @@ using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+/// <summary>
+/// Shader build preprocessor that strips unnecessary shader graphics tiers (Tier1 and Tier3) for Android Quest builds
+/// when BiRP is used and skipUnneededShaders is enabled in OVRProjectConfig. Quest only uses Tier2 shaders.
+/// </summary>
 public class OVRShaderBuildProcessor : IPreprocessShaders
 {
     public int callbackOrder
@@ -32,6 +36,12 @@ public class OVRShaderBuildProcessor : IPreprocessShaders
         get { return 0; }
     }
 
+    /// <summary>
+    /// Strips shader variants targeting unused graphics tiers (Tier1, Tier3) from Android Quest builds to reduce build size and compile time.
+    /// </summary>
+    /// <param name="shader">The shader being processed.</param>
+    /// <param name="snippet">Metadata about the shader snippet (pass type, stage).</param>
+    /// <param name="shaderCompilerData">The list of shader variants to compile. Variants targeting stripped tiers are removed from this list.</param>
     public void OnProcessShader(
         Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> shaderCompilerData)
     {

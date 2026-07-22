@@ -59,6 +59,9 @@ namespace Meta.XR.AI.AgentBridge
         {
             Uid = "RemoteServer_AutoStart",
             Owner = Owner,
+            // Off by default so the server never runs uninvited. It's turned on by EnableAutoStart()
+            // when the user sets up AI Agent Bridge from the AI Tools panel; the master Enabled toggle
+            // remains the opt-in gate.
             Default = false,
             Label = "Auto-Start",
             Tooltip = "Automatically start the Remote Agent server when Unity Editor loads. " +
@@ -166,6 +169,9 @@ namespace Meta.XR.AI.AgentBridge
             // Auto-start setting
             AutoStart.DrawForGUI(origin, owner);
 
+            // Windows Firewall section (Windows-only; no-op elsewhere)
+            WindowsFirewallUtility.DrawSettingsGUI();
+
             // Access Token section
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Authentication", EditorStyles.boldLabel);
@@ -255,6 +261,16 @@ namespace Meta.XR.AI.AgentBridge
                 "Developers can enable 'Use Manual Token' in their DevAgentSettings asset " +
                 "and enter the shared server's token manually.",
                 EditorStyles.wordWrappedMiniLabel);
+        }
+
+        /// <summary>
+        /// Turn on auto-start for the Remote Agent server. Called when the user sets up AI Agent Bridge
+        /// from the AI Tools panel, so the server runs for this and future editor sessions. Auto-start
+        /// stays off (the default) for users who never set up the bridge.
+        /// </summary>
+        public static void EnableAutoStart()
+        {
+            AutoStart.SetValue(true, Origins.Self, Owner);
         }
 
         /// <summary>

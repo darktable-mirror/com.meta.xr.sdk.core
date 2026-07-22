@@ -127,24 +127,24 @@ namespace Meta.XR.Editor.UserInterface
             };
 
             // Apply base RLDS text field styling
-            _visualElement.AddToClassList(Props.TextField.Base);
+            _visualElement.AddToClassList(RLDSConstants.TextField.Base);
 
             // Apply size variant
             if (FieldSize == Size.Small)
             {
-                _visualElement.AddToClassList(Props.TextField.Small);
+                _visualElement.AddToClassList(RLDSConstants.TextField.Small);
             }
 
             // Apply error state
             if (HasError)
             {
-                _visualElement.AddToClassList(Props.TextField.Error);
+                _visualElement.AddToClassList(RLDSConstants.TextField.Error);
             }
 
             // Apply read-only state
             if (IsReadOnly)
             {
-                _visualElement.AddToClassList(Props.TextField.ReadOnly);
+                _visualElement.AddToClassList(RLDSConstants.TextField.ReadOnly);
             }
 
             _uiTextField = new UnityEngine.UIElements.TextField
@@ -190,18 +190,18 @@ namespace Meta.XR.Editor.UserInterface
                         marginTop = 4
                     }
                 };
-                _helperContainer.AddToClassList(Props.TextField.HelperContainer);
+                _helperContainer.AddToClassList(RLDSConstants.TextField.HelperContainer);
 
                 if (HasError)
                 {
-                    _helperContainer.AddToClassList(Props.TextField.HasError);
+                    _helperContainer.AddToClassList(RLDSConstants.TextField.HasError);
                 }
 
                 // Add error message if present
                 if (HasError && !string.IsNullOrEmpty(ErrorMessage))
                 {
                     _errorMessageLabel = new UnityEngine.UIElements.Label(ErrorMessage);
-                    _errorMessageLabel.AddToClassList(Props.TextField.ErrorMessage);
+                    _errorMessageLabel.AddToClassList(RLDSConstants.TextField.ErrorMessage);
                     _helperContainer.Add(_errorMessageLabel);
                 }
 
@@ -209,7 +209,7 @@ namespace Meta.XR.Editor.UserInterface
                 if (ShowCharacterCount)
                 {
                     _characterCountLabel = new UnityEngine.UIElements.Label();
-                    _characterCountLabel.AddToClassList(Props.TextField.CharacterCount);
+                    _characterCountLabel.AddToClassList(RLDSConstants.TextField.CharacterCount);
                     UpdateCharacterCount();
                     _helperContainer.Add(_characterCountLabel);
                 }
@@ -260,11 +260,11 @@ namespace Meta.XR.Editor.UserInterface
             {
                 if (hasError)
                 {
-                    _visualElement.AddToClassList(Props.TextField.Error);
+                    _visualElement.AddToClassList(RLDSConstants.TextField.Error);
                 }
                 else
                 {
-                    _visualElement.RemoveFromClassList(Props.TextField.Error);
+                    _visualElement.RemoveFromClassList(RLDSConstants.TextField.Error);
                 }
 
                 if (_errorMessageLabel != null)

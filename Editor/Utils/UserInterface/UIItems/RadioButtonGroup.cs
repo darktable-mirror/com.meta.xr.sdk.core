@@ -131,7 +131,7 @@ namespace Meta.XR.Editor.UserInterface
             }
 
             var container = new VisualElement();
-            container.AddToClassList(Props.Radio.Group);
+            container.AddToClassList(RLDSConstants.Radio.Group);
 
             container.style.flexDirection = _placementType == Utils.UIItemPlacementType.Horizontal
                 ? FlexDirection.Row

@@ -36,6 +36,9 @@ using Fusion;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
+    /// <summary>
+    /// Installation routine for the Photon Fusion auto matchmaking building block that configures the network runner.
+    /// </summary>
     public class AutoMatchmakingFusionInstallationRoutine : NetworkInstallationRoutine
     {
         internal override IReadOnlyCollection<InstallationStepInfo> GetInstallationSteps(VariantsSelection selection)
@@ -47,6 +50,12 @@ namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
             return installationSteps;
         }
 
+        /// <summary>
+        /// Installs the Photon Fusion auto matchmaking building block and configures the network runner.
+        /// </summary>
+        /// <param name="blockData">The block data asset being installed.</param>
+        /// <param name="selectedGameObject">The optional GameObject to install the block onto.</param>
+        /// <returns>A task containing the list of GameObjects created during installation.</returns>
 #pragma warning disable CS1998
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
 #pragma warning restore CS1998

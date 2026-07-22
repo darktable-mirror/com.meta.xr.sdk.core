@@ -27,11 +27,21 @@ namespace Meta.XR.Simulator.Editor
 {
     internal class PackageManagerUtils
     {
+        /// <summary>
+        /// Checks whether a Unity package is currently installed.
+        /// </summary>
+        /// <param name="packageName">The name of the package to check.</param>
+        /// <returns>True if the package is installed, false otherwise.</returns>
         public virtual bool IsPackageInstalled(string packageName)
         {
             return PackageList.IsPackageInstalled(packageName);
         }
 
+        /// <summary>
+        /// Checks whether a Unity package is installed with a valid matching version.
+        /// </summary>
+        /// <param name="packageId">The package identifier, optionally including version or sample specifiers.</param>
+        /// <returns>True if the package is installed with a valid version, false otherwise.</returns>
         public virtual bool IsPackageInstalledWithValidVersion(string packageId)
         {
             return PackageList.IsPackageInstalledWithValidVersion(packageId);

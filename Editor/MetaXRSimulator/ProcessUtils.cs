@@ -104,7 +104,7 @@ namespace Meta.XR.Simulator.Editor
             {
                 int processId = 0;
                 string protocol = "", portNumber = "";
-#if UNITY_EDITOR_OSX
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_LINUX
                 if(String.IsNullOrEmpty(row))
                 {
                     continue;

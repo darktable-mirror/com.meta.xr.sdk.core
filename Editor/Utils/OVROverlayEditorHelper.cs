@@ -25,6 +25,7 @@ using Meta.XR.Telemetry;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>Provides editor utility methods for configuring OVR overlay canvas layers and displaying messages.</summary>
 public static class OVROverlayEditorHelper
 {
     public const string DefaultCanvasRenderLayerName = "OVROverlayCanvas Rendering";
@@ -58,8 +59,15 @@ public static class OVROverlayEditorHelper
             return settings.HiddenCanvasLayer;
         }
     }
+
+    /// <summary>
+    /// Returns true if a valid hidden canvas layer has been assigned.
+    /// </summary>
     public static bool HiddenCanvasLayerSelected => HiddenCanvasLayer != -1 && !string.IsNullOrEmpty(LayerMask.LayerToName(HiddenCanvasLayer));
 
+    /// <summary>Sets the name of a Unity layer in the Tag Manager project settings.</summary>
+    /// <param name="layer">The layer index to rename.</param>
+    /// <param name="name">The new name to assign to the layer.</param>
     public static void SetLayerName(int layer, string name)
     {
         var tagManager = new SerializedObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("ProjectSettings/TagManager.asset"));
@@ -75,6 +83,12 @@ public static class OVROverlayEditorHelper
         tagManager.ApplyModifiedProperties();
     }
 
+    /// <summary>Draws a layer selection field and marks the target object as dirty if the layer changes.</summary>
+    /// <param name="dirtyObject">The object to mark as dirty when the layer value changes.</param>
+    /// <param name="currentLayer">The currently selected layer index.</param>
+    /// <param name="label">The label to display for the field.</param>
+    /// <param name="tooltip">The tooltip to display for the field.</param>
+    /// <returns>The newly selected layer index.</returns>
     public static int DirtyLayerField(UnityEngine.Object dirtyObject, int currentLayer, string label, string tooltip)
     {
         var newLayer = EditorGUILayout.LayerField(new GUIContent(label, tooltip), currentLayer);
@@ -85,6 +99,7 @@ public static class OVROverlayEditorHelper
         return newLayer;
     }
 
+    /// <summary>Defines the visual severity types for editor display messages.</summary>
     public enum DisplayMessageType
     {
         Notice,
@@ -93,6 +108,10 @@ public static class OVROverlayEditorHelper
         Check
     }
 
+    /// <summary>Draws a styled message box in the editor with an icon, optional header, and message text.</summary>
+    /// <param name="messageType">The type of message that determines the icon and default header.</param>
+    /// <param name="messageText">The body text of the message.</param>
+    /// <param name="headerOverride">An optional header string that overrides the default header for the message type.</param>
     public static void DisplayMessage(DisplayMessageType messageType, string messageText, string headerOverride = null)
     {
         var (iconUri, header) = messageType switch
@@ -118,6 +137,10 @@ public static class OVROverlayEditorHelper
         EditorGUILayout.EndHorizontal(); //end 2-column wrapper
     }
 
+    /// <summary>Draws the UI for selecting or creating the hidden canvas layer used by OVR overlay canvases.</summary>
+    /// <param name="canvasLayer">The currently assigned canvas layer index.</param>
+    /// <param name="setCanvasLayer">A callback invoked to set the new canvas layer index.</param>
+    /// <param name="setMask">A callback invoked to set the camera culling mask.</param>
     public static void CanvasLayerSelectionUI(int canvasLayer, Action<int> setCanvasLayer, Action<int> setMask)
     {
         if (HiddenCanvasLayer != -1)
@@ -146,6 +169,9 @@ public static class OVROverlayEditorHelper
         }
     }
 
+    /// <summary>Finds an unused Unity layer index.</summary>
+    /// <param name="lowest">If true, returns the lowest unused layer; otherwise returns the highest.</param>
+    /// <returns>The index of an unused layer, or null if all layers are in use.</returns>
     public static int? FindUnusedLayer(bool lowest = true)
     {
         var layers = Enumerable.Range(0, 32);

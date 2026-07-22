@@ -47,6 +47,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks.Providers
         public string quantizationLevel;
     }
 
+    /// <summary>
+    /// Custom inspector editor for the Ollama local inference provider.
+    /// </summary>
     [CustomEditor(typeof(OllamaProvider))]
     public class OllamaProviderEditor : UnityEditor.Editor
     {
@@ -105,6 +108,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks.Providers
             if (ShouldRefresh()) FetchModels();
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the Ollama provider.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

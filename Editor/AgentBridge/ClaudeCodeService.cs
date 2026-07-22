@@ -29,7 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 using UnityEngine;
 
 namespace Meta.XR.AI.AgentBridge
@@ -38,7 +38,7 @@ namespace Meta.XR.AI.AgentBridge
     /// Service for handling Claude Code CLI integration in Unity Editor.
     /// Ported from MCPProxy to Unity.
     /// </summary>
-    [RegisterAIService(ServiceId, "Claude Code", Priority = 0)]
+    [RegisterAIService(ServiceId, "Claude Code", Priority = 0, ExecutableName = "claude", SkillsSubPath = ".claude/skills")]
     public class ClaudeCodeService : AIServiceBase, IServiceSettingsUI, IServiceValidation
     {
         /// <summary>
@@ -60,7 +60,7 @@ namespace Meta.XR.AI.AgentBridge
                 Uid = nameof(ExecutablePath),
                 Owner = Owner,
                 Default = "",
-                Label = "Claude Code Executable Path",
+                Label = "Executable Path",
                 Tooltip = "Optional path to Claude Code executable. Leave empty to use PATH environment variable.",
                 SendTelemetry = false
             };
@@ -78,8 +78,10 @@ namespace Meta.XR.AI.AgentBridge
         private bool _disposed = false;
         private ValidationResult _currentValidationResult = ValidationResult.Unknown();
 
+        /// <inheritdoc/>
         public override string ServiceName => "Claude Code";
 
+        /// <inheritdoc/>
         public override bool HasActiveSession => !string.IsNullOrEmpty(ConversationManager.GetSessionId());
 
         /// <inheritdoc />
@@ -169,7 +171,12 @@ namespace Meta.XR.AI.AgentBridge
             catch (Exception ex)
             {
                 UnityEngine.Debug.LogException(ex);
-                ConversationManager.SetError($"{ex.Message} ({ex.GetType().Name})");
+                // A plain Exception already carries its detail in the message
+                // (e.g. "Claude Code exited with code N"); only annotate with the
+                // type when it adds information, such as TimeoutException.
+                ConversationManager.SetError(ex.GetType() == typeof(Exception)
+                    ? ex.Message
+                    : $"{ex.Message} ({ex.GetType().Name})");
             }
             finally
             {
@@ -239,6 +246,11 @@ namespace Meta.XR.AI.AgentBridge
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8
             };
+
+            // On macOS, Unity launched from Finder doesn't inherit the user's shell PATH.
+            // Resolve the login shell PATH so auth helpers (apiKeyHelper, claude-meta) are found.
+            // See D97832865 for the canonical fix in AIServiceBase.
+            ApplyLoginShellPathToProcess(processStartInfo);
 
             // Add arguments individually (no escaping needed!)
             processStartInfo.ArgumentList.Add("-p"); // non-interactive mode
@@ -393,19 +405,20 @@ namespace Meta.XR.AI.AgentBridge
 
                 if (exitCode != 0 && !_cancellationRequested)
                 {
-                    MainThreadDispatcher.ExecuteOnMainThread(() =>
-                    {
-                        ConversationManager.SetError($"Claude Code exited with code {exitCode}");
-                    });
+                    throw new Exception($"Claude Code exited with code {exitCode}");
                 }
             }
             catch (Exception ex)
             {
                 Log.Error($"Exception running Claude Code: {ex.Message}");
-                MainThreadDispatcher.ExecuteOnMainThread(() =>
+                // Propagate the failure so ProcessUserInputAsync records it and the
+                // caller (AgentBridgeManager.SendPromptAsync) reports a failed send
+                // instead of rendering a timed-out/partial run as success. A user
+                // cancellation is not a failure, so swallow it.
+                if (!_cancellationRequested)
                 {
-                    ConversationManager.SetError($"Exception: {ex.Message}");
-                });
+                    throw;
+                }
             }
             finally
             {
@@ -430,6 +443,61 @@ namespace Meta.XR.AI.AgentBridge
                     _currentProcess = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Resolve the user's login shell PATH and apply it to a ProcessStartInfo.
+        /// On macOS, Unity launched from Finder/Spotlight doesn't inherit the shell PATH,
+        /// so CLI tools and auth helpers (apiKeyHelper, claude-meta) aren't found.
+        /// Temporary inline fix until D97832865 lands in AIServiceBase.
+        /// </summary>
+        private static string? _cachedLoginShellPath;
+
+        private static void ApplyLoginShellPathToProcess(ProcessStartInfo psi)
+        {
+#if UNITY_EDITOR_OSX
+            if (_cachedLoginShellPath == null)
+            {
+                try
+                {
+                    var shell = Environment.GetEnvironmentVariable("SHELL") ?? "/bin/bash";
+                    var shellPsi = new ProcessStartInfo
+                    {
+                        FileName = shell,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    };
+                    shellPsi.ArgumentList.Add("-l");
+                    shellPsi.ArgumentList.Add("-c");
+                    shellPsi.ArgumentList.Add("echo $PATH");
+
+                    using var process = new Process { StartInfo = shellPsi };
+                    process.Start();
+                    var output = process.StandardOutput.ReadToEnd().Trim();
+                    if (process.WaitForExit(5000) && process.ExitCode == 0 && !string.IsNullOrEmpty(output))
+                    {
+                        _cachedLoginShellPath = output;
+                        Log.Info($"Resolved login shell PATH ({output.Split(':').Length} entries)");
+                    }
+                    else
+                    {
+                        _cachedLoginShellPath = ""; // empty = don't retry
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"Failed to resolve login shell PATH: {ex.Message}");
+                    _cachedLoginShellPath = "";
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_cachedLoginShellPath))
+            {
+                psi.Environment["PATH"] = _cachedLoginShellPath;
+            }
+#endif
         }
 
         /// <summary>
@@ -484,7 +552,7 @@ namespace Meta.XR.AI.AgentBridge
         {
             try
             {
-                var json = Newtonsoft.Json.Linq.JObject.Parse(line);
+                var json = JsonObject.Parse(line);
                 var sessionId = json["session_id"]?.ToString();
 
                 if (!string.IsNullOrEmpty(sessionId))
@@ -500,6 +568,13 @@ namespace Meta.XR.AI.AgentBridge
             {
                 // Ignore parsing errors for session ID extraction
             }
+        }
+
+        /// <inheritdoc />
+        public override string? GetResumeCommand(string sessionId)
+        {
+            var executable = ResolveExecutable(ClaudeCodeSettings.ExecutablePath.Value, "claude");
+            return $"{executable} --resume {sessionId}";
         }
 
         /// <summary>
@@ -692,14 +767,14 @@ namespace Meta.XR.AI.AgentBridge
                 if (!line.Trim().StartsWith("{"))
                     return result;
 
-                var json = JObject.Parse(line);
+                var json = JsonObject.Parse(line);
 
                 // Method 1: Look for assistant messages with tool_use
                 if (json["type"]?.ToString() == "assistant")
                 {
                     var messageId = json["message"]?["id"]?.ToString();
                     var messageContent = json["message"]?["content"];
-                    if (messageContent is JArray contentArray && contentArray.Count > 0)
+                    if (messageContent is JsonArray contentArray && contentArray.Count > 0)
                     {
                         var firstContent = contentArray[0];
 
@@ -726,12 +801,12 @@ namespace Meta.XR.AI.AgentBridge
                             string? rationale = null;
                             string? method = null;
                             string? target = null;
-                            JObject? inputJson = null;
+                            JsonObject? inputJson = null;
                             try
                             {
                                 if (!string.IsNullOrEmpty(toolInputStr) && toolInputStr != null)
                                 {
-                                    inputJson = JObject.Parse(toolInputStr);
+                                    inputJson = JsonObject.Parse(toolInputStr);
                                     rationale = inputJson["rationale"]?.ToString();
                                     method = inputJson["method"]?.ToString();
                                     target = inputJson["target"]?.ToString();
@@ -750,27 +825,8 @@ namespace Meta.XR.AI.AgentBridge
                             result.Rationale = rationale;
                             result.AdditionalData = inputJson;
 
-                            // Build content string with optional method and target
-                            var toolDisplay = !string.IsNullOrEmpty(method)
-                                ? $"{toolName}/{method}"
-                                : toolName;
-
-                            // Format: [ToolName/Method] (Target) rationale
-                            var formattedContent = $"[{toolDisplay}]";
-
-                            // Add target in parentheses if present
-                            if (!string.IsNullOrEmpty(target))
-                            {
-                                formattedContent += $" ({target})";
-                            }
-
-                            // Add rationale if present
-                            if (!string.IsNullOrEmpty(rationale))
-                            {
-                                formattedContent += $" {rationale}";
-                            }
-
-                            result.Content = formattedContent;
+                            result.Content = ConversationStreamParser.FormatToolContent(
+                                toolName, method, target, rationale, inputJson);
                             return result;
                         }
 
@@ -795,7 +851,7 @@ namespace Meta.XR.AI.AgentBridge
                 if (json["type"]?.ToString() == "user")
                 {
                     var messageContent = json["message"]?["content"];
-                    if (messageContent is JArray contentArray && contentArray.Count > 0)
+                    if (messageContent is JsonArray contentArray && contentArray.Count > 0)
                     {
                         var firstContent = contentArray[0];
 
@@ -881,7 +937,7 @@ namespace Meta.XR.AI.AgentBridge
                 if (json["type"]?.ToString() == "partial_message")
                 {
                     var content = json["content"];
-                    if (content is JArray contentArray && contentArray.Count > 0)
+                    if (content is JsonArray contentArray && contentArray.Count > 0)
                     {
                         var firstContent = contentArray[0];
                         if (firstContent?["type"]?.ToString() == "text")

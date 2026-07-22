@@ -134,6 +134,9 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             {
 #if META_MR_UTILITY_KIT_DEFINED
                 MRUK.Instance.SetCustomWorldLockAnchor(anchors[0], ColocationConstants.AlignmentAnchorPose);
+                _colocationController.ColocationReadyCallbacks?.Invoke();
+                Logger.Log("Guest has retrieved and aligned with the alignment anchor, " +
+                           "and is ready for colocation", LogLevel.Info);
 #else
                 // align camera to anchors
                 var alignCamera = _cameraRig.gameObject.AddComponent<AlignCameraToAnchor>();
@@ -247,6 +250,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                     Instantiate(AnchorPrefab, currentRoom.FloorAnchors[0].transform);
                 }
                 Logger.Log($"Host successfully shared rooms with group {groupUuid}", LogLevel.Info);
+                _colocationController.ColocationReadyCallbacks?.Invoke();
             }
         }
 
@@ -278,6 +282,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             else
             {
                 Logger.Log("Guest has successfully loaded the shared room and is ready for colocation", LogLevel.Info);
+                _colocationController.ColocationReadyCallbacks?.Invoke();
                 if (_colocationController.DebuggingOptions.visualizeAlignmentAnchor)
                 {
                     Instantiate(AnchorPrefab, MRUK.Instance.GetCurrentRoom().FloorAnchors[0].transform);

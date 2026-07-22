@@ -20,10 +20,18 @@
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Wraps a value that can be temporarily overridden while preserving the original.
+    /// </summary>
+    /// <typeparam name="T">The type of the value being wrapped.</typeparam>
     public class Overridable<T>
     {
         private readonly T _originalValue;
         private T _overrideValue;
+
+        /// <summary>
+        /// Gets whether the value is currently overridden.
+        /// </summary>
         public bool IsOverriden { get; private set; }
 
         public Overridable(T originalValue)
@@ -31,8 +39,15 @@ namespace Meta.XR.BuildingBlocks.Editor
             _originalValue = originalValue;
         }
 
+        /// <summary>
+        /// Gets the current value, returning the override if set or the original otherwise.
+        /// </summary>
         public T Value => IsOverriden ? _overrideValue : _originalValue;
 
+        /// <summary>
+        /// Sets an override value, replacing the original value until the override is removed.
+        /// </summary>
+        /// <param name="overrideValue">The value to use as the override.</param>
         public void SetOverride(T overrideValue)
         {
             if (overrideValue is null)
@@ -45,13 +60,30 @@ namespace Meta.XR.BuildingBlocks.Editor
             IsOverriden = true;
         }
 
+        /// <summary>
+        /// Removes the current override, restoring the original value.
+        /// </summary>
         public void RemoveOverride()
         {
             IsOverriden = false;
         }
 
+        /// <summary>
+        /// Implicitly converts an Overridable to its underlying value.
+        /// </summary>
+        /// <param name="overridable">The overridable instance to convert.</param>
+        /// <returns>The current value of the overridable.</returns>
         public static implicit operator T(Overridable<T> overridable) => overridable.Value;
+        /// <summary>
+        /// Implicitly wraps a value in a new Overridable instance.
+        /// </summary>
+        /// <param name="value">The value to wrap.</param>
+        /// <returns>A new Overridable wrapping the given value.</returns>
         public static implicit operator Overridable<T>(T value) => new(value);
+        /// <summary>
+        /// Returns the string representation of the current value.
+        /// </summary>
+        /// <returns>The string representation, or an empty string if the value is null.</returns>
         public override string ToString() => Value?.ToString() ?? string.Empty;
     }
 }

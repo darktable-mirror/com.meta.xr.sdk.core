@@ -60,7 +60,7 @@ namespace Meta.XR.Editor.UserInterface
         /// </summary>
         /// <param name="label">Label text for the toggle</param>
         /// <param name="selected">Initial toggle state</param>
-        /// <param name="typography"><see cref="RLDS.Props.Typography"/> for the typographic variants</param>
+        /// <param name="typography"><see cref="RLDSConstants.Typography"/> for the typographic variants</param>
         /// <param name="onToggleChanged">Callback when toggle state changes</param>
         public Toggle(string label, bool selected, string typography, Action<bool> onToggleChanged = null)
         {
@@ -99,7 +99,7 @@ namespace Meta.XR.Editor.UserInterface
                 }
             };
 
-            _visualElement.AddToClassList(Props.Toggle.Base);
+            _visualElement.AddToClassList(RLDSConstants.Toggle.Base);
 
             _uiToggle = new UnityEngine.UIElements.Toggle
             {
@@ -115,8 +115,18 @@ namespace Meta.XR.Editor.UserInterface
             _uiToggle.RegisterValueChangedCallback(evt =>
             {
                 State = evt.newValue;
+                RLDSTelemetry.SendInteraction(_uiToggle, GetType().Name, _label, _label, value: evt.newValue.ToString());
                 _onToggleChanged?.Invoke(evt.newValue);
             });
+
+            var checkmark = _uiToggle.Q(className: "unity-toggle__checkmark");
+            if (checkmark != null)
+            {
+                Styles.Contents.TickIcon.RegisterToImageLoaded(image =>
+                {
+                    checkmark.style.backgroundImage = new StyleBackground(image as Texture2D);
+                });
+            }
 
             _visualElement.Add(_uiToggle);
 

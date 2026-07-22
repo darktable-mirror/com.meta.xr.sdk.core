@@ -58,6 +58,12 @@ namespace Meta.XR
 
             // Check if OVRProjectConfig has said we declined the prompt before
             var config = OVRProjectConfig.CachedProjectConfig;
+            if (config == null)
+            {
+                // Asset database not ready yet — retry on next editor update
+                EditorApplication.update += EnableMetaXRFeature;
+                return;
+            }
             bool promptDeclined = config.metaXrFeaturePromptDeclined;
 
             if (promptDeclined)

@@ -24,6 +24,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Meta.XR.Editor.UserInterface;
+using Meta.XR.Util;
 using UnityEngine;
 
 namespace Meta.XR.Guides.Editor
@@ -41,7 +42,7 @@ namespace Meta.XR.Guides.Editor
             get
             {
                 if (_guidedSetupClasses != null) return _guidedSetupClasses;
-                var types = Assemblies.SelectMany(t => t.GetTypes())
+                var types = Assemblies.SelectMany(t => t.TryGetTypes())
                     .Where(t => t.IsSubclassOf(typeof(GuidedSetup)))
                     .Select(t => t.AssemblyQualifiedName).ToArray();
                 _guidedSetupClasses = new string[types.Length + 1];
@@ -67,7 +68,7 @@ namespace Meta.XR.Guides.Editor
             if (_initialized) return;
 
             // Search for Types
-            var types = Assemblies.SelectMany(a => a.GetTypes())
+            var types = Assemblies.SelectMany(a => a.TryGetTypes())
                 .Where(t => t.GetCustomAttribute<GuideItemsAttribute>() != null);
 
             // Scan GetItems methods

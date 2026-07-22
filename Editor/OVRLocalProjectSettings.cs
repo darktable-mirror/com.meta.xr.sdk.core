@@ -23,6 +23,10 @@ using System.IO;
 
 namespace Oculus.VR.Editor
 {
+    /// <summary>
+    /// Machine-local (non-version-controlled) project settings stored in the Library folder.
+    /// Tracks OVRPlugin native library checksums to detect changes and prompt for editor restarts.
+    /// </summary>
     [System.Serializable]
     public class OVRLocalProjectSettings
     {

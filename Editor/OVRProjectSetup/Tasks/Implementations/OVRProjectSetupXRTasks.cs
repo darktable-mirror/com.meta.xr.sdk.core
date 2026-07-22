@@ -79,10 +79,10 @@ internal static class OVRProjectSetupXRTasks
             fixMessage: $"Open Package Manager",
             fix: _ =>
             {
-                if (Application.isBatchMode)
+                if (OVRSilentMode.IsEnabled)
                 {
-                    IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-fix-skipped-batchmode",
-                        $"Skipping Package Manager UI (no graphics device in batch mode). Install {OculusXRPackageName} manually or via the command line.");
+                    IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-fix-skipped-silent",
+                        $"Skipping Package Manager UI (silent mode). Install {OculusXRPackageName} manually or via the command line.");
                     return;
                 }
                 UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName);
@@ -115,10 +115,10 @@ internal static class OVRProjectSetupXRTasks
             fixMessage: $"Open Package Manager",
             fix: _ =>
             {
-                if (Application.isBatchMode)
+                if (OVRSilentMode.IsEnabled)
                 {
-                    IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-fix-skipped-batchmode",
-                        $"Skipping Package Manager UI (no graphics device in batch mode). Install {OculusXRPackageName} manually or via the command line.");
+                    IssueTracker.TrackWarning(IssueTracker.SDK.ProjectSetupTool, "ovr-project-setup-fix-skipped-silent",
+                        $"Skipping Package Manager UI (silent mode). Install {OculusXRPackageName} manually or via the command line.");
                     return;
                 }
                 UnityEditor.PackageManager.UI.Window.Open(OculusXRPackageName);

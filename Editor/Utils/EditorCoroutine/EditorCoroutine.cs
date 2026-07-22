@@ -23,8 +23,12 @@ using UnityEditor;
 
 namespace Meta.XR.Editor.EditorCoroutine
 {
+    /// <summary>Provides a mechanism for running coroutines in the Unity Editor outside of play mode.</summary>
     public class EditorCoroutine
     {
+        /// <summary>Starts a new editor coroutine from the given enumerator.</summary>
+        /// <param name="routine">The enumerator to execute as a coroutine.</param>
+        /// <returns>The started editor coroutine instance.</returns>
         public static EditorCoroutine Start(IEnumerator routine)
         {
             EditorCoroutine coroutine = new EditorCoroutine(routine);
@@ -46,12 +50,15 @@ namespace Meta.XR.Editor.EditorCoroutine
             EditorApplication.update += Update;
         }
 
+        /// <summary>Stops the coroutine and unregisters it from editor update callbacks.</summary>
         public void Stop()
         {
             EditorApplication.update -= Update;
             completed = true;
         }
 
+        /// <summary>Gets whether the coroutine has completed execution.</summary>
+        /// <returns>True if the coroutine has completed, false otherwise.</returns>
         public bool GetCompleted()
         {
             return completed;

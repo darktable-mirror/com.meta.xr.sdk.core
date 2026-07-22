@@ -20,6 +20,7 @@
 
 using Meta.XR.ImmersiveDebugger.Manager;
 using Meta.XR.ImmersiveDebugger.Utils;
+using UnityEngine.SceneManagement;
 
 namespace Meta.XR.ImmersiveDebugger.Hierarchy
 {
@@ -28,6 +29,32 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
         protected override Telemetry.Method Method => Telemetry.Method.Hierarchy;
 
         private readonly SceneRegistry _sceneRegistry = new();
+        private bool _needsRebuild;
+
+        protected override void OnReadyInternal()
+        {
+            base.OnReadyInternal();
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        protected override void OnDestroyInternal()
+        {
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneUnloaded(Scene scene)
+        {
+            _needsRebuild = true;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            _needsRebuild = true;
+        }
 
         public void ProcessItem(Item item)
         {
@@ -63,8 +90,9 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
 
         public void Refresh()
         {
-            if (_sceneRegistry.ComputeNeedsRefresh())
+            if (_needsRebuild || _sceneRegistry.ComputeNeedsRefresh())
             {
+                _needsRebuild = false;
                 _sceneRegistry.BuildChildren();
             }
         }

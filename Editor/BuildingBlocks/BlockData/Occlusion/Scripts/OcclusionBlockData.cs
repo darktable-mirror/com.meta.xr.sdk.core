@@ -34,6 +34,9 @@ using Object = UnityEngine.Object;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing the dynamic occlusion building block by applying occlusion materials to scene objects.
+    /// </summary>
     public class OcclusionBlockData : BlockData
     {
 

@@ -24,6 +24,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing the room mesh building block and enabling scene data access permissions.
+    /// </summary>
     public class RoomMeshBlockData : BlockData
     {
         internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps

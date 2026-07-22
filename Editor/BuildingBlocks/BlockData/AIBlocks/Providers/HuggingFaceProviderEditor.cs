@@ -23,6 +23,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the Hugging Face AI provider.
+    /// </summary>
     [CustomEditor(typeof(HuggingFaceProvider))]
     public class HuggingFaceProviderEditor : AIProviderEditorBase
     {
@@ -62,6 +65,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the Hugging Face provider.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

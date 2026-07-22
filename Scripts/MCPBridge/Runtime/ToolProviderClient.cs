@@ -25,8 +25,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Meta.MCPBridge.Schemas;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 using UnityEngine;
 
 namespace Meta.MCPBridge.Runtime
@@ -183,14 +182,19 @@ namespace Meta.MCPBridge.Runtime
             if (_disposed) throw new ObjectDisposedException(nameof(ToolProviderClient));
             if (_isConnected) return true;
 
+            // Capture the main-thread SynchronizationContext before any background
+            // work. ConnectAsync is called from the main thread; the SSE stream
+            // runs on a background thread where SynchronizationContext.Current is null.
+            LocalExecutor.CaptureMainThreadContext();
+
             _reconnectAttempts = 0;
             _connectionCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             var reachable = await CheckServerReachableAsync(_connectionCts.Token);
             if (!reachable)
             {
-                Debug.LogError($"[ToolProviderClient] Server not reachable at {ServerUrl}");
-                SetConnected(false);
+                Debug.LogWarning($"[ToolProviderClient] Server not reachable at {ServerUrl}, will retry in background");
+                _sseTask = RetryInitialConnectionAsync(_connectionCts.Token);
                 return false;
             }
 
@@ -326,7 +330,7 @@ namespace Meta.MCPBridge.Runtime
                     break;
 
                 case "request":
-                    var providerRequest = JsonConvert.DeserializeObject<ProviderRequestMessage>(data);
+                    var providerRequest = McpJsonConvert.Deserialize<ProviderRequestMessage>(data);
                     if (providerRequest != null)
                     {
                         await HandleRequest(providerRequest);
@@ -355,7 +359,7 @@ namespace Meta.MCPBridge.Runtime
             {
                 var capabilities = LocalExecutor.instance.GetCapabilities();
 
-                var json = JsonConvert.SerializeObject(capabilities);
+                var json = McpJsonConvert.Serialize(capabilities);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 // Configure auth header for this request
@@ -376,6 +380,10 @@ namespace Meta.MCPBridge.Runtime
                 {
                     Debug.LogWarning($"[ToolProviderClient] Failed to register capabilities: {response.StatusCode}");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during Disconnect/Dispose — not an error
             }
             catch (Exception ex)
             {
@@ -424,12 +432,12 @@ namespace Meta.MCPBridge.Runtime
             }
         }
 
-        private async Task<ResultSchema> HandleToolCall(JObject parameters)
+        private async Task<ResultSchema> HandleToolCall(JsonObject parameters)
         {
             var toolName = parameters["name"]?.ToString();
             var methodName = parameters["method"]?.ToString()
                              ?? parameters["arguments"]?["method"]?.ToString();
-            var arguments = parameters["arguments"] as JObject ?? new JObject();
+            var arguments = parameters["arguments"] as JsonObject ?? new JsonObject();
 
             if (string.IsNullOrEmpty(toolName))
                 throw new ArgumentNullException("name", "Tool name is required");
@@ -440,7 +448,7 @@ namespace Meta.MCPBridge.Runtime
             return await LocalExecutor.instance.ExecuteToolCall(toolName, methodName, arguments);
         }
 
-        private async Task<ResultSchema> HandleResourceRead(JObject parameters)
+        private async Task<ResultSchema> HandleResourceRead(JsonObject parameters)
         {
             var uri = parameters["uri"]?.ToString();
             if (string.IsNullOrEmpty(uri))
@@ -450,10 +458,10 @@ namespace Meta.MCPBridge.Runtime
             return await LocalExecutor.instance.ExecuteResourceRead(uri);
         }
 
-        private Task<ResultSchema> HandlePromptGet(JObject parameters)
+        private Task<ResultSchema> HandlePromptGet(JsonObject parameters)
         {
             var name = parameters["name"]?.ToString();
-            var arguments = parameters["arguments"] as JObject ?? new JObject();
+            var arguments = parameters["arguments"] as JsonObject ?? new JsonObject();
 
             if (string.IsNullOrEmpty(name))
                 throw new ArgumentNullException("name", "Prompt name is required");
@@ -474,7 +482,7 @@ namespace Meta.MCPBridge.Runtime
                     Error = error
                 };
 
-                var json = JsonConvert.SerializeObject(payload);
+                var json = McpJsonConvert.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 // Configure auth header for this request
@@ -499,6 +507,13 @@ namespace Meta.MCPBridge.Runtime
 
         #region Reconnection
 
+        private async Task RetryInitialConnectionAsync(CancellationToken ct)
+        {
+            await ReconnectAsync(ct);
+            if (ct.IsCancellationRequested) return;
+            await RunSseStreamAsync(ct);
+        }
+
         private async Task ReconnectAsync(CancellationToken ct)
         {
             while (!_isConnected && !ct.IsCancellationRequested)
@@ -521,7 +536,12 @@ namespace Meta.MCPBridge.Runtime
 
                 if (ct.IsCancellationRequested) break;
 
-                break;
+                var reachable = await CheckServerReachableAsync(ct);
+                if (reachable)
+                {
+                    _reconnectAttempts = 0;
+                    break;
+                }
             }
         }
 
@@ -568,33 +588,33 @@ namespace Meta.MCPBridge.Runtime
     /// <summary>
     /// Request received from the MCP server for execution by the Tool Provider.
     /// </summary>
-    public class ProviderRequestMessage
+    internal class ProviderRequestMessage
     {
-        [JsonProperty("requestId")]
+        [McpJsonProperty("requestId")]
         public string RequestId { get; set; }
 
-        [JsonProperty("method")]
+        [McpJsonProperty("method")]
         public string Method { get; set; }
 
-        [JsonProperty("params")]
-        public JObject Params { get; set; }
+        [McpJsonProperty("params")]
+        public JsonObject Params { get; set; }
     }
 
     /// <summary>
     /// Response sent from the Tool Provider back to the MCP server.
     /// </summary>
-    public class ProviderResponseMessage
+    internal class ProviderResponseMessage
     {
-        [JsonProperty("requestId")]
+        [McpJsonProperty("requestId")]
         public string RequestId { get; set; }
 
-        [JsonProperty("success")]
+        [McpJsonProperty("success")]
         public bool Success { get; set; }
 
-        [JsonProperty("result")]
+        [McpJsonProperty("result")]
         public object Result { get; set; }
 
-        [JsonProperty("error")]
+        [McpJsonProperty("error")]
         public string Error { get; set; }
     }
 

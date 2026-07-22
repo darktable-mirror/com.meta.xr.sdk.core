@@ -28,6 +28,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Tracks building blocks present in the scene and sends telemetry events when scenes are opened.
+    /// </summary>
     [InitializeOnLoad]
     public static class SceneListener
     {

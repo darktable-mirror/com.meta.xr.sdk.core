@@ -22,6 +22,9 @@
 using Meta.XR.ImmersiveDebugger.UserInterface.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+#if USE_INPUT_SYSTEM_PACKAGE
+using UnityEngine.InputSystem.UI;
+#endif
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
@@ -43,6 +46,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             if (InputModule != null && InputModule.isActiveAndEnabled) return true;
 
+            // If the module exists but is disabled, re-enable it rather than creating a new one
+            if (InputModule != null && !InputModule.isActiveAndEnabled)
+            {
+                InputModule.enabled = true;
+                return InputModule.isActiveAndEnabled;
+            }
+
             SearchForEventSystem();
 
             return InputModule;
@@ -54,6 +64,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             if (!eventSystem && RuntimeSettings.Instance.CreateEventSystem)
             {
                 eventSystem = _owner.AddComponent<EventSystem>();
+
+                // Add appropriate input module when creating EventSystem to ensure proper initialization
+#if USE_INPUT_SYSTEM_PACKAGE && ENABLE_INPUT_SYSTEM
+                if (!eventSystem.gameObject.GetComponent<InputSystemUIInputModule>())
+                {
+                    eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+                }
+#endif
             }
             SetupEventSystem(eventSystem);
         }
@@ -63,6 +81,15 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _eventSystem = eventSystem;
 
             if (!_eventSystem) return;
+
+            // Check if a PanelInputModule already exists on this EventSystem to avoid duplicates
+            var existingModule = _eventSystem.gameObject.GetComponent<PanelInputModule>();
+            if (existingModule != null)
+            {
+                existingModule.enabled = true;
+                SetupInputModule(existingModule);
+                return;
+            }
 
             // Once an event system has been found, we will instantiate our simplified PanelInputModule
             // This PanelInputModule should never activate and therefore should not interfere with

@@ -21,8 +21,17 @@
 using System;
 using System.IO;
 
+/// <summary>
+/// Provides filesystem path utility methods. Used internally by DirectorySyncer and other OVR editor tools.
+/// </summary>
 public static class PathHelper
 {
+    /// <summary>
+    /// Converts an absolute path to a relative path from the given base directory, using platform-appropriate directory separators.
+    /// </summary>
+    /// <param name="fromPath">The base directory path to make the result relative to.</param>
+    /// <param name="toPath">The target path to convert to a relative form.</param>
+    /// <returns>A relative path from <paramref name="fromPath"/> to <paramref name="toPath"/>, or <paramref name="toPath"/> unchanged if the schemes differ.</returns>
     public static string MakeRelativePath(string fromPath, string toPath)
     {
         var fromUri = new Uri(Path.GetFullPath(fromPath));

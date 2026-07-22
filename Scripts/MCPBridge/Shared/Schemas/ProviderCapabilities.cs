@@ -19,7 +19,7 @@
  */
 
 using Meta.MCPBridge.Schemas;
-using Newtonsoft.Json;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge
 {
@@ -30,13 +30,13 @@ namespace Meta.MCPBridge
     /// </summary>
     internal class ProviderCapabilities
     {
-        [JsonProperty("tools")]
+        [McpJsonProperty("tools")]
         internal ToolSchema[] Tools { get; set; }
 
-        [JsonProperty("resources")]
+        [McpJsonProperty("resources")]
         internal ResourceSchema[] Resources { get; set; }
 
-        [JsonProperty("prompts")]
+        [McpJsonProperty("prompts")]
         internal PromptSchema[] Prompts { get; set; }
     }
 }

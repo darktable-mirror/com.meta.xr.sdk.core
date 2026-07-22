@@ -41,10 +41,15 @@ namespace Meta.XR.AI.AgentBridge
         private static readonly object _shellPathLock = new();
 
         // Abstract interface members that must be implemented by derived classes
+        /// <inheritdoc/>
         public abstract string ServiceName { get; }
+        /// <inheritdoc/>
         public abstract bool HasActiveSession { get; }
+        /// <inheritdoc/>
         public abstract Task ProcessUserInputAsync(string userInput, CallerIdentity? caller, List<ImageAttachment>? images = null, System.Threading.CancellationToken cancellationToken = default, string? systemPrompt = null);
+        /// <inheritdoc/>
         public abstract void ClearSession();
+        /// <inheritdoc/>
         public abstract Task CancelCurrentOperationAsync();
 
         #region Shell Environment
@@ -208,6 +213,65 @@ namespace Meta.XR.AI.AgentBridge
             }
 
             return null;
+#endif
+        }
+
+        #endregion
+
+        #region Terminal Resume
+
+        /// <summary>
+        /// Get the shell command to resume the current session in a terminal.
+        /// Returns null if the service does not support terminal resume.
+        /// Derived classes should override this to provide service-specific resume commands.
+        /// </summary>
+        /// <param name="sessionId">The session ID to resume</param>
+        /// <returns>The full shell command string, or null if not supported</returns>
+        public virtual string? GetResumeCommand(string sessionId)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Open a terminal window and run the given command.
+        /// Works on Windows, macOS, and Linux.
+        /// </summary>
+        public static void OpenTerminalWithCommand(string command)
+        {
+#if UNITY_EDITOR_WIN
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/k {command}",
+                UseShellExecute = true
+            });
+#elif UNITY_EDITOR_OSX
+            var escaped = command.Replace("\"", "\\\"");
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "open",
+                Arguments = $"-a Terminal \"{escaped}\"",
+                UseShellExecute = true
+            });
+#else
+            var terminals = new[] { "gnome-terminal", "konsole", "xterm" };
+            foreach (var term in terminals)
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = term,
+                        Arguments = term == "gnome-terminal"
+                            ? $"-- bash -c \"{command}; exec bash\""
+                            : $"-e bash -c \"{command}; exec bash\"",
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+                catch { }
+            }
+            Log.Warning("Could not find a terminal emulator. Run manually: " + command);
 #endif
         }
 

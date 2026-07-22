@@ -22,6 +22,7 @@ using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Telemetry;
@@ -53,7 +54,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <summary>
         /// Check the user's usage limit
         /// </summary>
-        public async Task<CheckUsageResponse> CheckUsage(string usageFilter = "mesh_generation")
+        public async Task<CheckUsageResponse> CheckUsage(string usageFilter = "mesh_generation", CancellationToken cancellationToken = default)
         {
             var request = new CheckUsage()
             {
@@ -64,7 +65,7 @@ namespace Meta.XR.MetaWand.Editor.API
             var json = JsonUtility.ToJson(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(CHECK_USAGE, content);
+            var response = await _httpClient.PostAsync(CHECK_USAGE, content, cancellationToken);
             var responseText = await response.Content.ReadAsStringAsync();
             var result = JsonUtility.FromJson<CheckUsageResponse>(responseText);
             result.success = response.IsSuccessStatusCode;
@@ -80,7 +81,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <param name="polyCount">Target poly count for assets</param>
         /// <param name="requestId">(Optional) An Unique id for request.</param>
         /// <returns>Search results with assets and similarity scores</returns>
-        public async Task<SearchAssetsResponse> SearchAssets(string searchText, int topK = 4, int polyCount = 0, string requestId = null)
+        public async Task<SearchAssetsResponse> SearchAssets(string searchText, int topK = 4, int polyCount = 0, string requestId = null, CancellationToken cancellationToken = default)
         {
             var request = new SearchAssetsRequest
             {
@@ -102,7 +103,7 @@ namespace Meta.XR.MetaWand.Editor.API
             var json = JsonUtility.ToJson(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(SEARCH_ASSETS_URL, content);
+            var response = await _httpClient.PostAsync(SEARCH_ASSETS_URL, content, cancellationToken);
             var responseText = await response.Content.ReadAsStringAsync();
 
             try
@@ -131,7 +132,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <summary>
         /// Fetch asset from asset library
         /// </summary>
-        public async Task<FetchAssetResponse> FetchLibraryAsset(string assetId, int polyCount, bool includeBase64 = false, string requestId = null)
+        public async Task<FetchAssetResponse> FetchLibraryAsset(string assetId, int polyCount, bool includeBase64 = false, string requestId = null, CancellationToken cancellationToken = default)
         {
             var request = new FetchAssetRequest
             {
@@ -145,7 +146,7 @@ namespace Meta.XR.MetaWand.Editor.API
             var json = JsonUtility.ToJson(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(FETCH_FROM_LIBRARY_URL, content);
+            var response = await _httpClient.PostAsync(FETCH_FROM_LIBRARY_URL, content, cancellationToken);
             var responseText = await response.Content.ReadAsStringAsync();
             var result = JsonUtility.FromJson<FetchAssetResponse>(responseText);
             result.success = response.IsSuccessStatusCode;
@@ -158,7 +159,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// </summary>
         /// <param name="requestId">(Optional) A unique id for request.</param>
         /// <returns>TelemetryResponse indicating success or failure</returns>
-        public async Task<TelemetryResponse> ShouldDisplayFeedbackUI(string requestId = null)
+        public async Task<TelemetryResponse> ShouldDisplayFeedbackUI(string requestId = null, CancellationToken cancellationToken = default)
         {
             var request = new TelemetryRequest
             {
@@ -170,7 +171,7 @@ namespace Meta.XR.MetaWand.Editor.API
             var json = JsonUtility.ToJson(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(TELEMETRY_URL, content);
+            var response = await _httpClient.PostAsync(TELEMETRY_URL, content, cancellationToken);
             var responseText = await response.Content.ReadAsStringAsync();
             var result = JsonUtility.FromJson<TelemetryResponse>(responseText);
             result.success = response.IsSuccessStatusCode;
@@ -185,7 +186,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <param name="action">The feedback action (use Constants.AssetFeedbackActionLike or Constants.AssetFeedbackActionDislike)</param>
         /// <param name="requestId">(Optional) A unique id for request.</param>
         /// <returns>TelemetryResponse indicating success or failure</returns>
-        public async Task<TelemetryResponse> AssetFeedback(string assetId, string action, string requestId = null)
+        public async Task<TelemetryResponse> AssetFeedback(string assetId, string action, string requestId = null, CancellationToken cancellationToken = default)
         {
             var request = new TelemetryRequest
             {
@@ -198,7 +199,7 @@ namespace Meta.XR.MetaWand.Editor.API
             var json = JsonUtility.ToJson(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(TELEMETRY_URL, content);
+            var response = await _httpClient.PostAsync(TELEMETRY_URL, content, cancellationToken);
             var responseText = await response.Content.ReadAsStringAsync();
             var result = JsonUtility.FromJson<TelemetryResponse>(responseText);
             result.success = response.IsSuccessStatusCode;
@@ -214,7 +215,7 @@ namespace Meta.XR.MetaWand.Editor.API
         /// <param name="action">The feedback action (use Constants.SearchFeedbackActionLike or Constants.SearchFeedbackActionDislike)</param>
         /// <param name="requestId">(Optional) A unique id for request.</param>
         /// <returns>TelemetryResponse indicating success or failure</returns>
-        public async Task<TelemetryResponse> SearchFeedback(string targetRequestId, string originalSearchText, string action, string requestId = null)
+        public async Task<TelemetryResponse> SearchFeedback(string targetRequestId, string originalSearchText, string action, string requestId = null, CancellationToken cancellationToken = default)
         {
             var request = new TelemetryRequest
             {
@@ -228,7 +229,7 @@ namespace Meta.XR.MetaWand.Editor.API
             var json = JsonUtility.ToJson(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(TELEMETRY_URL, content);
+            var response = await _httpClient.PostAsync(TELEMETRY_URL, content, cancellationToken);
             var responseText = await response.Content.ReadAsStringAsync();
             var result = JsonUtility.FromJson<TelemetryResponse>(responseText);
             result.success = response.IsSuccessStatusCode;

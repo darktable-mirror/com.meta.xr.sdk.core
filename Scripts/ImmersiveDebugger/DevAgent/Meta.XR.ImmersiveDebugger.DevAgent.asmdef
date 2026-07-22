@@ -19,15 +19,8 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [
-        "HAS_NEWTONSOFT_JSON"
-    ],
+    "defineConstraints": [],
     "versionDefines": [
-        {
-            "name": "com.unity.nuget.newtonsoft-json",
-            "expression": "",
-            "define": "HAS_NEWTONSOFT_JSON"
-        },
         {
             "name": "com.meta.xr.sdk.voice",
             "expression": "",

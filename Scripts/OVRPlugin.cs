@@ -113,7 +113,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_203_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_205_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -5981,7 +5981,6 @@ public static partial class OVRPlugin
 #endif
     }
 
-
     public static EyeTextureFormat GetDesiredEyeTextureFormat()
     {
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM
@@ -7998,6 +7997,14 @@ public static partial class OVRPlugin
                 {
                     project_name = UnityEngine.Application.identifier;
                 }
+            }
+
+            // project_name_hash is essential — always populated regardless of consent
+            // since a hash cannot be reversed to reveal the actual project name.
+            var hash = OVRTelemetry.GetProjectNameHash(UnityEngine.Application.identifier);
+            if (hash != null)
+            {
+                SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProjectNameHash, hash);
             }
 
             SetMetadata(OVRTelemetryConstants.OVRManager.AnnotationTypes.ProcessorType, UnityEngine.SystemInfo.processorType);

@@ -29,6 +29,9 @@ using Oculus.Haptics;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing a haptic source building block onto a selected or new GameObject.
+    /// </summary>
     public class HapticsBlockData : Meta.XR.BuildingBlocks.Editor.BlockData
     {
         internal override bool CanBeAddedOverGameObject => true;

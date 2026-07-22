@@ -31,7 +31,7 @@ using System.Collections;
 using UnityEngine.Android;
 #endif
 
-
+#pragma warning disable CS0436
 public enum LipSyncMicInputMode
 {
     HoldToSpeak, // Constantly hold a button to enable the mic

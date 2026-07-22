@@ -61,6 +61,17 @@ namespace Meta.XR.AI.AgentBridge
         }
 
         /// <summary>
+        /// Event fired when the session ID changes.
+        /// The string parameter is the new session ID.
+        /// Subscribe to this to track session ID for resume capabilities.
+        /// </summary>
+        public static event System.Action<string>? OnSessionIdChanged
+        {
+            add => ConversationEventBroker.SessionIdChanged += value;
+            remove => ConversationEventBroker.SessionIdChanged -= value;
+        }
+
+        /// <summary>
         /// Send a text prompt to the selected AI agent.
         /// </summary>
         /// <param name="prompt">The text prompt to send to the AI</param>
@@ -201,6 +212,49 @@ namespace Meta.XR.AI.AgentBridge
         }
 
         /// <summary>
+        /// Get the current session ID for the default conversation.
+        /// Returns empty string if no session is active.
+        /// Use this to store the session ID for later resumption.
+        /// </summary>
+        /// <returns>Session ID string, or empty string if no active session</returns>
+        /// <example>
+        /// <code>
+        /// string sessionId = AgentBridgeAPI.GetSessionId();
+        /// if (!string.IsNullOrEmpty(sessionId))
+        /// {
+        ///     Debug.Log($"Current session: {sessionId}");
+        ///     // Store sessionId for later resume
+        /// }
+        /// </code>
+        /// </example>
+        public static string GetSessionId()
+        {
+            return AgentBridgeCoreService.GetSessionId();
+        }
+
+        /// <summary>
+        /// Get the session ID for a specific caller's conversation.
+        /// Returns empty string if no session is active for the caller.
+        /// Use this to store the session ID for later resumption.
+        /// </summary>
+        /// <param name="caller">The caller to get the session ID for</param>
+        /// <returns>Session ID string, or empty string if no active session</returns>
+        /// <example>
+        /// <code>
+        /// var caller = new CallerIdentity("MyTool");
+        /// string sessionId = AgentBridgeAPI.GetSessionIdForCaller(caller);
+        /// if (!string.IsNullOrEmpty(sessionId))
+        /// {
+        ///     Debug.Log($"Session for {caller.Id}: {sessionId}");
+        /// }
+        /// </code>
+        /// </example>
+        public static string GetSessionIdForCaller(CallerIdentity caller)
+        {
+            return AgentBridgeCoreService.GetSessionIdForCaller(caller);
+        }
+
+        /// <summary>
         /// Check if there is an active conversation session.
         /// </summary>
         /// <returns>True if there's an active session, false otherwise</returns>
@@ -270,6 +324,34 @@ namespace Meta.XR.AI.AgentBridge
         public static string GetCurrentServiceName()
         {
             return AgentBridgeCoreService.GetCurrentServiceName();
+        }
+
+        /// <summary>
+        /// Get the shell command to resume the session for a specific caller in a terminal.
+        /// Returns null if the service does not support terminal resume or no session is active.
+        /// </summary>
+        /// <param name="caller">The caller to get the resume command for</param>
+        /// <returns>The full shell command string, or null if not supported</returns>
+        public static string? GetResumeCommandForCaller(CallerIdentity caller)
+        {
+            return AgentBridgeCoreService.GetResumeCommandForCaller(caller);
+        }
+
+        /// <summary>
+        /// Open a terminal window and resume the session for a specific caller.
+        /// Does nothing if the service does not support terminal resume or no session is active.
+        /// </summary>
+        /// <param name="caller">The caller whose session to resume</param>
+        /// <returns>True if a terminal was opened, false if resume is not available</returns>
+        public static bool ResumeInTerminal(CallerIdentity caller)
+        {
+            var command = AgentBridgeCoreService.GetResumeCommandForCaller(caller);
+            if (string.IsNullOrEmpty(command))
+            {
+                return false;
+            }
+            AgentBridgeCoreService.OpenTerminalWithCommand(command!);
+            return true;
         }
 
         /// <summary>

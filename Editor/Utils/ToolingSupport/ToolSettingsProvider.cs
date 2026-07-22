@@ -211,7 +211,7 @@ namespace Meta.XR.Editor.ToolingSupport
             => SettingsService.OpenProjectSettings(settingsPath);
 
         public static void Open(ToolDescriptor tool, Origins origin)
-            => FetchSettingsProvider(tool).Open(origin);
+            => FetchSettingsProvider(tool)?.Open(origin);
 
         public ProjectSettingsProvider
             (ToolDescriptor tool, Action<Origins, string> onGUI, string path, SettingsScope scope)
@@ -243,7 +243,7 @@ namespace Meta.XR.Editor.ToolingSupport
             => SettingsService.OpenUserPreferences(settingsPath);
 
         public static void Open(ToolDescriptor tool, Origins origin)
-            => FetchSettingsProvider(tool).Open(origin);
+            => FetchSettingsProvider(tool)?.Open(origin);
 
         public UserSettingsProvider
             (ToolDescriptor tool, Action<Origins, string> onGUI, string path, SettingsScope scope)

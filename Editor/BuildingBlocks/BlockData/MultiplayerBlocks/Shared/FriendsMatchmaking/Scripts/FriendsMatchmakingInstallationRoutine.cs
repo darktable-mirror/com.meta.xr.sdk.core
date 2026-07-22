@@ -20,6 +20,9 @@
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Installation routine for the friends matchmaking building block.
+    /// </summary>
     public class FriendsMatchmakingInstallationRoutine : InstallationRoutine
     {
     }

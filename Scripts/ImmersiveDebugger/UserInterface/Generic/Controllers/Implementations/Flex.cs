@@ -173,7 +173,20 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         protected override void RefreshLayoutPreChildren()
         {
+            // When this Flex is a ScrollRect's content, its anchoredPosition is the scroll offset,
+            // owned by the ScrollRect. The base sizing pass (SetSizeOptimized) would reset it to the
+            // layout origin (the top), scrolling the view away from what the user is reading. Preserve
+            // it across the base pass so a forced content-only layout — e.g. adding or streaming an
+            // entry while scrolled up — doesn't jump the view to the top.
+            var isScrollContent = ScrollViewport != null && _hasRectTransform;
+            var scrollOffset = isScrollContent ? RectTransform.anchoredPosition : Vector2.zero;
+
             base.RefreshLayoutPreChildren();
+
+            if (isScrollContent)
+            {
+                RectTransform.anchoredPosition = scrollOffset;
+            }
 
             UpdateChildrenWidth();
         }

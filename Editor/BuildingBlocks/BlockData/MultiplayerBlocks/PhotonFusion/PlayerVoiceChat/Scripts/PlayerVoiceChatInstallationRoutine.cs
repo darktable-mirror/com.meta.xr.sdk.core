@@ -40,8 +40,17 @@ using Photon.Voice.Fusion;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
+    /// <summary>
+    /// Installation routine for the Photon Voice chat building block that configures voice components on the camera rig.
+    /// </summary>
     public class PlayerVoiceChatInstallationRoutine : NetworkInstallationRoutine
     {
+        /// <summary>
+        /// Installs the Photon Voice chat building block and attaches voice components to the camera rig.
+        /// </summary>
+        /// <param name="blockData">The block data asset being installed.</param>
+        /// <param name="selectedGameObject">The optional GameObject to install the block onto.</param>
+        /// <returns>A task containing the list of GameObjects created during installation.</returns>
 #pragma warning disable CS1998
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
 #pragma warning restore CS1998

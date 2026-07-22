@@ -25,8 +25,10 @@ using UnityEngine;
 #if USING_XR_SDK_OPENXR
 using Meta.XR;
 using UnityEngine.XR.OpenXR;
-using UnityEngine.XR.Management;
 using UnityEngine.XR.OpenXR.Features;
+#endif
+#if USING_XR_SDK_OPENXR || USING_XR_SDK_OCULUS
+using UnityEngine.XR.Management;
 #endif
 
 public partial class OVRManager
@@ -219,12 +221,21 @@ public partial class OVRManager
 #endif
     }
 
-    private static bool IsOpenXRLoaderActive()
+    internal static bool IsOpenXRLoaderActive()
     {
 #if USING_XR_SDK_OPENXR
-        XRLoader loader = XRGeneralSettings.Instance.Manager.activeLoader;
-        OpenXRLoader openXRLoader = loader as OpenXRLoader;
-        return openXRLoader != null;
+        var loader = XRGeneralSettings.Instance?.Manager?.activeLoader;
+        return loader is OpenXRLoader;
+#else
+        return false;
+#endif
+    }
+
+    internal static bool IsOculusLoaderActive()
+    {
+#if USING_XR_SDK_OCULUS
+        var loader = XRGeneralSettings.Instance?.Manager?.activeLoader;
+        return loader is Unity.XR.Oculus.OculusLoader;
 #else
         return false;
 #endif

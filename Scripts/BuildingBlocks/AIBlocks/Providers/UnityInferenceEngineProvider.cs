@@ -251,6 +251,14 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 _model = ModelLoader.Load(modelFile);
             }
 
+            // Yield a frame after model deserialization. ModelLoader.Load is synchronous
+            // and blocks the main thread; the next heavy step (Worker creation) does the
+            // same. Without yields, the headset stays frozen across the whole cold-start
+            // path -- visible to QA as a multi-second freeze on first entry to OD/IS scenes.
+            // Yielding lets Unity render at least one frame (e.g. a "Loading..." UI) between
+            // the heavy steps so the user sees progress instead of an apparent hang.
+            await Task.Yield();
+
             // Validate that the model was loaded successfully
             if (_model == null)
             {
@@ -280,7 +288,13 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
                 throw new InvalidOperationException($"Invalid model input shape. Expected 4D tensor, got {sh?.Length ?? 0}D.");
             }
 
+            // Yield before Worker creation -- the next call compiles GPU shader variants
+            // and allocates GPU resources for the model, which can stall the main thread
+            // for several hundred ms on first run.
+            await Task.Yield();
             _worker = new Worker(_model, backend);
+
+            await Task.Yield();
             _input = new Tensor<float>(new TensorShape(sh));
 
             inputHeight = sh[2];

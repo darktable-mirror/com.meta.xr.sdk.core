@@ -39,7 +39,7 @@ namespace Meta.XR.AI.AgentBridge
     /// Communicates over a bidirectional JSON-RPC 2.0 protocol over stdio,
     /// keeping the subprocess alive across prompts within a session.
     /// </summary>
-    [RegisterAIService(ServiceId, "Gemini CLI", Priority = 20)]
+    [RegisterAIService(ServiceId, "Gemini CLI", Priority = 20, ExecutableName = "gemini", SkillsSubPath = ".gemini/skills")]
     public class GeminiCliService : AIServiceBase, IServiceSettingsUI, IServiceValidation, IAIServiceSessionResume
     {
         /// <summary>
@@ -77,8 +77,10 @@ namespace Meta.XR.AI.AgentBridge
         private bool _disposed;
         private ValidationResult _currentValidationResult = ValidationResult.Unknown();
 
+        /// <inheritdoc/>
         public override string ServiceName => "Gemini CLI";
 
+        /// <inheritdoc/>
         public override bool HasActiveSession => !string.IsNullOrEmpty(_sessionId);
 
         /// <inheritdoc />
@@ -327,6 +329,13 @@ namespace Meta.XR.AI.AgentBridge
             // Application.dataPath returns "ProjectPath/Assets", go up one level
             var assetsPath = Application.dataPath;
             return Directory.GetParent(assetsPath)?.FullName ?? assetsPath;
+        }
+
+        /// <inheritdoc />
+        public override string? GetResumeCommand(string sessionId)
+        {
+            var executable = GetGeminiExecutable();
+            return $"{executable} --resume {sessionId}";
         }
 
         /// <summary>

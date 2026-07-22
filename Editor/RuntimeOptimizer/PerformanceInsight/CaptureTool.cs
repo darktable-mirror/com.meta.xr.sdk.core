@@ -21,7 +21,9 @@
 using System;
 using Unity.Profiling;
 using UnityEngine;
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX
 using UnityEditor.Android;
+#endif
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -36,7 +38,12 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 {
     static class CaptureTool
     {
-        static private OVRADBTool adbTool = new OVRADBTool(AndroidExternalToolsSettings.sdkRootPath);
+        static private OVRADBTool adbTool =
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX
+            new OVRADBTool(AndroidExternalToolsSettings.sdkRootPath);
+#else
+            new OVRADBTool("");
+#endif
         static private Thread captureThread = null;
         static private List<string> connectedDevices = new List<string>();
         private const string outFile = "/data/misc/perfetto-traces/trace";
@@ -400,7 +407,11 @@ duration_ms: 2000
         {
             if (adbTool == null)
             {
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX
                 adbTool = new OVRADBTool(AndroidExternalToolsSettings.sdkRootPath);
+#else
+                adbTool = new OVRADBTool("");
+#endif
             }
             int code = adbTool.StartServer(StartServerCallback);
             if (code != 0)
@@ -764,6 +775,24 @@ duration_ms: 2000
             return 0;
         }
 
+        /// <summary>
+        /// Checks if the connected device is currently asleep (T241267036).
+        /// Used by the async capture thread to detect device sleep and abort early,
+        /// preventing blank screenshots from being captured.
+        /// </summary>
+        static public bool IsDeviceAsleep()
+        {
+            string output;
+            if (ExecuteADBCommand(new[] { "shell dumpsys power | grep \"mWakefulness=\"" }, out output))
+            {
+                if (!string.IsNullOrEmpty(output) && output.Contains("Asleep"))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         static public int CompareStringsAsHex(string filePath1, string filePath2)
         {
             string fileName1 = Path.GetFileNameWithoutExtension(filePath1);
@@ -836,6 +865,21 @@ duration_ms: 2000
                     onFirstExecute();
                 }
                 IssuePerfettoCapture(screenshot, packageName, lowOverhead);
+
+                // Check if device went to sleep during Perfetto capture (T241267036)
+                // If asleep, skip pull and screenshot to avoid capturing blank frames
+                // Single check covers both pull and screenshot to avoid redundant ADB calls
+                bool deviceAsleep = IsDeviceAsleep();
+                if (deviceAsleep)
+                {
+                    RO.Util.DebugLogError("Device entered sleep mode during Perfetto capture - aborting to prevent blank frame");
+                    if (onFinishedScreenshot != null)
+                    {
+                        onFinishedScreenshot();
+                    }
+                    return;
+                }
+
                 PullPerfettoCapture(captureName);
                 if (screenshot)
                 {
@@ -869,7 +913,15 @@ duration_ms: 2000
                     onFirstExecute();
                 }
 
-                IssueScreenShotCapture(captureName);
+                // Check if device is asleep before taking screenshot (T241267036)
+                if (IsDeviceAsleep())
+                {
+                    RO.Util.DebugLogError("Device is asleep - skipping screenshot capture to prevent blank frame");
+                }
+                else
+                {
+                    IssueScreenShotCapture(captureName);
+                }
 
                 if (onFinished != null)
                 {

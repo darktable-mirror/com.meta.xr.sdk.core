@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using System;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -25,20 +26,21 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 {
     internal class PanelScrollRect : ScrollRect
     {
+        internal event Action UserInteracted;
+
         public override void OnScroll(PointerEventData eventData)
         {
-            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
             if (!PanelInputModule.Processing)
             {
                 return;
             }
 
             base.OnScroll(eventData);
+            UserInteracted?.Invoke();
         }
 
         public override void OnInitializePotentialDrag(PointerEventData eventData)
         {
-            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
             if (!PanelInputModule.Processing)
             {
                 return;
@@ -49,18 +51,17 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public override void OnBeginDrag(PointerEventData eventData)
         {
-            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
             if (!PanelInputModule.Processing)
             {
                 return;
             }
 
             base.OnBeginDrag(eventData);
+            UserInteracted?.Invoke();
         }
 
         public override void OnEndDrag(PointerEventData eventData)
         {
-            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
             if (!PanelInputModule.Processing)
             {
                 return;
@@ -71,7 +72,6 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         public override void OnDrag(PointerEventData eventData)
         {
-            // Filtering out any event that is not triggered during our bespoke processing of the PanelInputModule.
             if (!PanelInputModule.Processing)
             {
                 return;

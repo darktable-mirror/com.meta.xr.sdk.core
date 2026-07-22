@@ -22,16 +22,31 @@ using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
 {
+    /// <summary>
+    /// Stores a sequence of texture frames and provides playback support for animated editor UI content.
+    /// </summary>
     public class AnimatedContent : ScriptableObject
     {
+        /// <summary>
+        /// The array of texture frames that make up the animation.
+        /// </summary>
         public Texture2D[] frames;
+        /// <summary>
+        /// The duration in seconds each frame is displayed before advancing to the next.
+        /// </summary>
         public float frameDuration;
 
         private int _currentIndex;
         private float _lastTimer = 0.0f;
 
+        /// <summary>
+        /// Gets the texture of the currently displayed animation frame.
+        /// </summary>
         public Texture2D CurrentFrame => frames[_currentIndex];
 
+        /// <summary>
+        /// Advances the animation to the next frame if the elapsed time exceeds the frame duration.
+        /// </summary>
         public void Update()
         {
             if (frameDuration == 0)
@@ -49,8 +64,14 @@ namespace Meta.XR.Editor.UserInterface
             }
         }
 
+        /// <summary>
+        /// Resets the animation to the first frame.
+        /// </summary>
         public void Reset() => _currentIndex = 0;
 
+        /// <summary>
+        /// Resets the animation timer to the current time when the asset is validated in the editor.
+        /// </summary>
         public void OnValidate()
         {
             _lastTimer = Time.realtimeSinceStartup;

@@ -39,6 +39,9 @@ using Oculus.Platform;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Custom inspector editor for the BuildingBlock component that displays block details and configuration.
+    /// </summary>
     [CustomEditor(typeof(BuildingBlock))]
     public class BuildingBlockEditor : UnityEditor.Editor
     {
@@ -77,6 +80,9 @@ namespace Meta.XR.BuildingBlocks.Editor
         private MetaAvatarsSetupGuide MetaAvatarsSetupGuide => _metaAvatarsSetupGuide ??= new MetaAvatarsSetupGuide();
 #endif // USING_META_XR_PLATFORM_SDK
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the building block component.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             _block = target as BuildingBlock;

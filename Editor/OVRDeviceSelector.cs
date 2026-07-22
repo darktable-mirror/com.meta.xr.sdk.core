@@ -27,8 +27,16 @@ using UnityEditor;
 using Unity.XR.Oculus;
 #endif
 
+/// <summary>
+/// Provides static boolean properties indicating which Meta Quest device types are selected as build targets.
+/// Reads from OVRProjectConfig (or Oculus XR Settings when PRIORITIZE_OCULUS_XR_SETTINGS is defined).
+/// Use these properties to conditionally enable device-specific features or manifest entries at build time.
+/// </summary>
 public class OVRDeviceSelector
 {
+    /// <summary>
+    /// Returns true if any Quest-family headset (Quest, Quest 2, Quest Pro, Quest 3, Quest 3S) is selected as a target device.
+    /// </summary>
     public static bool isTargetDeviceQuestFamily
     {
         get
@@ -38,6 +46,9 @@ public class OVRDeviceSelector
         }
     }
 
+    /// <summary>
+    /// Returns true if Quest 1 is selected as a target device.
+    /// </summary>
     public static bool isTargetDeviceQuest
     {
         get
@@ -52,11 +63,14 @@ public class OVRDeviceSelector
 #endif
 #else
             OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
-            return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest);
+            return projectConfig != null && projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest);
 #endif
         }
     }
 
+    /// <summary>
+    /// Returns true if Quest 2 is selected as a target device.
+    /// </summary>
     public static bool isTargetDeviceQuest2
     {
         get
@@ -67,11 +81,14 @@ public class OVRDeviceSelector
             return settings.TargetQuest2;
 #else
             OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
-            return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest2);
+            return projectConfig != null && projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest2);
 #endif
         }
     }
 
+    /// <summary>
+    /// Returns true if Quest Pro is selected as a target device.
+    /// </summary>
     public static bool isTargetDeviceQuestPro
     {
         get
@@ -86,11 +103,14 @@ public class OVRDeviceSelector
 #endif
 #else
             OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
-            return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.QuestPro);
+            return projectConfig != null && projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.QuestPro);
 #endif
         }
     }
 
+    /// <summary>
+    /// Returns true if Quest 3 is selected as a target device.
+    /// </summary>
     public static bool isTargetDeviceQuest3
     {
         get
@@ -99,11 +119,14 @@ public class OVRDeviceSelector
             return false;
 #else
             OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
-            return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3);
+            return projectConfig != null && projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3);
 #endif
         }
     }
 
+    /// <summary>
+    /// Returns true if Quest 3S is selected as a target device.
+    /// </summary>
     public static bool isTargetDeviceQuest3S
     {
         get
@@ -112,7 +135,7 @@ public class OVRDeviceSelector
             return false;
 #else
             OVRProjectConfig projectConfig = OVRProjectConfig.CachedProjectConfig;
-            return projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3S);
+            return projectConfig != null && projectConfig.targetDeviceTypes.Contains(OVRProjectConfig.DeviceType.Quest3S);
 #endif
         }
     }

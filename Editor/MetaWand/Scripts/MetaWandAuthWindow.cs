@@ -90,7 +90,7 @@ namespace Meta.XR.MetaWand.Editor
         {
             root.Clear();
             LoadStyleSheet();
-            root.AddToClassList(Props.Surface.Secondary);
+            root.AddToClassList(RLDSConstants.Surface.Secondary);
 
             var closeButton = new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Horizontal,
                 new List<IUserInterfaceItem>
@@ -100,9 +100,9 @@ namespace Meta.XR.MetaWand.Editor
                     {
                         Content = new GUIContent("Cancel"),
                         Action = CloseWindow
-                    }, Props.ButtonVariant.Secondary, Props.ButtonSize.Small)
-                }, Props.Flexbox.AlignEnd);
-            closeButton.Build().AddToClassList(Props.Flexbox.SelfStretch);
+                    }, RLDSConstants.ButtonVariant.Secondary, RLDSConstants.ButtonSize.Small)
+                }, RLDSConstants.Flexbox.AlignEnd);
+            closeButton.Build().AddToClassList(RLDSConstants.Flexbox.SelfStretch);
 
             var element = new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical,
                 new List<IUserInterfaceItem>
@@ -116,21 +116,21 @@ namespace Meta.XR.MetaWand.Editor
                             new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Vertical,
                                 new List<IUserInterfaceItem>
                                 {
-                                    new Label("Continue in your browser", Props.Typography.Heading3),
+                                    new Label("Continue in your browser", RLDSConstants.Typography.Heading3),
                                     new AddSpace(XR.Editor.UserInterface.RLDS.Styles.Spacing.SpaceMD),
                                     new Label("To confirm your Meta login, please continue in the\nbrowser window.",
-                                        Props.Typography.Body2SupportingText)
-                                }, Props.Flexbox.Grow1),
+                                        RLDSConstants.Typography.Body2SupportingText)
+                                }, RLDSConstants.Flexbox.Grow1),
                             new GroupedItem(XR.Editor.UserInterface.Utils.UIItemPlacementType.Horizontal,
                                 new List<IUserInterfaceItem>
                             {
                                 new Spinner(RingSize.Size24, RingColor.Disabled, 720f,
-                                    Props.Flexbox.SelfCenter)
-                            }, Props.Flexbox.Grow1)
-                        }, Props.Flexbox.Grow1, Props.Flexbox.AlignCenter),
+                                    RLDSConstants.Flexbox.SelfCenter)
+                            }, RLDSConstants.Flexbox.Grow1)
+                        }, RLDSConstants.Flexbox.Grow1, RLDSConstants.Flexbox.AlignCenter),
                     new AddSpace(true),
                     closeButton
-                }, Props.Utilities.MarginLG, Props.Flexbox.Grow1).Build();
+                }, RLDSConstants.Utilities.MarginLG, RLDSConstants.Flexbox.Grow1).Build();
 
             root.Add(element);
         }

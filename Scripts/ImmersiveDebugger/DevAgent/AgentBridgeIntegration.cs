@@ -34,7 +34,10 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
     /// </summary>
     internal class AgentBridgeIntegration : MonoBehaviour
     {
-        private const string CallerId = "ImmersiveDebugger.DevAgent";
+        // Unique per session instance so a new session starts a fresh server-side
+        // conversation; stable across OnApplicationPause so resume keeps the conversation.
+        private readonly string _callerId =
+            "ImmersiveDebugger.DevAgent." + System.Guid.NewGuid().ToString("N");
 
         private const string DefaultSystemPrompt =
             "You are a Unity VR debugging assistant running on Meta Quest. " +
@@ -61,6 +64,10 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         private ConversationEntry _currentThinkingEntry;
         private string _currentThinkingMessageId = "";
         private string _accumulatedThinkingContent = "";
+
+        // When true, the next reconnect or prompt must send a clear before proceeding.
+        // Set when the user clears the conversation while the client is disconnected.
+        internal bool _pendingClear;
 
         #region Initialization
 
@@ -93,7 +100,8 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
             var settings = RuntimeSettings.Instance;
             var witConfig = settings != null ? settings.WitConfiguration as Meta.WitAi.Data.Configuration.WitConfiguration : null;
-            _voiceSetupController = VoiceSetupController.CreateVoiceSetupAsChild(gameObject, witConfig);
+            var clientToken = settings != null ? settings.WitClientAccessToken : null;
+            _voiceSetupController = VoiceSetupController.CreateVoiceSetupAsChild(gameObject, witConfig, clientToken);
             if (_voiceSetupController != null)
             {
                 _voiceSetupController.OnDictationControllerReady += OnDictationControllerReady;
@@ -120,13 +128,19 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             // Create and connect the AgentBridge remote client (if not already injected)
             if (_client == null)
             {
+                // Only attempt auto-connection when the AI Assistant is enabled in settings
                 var settings = RuntimeSettings.Instance;
-                string serverAddress = settings != null ? settings.ServerAddress : "127.0.0.1";
-                int serverPort = settings != null ? settings.ServerPort : 48735;
+                if (settings == null || !settings.Enabled)
+                {
+                    return;
+                }
+
+                string serverAddress = settings.ServerAddress;
+                int serverPort = settings.ServerPort;
                 _client = new RemoteAgentBridgeClient(serverAddress, serverPort);
 
                 // Set access token for authentication
-                if (settings != null && !string.IsNullOrEmpty(settings.AccessToken))
+                if (!string.IsNullOrEmpty(settings.AccessToken))
                 {
                     _client.AccessToken = settings.AccessToken;
                 }
@@ -180,6 +194,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             {
                 _dictationController.OnPartialTranscriptionUpdate -= OnPartialTranscriptionUpdate;
                 _dictationController.OnTranscriptionFinalized -= OnTranscriptionFinalized;
+                _dictationController.OnDictationError -= HandleDictationError;
             }
 
             if (_voiceSetupController != null)
@@ -191,6 +206,15 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         internal void OnApplicationPause(bool pauseStatus)
         {
+#if HAS_META_VOICE_SDK
+            if (pauseStatus)
+            {
+                // Headset doffed mid-dictation — abandon the session so it doesn't stay stuck active
+                // and a stale utterance isn't sent on resume. Done regardless of client state.
+                CancelActiveDictation();
+            }
+#endif
+
             if (_client == null) return;
 
             if (pauseStatus)
@@ -222,7 +246,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         #region Connection State
 
-        private void OnConnectionStateChanged(bool connected)
+        private async void OnConnectionStateChanged(bool connected)
         {
             if (_manager == null) return;
 
@@ -231,6 +255,26 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
                 : ConversationManager.ConnectionStatus.Disconnected;
 
             _manager.SetConnectionStatus(status);
+
+            if (connected && _pendingClear)
+            {
+                try
+                {
+                    await SendClearAsync();
+                }
+                catch (Exception ex)
+                {
+                    _pendingClear = true;
+                    Debug.LogError($"[AgentBridgeIntegration] Failed to replay pending clear on reconnect: {ex.Message}");
+                }
+            }
+
+            if (!connected && _manager.IsConversationActive)
+            {
+                FinalizeThinkingStream();
+                _manager.AddSystemMessage("[Connection lost]");
+                _manager.StopProcessing();
+            }
         }
 
         private void OnErrorReceived(RemoteSseError error)
@@ -238,6 +282,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             if (_manager == null) return;
 
             Debug.LogError($"[AgentBridgeIntegration] Server error: [{error.Code}] {error.Message}");
+            FinalizeThinkingStream();
             _manager.AddSystemMessage($"[Error: {error.Message}]");
             _manager.StopProcessing();
         }
@@ -391,30 +436,51 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             _dictationController = dictationController;
             _dictationController.OnPartialTranscriptionUpdate += OnPartialTranscriptionUpdate;
             _dictationController.OnTranscriptionFinalized += OnTranscriptionFinalized;
+            _dictationController.OnDictationError += HandleDictationError;
         }
 
         private void OnInputButtonPressed()
         {
+            // Don't start a live entry or flip the active flag until dictation can actually run,
+            // otherwise an orphan entry is left behind and the flag stays stuck, no-op'ing future presses.
+            if (_dictationController == null)
+            {
+                Debug.LogWarning("[AgentBridgeIntegration] Cannot start dictation - DictationController is not ready yet.");
+                return;
+            }
+
+            // The live-transcription slot is shared with the assistant's streaming reply, so starting
+            // dictation while a response is in flight would overwrite that bubble. Ignore the press.
+            if (_manager != null && _manager.IsConversationActive)
+            {
+                Debug.Log("[AgentBridgeIntegration] Ignoring push-to-talk while a response is in progress.");
+                return;
+            }
+
             if (_manager != null && !_isLiveTranscriptionActive)
             {
                 _manager.AddLiveTranscriptionEntry();
-                _isLiveTranscriptionActive = true;
             }
+            // Track the push-to-talk session whenever dictation actually starts — even if _manager is
+            // momentarily null and no live entry was added — so OnInputButtonReleased stays symmetric and
+            // always stops a session a press began, never leaving dictation stuck active.
+            _isLiveTranscriptionActive = true;
 
-            if (_dictationController != null)
-            {
-                _dictationController.Toggle(true);
-            }
-            else
-            {
-                Debug.LogWarning("[AgentBridgeIntegration] Cannot start dictation - DictationController is not ready yet.");
-            }
+            _dictationController.Toggle(true);
 
             _manager?.SetVoiceStatus(ConversationManager.VoiceStatus.Listening);
         }
 
         private void OnInputButtonReleased()
         {
+            // If the press never started a dictation — it was ignored because a response was already in
+            // progress, or the controller wasn't ready — there's nothing to finalize. Leave the voice
+            // status untouched so it stays "Waiting" rather than falsely flipping to "Processing".
+            if (!_isLiveTranscriptionActive)
+            {
+                return;
+            }
+
             _manager?.SetVoiceStatus(ConversationManager.VoiceStatus.Processing);
 
             if (_dictationController != null)
@@ -450,6 +516,43 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             {
                 _manager.SetVoiceStatus(ConversationManager.VoiceStatus.Waiting);
             }
+        }
+
+        /// <summary>
+        /// Abandon any in-progress dictation and drop its live-transcription entry. Used when the
+        /// conversation is cleared or the headset is doffed mid-dictation so the voice state does not
+        /// stay stuck active and an orphaned utterance is not sent.
+        /// </summary>
+        private void CancelActiveDictation()
+        {
+            _dictationController?.Cancel();
+
+            if (_isLiveTranscriptionActive)
+            {
+                _isLiveTranscriptionActive = false;
+                _manager?.RemoveLiveTranscriptionEntry();
+                _manager?.SetVoiceStatus(ConversationManager.VoiceStatus.Waiting);
+            }
+        }
+
+        /// <summary>
+        /// The dictation request failed (auth/quota/network). Drop the empty live entry, flag the
+        /// voice status as Error (red pill), and surface the reason in the conversation so the failure
+        /// isn't silent.
+        /// </summary>
+        private void HandleDictationError(string message)
+        {
+            if (_manager == null) return;
+
+            if (_isLiveTranscriptionActive)
+            {
+                _isLiveTranscriptionActive = false;
+                _manager.RemoveLiveTranscriptionEntry();
+            }
+
+            _manager.SetVoiceStatus(ConversationManager.VoiceStatus.Error);
+            _manager.AddSystemMessage($"[Voice error: {message}]");
+            Debug.LogError($"[AgentBridgeIntegration] Dictation failed: {message}");
         }
 #endif
 
@@ -495,10 +598,23 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
                     return;
                 }
 
+                if (_pendingClear)
+                {
+                    // Don't send the new prompt against stale server-side history if the clear failed.
+                    var cleared = await SendClearAsync();
+                    if (!cleared)
+                    {
+                        Debug.LogError("[AgentBridgeIntegration] Aborting prompt because the pending conversation clear failed.");
+                        _manager?.AddSystemMessage("[Error: Could not clear the previous conversation]");
+                        _manager?.StopProcessing();
+                        return;
+                    }
+                }
+
                 var request = new RemotePromptRequest
                 {
                     Prompt = transcription,
-                    CallerId = CallerId,
+                    CallerId = _callerId,
                     SystemPrompt = DefaultSystemPrompt
                 };
 
@@ -513,6 +629,8 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             catch (Exception ex)
             {
                 Debug.LogError($"[AgentBridgeIntegration] Error in ProcessTranscription: {ex.Message}");
+                _manager?.AddSystemMessage($"[Error: {ex.Message}]");
+                _manager?.StopProcessing();
             }
             finally
             {
@@ -524,23 +642,42 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
         {
             try
             {
+#if HAS_META_VOICE_SDK
+                // The cleared conversation removed the live-transcription entry; abandon any active
+                // dictation so it doesn't keep the voice state stuck or send a now-orphaned utterance.
+                CancelActiveDictation();
+#endif
+
                 if (_client == null || !_client.IsConnected)
                 {
-                    Debug.LogError("[AgentBridgeIntegration] Not connected to Remote Agent Server");
+                    _pendingClear = true;
+                    Debug.LogWarning("[AgentBridgeIntegration] Not connected; clear will be sent on reconnect");
                     return;
                 }
 
-                var request = new RemoteCallerRequest { CallerId = CallerId };
-                var (success, error) = await _client.ClearConversationAsync(request);
-                if (!success)
-                {
-                    Debug.LogError($"[AgentBridgeIntegration] Failed to clear conversation: {error}");
-                }
+                await SendClearAsync();
             }
             catch (Exception ex)
             {
+                _pendingClear = true;
                 Debug.LogError($"[AgentBridgeIntegration] Failed to clear conversation: {ex.Message}");
             }
+        }
+
+        private async System.Threading.Tasks.Task<bool> SendClearAsync()
+        {
+            var request = new RemoteCallerRequest { CallerId = _callerId };
+            var (success, error) = await _client.ClearConversationAsync(request);
+            if (success)
+            {
+                _pendingClear = false;
+            }
+            else
+            {
+                _pendingClear = true;
+                Debug.LogError($"[AgentBridgeIntegration] Failed to clear conversation: {error}");
+            }
+            return success;
         }
 
         internal async void OnConversationCancelled()
@@ -554,7 +691,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
                 }
 
                 Debug.Log("[AgentBridgeIntegration] Sending cancellation request");
-                var request = new RemoteCallerRequest { CallerId = CallerId };
+                var request = new RemoteCallerRequest { CallerId = _callerId };
                 var (success, error) = await _client.CancelAsync(request);
 
                 _manager?.AddSystemMessage(

@@ -27,6 +27,10 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Provides a lazily-refreshed dictionary that caches ScriptableObject assets keyed by their unique identifier.
+    /// </summary>
+    /// <typeparam name="T">The ScriptableObject type that implements IIdentified.</typeparam>
     public class CachedIdDictionary<T>
         where T : ScriptableObject, IIdentified
     {
@@ -87,6 +91,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
+        /// <summary>
+        /// Attempts to retrieve the value associated with the specified key.
+        /// </summary>
+        /// <param name="key">The unique identifier to look up.</param>
+        /// <param name="value">When this method returns, contains the value if the key was found; otherwise, null.</param>
+        /// <returns>True if the key was found; otherwise, false.</returns>
         public bool TryGetValue(string key, out T value)
         {
             if (key == null)
@@ -108,6 +118,9 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
+        /// <summary>
+        /// Marks the cache as dirty so it will be refreshed on the next access.
+        /// </summary>
         public void MarkAsDirty() => _dirty = true;
     }
 }

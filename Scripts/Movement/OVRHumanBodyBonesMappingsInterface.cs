@@ -55,14 +55,14 @@ public interface OVRHumanBodyBonesMappingsInterface
     public Dictionary<HumanBodyBones, BodySection> GetBoneToBodySection { get; }
 
     /// <summary>
-    /// Returns <see cref="BoneId"> to <see cref="HumanBodyBones"/> mapping for full body
+    /// Returns <see cref="BoneId"/> to <see cref="HumanBodyBones"/> mapping for full body
     /// characters. Since retargeting retargets to humanoid characters, it uses this field
     /// to map body tracking bones to humanoid bones.
     /// </summary>
     public Dictionary<BoneId, HumanBodyBones> GetFullBodyBoneIdToHumanBodyBone { get; }
 
     /// <summary>
-    /// Returns <see cref="BoneId"> to <see cref="HumanBodyBones"/> mapping for upper body
+    /// Returns <see cref="BoneId"/> to <see cref="HumanBodyBones"/> mapping for upper body
     /// characters. Since retargeting retargets to humanoid characters, it uses this field
     /// to map body tracking bones to humanoid bones.
     /// </summary>

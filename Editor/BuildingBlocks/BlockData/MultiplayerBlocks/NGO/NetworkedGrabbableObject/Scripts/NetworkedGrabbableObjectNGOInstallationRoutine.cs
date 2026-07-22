@@ -32,9 +32,18 @@ using Unity.Netcode.Components;
 
 namespace Meta.XR.MultiplayerBlocks.NGO.Editor
 {
+    /// <summary>
+    /// Installation routine for the networked grabbable object building block using Unity Netcode for GameObjects.
+    /// </summary>
     public class NetworkedGrabbableObjectNGOInstallationRoutine : NetworkedGrabbableObjectInstallationRoutine
     {
         protected override bool UsesPrefab => false;
+        /// <summary>
+        /// Installs the networked grabbable object building block using Unity Netcode for GameObjects.
+        /// </summary>
+        /// <param name="blockData">The block data asset being installed.</param>
+        /// <param name="selectedGameObject">The optional GameObject to install the block onto.</param>
+        /// <returns>A task containing the list of GameObjects created during installation.</returns>
 #pragma warning disable CS1998
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
 #pragma warning restore CS1998

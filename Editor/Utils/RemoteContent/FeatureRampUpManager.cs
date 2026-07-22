@@ -153,6 +153,12 @@ namespace Meta.XR.Editor.RemoteContent
             await WaitUntil(() => InitSession.Get() == false, Timeout);
         }
 
+        // Synchronous, non-consuming check of whether the remote ramp-up keys have finished
+        // loading into RampKeysCache this session. Lets callers poll (e.g. on
+        // EditorApplication.update) instead of awaiting, which is fragile across the domain
+        // reloads that are common during editor startup.
+        public static bool AreKeysReady => InitSession.Get() == false;
+
         public static async Task<bool> GetRemoteKeysResultAsync(string key, bool defaultValue = false)
         {
             await WaitForKeysFetchingAsync();

@@ -23,12 +23,32 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Meta.XR.Editor.RemoteContent;
+using UnityEditor;
 using UnityEngine;
 
 namespace Meta.XR.Editor.UserInterface
 {
     internal class RemoteTextureContent : TextureContent
     {
+        private static readonly List<Texture2D> TrackedTextures = new();
+
+        static RemoteTextureContent()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload += DestroyTrackedTextures;
+        }
+
+        private static void DestroyTrackedTextures()
+        {
+            foreach (var texture in TrackedTextures)
+            {
+                if (texture != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(texture);
+                }
+            }
+            TrackedTextures.Clear();
+        }
+
         public ulong ContentId { get; }
         private readonly GUIContent _guiContent;
         private event OnImageLoadedDelegate OnImageLoadedEvent;
@@ -40,13 +60,16 @@ namespace Meta.XR.Editor.UserInterface
         {
             ContentId = contentId;
 
+            var texture = new Texture2D(2, 2)
+            {
+                hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy
+            };
+            TrackedTextures.Add(texture);
+
             _guiContent = new GUIContent
             {
                 tooltip = Tooltip,
-                image = new Texture2D(2, 2)
-                {
-                    hideFlags = HideFlags.DontSave | HideFlags.HideInHierarchy
-                }
+                image = texture
             };
         }
 

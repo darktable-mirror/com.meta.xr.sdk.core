@@ -34,6 +34,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
     {
         private Texture2D _toggleIconOn;
         private Texture2D _toggleIconOff;
+        private bool _lastKnownState;
 
         internal Tweak Tweak { get; set; }
         /// <summary>
@@ -41,9 +42,13 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         /// </summary>
         public bool State
         {
-            get => Tweak != null && Math.Abs(Tweak.Tween - 1.0f) < Mathf.Epsilon;
+            get => Tweak != null && Tweak.Valid && Math.Abs(Tweak.Tween - 1.0f) < Mathf.Epsilon;
             set
             {
+                if (Tweak == null || !Tweak.Valid)
+                {
+                    return;
+                }
                 Tweak.Tween = value ? 1.0f : 0.0f;
                 OnStateChanged();
             }
@@ -62,8 +67,26 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private void Start()
         {
+            if (Tweak == null || !Tweak.Valid)
+            {
+                return;
+            }
             State = Tweak.Tween > 0;
+            _lastKnownState = State;
             UpdateIcon();
+        }
+
+        private void Update()
+        {
+            if (Tweak == null || !Tweak.Valid)
+                return;
+
+            var currentState = State;
+            if (currentState != _lastKnownState)
+            {
+                _lastKnownState = currentState;
+                RefreshStyle();
+            }
         }
 
         internal void SetToggleIcons(Texture2D onState, Texture2D offState)
@@ -74,6 +97,8 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         protected override void UpdateIcon()
         {
+            if (_icon == null || _iconStyle == null) return;
+
             Icon = State ? _toggleIconOn : _toggleIconOff;
             _icon.Color = Hover ? _iconStyle.colorHover : State ? _iconStyle.color : _iconStyle.colorOff;
             _icon.RaycastTarget = _backgroundStyle == null || !_backgroundStyle.enabled;

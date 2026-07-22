@@ -20,6 +20,7 @@
 
 using Meta.XR.AI.AgentBridge;
 using Meta.XR.Editor.Id;
+using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.Tags;
 using UnityEditor;
@@ -38,6 +39,8 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
     [InitializeOnLoad]
     internal static class Settings
     {
+        private const string RampUpKey = "immersive_debugger_ai_assistant";
+
         static Settings()
         {
             ImmersiveDebugger.Editor.Utils.ToolDescriptor.OnProjectSettingsGUI += OnGUI;
@@ -142,7 +145,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
             Owner = ImmersiveDebugger.Editor.Utils.ToolDescriptor,
             Get = () => RuntimeSettings.Instance != null ? RuntimeSettings.Instance.PushToTalkButton : OVRInput.Button.One,
             Set = val => { if (RuntimeSettings.Instance != null) RuntimeSettings.Instance.PushToTalkButton = val; },
-            Label = "Controller Push-To-Talk Button",
+            Label = "Controller Button",
             Tooltip = "Controller button used for push-to-talk voice input when using controllers.",
             SendTelemetry = true
         };
@@ -153,7 +156,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
             Owner = ImmersiveDebugger.Editor.Utils.ToolDescriptor,
             Get = () => RuntimeSettings.Instance != null ? RuntimeSettings.Instance.HandPushToTalkGesture : HandPinchGesture.MiddleFingerPinch,
             Set = val => { if (RuntimeSettings.Instance != null) RuntimeSettings.Instance.HandPushToTalkGesture = val; },
-            Label = "Hand Push-To-Talk Gesture",
+            Label = "Hand Gesture",
             Tooltip = "Hand pinch gesture used for push-to-talk when using hand tracking. " +
                 "Middle Finger Pinch is recommended to avoid conflict with the index pinch used for UI interaction.",
             SendTelemetry = true
@@ -205,6 +208,9 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
 
         public static void OnGUI(Origins origin, string searchContext)
         {
+            if (!FeatureRampUpManager.GetRemoteKeysResult(RampUpKey, false))
+                return;
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("AI Assistant", GUIStyles.BoldLabel);
 
@@ -390,13 +396,26 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
                 statusTitle = "Token Mismatch";
                 statusMessage = "Access token doesn't match the server. Click 'Use Project Token' to sync.";
             }
+            else if (RuntimeSettings.Instance != null && !RuntimeSettings.Instance.HasValidConnectionSettings)
+            {
+                statusIcon = Contents.ErrorIcon;
+                statusColor = Colors.WarningColor;
+                statusTitle = "Invalid Connection Settings";
+                var address = RuntimeSettings.Instance.ServerAddress;
+                var port = RuntimeSettings.Instance.ServerPort;
+                if (string.IsNullOrWhiteSpace(address) && port <= 0)
+                    statusMessage = "Server Address is blank and Server Port is 0. Configure both for Quest connectivity.";
+                else if (string.IsNullOrWhiteSpace(address))
+                    statusMessage = "Server Address is blank. Set the IP address of this machine for Quest connectivity.";
+                else
+                    statusMessage = $"Server Port is {port}. Set a valid port number (e.g. 48735) for Quest connectivity.";
+            }
             else if (validationService != null)
             {
                 var result = validationService.CurrentValidationResult;
 
                 if (result.Status == ValidationStatus.Valid && isRemoteServerRunning)
                 {
-                    // Both AI service and Remote Server are ready
                     statusIcon = Contents.CheckIcon;
                     statusColor = Colors.AI;
                     statusTitle = "AI Assistant Ready";
@@ -404,7 +423,6 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
                 }
                 else if (result.Status == ValidationStatus.Valid && !isRemoteServerRunning)
                 {
-                    // AI service is valid but Remote Server is not running
                     statusIcon = Contents.InfoIcon;
                     statusColor = Colors.LightGray;
                     statusTitle = "Remote Server Not Running";
@@ -419,7 +437,6 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
                 }
                 else
                 {
-                    // AI service has issues
                     (statusIcon, statusColor) = GetValidationStatusVisuals(result.Status);
                     statusTitle = GetValidationStatusTitle(result.Status);
                     statusMessage = $"Service: {serviceName} • {result.Message}";
@@ -427,7 +444,6 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
             }
             else if (service != null)
             {
-                // Service exists but doesn't support validation
                 if (isRemoteServerRunning)
                 {
                     statusIcon = Contents.CheckIcon;
@@ -479,9 +495,9 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
             GUILayout.FlexibleSpace();
 
             // Open AgentBridge Settings button
-            if (GUILayout.Button("Open AgentBridge Settings"))
+            if (GUILayout.Button("Open AI Tools Setup"))
             {
-                AgentBridgeUtils.ToolDescriptor.OpenUserSettings(Origins.ProjectSettings);
+                AgentBridgeUtils.ToolDescriptor.OnClickDelegate(Origins.ProjectSettings);
             }
 
             EditorGUILayout.EndHorizontal();
@@ -496,12 +512,58 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
             var settings = RuntimeSettings.Instance;
             if (settings == null) return;
 
+            // Client Access Token — the simplest way to use your own Wit app for dictation.
+            EditorGUI.BeginChangeCheck();
+            var newToken = DrawTextFieldWithPlaceholder(
+                new GUIContent("Wit Client Access Token",
+                    "Paste your Wit.ai app's Client Access Token to use your own app for dictation, with a higher " +
+                    "request quota than the shared demo token. Leave empty to use the built-in demo token."),
+                settings.WitClientAccessToken ?? "",
+                "Leave empty to use the built-in demo token");
+            if (EditorGUI.EndChangeCheck())
+            {
+                settings.WitClientAccessToken = newToken;
+                SetDirty();
+            }
+
+            // Hint with a clickable wit.ai link. Drawn in a single indented rect (rather than a GUILayout
+            // row) so it lines up under the field labels above. The link copies the prefix's font size,
+            // alignment and vertical padding so the two share one baseline — linkLabel's own metrics
+            // otherwise rendered "wit.ai" lower than the prefix text — while its horizontal padding is
+            // zeroed so it stays flush against the prefix.
+            var hintStyle = EditorStyles.miniLabel;
+            var hintLinkStyle = new GUIStyle(EditorStyles.linkLabel)
+            {
+                fontSize = hintStyle.fontSize,
+                alignment = hintStyle.alignment,
+                padding = new RectOffset(0, 0, hintStyle.padding.top, hintStyle.padding.bottom),
+                margin = new RectOffset(0, 0, 0, 0)
+            };
+            var hintPrefix = new GUIContent("Get a free Client Access Token at ");
+            var hintLink = new GUIContent("wit.ai");
+            var prefixSize = hintStyle.CalcSize(hintPrefix);
+            var linkSize = hintLinkStyle.CalcSize(hintLink);
+            var lineHeight = Mathf.Max(prefixSize.y, linkSize.y);
+            var hintRect = EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false, lineHeight));
+            var prefixRect = new Rect(hintRect.x, hintRect.y, prefixSize.x, lineHeight);
+            var linkRect = new Rect(prefixRect.xMax, hintRect.y, linkSize.x, lineHeight);
+            GUI.Label(prefixRect, hintPrefix, hintStyle);
+            EditorGUIUtility.AddCursorRect(linkRect, MouseCursor.Link);
+            if (GUI.Button(linkRect, hintLink, hintLinkStyle))
+            {
+                Application.OpenURL("https://wit.ai");
+            }
+
+            EditorGUILayout.Space();
+
+            // Advanced: a full WitConfiguration asset (custom intents/entities). Takes precedence over the
+            // token above; not required for dictation.
             EditorGUI.BeginChangeCheck();
             var current = settings.WitConfiguration as Meta.WitAi.Data.Configuration.WitConfiguration;
             var newConfig = EditorGUILayout.ObjectField(
-                new GUIContent("Wit Configuration",
-                    "Assign a WitConfiguration asset for custom Wit.ai app settings. " +
-                    "If left empty, a built-in demo app is used with limited quotas."),
+                new GUIContent("Wit Configuration (advanced)",
+                    "Optional: assign a full WitConfiguration asset for custom Wit.ai app settings " +
+                    "(intents/entities). Takes precedence over the token above. Not needed for dictation."),
                 current,
                 typeof(Meta.WitAi.Data.Configuration.WitConfiguration),
                 false) as Meta.WitAi.Data.Configuration.WitConfiguration;
@@ -511,19 +573,50 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent.Editor
                 SetDirty();
             }
 
-            if (current == null)
+            // Demo-app explanation, appended at the bottom while relying on the built-in demo token.
+            if (current == null && string.IsNullOrWhiteSpace(settings.WitClientAccessToken))
             {
+                EditorGUILayout.Space();
                 EditorGUILayout.HelpBox(
                     "Using built-in demo Wit.ai app (speech-to-text only).\n" +
                     "• Limited request quota shared across all demo users\n" +
                     "• No custom intents, entities, or trained models\n\n" +
                     "For more heavy and customized usage, create a free Wit.ai app at https://wit.ai, " +
-                    "then create a WitConfiguration asset (Assets > Create > Wit > Configuration) " +
-                    "and assign it above for higher rate limits and custom voice commands.",
+                    "then paste its Client Access Token above (your app > Management > Settings > Client Access Token), " +
+                    "or assign a WitConfiguration asset (Assets > Create > Wit > Configuration) for higher rate limits " +
+                    "and custom voice commands.",
                     MessageType.Info);
             }
 
             EditorGUILayout.Space();
+        }
+
+        /// <summary>
+        /// Draws a text field that shows grayed italic placeholder text while the value is empty.
+        /// </summary>
+        private static string DrawTextFieldWithPlaceholder(GUIContent label, string value, string placeholder)
+        {
+            var rect = EditorGUILayout.GetControlRect();
+            var result = EditorGUI.TextField(rect, label, value);
+
+            if (string.IsNullOrEmpty(value) && Event.current.type == EventType.Repaint)
+            {
+                var placeholderStyle = new GUIStyle(EditorStyles.label)
+                {
+                    fontStyle = FontStyle.Italic,
+                    normal = { textColor = Color.gray }
+                };
+                var fieldRect = new Rect(
+                    rect.x + EditorGUIUtility.labelWidth + 2f,
+                    rect.y,
+                    rect.width - EditorGUIUtility.labelWidth - 2f,
+                    rect.height);
+                // GUI.Label (not EditorGUI.LabelField) so the placeholder isn't shifted right by the
+                // active EditorGUI.indentLevel — that extra indent was the visible gap inside the field.
+                GUI.Label(fieldRect, placeholder, placeholderStyle);
+            }
+
+            return result;
         }
 #endif
 

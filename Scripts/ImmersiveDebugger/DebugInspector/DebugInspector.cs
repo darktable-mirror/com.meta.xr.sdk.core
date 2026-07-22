@@ -121,7 +121,10 @@ namespace Meta.XR.ImmersiveDebugger
 
         private void OnDisable()
         {
-            DebugInspectorManager.Instance.UnregisterInspector(this);
+            if (Application.isPlaying)
+            {
+                DebugInspectorManager.Instance.UnregisterInspector(this);
+            }
         }
     }
 }

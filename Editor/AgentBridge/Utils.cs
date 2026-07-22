@@ -20,6 +20,8 @@
 
 #nullable enable
 
+using System;
+using Meta.XR.Editor.Id;
 using Meta.XR.Editor.ToolingSupport;
 using UnityEditor;
 
@@ -41,6 +43,18 @@ namespace Meta.XR.AI.AgentBridge
             "\n\nSelect your preferred AI service and configure service-specific settings below.";
 
         /// <summary>
+        /// Action slot invoked when the user clicks "Open AgentBridge Settings".
+        /// Registered by AIToolsSetupWindow at editor startup.
+        /// </summary>
+        internal static Action<Origins>? OpenWizardAction;
+
+        /// <summary>
+        /// Action slot invoked to draw the user-settings GUI for AgentBridge.
+        /// Registered by AIToolsSetupWindow at editor startup.
+        /// </summary>
+        internal static Action<Origins, string>? OpenWizardSettingsGUI;
+
+        /// <summary>
         /// Tool descriptor for Meta XR Editor tooling support integration.
         /// Enables Agent Bridge settings in Edit > Preferences > Meta XR / Agent Bridge.
         /// </summary>
@@ -53,9 +67,19 @@ namespace Meta.XR.AI.AgentBridge
             Experimental = true,
             AddToStatusMenu = false,
             AddToMenu = false,
-            OnClickDelegate = origin => ToolDescriptor?.OpenUserSettings(origin),
-            OnUserSettingsGUI = Settings.OnGUI,
+            OnClickDelegate = OnClickDelegate,
+            OnUserSettingsGUI = null,
             Order = 100,
         };
+
+        private static void OnClickDelegate(Origins origin)
+        {
+            OpenWizardAction?.Invoke(origin);
+        }
+
+        private static void OnUserSettingsGUI(Origins origin, string searchContext)
+        {
+            OpenWizardSettingsGUI?.Invoke(origin, searchContext);
+        }
     }
 }

@@ -18,8 +18,7 @@
  * limitations under the License.
  */
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Schemas
 {
@@ -38,14 +37,14 @@ namespace Meta.MCPBridge.Schemas
         /// a resource, "prompts/list" to list prompts, and "prompts/get" to fetch a prompt.
         /// The method name determines how the <see cref="Parameters"/> will be interpreted.
         /// </summary>
-        [JsonProperty("method")] public string Method { get; set; }
+        [McpJsonProperty("method")] public string Method { get; set; }
 
         /// <summary>
         /// Gets or sets the parameters for the MCP method specified in <see cref="Method"/>. The structure
         /// and required fields of this object vary depending on the method being invoked. See
         /// <see cref="RequestParametersSchema"/> for all available parameter fields and their usage.
         /// </summary>
-        [JsonProperty("params")] public RequestParametersSchema Parameters { get; set; }
+        [McpJsonProperty("params")] public RequestParametersSchema Parameters { get; set; }
     }
 
     /// <summary>
@@ -63,7 +62,7 @@ namespace Meta.MCPBridge.Schemas
         /// in the corresponding registry (<see cref="Meta.MCPBridge.Registries.ToolRegistry"/> or
         /// <see cref="Meta.MCPBridge.Registries.PromptRegistry"/>). Not used for resource methods.
         /// </summary>
-        [JsonProperty("name")] public string Name { get; set; }
+        [McpJsonProperty("name")] public string Name { get; set; }
 
         /// <summary>
         /// Gets or sets the URI of the resource being requested. This field is required for "resources/read"
@@ -71,28 +70,28 @@ namespace Meta.MCPBridge.Schemas
         /// match a registered resource in <see cref="Meta.MCPBridge.Registries.ResourceRegistry"/>. Examples
         /// might include "config://settings.json" or "state://gameworld". Not used for tool or prompt methods.
         /// </summary>
-        [JsonProperty("uri")] public string Uri { get; set; }
+        [McpJsonProperty("uri")] public string Uri { get; set; }
 
         /// <summary>
         /// Gets or sets the arguments for tool calls or prompt population. For "tools/call", this contains the
         /// input parameters needed by the tool method, including the required "method" field. For "prompts/get",
         /// this contains the template variables to populate the prompt with. The structure is a flexible JSON
-        /// object (<see cref="JObject"/>) that varies based on the tool or prompt being invoked.
+        /// object (<see cref="JsonObject"/>) that varies based on the tool or prompt being invoked.
         /// </summary>
-        [JsonProperty("arguments")] public JObject Arguments { get; set; }
+        [McpJsonProperty("arguments")] public JsonObject Arguments { get; set; }
 
         /// <summary>
         /// Gets or sets the method name for tool execution. When a tool call specifies a method at the
         /// parameter level (as opposed to within the arguments), this field carries that value.
         /// </summary>
-        [JsonProperty("method")] public string Method { get; set; }
+        [McpJsonProperty("method")] public string Method { get; set; }
 
         /// <summary>
         /// Gets or sets additional arbitrary data that may be provided with MCP requests. This flexible JSON
-        /// object (<see cref="JObject"/>) allows for future extensibility and custom data passing without
+        /// object (<see cref="JsonObject"/>) allows for future extensibility and custom data passing without
         /// requiring schema changes. The structure and usage of this field are application-specific and may
         /// vary based on your custom MCP implementations.
         /// </summary>
-        [JsonProperty("additionalData")] public JObject AdditionalData { get; set; }
+        [McpJsonProperty("additionalData")] public JsonObject AdditionalData { get; set; }
     }
 }

@@ -36,6 +36,8 @@ namespace Meta.MCPBridge.Editor
     {
         private static readonly IIdentified Owner = Utils.ToolDescriptor;
 
+        internal static bool EmbeddedMode { get; set; }
+
         /// <summary>
         /// The port number for the MCP HTTP server.
         /// </summary>
@@ -46,7 +48,7 @@ namespace Meta.MCPBridge.Editor
             Default = 48736,
             Label = "Port",
             Tooltip = "The port number for the MCP HTTP server. " +
-                      "AI agents (Claude Code, DevMate) connect to this port.",
+                      "AI agents (such as Claude Code) connect to this port.",
             SendTelemetry = false
         };
 
@@ -93,13 +95,30 @@ namespace Meta.MCPBridge.Editor
             // Server status and Start/Stop button on the same line
             var isRunning = HttpMcpServer.Instance.IsRunning;
 
+            var claudeRegStatus = isRunning ? McpRegistration.GetClaudeCodeStatus(Port.Value) : McpRegistrationStatus.Unknown;
+            var isRegistered = claudeRegStatus == McpRegistrationStatus.Registered;
+
             EditorGUILayout.BeginHorizontal();
-            var statusLabel = isRunning
-                ? $"● Running (port {Port.Value})"
-                : "○ Stopped";
+            string statusLabel;
+            Color statusColor;
+            if (!isRunning)
+            {
+                statusLabel = "○ Stopped";
+                statusColor = Colors.DisabledColor;
+            }
+            else if (isRegistered)
+            {
+                statusLabel = $"● Running (port {Port.Value})";
+                statusColor = Colors.SuccessColor;
+            }
+            else
+            {
+                statusLabel = $"▲ Running (port {Port.Value}) — not registered with AI provider";
+                statusColor = new Color(1f, 0.65f, 0f); // orange warning
+            }
             var statusStyle = new GUIStyle(EditorStyles.label)
             {
-                normal = { textColor = isRunning ? Colors.SuccessColor : Colors.DisabledColor }
+                normal = { textColor = statusColor }
             };
             EditorGUILayout.LabelField("Status", statusLabel, statusStyle);
             if (isRunning)
@@ -113,7 +132,7 @@ namespace Meta.MCPBridge.Editor
             {
                 if (GUILayout.Button("Start Server", GUILayout.Width(120)))
                 {
-                    HttpMcpServer.Instance.Start(Port.Value);
+                    HttpMcpServer.StartMcpBridgeServer();
                 }
             }
             EditorGUILayout.EndHorizontal();
@@ -129,17 +148,12 @@ namespace Meta.MCPBridge.Editor
                     "Restart", "Later"))
                 {
                     HttpMcpServer.Instance.Stop();
-                    HttpMcpServer.Instance.Start(Port.Value);
+                    HttpMcpServer.StartMcpBridgeServer();
                 }
             }
 
             // Auto-start setting
             AutoStart.DrawForGUI(origin, Owner);
-
-            EditorGUILayout.Space();
-
-            // Authentication section (shared with AgentBridge)
-            RemoteAgentSettings.DrawAuthenticationUI();
 
             EditorGUILayout.Space();
 
@@ -189,7 +203,7 @@ namespace Meta.MCPBridge.Editor
                           claudeStatus != McpRegistrationStatus.Checking;
             if (GUILayout.Button("Register", GUILayout.Width(80)))
             {
-                McpRegistration.RegisterWithClaudeCodeAsync(Port.Value);
+                _ = McpRegistration.RegisterWithClaudeCodeAsync(Port.Value);
             }
             if (GUILayout.Button("Unregister", GUILayout.Width(80)))
             {
@@ -198,16 +212,28 @@ namespace Meta.MCPBridge.Editor
             GUI.enabled = true;
             EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.Space();
-
-            // Reset button (matching AgentBridge layout)
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Reset to Defaults"))
+            if (!EmbeddedMode)
             {
-                ResetToDefaults();
+                EditorGUILayout.Space();
+
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Reset to Defaults"))
+                {
+                    ResetToDefaults();
+                }
+                EditorGUILayout.EndHorizontal();
             }
-            EditorGUILayout.EndHorizontal();
+        }
+
+        /// <summary>
+        /// Turn on auto-start for the MCP HTTP server. Called when the user enables AI Agent Bridge
+        /// (settings toggle or AI Tools Setup install), so the server runs for this and future editor
+        /// sessions once the bridge has been set up.
+        /// </summary>
+        public static void EnableAutoStart()
+        {
+            AutoStart.SetValue(true, Origins.Self, Owner);
         }
 
         /// <summary>

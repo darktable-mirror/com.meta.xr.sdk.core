@@ -25,8 +25,17 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Provides a persistent session-scoped queue backed by Unity's SessionState for storing value-type items.
+    /// </summary>
     public static class SessionQueue
     {
+        /// <summary>
+        /// Adds an item to the end of the session queue identified by the specified key.
+        /// </summary>
+        /// <param name="item">The item to enqueue.</param>
+        /// <param name="queueKey">The session state key identifying the queue.</param>
+        /// <typeparam name="T">The value type of the items in the queue.</typeparam>
         public static void Enqueue<T>(T item, string queueKey) where T : struct
         {
             var queue = LoadQueue<T>(queueKey);
@@ -34,6 +43,12 @@ namespace Meta.XR.BuildingBlocks.Editor
             SaveQueue(queue, queueKey);
         }
 
+        /// <summary>
+        /// Removes and returns the item at the front of the session queue.
+        /// </summary>
+        /// <param name="queueKey">The session state key identifying the queue.</param>
+        /// <typeparam name="T">The value type of the items in the queue.</typeparam>
+        /// <returns>The dequeued item, or null if the queue is empty.</returns>
         public static T? Dequeue<T>(string queueKey) where T : struct
         {
             var queue = LoadQueue<T>(queueKey);
@@ -47,12 +62,22 @@ namespace Meta.XR.BuildingBlocks.Editor
             return item;
         }
 
+        /// <summary>
+        /// Returns the number of items in the session queue.
+        /// </summary>
+        /// <param name="queueKey">The session state key identifying the queue.</param>
+        /// <typeparam name="T">The value type of the items in the queue.</typeparam>
+        /// <returns>The number of items in the queue.</returns>
         public static int Count<T>(string queueKey) where T : struct
         {
             var queue = LoadQueue<T>(queueKey);
             return queue.Count;
         }
 
+        /// <summary>
+        /// Clears all items from the session queue identified by the specified key.
+        /// </summary>
+        /// <param name="queueKey">The session state key identifying the queue to clear.</param>
         public static void Clear(string queueKey)
         {
             SessionState.EraseString(queueKey);

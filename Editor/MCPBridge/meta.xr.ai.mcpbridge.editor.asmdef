@@ -2,6 +2,7 @@
     "name": "meta.xr.ai.mcpbridge.editor",
     "rootNamespace": "",
     "references": [
+        "meta.xr.json",
         "meta.xr.ai.mcpbridge",
         "meta.xr.ai.agentbridge.editor",
         "Meta.XR.Editor.Settings",
@@ -9,9 +10,12 @@
         "meta.xr.ai.mcpbridge.telemetry",
         "Meta.XR.Editor.ToolingSupport",
         "Meta.XR.Editor.UserInterface",
-        "Unity.Nuget.Newtonsoft-Json",
         "Meta.XR.Editor.Callbacks",
-        "Oculus.VR"
+        "Oculus.VR",
+        "Oculus.VR.Editor",
+        "Meta.XR.BuildingBlocks",
+        "Meta.XR.BuildingBlocks.Editor",
+        "Meta.XR.Editor.Tags"
     ],
     "includePlatforms": [
         "Editor"
@@ -21,15 +25,8 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [
-        "HAS_NEWTONSOFT_JSON"
-    ],
+    "defineConstraints": [],
     "versionDefines": [
-        {
-            "name": "com.unity.nuget.newtonsoft-json",
-            "expression": "",
-            "define": "HAS_NEWTONSOFT_JSON"
-        },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",
             "name": "com.meta.xr.sdk.core",

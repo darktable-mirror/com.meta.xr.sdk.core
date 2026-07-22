@@ -39,7 +39,7 @@ namespace Meta.XR.Telemetry
             MRUK
         }
 
-        private static void SendEvent(SDK sdk, string issueCode, string eventType, string message, string memberName, int lineNumber, string fullPath)
+        private static void SendEvent(SDK sdk, string issueCode, string eventType, string message, string memberName, int lineNumber, string fullPath, string exceptionType = null, string stackTrace = null)
         {
             string fileName = Path.GetFileName(fullPath);
             var unifiedEvent = new UnifiedEventData("INTEGRATION_ISSUE")
@@ -54,6 +54,14 @@ namespace Meta.XR.Telemetry
             unifiedEvent.SetMetadata("line_number", lineNumber);
             unifiedEvent.SetMetadata("file_name", fileName);
             unifiedEvent.SetMetadata("openxr_runtime_name", OVRPlugin.runtimeName);
+            if (exceptionType != null)
+            {
+                unifiedEvent.SetMetadata("exception_type", exceptionType);
+            }
+            if (stackTrace != null)
+            {
+                unifiedEvent.SetMetadata("stack_trace", stackTrace);
+            }
             unifiedEvent.Send();
         }
 
@@ -90,7 +98,8 @@ namespace Meta.XR.Telemetry
         /// <param name="fullPath">The file path where the error occurred (automatically populated).</param>
         public static void TrackError(SDK sdk, string issueCode, Exception exception, bool enableDebugLog = true, [CallerMemberName] string memberName = "", [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string fullPath = "")
         {
-            SendEvent(sdk, issueCode, "error", exception.Message, memberName, lineNumber, fullPath);
+            SendEvent(sdk, issueCode, "error", exception.Message, memberName, lineNumber, fullPath,
+                exception.GetType().FullName, exception.StackTrace);
 #if UNITY_EDITOR
             if (enableDebugLog)
             {
@@ -132,7 +141,8 @@ namespace Meta.XR.Telemetry
         /// <param name="fullPath">The file path where the warning occurred (automatically populated).</param>
         public static void TrackWarning(SDK sdk, string issueCode, Exception exception, bool enableDebugLog = true, [CallerMemberName] string memberName = "", [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string fullPath = "")
         {
-            SendEvent(sdk, issueCode, "warning", exception.Message, memberName, lineNumber, fullPath);
+            SendEvent(sdk, issueCode, "warning", exception.Message, memberName, lineNumber, fullPath,
+                exception.GetType().FullName, exception.StackTrace);
 #if UNITY_EDITOR
             if (enableDebugLog)
             {

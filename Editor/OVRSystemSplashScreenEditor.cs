@@ -27,6 +27,10 @@ using UnityEngine.Rendering;
 
 namespace Oculus.VR.Editor
 {
+    /// <summary>
+    /// Utility for processing system splash screen textures for Quest. Converts input textures to a compatible PNG format
+    /// by blitting through a RenderTexture, ensuring correct encoding for the Quest OS splash screen system.
+    /// </summary>
     public class OVRSystemSplashScreenEditor
     {
         private const string DefaultFileName = "OculusSystemSplashScreen";

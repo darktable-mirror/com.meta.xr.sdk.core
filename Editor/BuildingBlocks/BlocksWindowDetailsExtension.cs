@@ -32,6 +32,9 @@ using static Meta.XR.Editor.UserInterface.Styles.Colors;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Extends BuildingBlocksWindow with the detail pane UI for viewing and installing individual building blocks.
+    /// </summary>
     public partial class BuildingBlocksWindow
     {
         private const float DetailPaneShowAmount = 0.95f;
@@ -419,6 +422,13 @@ namespace Meta.XR.BuildingBlocks.Editor
                     // Defer installation to avoid GUI state corruption during async operations
                     EditorApplication.delayCall += () =>
                     {
+                        // Bridge variant selection from details page to installation
+                        if (block is InterfaceBlockData)
+                        {
+                            InterfaceBlockData.Selection.SetupForSelection(block);
+                            InterfaceBlockData.Selection.ApplySelectionsFrom(VariantsSelection);
+                        }
+
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                         if (canBeAddedOnObjects)
                         {

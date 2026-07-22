@@ -24,6 +24,9 @@ using System;
 namespace Meta.XR.MetaWand.Editor.API
 {
 
+    /// <summary>
+    /// Represents a request to check the user's API usage limits.
+    /// </summary>
     [Serializable]
     public class CheckUsage
     {
@@ -32,6 +35,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public Error error;
     }
 
+    /// <summary>
+    /// Represents the response containing API usage limit information.
+    /// </summary>
     [Serializable]
     public class CheckUsageResponse
     {
@@ -44,6 +50,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public Error error;
     }
 
+    /// <summary>
+    /// Represents a request to fetch a specific asset by its identifier.
+    /// </summary>
     [Serializable]
     public class FetchAssetRequest
     {
@@ -60,6 +69,9 @@ namespace Meta.XR.MetaWand.Editor.API
         };
     }
 
+    /// <summary>
+    /// Represents the response from fetching a specific asset.
+    /// </summary>
     [Serializable]
     public class FetchAssetResponse
     {
@@ -77,6 +89,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public Error error;
     }
 
+    /// <summary>
+    /// Contains metadata about an asset including polygon count information.
+    /// </summary>
     [Serializable]
     public class AssetMeta
     {
@@ -84,12 +99,18 @@ namespace Meta.XR.MetaWand.Editor.API
         public int[] all_polycounts;
     }
 
+    /// <summary>
+    /// Contains URLs for asset preview images.
+    /// </summary>
     [Serializable]
     public class PreviewUrls
     {
         public string image;
     }
 
+    /// <summary>
+    /// Contains download URLs for mesh assets in different formats.
+    /// </summary>
     [Serializable]
     public class MeshUrls
     {
@@ -97,6 +118,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public string fbx;
     }
 
+    /// <summary>
+    /// Contains download URLs for different texture maps of an asset.
+    /// </summary>
     [Serializable]
     public class TextureUrl
     {
@@ -108,6 +132,9 @@ namespace Meta.XR.MetaWand.Editor.API
 
 
 
+    /// <summary>
+    /// Represents a single part of a generated asset with its mesh, texture, and audio URLs.
+    /// </summary>
     [Serializable]
     public class AssetPart
     {
@@ -115,6 +142,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public TextureUrl[] texture_urls;
     }
 
+    /// <summary>
+    /// Represents a request to search for assets by text query.
+    /// </summary>
     [Serializable]
     public class SearchAssetsRequest
     {
@@ -132,18 +162,27 @@ namespace Meta.XR.MetaWand.Editor.API
         };
     }
 
+    /// <summary>
+    /// Contains attribute filters for asset search requests.
+    /// </summary>
     [Serializable]
     public class SearchAssetsAttributes
     {
         public MeshAttribute mesh;
     }
 
+    /// <summary>
+    /// Contains mesh-specific attributes for filtering search results.
+    /// </summary>
     [Serializable]
     public class MeshAttribute
     {
         public int target_polycount;
     }
 
+    /// <summary>
+    /// Contains application information sent with API requests for tracking.
+    /// </summary>
     [Serializable]
     public class AppInfoAttribute
     {
@@ -153,6 +192,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public string build_channel;
     }
 
+    /// <summary>
+    /// Represents the response from an asset search request.
+    /// </summary>
     [Serializable]
     public class SearchAssetsResponse
     {
@@ -162,6 +204,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public Error error;
     }
 
+    /// <summary>
+    /// Represents a single search result containing an asset and its relevance score.
+    /// </summary>
     [Serializable]
     public class SearchAssetResult
     {
@@ -169,6 +214,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public float similarity_score;
     }
 
+    /// <summary>
+    /// Represents a searched asset with its metadata, URLs, and generation details.
+    /// </summary>
     [Serializable]
     public class SearchAsset
     {
@@ -183,6 +231,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public bool success;
     }
 
+    /// <summary>
+    /// Represents an API error response with detailed error information.
+    /// </summary>
     [Serializable]
     public class Error
     {
@@ -194,6 +245,9 @@ namespace Meta.XR.MetaWand.Editor.API
         public string error_user_msg;
     }
 
+    /// <summary>
+    /// Represents a request to log telemetry data such as user feedback.
+    /// </summary>
     [Serializable]
     public class TelemetryRequest
     {
@@ -211,6 +265,9 @@ namespace Meta.XR.MetaWand.Editor.API
         };
     }
 
+    /// <summary>
+    /// Represents the response from a telemetry logging request.
+    /// </summary>
     [Serializable]
     public class TelemetryResponse
     {

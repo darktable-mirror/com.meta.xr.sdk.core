@@ -20,8 +20,12 @@
 
 namespace Meta.XR.Editor.Id
 {
+    /// <summary>Defines a contract for objects that have a unique string identifier.</summary>
     public interface IIdentified
     {
+        /// <summary>
+        /// Returns the unique string identifier for this object.
+        /// </summary>
         public string Id { get; }
     }
 }

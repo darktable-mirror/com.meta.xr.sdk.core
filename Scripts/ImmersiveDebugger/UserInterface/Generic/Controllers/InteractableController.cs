@@ -18,6 +18,8 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
     /// <summary>
@@ -91,16 +93,24 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             if (hapticsClip == null) return;
 
-            switch (OVRInput.GetActiveController())
+            try
             {
-                case OVRInput.Controller.LTouch:
-                    OVRHaptics.LeftChannel.Mix(hapticsClip);
-                    break;
-                case OVRInput.Controller.RTouch:
-                    OVRHaptics.RightChannel.Mix(hapticsClip);
-                    break;
-                default:
-                    break;
+                switch (OVRInput.GetActiveController())
+                {
+                    case OVRInput.Controller.LTouch:
+                        OVRHaptics.LeftChannel.Mix(hapticsClip);
+                        break;
+                    case OVRInput.Controller.RTouch:
+                        OVRHaptics.RightChannel.Mix(hapticsClip);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            catch (Exception)
+            {
+                // Silently ignore haptic errors when XR runtime is not available
+                // (e.g., mouse hover in editor without a connected headset)
             }
         }
 #pragma warning restore CS0618

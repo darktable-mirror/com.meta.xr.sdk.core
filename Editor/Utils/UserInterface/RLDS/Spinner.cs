@@ -110,10 +110,16 @@ namespace Meta.XR.Editor.UserInterface.RLDS
             _rotationScheduler = null;
         }
 
+        /// <summary>
+        /// Draws the spinner using IMGUI; logs a warning directing callers to the UIToolkit version instead.
+        /// </summary>
         public void Draw()
         {
         }
 
+        /// <summary>
+        /// Whether this spinner should be hidden from rendering.
+        /// </summary>
         public bool Hide { get; set; }
 
         /// <summary>
@@ -128,34 +134,34 @@ namespace Meta.XR.Editor.UserInterface.RLDS
                 return _container;
             }
             _container = new VisualElement();
-            _container.AddToClassList(Props.RingSpinner.Root);
+            _container.AddToClassList(RLDSConstants.RingSpinner.Root);
             foreach (var style in _styles)
             {
                 _container.AddToClassList(style);
             }
 
             _ring = new VisualElement();
-            _ring.AddToClassList(Props.RingSpinner.Ring);
+            _ring.AddToClassList(RLDSConstants.RingSpinner.Ring);
 
             // Add size class
             var sizeClass = _size switch
             {
-                RingSize.Size12 => Props.RingSpinner.Size12,
-                RingSize.Size16 => Props.RingSpinner.Size16,
-                RingSize.Size24 => Props.RingSpinner.Size24,
-                RingSize.Size32 => Props.RingSpinner.Size32,
-                _ => Props.RingSpinner.Size24
+                RingSize.Size12 => RLDSConstants.RingSpinner.Size12,
+                RingSize.Size16 => RLDSConstants.RingSpinner.Size16,
+                RingSize.Size24 => RLDSConstants.RingSpinner.Size24,
+                RingSize.Size32 => RLDSConstants.RingSpinner.Size32,
+                _ => RLDSConstants.RingSpinner.Size24
             };
             _ring.AddToClassList(sizeClass);
 
             // Add color class
             var colorClass = _color switch
             {
-                RingColor.Accent => Props.RingSpinner.Accent,
-                RingColor.Disabled => Props.RingSpinner.Disabled,
-                RingColor.Dark => Props.RingSpinner.Dark,
-                RingColor.Light => Props.RingSpinner.Light,
-                _ => Props.RingSpinner.Default
+                RingColor.Accent => RLDSConstants.RingSpinner.Accent,
+                RingColor.Disabled => RLDSConstants.RingSpinner.Disabled,
+                RingColor.Dark => RLDSConstants.RingSpinner.Dark,
+                RingColor.Light => RLDSConstants.RingSpinner.Light,
+                _ => RLDSConstants.RingSpinner.Default
             };
             _ring.AddToClassList(colorClass);
 

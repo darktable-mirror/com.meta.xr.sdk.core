@@ -34,4 +34,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.Editor.Notifications")]
 [assembly: InternalsVisibleTo("meta.xr.mrutilitykit.tests")]
 [assembly: InternalsVisibleTo("Meta.XR.ImmersiveDebugger.DevAgent.Editor")]
+[assembly: InternalsVisibleTo("Meta.XR.HandReadinessTool.Editor")]
 

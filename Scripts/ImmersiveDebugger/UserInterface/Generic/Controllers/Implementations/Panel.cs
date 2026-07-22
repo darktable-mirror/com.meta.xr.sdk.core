@@ -164,9 +164,12 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 
         private void RefreshCanvas()
         {
-            if (_canvas.worldCamera != Interface.Camera)
+            var camera = Interface?.Camera;
+            if (camera == null) return;
+
+            if (_canvas.worldCamera != camera)
             {
-                _canvas.worldCamera = Interface.Camera;
+                _canvas.worldCamera = camera;
             }
         }
 

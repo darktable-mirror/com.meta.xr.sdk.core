@@ -137,6 +137,13 @@ namespace Meta.XR.AI.AgentBridge
         /// Add a message with specific details to the conversation history.
         /// Every caller must provide a CallerIdentity for per-caller state isolation.
         /// </summary>
+        /// <param name="messageType">The type of message (e.g., "user", "assistant", "tool_use").</param>
+        /// <param name="content">The message content text.</param>
+        /// <param name="toolName">Optional tool name if this is a tool-related message.</param>
+        /// <param name="method">Optional method name for tool calls.</param>
+        /// <param name="target">Optional target for tool calls.</param>
+        /// <param name="rationale">Optional rationale for the message.</param>
+        /// <param name="caller">Optional caller identity for per-caller state isolation.</param>
         public static void AddMessage(string messageType, string content, string toolName = "",
             string method = "", string target = "", string rationale = "",
             CallerIdentity? caller = null)
@@ -158,6 +165,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get all messages in the default conversation history.
         /// </summary>
+        /// <returns>A list of all conversation messages.</returns>
         public static List<ConversationMessage> GetMessages()
         {
             return GetMessagesForCaller((CallerIdentity?)null);
@@ -166,6 +174,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get all messages for a specific caller's conversation history.
         /// </summary>
+        /// <param name="caller">The caller identity to get messages for, or null for the default state.</param>
+        /// <returns>A list of conversation messages for the specified caller.</returns>
         public static List<ConversationMessage> GetMessagesForCaller(CallerIdentity? caller)
         {
             return new List<ConversationMessage>(ConversationPersistence.GetStateForCaller(caller?.Id).Messages);
@@ -174,6 +184,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get all messages for a specific caller's conversation history (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string to get messages for, or null for the default state.</param>
+        /// <returns>A list of conversation messages for the specified caller.</returns>
         public static List<ConversationMessage> GetMessagesForCaller(string? callerId)
         {
             return new List<ConversationMessage>(ConversationPersistence.GetStateForCaller(callerId).Messages);
@@ -182,6 +194,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get the current session ID (for default state).
         /// </summary>
+        /// <returns>The current session ID string.</returns>
         public static string GetSessionId()
         {
             return GetSessionIdForCaller((CallerIdentity?)null);
@@ -190,6 +203,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get the session ID for a specific caller.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
+        /// <returns>The session ID for the specified caller.</returns>
         public static string GetSessionIdForCaller(CallerIdentity? caller)
         {
             var state = ConversationPersistence.GetStateForCaller(caller?.Id);
@@ -199,6 +214,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get the session ID for a specific caller (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
+        /// <returns>The session ID for the specified caller.</returns>
         public static string GetSessionIdForCaller(string? callerId)
         {
             var state = ConversationPersistence.GetStateForCaller(callerId);
@@ -208,6 +225,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Set the session ID for the default conversation.
         /// </summary>
+        /// <param name="sessionId">The session ID to set.</param>
         public static void SetSessionId(string sessionId)
         {
             SetSessionIdForCaller((CallerIdentity?)null, sessionId);
@@ -216,21 +234,29 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Set the session ID for a specific caller's conversation.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
+        /// <param name="sessionId">The session ID to set.</param>
         public static void SetSessionIdForCaller(CallerIdentity? caller, string sessionId)
         {
             var state = ConversationPersistence.GetStateForCaller(caller?.Id);
             state.SessionId = sessionId;
             ConversationPersistence.Save();
+
+            ConversationEventBroker.RaiseSessionIdChanged(sessionId);
         }
 
         /// <summary>
         /// Set the session ID for a specific caller's conversation (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
+        /// <param name="sessionId">The session ID to set.</param>
         public static void SetSessionIdForCaller(string? callerId, string sessionId)
         {
             var state = ConversationPersistence.GetStateForCaller(callerId);
             state.SessionId = sessionId;
             ConversationPersistence.Save();
+
+            ConversationEventBroker.RaiseSessionIdChanged(sessionId);
         }
 
         /// <summary>
@@ -245,6 +271,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Check if a request is currently active for a specific caller.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
+        /// <returns>True if a request is currently active for the specified caller.</returns>
         public static bool IsActiveForCaller(CallerIdentity? caller)
         {
             return ConversationPersistence.GetStateForCaller(caller?.Id).IsActive;
@@ -253,6 +281,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Check if a request is currently active for a specific caller (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
+        /// <returns>True if a request is currently active for the specified caller.</returns>
         public static bool IsActiveForCaller(string? callerId)
         {
             return ConversationPersistence.GetStateForCaller(callerId).IsActive;
@@ -261,6 +291,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Set the active state for a specific caller.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
+        /// <param name="value">True to mark as active, false to mark as inactive.</param>
         public static void SetActiveForCaller(CallerIdentity? caller, bool value)
         {
             var state = ConversationPersistence.GetStateForCaller(caller?.Id);
@@ -278,6 +310,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Set the active state for a specific caller (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
+        /// <param name="value">True to mark as active, false to mark as inactive.</param>
         public static void SetActiveForCaller(string? callerId, bool value)
         {
             var state = ConversationPersistence.GetStateForCaller(callerId);
@@ -314,6 +348,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Clear the conversation state for a specific caller.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
         public static void ClearForCaller(CallerIdentity? caller)
         {
             ConversationPersistence.ClearForCaller(caller?.Id);
@@ -325,6 +360,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Clear the conversation state for a specific caller (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
         public static void ClearForCaller(string? callerId)
         {
             ConversationPersistence.ClearForCaller(callerId);
@@ -336,6 +372,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Set an error message for the default conversation.
         /// </summary>
+        /// <param name="error">The error message to set.</param>
         public static void SetError(string error)
         {
             SetErrorForCaller((CallerIdentity?)null, error);
@@ -344,6 +381,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Set an error message for a specific caller's conversation.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
+        /// <param name="error">The error message to set.</param>
         public static void SetErrorForCaller(CallerIdentity? caller, string error)
         {
             var state = ConversationPersistence.GetStateForCaller(caller?.Id);
@@ -354,6 +393,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Set an error message for a specific caller's conversation (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
+        /// <param name="error">The error message to set.</param>
         public static void SetErrorForCaller(string? callerId, string error)
         {
             var state = ConversationPersistence.GetStateForCaller(callerId);
@@ -364,6 +405,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get the last error message if any occurred (for default state).
         /// </summary>
+        /// <returns>The last error message, or null if no error occurred.</returns>
         public static string? GetLastError()
         {
             return GetLastErrorForCaller((CallerIdentity?)null);
@@ -372,6 +414,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get the last error message for a specific caller.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
+        /// <returns>The last error message, or null if no error occurred.</returns>
         public static string? GetLastErrorForCaller(CallerIdentity? caller)
         {
             return ConversationPersistence.GetStateForCaller(caller?.Id).LastError;
@@ -380,6 +424,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get the last error message for a specific caller (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
+        /// <returns>The last error message, or null if no error occurred.</returns>
         public static string? GetLastErrorForCaller(string? callerId)
         {
             return ConversationPersistence.GetStateForCaller(callerId).LastError;
@@ -396,6 +442,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Clear the last error message for a specific caller.
         /// </summary>
+        /// <param name="caller">The caller identity, or null for the default state.</param>
         public static void ClearErrorForCaller(CallerIdentity? caller)
         {
             var state = ConversationPersistence.GetStateForCaller(caller?.Id);
@@ -406,6 +453,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Clear the last error message for a specific caller (by string ID).
         /// </summary>
+        /// <param name="callerId">The caller ID string, or null for the default state.</param>
         public static void ClearErrorForCaller(string? callerId)
         {
             var state = ConversationPersistence.GetStateForCaller(callerId);

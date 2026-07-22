@@ -26,6 +26,9 @@ using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
+/// <summary>
+/// Sends telemetry events when scenes are opened, restored, or closed in the Unity Editor.
+/// </summary>
 [InitializeOnLoad]
 public static class OVRSceneOpen
 {

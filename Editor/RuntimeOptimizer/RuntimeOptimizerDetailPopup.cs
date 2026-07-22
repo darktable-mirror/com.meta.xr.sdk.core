@@ -28,8 +28,10 @@ using Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight;
 
 namespace Meta.XR.RuntimeOptimizer.Editor
 {
+    /// <summary>Displays a draggable popup window showing detailed asset information for vertices, textures, or materials.</summary>
     public class RuntimeOptimizerDetailPopup : PopupWindowContent
     {
+        /// <summary>Specifies the type of asset array to display in the detail popup.</summary>
         public enum PopupForType
         {
             Unknown,
@@ -72,27 +74,29 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             Debug.Log("Popup window created " + typeOfArray + selectedObject);
         }
 
-        // Called when the popup window is opened
+        /// <summary>Initializes resources when the popup window is opened.</summary>
         public override void OnOpen()
         {
             // You can initialize resources here
             Debug.Log("Popup window opened");
         }
 
-        // Called when the popup window is closed
+        /// <summary>Cleans up resources when the popup window is closed.</summary>
         public override void OnClose()
         {
             // Clean up resources here
             Debug.Log("Popup window closed");
         }
 
-        // Get the window size
+        /// <summary>Returns the configured size of the popup window.</summary>
+        /// <returns>A <see cref="Vector2"/> containing the width and height of the popup.</returns>
         public override Vector2 GetWindowSize()
         {
             return new Vector2(windowWidth, windowHeight);
         }
 
-        // Draw the GUI
+        /// <summary>Draws the popup content including the drag handle, scroll view, and asset detail list.</summary>
+        /// <param name="rect">The rectangle area available for drawing the popup GUI.</param>
         public override void OnGUI(Rect rect)
         {
             // Store the current instance and window rect for dragging

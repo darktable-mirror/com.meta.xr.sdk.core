@@ -76,6 +76,12 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
     public int CanvasRenderLayer = 31;
     [FormerlySerializedAs("CanvasLayer")] public int HiddenCanvasLayer = -1;
 
+    [Tooltip("Editor only — has no effect in player builds. When enabled, every OVROverlayCanvas " +
+        "flips its rendered output on the Y axis in the Unity Editor. Use this only if overlay canvas " +
+        "panels appear vertically flipped in the Editor (e.g. the Meta XR Simulator); leave it off " +
+        "(the default) otherwise.")]
+    public bool FlipOverlayCanvasYInEditor = false;
+
 #if UNITY_EDITOR
     public static string GetOculusOverlayCanvasSettingsAssetPath()
     {
@@ -144,7 +150,7 @@ public class OVROverlayCanvasSettings : OVRRuntimeAssetsBase
         }
     }
 
-    private static bool UsingBuiltInRenderPipeline()
+    internal static bool UsingBuiltInRenderPipeline()
     {
         return UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline == default;
     }

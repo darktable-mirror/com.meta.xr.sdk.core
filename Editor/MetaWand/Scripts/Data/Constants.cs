@@ -26,7 +26,7 @@ namespace Meta.XR.MetaWand.Editor
     {
         public const string AssetLibraryPublicName = "Asset library";
         public const string AssetLibraryMenuDescriptionKey = "menu_description";
-        public const string AssetLibraryMenuDescription = "Explore a central repository of pre-generated 3D assets";
+        public const string AssetLibraryMenuDescription = "Add 3D assets to your project";
 
         public const string MetaSubtextKey = "powered_by";
         public const string MetaSubtextFallback = "";
@@ -86,6 +86,15 @@ namespace Meta.XR.MetaWand.Editor
         // Telemetry action messages for search feedback
         public const string SearchFeedbackActionLike = "search_like";
         public const string SearchFeedbackActionDislike = "search_dislike";
+
+        public const string FeedbackToastMessage = "Thanks for your feedback!";
+        public const float FeedbackToastDuration = 2.0f;
+        public const string SearchTextFieldControlName = "SearchTextField";
+        public const int AuthTimeoutMs = 200;
+        public const int AuthPollIntervalMs = 10;
+
+        public static readonly float[] LodScreenPercentages = { 0.5f, 0.2f, 0.05f };
+        public const int MaxDisplayTextLength = 42;
 
         public static class Telemetry
         {

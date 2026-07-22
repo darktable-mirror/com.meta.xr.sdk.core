@@ -76,6 +76,11 @@ public static class OVRHaptics
         {
             OVRPlugin.HapticsDesc desc = OVRPlugin.GetControllerHapticsDesc((uint)OVRPlugin.Controller.RTouch);
 
+            if (desc.SampleRateHz == 0)
+            {
+                desc = OVRPlugin.GetControllerHapticsDesc((uint)OVRPlugin.Controller.LTouch);
+            }
+
             SampleRateHz = desc.SampleRateHz;
             SampleSizeInBytes = desc.SampleSizeInBytes;
             MinimumSafeSamplesQueued = desc.MinimumSafeSamplesQueued;

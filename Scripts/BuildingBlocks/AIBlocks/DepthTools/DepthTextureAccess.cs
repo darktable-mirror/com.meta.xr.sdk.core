@@ -45,13 +45,13 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         /// <summary>
         /// Edge-aligned square size (in pixels) of the downsampled depth texture
         /// used for CPU readback and intersection tests.
-        /// This is dynamically determined from the depth texture at runtime.
+        /// Must match the hardcoded output size in the CopyDepthTextureIntoNativeArray
+        /// compute shader, which always produces ShaderOutputSize×ShaderOutputSize output
+        /// per eye regardless of the source depth texture resolution.
         /// </summary>
-        /// <remarks>
-        /// Only access this property after <see cref="IsInitialized"/> is true to ensure
-        /// the texture size has been properly determined from the actual depth texture.
-        /// </remarks>
-        public int TextureSize { get; private set; } = 320;
+        public int TextureSize => ShaderOutputSize;
+
+        private const int ShaderOutputSize = 320;
 
         /// <summary>
         /// Indicates whether the depth texture has been initialized and TextureSize has been set.
@@ -191,16 +191,8 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
 #endif
 
-            if (!_depthTexturePixels.IsCreated || TextureSize != depthTexture.width)
+            if (!_depthTexturePixels.IsCreated)
             {
-                if (_depthTexturePixels.IsCreated)
-                {
-                    _computeBuffer?.Dispose();
-                    _depthTexturePixels.Dispose();
-                    _gpuRequestBuffer.Dispose();
-                }
-
-                TextureSize = depthTexture.width;
                 var numPixels = TextureSize * TextureSize * NumEyes;
                 _computeBuffer = new ComputeBuffer(numPixels, sizeof(float));
                 _depthTexturePixels = new NativeArray<float>(numPixels, Allocator.Persistent);

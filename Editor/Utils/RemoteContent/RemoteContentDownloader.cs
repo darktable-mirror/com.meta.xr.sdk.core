@@ -162,7 +162,15 @@ namespace Meta.XR.Editor.RemoteContent
 
         public T WithMachineIdUrlParameter(bool required = false)
         {
-            var machineID = OVRPlugin.GetMachineID();
+            string machineID = null;
+            try
+            {
+                machineID = OVRPlugin.GetMachineID();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[MetaXR] Failed to get machine ID: {e.Message}");
+            }
 
             if (required && string.IsNullOrEmpty(machineID))
             {

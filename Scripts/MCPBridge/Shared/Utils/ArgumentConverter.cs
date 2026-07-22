@@ -21,14 +21,14 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 using UnityEngine;
 
 namespace Meta.MCPBridge.Utils
 {
     internal static class ArgumentConverter
     {
-        internal static object[] ConvertJObjectToArguments(JObject jObject, MethodInfo methodInfo)
+        internal static object[] ConvertJsonObjectToArguments(JsonObject jObject, MethodInfo methodInfo)
         {
             var parameters = methodInfo.GetParameters();
             var arguments = new object[parameters.Length];
@@ -39,9 +39,9 @@ namespace Meta.MCPBridge.Utils
                 var parameterName = parameter.Name;
                 var parameterType = parameter.ParameterType;
 
-                // Try to get the value from JObject by parameter name
+                // Try to get the value from JsonObject by parameter name
                 if (jObject.TryGetValue(parameterName, StringComparison.OrdinalIgnoreCase, out var token))
-                    arguments[i] = ConvertJTokenToType(token, parameterType);
+                    arguments[i] = ConvertJsonNodeToType(token, parameterType);
                 else if (parameter.HasDefaultValue)
                     // Use default value if parameter is optional
                     arguments[i] = parameter.DefaultValue;
@@ -50,15 +50,15 @@ namespace Meta.MCPBridge.Utils
                     arguments[i] = null;
                 else
                     throw new ArgumentException(
-                        $"Required parameter '{parameterName}' not found in JObject and has no default value.");
+                        $"Required parameter '{parameterName}' not found in JsonObject and has no default value.");
             }
 
             return arguments;
         }
 
-        internal static object ConvertJTokenToType(JToken token, Type targetType)
+        internal static object ConvertJsonNodeToType(JsonNode token, Type targetType)
         {
-            if (token == null || token.Type == JTokenType.Null)
+            if (token == null || token.Type == JsonNodeType.Null)
             {
                 if (IsNullableType(targetType) || !targetType.IsValueType)
                     return null;
@@ -92,6 +92,24 @@ namespace Meta.MCPBridge.Utils
                 if (targetType == typeof(bool))
                     return token.Value<bool>();
 
+                if (targetType == typeof(ulong))
+                    return Convert.ToUInt64(token.Value<long>());
+
+                if (targetType == typeof(uint))
+                    return Convert.ToUInt32(token.Value<long>());
+
+                if (targetType == typeof(short))
+                    return Convert.ToInt16(token.Value<int>());
+
+                if (targetType == typeof(ushort))
+                    return Convert.ToUInt16(token.Value<int>());
+
+                if (targetType == typeof(byte))
+                    return Convert.ToByte(token.Value<int>());
+
+                if (targetType == typeof(sbyte))
+                    return Convert.ToSByte(token.Value<int>());
+
                 if (targetType == typeof(DateTime))
                     return token.Value<DateTime>();
 
@@ -107,7 +125,7 @@ namespace Meta.MCPBridge.Utils
                 // Handle System.Type - useful for methods like GameObject.AddComponent(Type)
                 if (targetType == typeof(Type))
                 {
-                    if (token.Type == JTokenType.String)
+                    if (token.Type == JsonNodeType.String)
                     {
                         string typeName = token.ToString();
 
@@ -152,34 +170,34 @@ namespace Meta.MCPBridge.Utils
 
                         throw new ArgumentException($"Could not find type '{typeName}'. Make sure the type name is fully qualified.");
                     }
-                    else if (token.Type == JTokenType.Object && token is JObject typeObj)
+                    else if (token.Type == JsonNodeType.Object && token is JsonObject typeObj)
                     {
                         // Handle case where the type is passed as an object with a "typeName" property
                         if (typeObj.TryGetValue("typeName", StringComparison.OrdinalIgnoreCase, out var typeNameToken))
                         {
-                            return ConvertJTokenToType(typeNameToken, typeof(Type));
+                            return ConvertJsonNodeToType(typeNameToken, typeof(Type));
                         }
                     }
 
-                    throw new ArgumentException($"Cannot convert JToken of type {token.Type} to System.Type. Expected a string with the type name.");
+                    throw new ArgumentException($"Cannot convert JsonNode of type {token.Type} to System.Type. Expected a string with the type name.");
                 }
 
                 // Handle enums
                 if (targetType.IsEnum)
                 {
-                    if (token.Type == JTokenType.String)
+                    if (token.Type == JsonNodeType.String)
                         return Enum.Parse(targetType, token.Value<string>(), true);
                     return Enum.ToObject(targetType, token.Value<int>());
                 }
 
                 // Handle arrays
-                if (targetType.IsArray && token is JArray jArray)
+                if (targetType.IsArray && token is JsonArray jArray)
                 {
                     var elementType = targetType.GetElementType();
                     var array = Array.CreateInstance(elementType, jArray.Count);
 
                     for (var i = 0; i < jArray.Count; i++)
-                        array.SetValue(ConvertJTokenToType(jArray[i], elementType), i);
+                        array.SetValue(ConvertJsonNodeToType(jArray[i], elementType), i);
 
                     return array;
                 }
@@ -192,37 +210,37 @@ namespace Meta.MCPBridge.Utils
                     var list = Activator.CreateInstance(listType);
                     var addMethod = listType.GetMethod("Add");
 
-                    if (token is JArray jArrayList)
+                    if (token is JsonArray jArrayList)
                         foreach (var item in jArrayList)
-                            addMethod.Invoke(list, new[] { ConvertJTokenToType(item, elementType) });
+                            addMethod.Invoke(list, new[] { ConvertJsonNodeToType(item, elementType) });
 
                     return list;
                 }
 
-                // Special handling for JObject target type
-                if (targetType == typeof(JObject))
+                // Special handling for JsonObject target type
+                if (targetType == typeof(JsonObject))
                 {
-                    // If the token is already a JObject, return it
-                    if (token is JObject jObj)
+                    // If the token is already a JsonObject, return it
+                    if (token is JsonObject jObj)
                         return jObj;
 
                     // If the token is a string, try to parse it as JSON
-                    if (token.Type == JTokenType.String)
+                    if (token.Type == JsonNodeType.String)
                     {
                         try
                         {
                             string jsonStr = token.ToString();
-                            return JObject.Parse(jsonStr);
+                            return JsonObject.Parse(jsonStr);
                         }
                         catch (Exception)
                         {
-                            // If parsing fails, create a new JObject with the string as a property
-                            return new JObject { ["value"] = token };
+                            // If parsing fails, create a new JsonObject with the string as a property
+                            return new JsonObject { ["value"] = token };
                         }
                     }
 
-                    // For other token types, create a new JObject with the token as a property
-                    return new JObject { ["value"] = token };
+                    // For other token types, create a new JsonObject with the token as a property
+                    return new JsonObject { ["value"] = token };
                 }
 
                 // For complex objects, deserialize using ToObject
@@ -231,7 +249,7 @@ namespace Meta.MCPBridge.Utils
             catch (Exception ex)
             {
                 throw new ArgumentException(
-                    $"Cannot convert JToken of type {token.Type} to {targetType.Name}: {ex.Message}",
+                    $"Cannot convert JsonNode of type {token.Type} to {targetType.Name}: {ex.Message}",
                     ex);
             }
         }

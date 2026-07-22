@@ -2,10 +2,11 @@
     "name": "meta.xr.ai.mcpbridge",
     "rootNamespace": "",
     "references": [
+        "meta.xr.json",
         "Meta.XR.Editor.Callbacks",
         "Meta.XR.ImmersiveDebugger",
         "meta.xr.ai.mcpbridge.telemetry",
-        "Unity.Nuget.Newtonsoft-Json"
+        "Oculus.VR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -13,15 +14,8 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [
-        "HAS_NEWTONSOFT_JSON"
-    ],
+    "defineConstraints": [],
     "versionDefines": [
-        {
-            "name": "com.unity.nuget.newtonsoft-json",
-            "expression": "",
-            "define": "HAS_NEWTONSOFT_JSON"
-        },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",
             "name": "com.meta.xr.sdk.core",

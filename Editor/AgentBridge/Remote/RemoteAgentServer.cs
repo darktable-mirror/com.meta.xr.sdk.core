@@ -28,7 +28,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Meta.XR.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -46,6 +46,7 @@ namespace Meta.XR.AI.AgentBridge
         private const string LogPrefix = "Remote:";
         private const string BasePath = "/agentbridge/";
         private const int SsePingIntervalMs = 15000;
+        private const string WasRunningSessionKey = "AgentBridge.RemoteServer.WasRunning";
 
         private static HttpListener? _listener;
         private static CancellationTokenSource? _cts;
@@ -60,13 +61,23 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Initialize the remote server based on settings.
         /// Called by AgentBridgeManager during editor initialization.
+        /// Restarts the server if it was running before a domain reload (e.g., Play mode entry).
         /// </summary>
         public static void Initialize()
         {
-            if (RemoteAgentSettings.AutoStart.Value)
+            if (RemoteAgentSettings.AutoStart.Value || SessionState.GetBool(WasRunningSessionKey, false))
             {
                 Start();
             }
+        }
+
+        /// <summary>
+        /// Save the current running state to SessionState so it survives domain reload.
+        /// Called by AgentBridgeManager before shutdown.
+        /// </summary>
+        public static void SaveRunningState()
+        {
+            SessionState.SetBool(WasRunningSessionKey, _isRunning);
         }
 
         /// <summary>
@@ -115,6 +126,9 @@ namespace Meta.XR.AI.AgentBridge
 
                 var localIp = NetworkUtilities.GetLocalNetworkAddress();
                 Log.Info($"{LogPrefix} Server started on port {port} (accessible at {localIp}:{port})");
+
+                // Surface a one-time hint if the Windows Firewall would block inbound device connections.
+                WindowsFirewallUtility.WarnIfNotConfigured();
             }
             catch (Exception ex)
             {
@@ -642,7 +656,7 @@ namespace Meta.XR.AI.AgentBridge
             {
                 using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
                 var bodyString = await reader.ReadToEndAsync();
-                return JsonConvert.DeserializeObject<T>(bodyString);
+                return McpJsonConvert.Deserialize<T>(bodyString);
             }
             catch
             {
@@ -655,7 +669,7 @@ namespace Meta.XR.AI.AgentBridge
             response.StatusCode = statusCode;
             response.ContentType = "application/json";
 
-            var json = JsonConvert.SerializeObject(data);
+            var json = McpJsonConvert.Serialize(data);
             var bytes = Encoding.UTF8.GetBytes(json);
             response.ContentLength64 = bytes.Length;
 
@@ -697,7 +711,7 @@ namespace Meta.XR.AI.AgentBridge
 
                 try
                 {
-                    var json = JsonConvert.SerializeObject(data);
+                    var json = McpJsonConvert.Serialize(data);
                     var ssePayload = $"event: {SseEvent.ToWireName(eventType)}\ndata: {json}\n\n";
                     var bytes = Encoding.UTF8.GetBytes(ssePayload);
 

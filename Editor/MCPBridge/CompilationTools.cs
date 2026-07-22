@@ -422,6 +422,40 @@ namespace Meta.MCPBridge.Editor
             }
         }
 
+        [Tool(Description = "Reimport a folder in the AssetDatabase, forcing Unity to re-detect new, changed, or deleted files. The path must be relative to the project (e.g. 'Assets/Oculus/VR/Editor/Utils/UserInterface'). After reimport, triggers script compilation if any scripts changed.",
+            Returns = "JSON object with reimport result and whether compilation was triggered")]
+        internal Task<object> ReimportFolder(string folderPath)
+        {
+            return RunOnMainThread<object>(() =>
+            {
+                if (string.IsNullOrEmpty(folderPath))
+                {
+                    return new { success = false, error = "folderPath is required" };
+                }
+
+                if (!AssetDatabase.IsValidFolder(folderPath))
+                {
+                    return new { success = false, error = $"Not a valid folder: {folderPath}" };
+                }
+
+                lock (_lock)
+                {
+                    _cachedErrors.Clear();
+                    _compilationTcs = new TaskCompletionSource<CompilationResult>();
+                }
+
+                AssetDatabase.ImportAsset(folderPath, ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+                CompilationPipeline.RequestScriptCompilation();
+
+                return new
+                {
+                    success = true,
+                    folderPath,
+                    timestamp = DateTime.UtcNow.ToString("o")
+                };
+            });
+        }
+
         [Tool(Description = "Clear cached compilation errors. Useful before starting a new verification cycle.",
             Returns = "Confirmation that errors were cleared")]
         internal object ClearErrors()

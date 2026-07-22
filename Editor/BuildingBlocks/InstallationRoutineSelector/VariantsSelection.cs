@@ -66,7 +66,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             if (HasMissingDependencies)
                 return true;
 
-            return routines.Count > 1;
+            if (routines.Count > 1)
+                return true;
+
+            // Also require a choice if any dependency block has multiple possible
+            // installation routines. This ensures the variant selection window is
+            // shown upfront (before any dependencies are installed), so that
+            // cancelling does not leave partially-installed dependencies behind.
+            return _possibleRoutines.Values.Any(depRoutines => depRoutines.Count > 1);
         }
 
         public void SetupForSelection(BlockData blockData)
@@ -234,6 +241,23 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             // Apply the restored values back to the installation routine's actual fields
             routine.ApplySelection(this);
+        }
+
+        internal void ApplySelectionsFrom(VariantsSelection source)
+        {
+            foreach (var sourceVariant in source)
+            {
+                for (var i = 0; i < _variants.Count; i++)
+                {
+                    if (_variants[i].Matches(sourceVariant))
+                    {
+                        _variants[i].RawValue = sourceVariant.RawValue;
+                        break;
+                    }
+                }
+            }
+            FavouriteRoutine = source.FavouriteRoutine;
+            UpdateVariants();
         }
 
         public void Release(BlockData blockData, bool force = false)

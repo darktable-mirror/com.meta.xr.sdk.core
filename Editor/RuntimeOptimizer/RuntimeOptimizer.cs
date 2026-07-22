@@ -73,7 +73,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
     internal static class RuntimeOptimizerToolRegistration
     {
         private const string PublicName = "Quest Runtime Optimizer";
-        private const string MenuDescription = "Diagnose Performance Issues";
+        private const string MenuDisplayName = "Runtime optimizer";
+        private const string MenuDescription = "Diagnose app performance issues at runtime";
         private const string ToolDescription =
             "Profile and optimize Quest app performance with real-time GPU/CPU metrics, " +
             "What-If analysis, and draw call inspection.";
@@ -87,16 +88,20 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         internal static readonly ToolDescriptor ToolDescriptor = new()
         {
             Name = PublicName,
+            DisplayName = MenuDisplayName,
             MenuDescription = MenuDescription,
             Description = ToolDescription,
             Color = RuntimeOptimizerWindow.Colors.Meta,
             Icon = StatusIcon,
-            Order = 15,
+            Order = 6,
             AddToStatusMenu = true,
+            MenuCategory = MenuCategory.Tools,
             AddToMenu = true,
             CanBeNew = true,
             OnClickDelegate = OnClickDelegate,
             InfoTextDelegate = ComputeInfoText,
+            EnablementDescriptor = ComputeEnablement,
+            EnablementLink = () => ("Enable in ", "project settings", _ => RuntimeOptimizerWindow.ShowWindow()),
             Documentation = new List<Documentation>()
             {
                 new()
@@ -120,8 +125,21 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         {
             return (null, null);
         }
+
+        private static bool IsRuntimeOptimizerEnabled()
+        {
+            var defines = PlayerSettings.GetScriptingDefineSymbols(
+                UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup));
+            return System.Array.IndexOf(defines.Split(';'), "ENABLE_RUNTIME_OPTIMIZER") >= 0;
+        }
+
+        // Surfaces the greyed "Enable in project settings" caption until the
+        // ENABLE_RUNTIME_OPTIMIZER scripting define is set (toggled from the optimizer window).
+        private static (bool, string) ComputeEnablement() =>
+            IsRuntimeOptimizerEnabled() ? (true, string.Empty) : (false, "Enable in project settings");
     }
 
+    /// <summary>Provides an editor window for profiling and optimizing Quest application runtime performance.</summary>
     [InitializeOnLoadAttribute]
     public partial class RuntimeOptimizerWindow : EditorWindow
     {
@@ -215,6 +233,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         private DateTime captureStartTime = default(DateTime);
         private int maxCaptureTimeoutSeconds = 60; // Maximum capture duration (dynamically adjusted for What If)
         private bool isActivelyCapturing = false;
+
+        private bool isUpdatingScriptDefines = false;
 
         // Staging area for temporary freeze preview (not saved to disk)
         private QuickPerfData? stagingPerfMetrics = null;
@@ -588,6 +608,22 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                 ProcessPayload(payload.payloadType, payload.message);
             }
 
+            if (isUpdatingScriptDefines)
+            {
+                if (!EditorApplication.isCompiling)
+                {
+                    isUpdatingScriptDefines = false;
+                    EditorUtility.ClearProgressBar();
+                    needRepait = true;
+                    Repaint();
+                }
+                else
+                {
+                    Repaint();
+                    return;
+                }
+            }
+
             // Unified 1-second periodic checks for both ADB validation and capture monitoring
             DateTime now = DateTime.Now;
             double lastChecked = (now - lastTimeAdbValidate).TotalSeconds;
@@ -726,9 +762,12 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                         runtimeServicePID = -1;
                         sleepNotificationShown = true;
                         needRepait = true;
-                        if (isActivelyCapturing)
+                        // Cancel any active capture operation when device sleeps (T241267036)
+                        // Check all capture states, not just isActivelyCapturing, to prevent
+                        // getting stuck in "Processing..." when power button is pressed mid-capture
+                        if (isActivelyCapturing || IsCapturingBottlenecks != "" || isCapturingWhatIf || freezeFrameInProgress || capturingForStaging)
                         {
-                            CancelCurrentCapture("Device Sleep. Please check device status and try again.", "device_sleep");
+                            CancelCurrentCapture("Device entered sleep mode during capture. Please wake the device and try again.", "device_sleep");
                         }
                     }
                 }
@@ -831,7 +870,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             RuntimeOptimizerPlugin.SendEvent("toggle_auto_capture", InsightEventDataStr.ToJsonStr(enableAutoCapture.ToString()));
         }
 
-        [MenuItem("Meta/Tools/Quest Runtime Optimizer", false, 1)]
+        /// <summary>Opens the Quest Runtime Optimizer editor window from the Meta menu.</summary>
+        [MenuItem("Meta/Tools/Runtime optimizer", false, 1)]
         public static void ShowWindow()
         {
             ShowWindow("Menu Item");
@@ -905,6 +945,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             EditorGUILayout.EndHorizontal();
         }
 
+        /// <summary>Draws a horizontal line with a colored bullet icon and bold label text.</summary>
+        /// <param name="text">The label text to display.</param>
+        /// <param name="dotColor">The color applied to both the label and bullet icon.</param>
+        /// <param name="labelWidth">The width of the label field in pixels.</param>
         public void DrawBulletLine(string text, Color dotColor, int labelWidth = 200)
         {
             if (BulletIcon == null)
@@ -937,16 +981,28 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             EditorGUILayout.LabelField("Quest Runtime Optimizer Enabled", GUILayout.Width(205));
             string currentDefines = PlayerSettings.GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup));
             bool runtimeOptimizerPreviouslyEnabled = currentDefines.Contains("ENABLE_RUNTIME_OPTIMIZER");
+
+            bool previousGUIEnabledToggle = GUI.enabled;
+            GUI.enabled = !isUpdatingScriptDefines && !isActivelyCapturing;
             bool runtimeOptimizerEnabled = EditorGUILayout.Toggle(runtimeOptimizerPreviouslyEnabled, GUILayout.Width(20));
+            GUI.enabled = previousGUIEnabledToggle;
+
             if (runtimeOptimizerPreviouslyEnabled != runtimeOptimizerEnabled)
             {
                 EditorPrefs.SetBool("RuntimeOptimizerEnabled", runtimeOptimizerEnabled);
+                isUpdatingScriptDefines = true;
+                EditorUtility.DisplayProgressBar(
+                    "Quest Runtime Optimizer",
+                    runtimeOptimizerEnabled
+                        ? "Enabling Runtime Optimizer... Unity is recompiling scripts."
+                        : "Disabling Runtime Optimizer... Unity is recompiling scripts.",
+                    1.0f);
                 UpdateROEnabled(runtimeOptimizerEnabled);
             }
             GUILayout.FlexibleSpace();
             GUILayout.FlexibleSpace();
             bool previousGUIEnabled = GUI.enabled;
-            GUI.enabled = !isActivelyCapturing;
+            GUI.enabled = !isActivelyCapturing && !isUpdatingScriptDefines;
             if (GUILayout.Button("Open Build Settings", Styles.ButtonStyle, GUILayout.Width(150)))
             {
                 CaptureTool.Init(bundleName);
@@ -956,6 +1012,13 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             GUI.enabled = previousGUIEnabled;
 
             EditorGUILayout.EndHorizontal();
+
+            if (isUpdatingScriptDefines)
+            {
+                EditorGUILayout.HelpBox(
+                    "Unity is recompiling scripts after changing Runtime Optimizer settings. Please wait...",
+                    MessageType.Info);
+            }
 
         }
 
@@ -1382,6 +1445,22 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             isActivelyCapturing = false;
             captureStartTime = default(DateTime);
             capturingForStaging = false;
+
+            // Reset freeze frame state to prevent UI getting stuck (T241267036)
+            lock (freezeFrameLock)
+            {
+                freezeFrameInProgress = false;
+                freezeFrameStartTime = default(DateTime);
+                freezeFrameScreenshotComplete = false;
+                freezeFrameMetricsComplete = false;
+            }
+
+            // Stop any in-progress Perfetto capture on the device (T241267036)
+            // This prevents the capture from hanging when the device enters sleep mode
+            if (failureReason == "device_sleep" && wasCapturing)
+            {
+                CaptureTool.StopPerfettoCapture();
+            }
 
             // Stop countdown timer for What If Analysis
             StopCountdownTimer();
@@ -1840,12 +1919,16 @@ namespace Meta.XR.RuntimeOptimizer.Editor
 
             // Title and timestamp on the same line
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Active Frame To Analyze", GUILayout.Width(150));
             if (!string.IsNullOrEmpty(activeFrameName))
             {
+                EditorGUILayout.LabelField("Active Frame To Analyze", GUILayout.Width(150));
                 DateTime captureDate = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(Convert.ToInt64(activeFrameName, 16));
                 string captureDateStr = captureDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
                 EditorGUILayout.LabelField($"{captureDateStr}", EditorStyles.label);
+            }
+            else
+            {
+                EditorGUILayout.LabelField("No active frame selected", EditorStyles.label);
             }
             EditorGUILayout.EndHorizontal();
 
@@ -2020,7 +2103,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             if (runtimeIsFrozen && freezeFrameInProgress)
             {
                 // Show completion status in tooltip when trying to unpause during freeze operation
-                freezeTooltip = $"Please wait for freeze to complete... (Screenshot: {(freezeFrameScreenshotComplete ? "✓" : "...")} Metrics: {(freezeFrameMetricsComplete ? "✓" : "...")})";
+                freezeTooltip = "Please wait for freeze to complete...";
             }
             else if (!enableAnalyze || !canCapture)
             {
@@ -2336,6 +2419,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
 
             // Clear active frame when unfreezing
             activeFrameImage = null;
+            activeFrameName = "";
 
             // Reset freeze frame tracking state
             lock (freezeFrameLock)
@@ -2572,17 +2656,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
 
         private bool IsDeviceAsleep()
         {
-            string output;
-            // Check device wakefulness state using dumpsys power
-            if (CaptureTool.ExecuteADBCommand(new[] { "shell dumpsys power | grep \"mWakefulness=\"" }, out output))
-            {
-                // Output will be like "mWakefulness=Asleep" or "mWakefulness=Awake"
-                if (!string.IsNullOrEmpty(output) && output.Contains("Asleep"))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return CaptureTool.IsDeviceAsleep();
         }
 
         private void LockPerformanceMode()
@@ -3229,7 +3303,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         private void DrawLaunchButton()
         {
             bool hasExecutablePath = !string.IsNullOrWhiteSpace(executablePath);
-            bool canLaunch = hasExecutablePath && !isLaunchInProgress;
+            bool hasDeviceConnection = pcTestingMode || CaptureTool.ConnectedDeviceCount() > 0;
+            bool canLaunch = hasExecutablePath && hasDeviceConnection && !isLaunchInProgress;
             GUI.enabled = canLaunch;
 
             string buttonLabel = isLaunchInProgress ? "Launching..." : "Launch";
@@ -3244,7 +3319,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         private void DrawRelaunchButton()
         {
             bool hasExecutablePath = !string.IsNullOrWhiteSpace(executablePath);
-            bool canLaunch = hasExecutablePath && !isLaunchInProgress;
+            bool hasDeviceConnection = pcTestingMode || CaptureTool.ConnectedDeviceCount() > 0;
+            bool canLaunch = hasExecutablePath && hasDeviceConnection && !isLaunchInProgress;
             GUI.enabled = canLaunch;
 
             string buttonLabel = isLaunchInProgress ? "Launching..." : "Relaunch";
@@ -3259,7 +3335,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         private void DrawRelaunchReconnectButtons()
         {
             bool hasExecutablePath = !string.IsNullOrWhiteSpace(executablePath);
-            bool canLaunch = hasExecutablePath && !isLaunchInProgress;
+            bool hasDeviceConnection = pcTestingMode || CaptureTool.ConnectedDeviceCount() > 0;
+            bool canLaunch = hasExecutablePath && hasDeviceConnection && !isLaunchInProgress;
 
             GUI.enabled = canLaunch;
             string buttonLabel = isLaunchInProgress ? "Launching..." : "Relaunch";
@@ -3780,13 +3857,27 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                 _aiAnalysisResult.Clear();
                 _aiAnalysisError = null;
                 _isAIAnalyzing = false;
-                lastSelectedInsight = InsightType.ACTIONABLE_INSIGHT;
+                if (!string.IsNullOrEmpty(lastSelectedInsightName) && snapshotJsonCache.ContainsKey(lastSelectedInsightName) && metricJsonCache.ContainsKey(lastSelectedInsightName))
+                {
+                    OpenAnalysisForTimestamp(lastSelectedInsightName, snapshotJsonCache[lastSelectedInsightName], metricJsonCache[lastSelectedInsightName]);
+                }
+                else
+                {
+                    lastSelectedInsight = InsightType.ACTIONABLE_INSIGHT;
+                }
                 RuntimeOptimizerPlugin.SendEvent("ai_analysis_clear", InsightEventDataStr.ToJsonStr(""));
                 Repaint();
             }
             if (_aiAnalysisResult.Length > 0 && GUILayout.Button("Back to Insights", GUILayout.Width(120)))
             {
-                lastSelectedInsight = InsightType.ACTIONABLE_INSIGHT;
+                if (snapshotJsonCache.ContainsKey(lastSelectedInsightName) && metricJsonCache.ContainsKey(lastSelectedInsightName))
+                {
+                    OpenAnalysisForTimestamp(lastSelectedInsightName, snapshotJsonCache[lastSelectedInsightName], metricJsonCache[lastSelectedInsightName]);
+                }
+                else
+                {
+                    lastSelectedInsight = InsightType.ACTIONABLE_INSIGHT;
+                }
                 RuntimeOptimizerPlugin.SendEvent("ai_analysis_back", InsightEventDataStr.ToJsonStr(lastSelectedInsightName));
                 Repaint();
             }
@@ -3829,6 +3920,12 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             DrawSeperator();
 
             DrawBuildSettings();
+
+            bool savedGUIEnabled = GUI.enabled;
+            if (isUpdatingScriptDefines)
+            {
+                GUI.enabled = false;
+            }
 
             DrawSeperator();
 
@@ -3900,7 +3997,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                                 Texture2D imageToUse = captureImageCache.ContainsKey(fileName) ? captureImageCache[fileName] : Texture2D.whiteTexture;
                                 JSONObject? metricJsonToUse = metricJsonCache.ContainsKey(fileName) ? metricJsonCache[fileName] : null;
 
-                                EditorGUILayout.BeginHorizontal(Styles.CaptureBox);
+                                bool isSelectedCapture = lastSelectedInsight == InsightType.ACTIONABLE_INSIGHT && lastSelectedInsightName == fileName;
+                                EditorGUILayout.BeginHorizontal(isSelectedCapture ? Styles.SelectedCaptureBox : Styles.CaptureBox);
 
                                 JSONObject? snapshotJsonToUse = snapshotJsonCache.ContainsKey(fileName) ? snapshotJsonCache[fileName] : null;
                                 {
@@ -4112,6 +4210,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                 GUILayout.Space(10);
             }
 
+            GUI.enabled = savedGUIEnabled;
         }
         private void DrawIntField(Func<int> get, Action<int> set, GUIContent content, bool sendTelemetry = true)
         {
@@ -4129,6 +4228,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             }
         }
     }
+    /// <summary>Categorizes the type of performance insight displayed in the optimizer window.</summary>
     public enum InsightType
     {
         EMPTY_NO_CAPTURES = 0,

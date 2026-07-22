@@ -29,6 +29,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Shared.Editor
 {
+    /// <summary>
+    /// Abstract base installation routine for networked grabbable object building blocks that configures hand grab interactions.
+    /// </summary>
     public abstract class NetworkedGrabbableObjectInstallationRoutine : NetworkInstallationRoutine
     {
         [SerializeField]
@@ -41,6 +44,12 @@ namespace Meta.XR.BuildingBlocks.Shared.Editor
         private const string HandGrabBlockId = Oculus.Interaction.Editor.BuildingBlocks.BlockDataIds.HandGrab;
 #endif // META_INTERACTION_SDK_DEFINED
 
+        /// <summary>
+        /// Installs the networked grabbable object building block and configures hand grab interactions.
+        /// </summary>
+        /// <param name="blockData">The block data asset being installed.</param>
+        /// <param name="selectedGameObject">The optional GameObject to install the block onto.</param>
+        /// <returns>A task containing the list of GameObjects created during installation.</returns>
 #pragma warning disable CS1998
         public override async Task<List<GameObject>> InstallAsync(BlockData blockData, GameObject selectedGameObject)
 #pragma warning restore CS1998

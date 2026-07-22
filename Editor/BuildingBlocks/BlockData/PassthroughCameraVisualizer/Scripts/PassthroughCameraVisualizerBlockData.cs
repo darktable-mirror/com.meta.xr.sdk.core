@@ -26,6 +26,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Provides block data and installation logic for the passthrough camera visualizer building block.
+    /// </summary>
     public class PassthroughCameraVisualizerBlockData : BlockData
     {
 #if USING_META_XR_MR_UTILITYKIT_SDK

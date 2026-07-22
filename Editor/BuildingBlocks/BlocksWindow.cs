@@ -38,6 +38,9 @@ using Object = UnityEngine.Object;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Provides the main editor window for browsing and installing building blocks.
+    /// </summary>
     public partial class BuildingBlocksWindow : EditorWindow
     {
         private static BuildingBlocksWindow _instance;
@@ -219,6 +222,10 @@ namespace Meta.XR.BuildingBlocks.Editor
             EditorGUILayout.Space();
         }
 
+        /// <summary>
+        /// Populates the settings menu with building blocks configuration options.
+        /// </summary>
+        /// <param name="menu">The menu to populate with settings items.</param>
         public static void BuildSettingsMenu(GenericMenu menu)
         {
             if (ValidCollections)
@@ -458,8 +465,6 @@ namespace Meta.XR.BuildingBlocks.Editor
 
             var containsSearch = string.IsNullOrEmpty(_filterSearch)
                                  || block.blockName.Contains(_filterSearch, StringComparison.InvariantCultureIgnoreCase)
-                                 || block.Description.Value.Contains(_filterSearch,
-                                     StringComparison.InvariantCultureIgnoreCase)
                                  || block.Tags.Any(tag =>
                                      tag.Name.Contains(_filterSearch, StringComparison.InvariantCultureIgnoreCase));
             return containsSearch;

@@ -34,7 +34,7 @@ namespace Meta.MCPBridge.Editor
 
         public static readonly string Description =
             "Exposes Unity tools, resources, and prompts to AI agents via the Model Context Protocol (MCP). " +
-            "Runs a lightweight HTTP server that AI agents (Claude Code, DevMate) connect to for tool discovery and execution." +
+            "Runs a lightweight HTTP server that AI agents (such as Claude Code) connect to for tool discovery and execution." +
             "\n\nConfigure the HTTP server port and MCP registration below.";
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Meta.MCPBridge.Editor
             AddToStatusMenu = false,
             AddToMenu = false,
             OnClickDelegate = origin => ToolDescriptor?.OpenUserSettings(origin),
-            OnUserSettingsGUI = McpBridgeSettings.OnGUI,
+            OnUserSettingsGUI = null,
             Order = 101,
         };
     }

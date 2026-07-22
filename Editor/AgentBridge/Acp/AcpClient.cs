@@ -28,8 +28,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.XR.AI.AgentBridge.Acp
 {
@@ -47,7 +46,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
 
         // Request correlation
         private int _nextRequestId;
-        private readonly ConcurrentDictionary<int, TaskCompletionSource<JToken?>> _pendingRequests = new();
+        private readonly ConcurrentDictionary<int, TaskCompletionSource<JsonNode?>> _pendingRequests = new();
 
         // Agent request handling
         private readonly AcpRequestHandler _requestHandler = new();
@@ -61,9 +60,9 @@ namespace Meta.XR.AI.AgentBridge.Acp
         private readonly object _stderrLock = new();
 
         // Serialization settings
-        private static readonly JsonSerializerSettings SerializerSettings = new()
+        private static readonly McpJsonSettings SerializerSettings = new()
         {
-            NullValueHandling = NullValueHandling.Ignore
+            NullHandling = McpJsonNullHandling.Ignore
         };
 
         /// <summary>
@@ -159,10 +158,10 @@ namespace Meta.XR.AI.AgentBridge.Acp
         /// <summary>
         /// Send a JSON-RPC request and wait for the correlated response.
         /// </summary>
-        private Task<JToken?> SendRequestAsync(string method, object? @params)
+        private Task<JsonNode?> SendRequestAsync(string method, object? @params)
         {
             var id = Interlocked.Increment(ref _nextRequestId);
-            var tcs = new TaskCompletionSource<JToken?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<JsonNode?>(TaskCreationOptions.RunContinuationsAsynchronously);
             _pendingRequests[id] = tcs;
 
             var request = new JsonRpcRequest
@@ -172,7 +171,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
                 Params = @params
             };
 
-            var json = JsonConvert.SerializeObject(request, SerializerSettings);
+            var json = McpJsonConvert.Serialize(request, SerializerSettings);
             SendLine(json);
 
             return tcs.Task;
@@ -184,7 +183,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
         private void SendNotification(string method, object? @params)
         {
             var notification = new { jsonrpc = "2.0", method, @params };
-            var json = JsonConvert.SerializeObject(notification, SerializerSettings);
+            var json = McpJsonConvert.Serialize(notification, SerializerSettings);
             SendLine(json);
         }
 
@@ -378,7 +377,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
         /// </summary>
         private void DispatchMessage(string line)
         {
-            var jo = JObject.Parse(line);
+            var jo = JsonObject.Parse(line);
 
             // Is this a response? (has "id" and either "result" or "error")
             if (jo["id"] != null && (jo["result"] != null || jo["error"] != null))
@@ -404,9 +403,9 @@ namespace Meta.XR.AI.AgentBridge.Acp
             LogWarning($"ACP: Unknown message format: {line}");
         }
 
-        private void HandleResponse(JObject jo)
+        private void HandleResponse(JsonObject jo)
         {
-            var id = jo["id"]?.ToObject<int>() ?? -1;
+            var id = jo["id"]?.Value<int>() ?? -1;
             if (!_pendingRequests.TryRemove(id, out var tcs))
             {
                 LogWarning($"ACP: Received response for unknown request ID: {id}");
@@ -427,9 +426,9 @@ namespace Meta.XR.AI.AgentBridge.Acp
             }
         }
 
-        private void HandleAgentRequest(JObject jo)
+        private void HandleAgentRequest(JsonObject jo)
         {
-            var id = jo["id"]?.ToObject<int>() ?? -1;
+            var id = jo["id"]?.Value<int>() ?? -1;
             var method = jo["method"]?.ToString() ?? "";
             var @params = jo["params"];
 
@@ -449,7 +448,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
             });
         }
 
-        private void HandleNotification(JObject jo)
+        private void HandleNotification(JsonObject jo)
         {
             var method = jo["method"]?.ToString() ?? "";
             var @params = jo["params"];
@@ -471,7 +470,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
         private void SendResponseSuccess(int id, object result)
         {
             var response = new { jsonrpc = "2.0", id, result };
-            var json = JsonConvert.SerializeObject(response, SerializerSettings);
+            var json = McpJsonConvert.Serialize(response, SerializerSettings);
 
             try
             {
@@ -491,7 +490,7 @@ namespace Meta.XR.AI.AgentBridge.Acp
                 id,
                 error = new { code, message }
             };
-            var json = JsonConvert.SerializeObject(response, SerializerSettings);
+            var json = McpJsonConvert.Serialize(response, SerializerSettings);
 
             try
             {

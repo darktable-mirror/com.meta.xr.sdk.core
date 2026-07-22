@@ -23,6 +23,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing the passthrough camera access building block into the scene.
+    /// </summary>
     public class PassthroughCameraAccessBlockData : BlockData
     {
         protected override bool UsesPrefab => false;

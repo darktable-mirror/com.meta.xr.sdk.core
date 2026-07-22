@@ -21,10 +21,12 @@
 using System.Collections.Generic;
 using Meta.XR.BuildingBlocks.Editor;
 using Meta.XR.Editor.Id;
+using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.StatusMenu;
 using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.Utils;
+using Meta.XR.Guides.Editor.Welcome;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Constants;
@@ -49,6 +51,7 @@ namespace Meta.XR.Guides.Editor.About
             AddToStatusMenu = true,
             AddToMenu = false,
             OnClickDelegate = ShowGuide,
+            MenuCategory = MenuCategory.Header,
         };
 
         static LearnGuide()
@@ -58,7 +61,16 @@ namespace Meta.XR.Guides.Editor.About
 
         public static void ShowGuide(Origins origin)
         {
-            LearnInstance.ShowWindow(origin, true);
+            // Gated on the nux_flow rollout (restored from D101980733): the new Welcome window when
+            // rolled out, otherwise the legacy Learn guide.
+            if (FeatureRampUpManager.GetRemoteKeysResult("nux_flow"))
+            {
+                WelcomeWindow.Show(origin);
+            }
+            else
+            {
+                LearnInstance.ShowWindow(origin, true);
+            }
         }
     }
 

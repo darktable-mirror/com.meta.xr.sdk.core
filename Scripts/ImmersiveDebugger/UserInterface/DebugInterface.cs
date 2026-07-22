@@ -181,14 +181,39 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                 Show();
             }
 
-            var debugManager = DebugManager.Instance;
-            if (debugManager != null)
-            {
-                debugManager.OnUpdateAction += UpdateVisibility;
-                debugManager.CustomShouldRetrieveInstanceCondition += IsInspectorPanelVisible;
-            }
+            RegisterWithDebugManager();
 
             DiscoverAndRegisterDynamicPanels();
+        }
+
+        /// <summary>
+        /// Registers callbacks with DebugManager, handling the case where DebugManager
+        /// might not be available yet.
+        /// Uses the OnReady pattern from DebugManagerAddon to ensure callbacks are
+        /// registered even when DebugManager is created after DebugInterface.
+        /// </summary>
+        internal void RegisterWithDebugManager()
+        {
+            if (DebugManager.Instance == null)
+            {
+                DebugManager.OnReady -= OnDebugManagerReady;
+                DebugManager.OnReady += OnDebugManagerReady;
+            }
+            else
+            {
+                OnDebugManagerReady(DebugManager.Instance);
+            }
+        }
+
+        internal void OnDebugManagerReady(DebugManager debugManager)
+        {
+            debugManager.OnUpdateAction += UpdateVisibility;
+            debugManager.CustomShouldRetrieveInstanceCondition += IsInspectorPanelVisible;
+        }
+
+        private void OnDestroy()
+        {
+            DebugManager.OnReady -= OnDebugManagerReady;
         }
 
         private void ToggleDistances()

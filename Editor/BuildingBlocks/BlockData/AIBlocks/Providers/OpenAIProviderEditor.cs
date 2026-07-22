@@ -23,6 +23,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the OpenAI provider.
+    /// </summary>
     [CustomEditor(typeof(OpenAIProvider))]
     public sealed class OpenAIProviderEditor : AIProviderEditorBase
     {
@@ -73,6 +76,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             TestConnection(config.Endpoint, config.Model, config.ProviderId);
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the OpenAI provider.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

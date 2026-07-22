@@ -27,6 +27,9 @@ using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
 
+/// <summary>
+/// Monitors Unity Editor scene changes and user activity to send telemetry events.
+/// </summary>
 [InitializeOnLoad]
 public class OVRSceneChangeListener
 {

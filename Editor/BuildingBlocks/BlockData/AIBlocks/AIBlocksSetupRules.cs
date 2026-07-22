@@ -69,7 +69,13 @@ namespace Meta.XR.Editor.BuildingBlocks.AIBlocks
                          "Unity 6+ with AI Building Blocks requires the Inference Engine namespace. " +
                          "In Package Manager, find the Sentis package, click 'Version History', and install the latest " +
                          "'Recommended' version with the 'Inference Engine' package title.",
-                fix: _ => { UnityEditor.PackageManager.UI.Window.Open("com.unity.ai.inference@recommended"); },
+                fix: _ =>
+                {
+                    if (!OVRSilentMode.IsEnabled)
+                    {
+                        UnityEditor.PackageManager.UI.Window.Open("com.unity.ai.inference@recommended");
+                    }
+                },
                 fixMessage: "Open Package Manager to update to Inference Engine"
             );
         }

@@ -181,20 +181,35 @@ public class OVROverlayEditor : Editor
                 "If true, will allow layer depth buffer compositing if the engine has \"Shared Depth Buffer\" enabled"),
             tmpEnableDepthBufferTest);
 
-#if USING_XR_SDK_OCULUS && UNITY_2021_3_OR_NEWER && OCULUS_XR_DEPTH_SUBMISSION
-        OculusSettings settings;
-        if (UnityEditor.EditorBuildSettings.TryGetConfigObject<OculusSettings>("Unity.XR.Oculus.Settings",
-                out settings))
+        bool eyebufferDepthSubmission = false;
+        bool hasDepthSubmissionInfo = false;
+#if USING_XR_SDK_OPENXR && UNITY_ANDROID
+        if (OVRManifestPreprocessor.IsOpenXRLoaderActive())
         {
-            bool eyebufferDepthSubmission = settings.DepthSubmission;
-            if (tmpEnableDepthBufferTest && !eyebufferDepthSubmission)
+            var openXRSettings = UnityEngine.XR.OpenXR.OpenXRSettings.Instance;
+            if (openXRSettings != null)
             {
-                EditorGUILayout.HelpBox(
-                    "Enabling depth testing for this layer will result in additional GPU cost during composition if depth submission is not enabled in the Oculus XR Plugin settings. Consider disabling depth testing and using composition depth instead if only testing between layers and not eye textures.",
-                    MessageType.Warning);
+                eyebufferDepthSubmission = (openXRSettings.depthSubmissionMode !=
+                                            UnityEngine.XR.OpenXR.OpenXRSettings.DepthSubmissionMode.None);
+                hasDepthSubmissionInfo = true;
             }
         }
 #endif
+#if USING_XR_SDK_OCULUS && UNITY_2021_3_OR_NEWER && OCULUS_XR_DEPTH_SUBMISSION
+        if (OVRManifestPreprocessor.IsOculusLoaderActive() &&
+            UnityEditor.EditorBuildSettings.TryGetConfigObject<OculusSettings>("Unity.XR.Oculus.Settings",
+                out var oculusSettings))
+        {
+            eyebufferDepthSubmission = oculusSettings.DepthSubmission;
+            hasDepthSubmissionInfo = true;
+        }
+#endif
+        if (hasDepthSubmissionInfo && tmpEnableDepthBufferTest && !eyebufferDepthSubmission)
+        {
+            EditorGUILayout.HelpBox(
+                "Enabling depth testing for this layer will result in additional GPU cost during composition if depth submission is not enabled in the XR Plugin settings. Consider disabling depth testing and using composition depth instead if only testing between layers and not eye textures.",
+                MessageType.Warning);
+        }
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField(new GUIContent("Overlay Shape", "The shape of this overlay"),

@@ -33,13 +33,22 @@ using Meta.XR.Editor.Settings;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Serves as the abstract base class for all building block data assets.
+    /// </summary>
     public abstract class BlockBaseData : ScriptableObject, ITaggable, IIdentified, IComparable<BlockBaseData>
     {
         internal static readonly CachedIdDictionary<BlockBaseData> Registry = new();
 
+        /// <summary>
+        /// Gets the unique identifier of this building block.
+        /// </summary>
         [SerializeField, OVRReadOnly] internal string id = Guid.NewGuid().ToString();
         public string Id => id;
 
+        /// <summary>
+        /// Gets the version number of this building block.
+        /// </summary>
         [SerializeField, OVRReadOnly] internal int version = 1;
         public int Version => version;
 
@@ -51,9 +60,15 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static TextureContent DefaultInternalThumbnailTexture => _defaultInternalThumbnailTexture ??=
             TextureContent.CreateContent("bb_thumb_internal.jpg", Utils.BuildingBlocksThumbnails);
 
+        /// <summary>
+        /// Gets the overridable display name of this building block.
+        /// </summary>
         [SerializeField] internal string blockName;
         public Overridable<string> BlockName { get; private set; } = new("");
 
+        /// <summary>
+        /// Gets the overridable text description of this building block.
+        /// </summary>
         [TextArea(5, 40)]
         [SerializeField] internal string description;
         public Overridable<string> Description { get; private set; } = new("");
@@ -64,7 +79,15 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private TagArray SerializedTags => tags ??= new TagArray();
         private Overridable<TagArray> _overridableTags;
+
+        /// <summary>
+        /// Gets the overridable collection of tags assigned to this building block.
+        /// </summary>
         public Overridable<TagArray> OverridableTags => _overridableTags ??= new Overridable<TagArray>(SerializedTags);
+
+        /// <summary>
+        /// Gets the current collection of tags assigned to this building block.
+        /// </summary>
         public TagArray Tags => OverridableTags.Value;
 
         internal virtual void OnEnable()
@@ -74,11 +97,17 @@ namespace Meta.XR.BuildingBlocks.Editor
             RemoteThumbnailContentId = new Overridable<ulong>(remoteThumbnailContentId);
         }
 
+        /// <summary>
+        /// Initializes the block base data when it awakens.
+        /// </summary>
         public void OnAwake()
         {
             ValidateTags();
         }
 
+        /// <summary>
+        /// Validates the block base data when a value changes in the inspector.
+        /// </summary>
         public void OnValidate()
         {
             ValidateTags();
@@ -182,6 +211,9 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         [SerializeField] internal Texture2D thumbnail;
         [SerializeField] internal ulong remoteThumbnailContentId;
+        /// <summary>
+        /// Gets the overridable content ID for the remotely hosted thumbnail image.
+        /// </summary>
         public Overridable<ulong> RemoteThumbnailContentId { get; private set; } = new(0ul);
 
         private RemoteTextureContent _remoteThumbnail;
@@ -225,8 +257,14 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
         }
 
+        /// <summary>
+        /// Gets whether this block is hidden based on its tag visibility settings.
+        /// </summary>
         public virtual bool Hidden => Tags.Any(tag => tag.Behavior.Visibility == false);
 
+        /// <summary>
+        /// Gets whether this block is tagged as experimental.
+        /// </summary>
         public bool Experimental => Tags.Contains(Utils.ExperimentalTag);
 
 
@@ -260,6 +298,12 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal virtual bool RequireListRefreshAfterInstall => false;
 
         internal virtual bool OverridesInstallRoutine => false;
+
+        /// <summary>
+        /// Compares this block base data to another by block name for sorting purposes.
+        /// </summary>
+        /// <param name="other">The other block base data to compare against.</param>
+        /// <returns>An integer indicating the relative sort order of the two instances.</returns>
         public int CompareTo(BlockBaseData other)
         {
             return other == null ? 0 : string.Compare(other.BlockName.Value, BlockName.Value, StringComparison.CurrentCultureIgnoreCase);

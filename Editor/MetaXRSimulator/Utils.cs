@@ -25,6 +25,9 @@ using UnityEditor;
 
 namespace Meta.XR.Simulator.Editor
 {
+    /// <summary>
+    /// Represents the origin from which a Meta XR Simulator action was triggered.
+    /// </summary>
     public enum Origin
     {
         Unknown = -1,

@@ -104,11 +104,11 @@ namespace Meta.XR.Editor.UserInterface
 
             _containerElement = new VisualElement();
             var placement = _placementType == Utils.UIItemPlacementType.Horizontal
-                ? Props.Flexbox.Row
-                : Props.Flexbox.Column;
+                ? RLDSConstants.Flexbox.Row
+                : RLDSConstants.Flexbox.Column;
 
             _containerElement.AddToClassList(placement);
-            _containerElement.AddToClassList(Props.Flexbox.AlignStart);
+            _containerElement.AddToClassList(RLDSConstants.Flexbox.AlignStart);
 
             foreach (var styleClass in _styleClasses)
             {

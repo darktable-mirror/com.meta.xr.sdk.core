@@ -22,12 +22,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Xml;
+using Meta.XR.Util;
 using UnityEditor;
 using UnityEditor.Android;
 using UnityEngine;
 
 namespace Meta.XR.Samples.Editor
 {
+    /// <summary>Injects Meta code sample metadata into the Android manifest during the Gradle build process.</summary>
     public class UpdateManifestWithCodeSample : IPostGenerateGradleAndroidProject
     {
         const string NAMESPACE_ATTRIBUTE = "xmlns:android";
@@ -68,6 +70,9 @@ namespace Meta.XR.Samples.Editor
             }
         }
 
+        /// <summary>
+        /// Gets the execution order for this build preprocessor callback.
+        /// </summary>
         public int callbackOrder { get; }
 
         /// <summary>
@@ -154,7 +159,7 @@ namespace Meta.XR.Samples.Editor
             var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
             foreach (var assembly in assemblies)
             {
-                foreach (var type in assembly.GetTypes())
+                foreach (var type in assembly.TryGetTypes())
                 {
                     var codeSampleAttributes = type.GetCustomAttributes(typeof(MetaCodeSampleAttribute), false);
                     if (codeSampleAttributes.Length > 0)

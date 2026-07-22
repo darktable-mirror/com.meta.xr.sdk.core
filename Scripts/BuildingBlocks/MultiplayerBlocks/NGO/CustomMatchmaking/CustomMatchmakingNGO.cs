@@ -193,7 +193,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
                 // Send a heartbeat every 15 seconds to keep the room alive
                 StartCoroutine(HeartbeatLobbyCoroutine(ConnectedLobby.Id, 15));
 
-                FindObjectOfType<UnityTransport>().SetHostRelayData(hostAllocation.RelayServer.IpV4,
+                FindAnyObjectByType<UnityTransport>().SetHostRelayData(hostAllocation.RelayServer.IpV4,
                     (ushort)hostAllocation.RelayServer.Port, hostAllocation.AllocationIdBytes, hostAllocation.Key,
                     hostAllocation.ConnectionData);
                 var startedHost = NetworkManager.Singleton.StartHost();
@@ -313,7 +313,7 @@ namespace Meta.XR.MultiplayerBlocks.NGO
             var joinAllocation =
                 await RelayService.Instance.JoinAllocationAsync(joinCode: ConnectedLobby.Data[RelayJoinCodeKey]
                     .Value);
-            FindObjectOfType<UnityTransport>().SetClientRelayData(joinAllocation.RelayServer.IpV4,
+            FindAnyObjectByType<UnityTransport>().SetClientRelayData(joinAllocation.RelayServer.IpV4,
                 (ushort)joinAllocation.RelayServer.Port,
                 joinAllocation.AllocationIdBytes, joinAllocation.Key, joinAllocation.ConnectionData,
                 joinAllocation.HostConnectionData);

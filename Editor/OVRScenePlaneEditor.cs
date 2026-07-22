@@ -23,6 +23,11 @@ using UnityEngine;
 using UnityEditor;
 
 
+/// <summary>
+/// Custom inspector for OVRScenePlane components. Displays read-only dimensions and offset, and
+/// provides properties for controlling child object scaling and offset behavior.
+/// Deprecated: use the MR Utility Kit (MRUK) scene plane system instead.
+/// </summary>
 [CustomEditor(typeof(OVRScenePlane))]
 [Obsolete(OVRSceneManager.DeprecationMessage)]
 public class OVRScenePlaneEditor : UnityEditor.Editor
@@ -40,6 +45,9 @@ public class OVRScenePlaneEditor : UnityEditor.Editor
         _offsetChildren = serializedObject.FindProperty(nameof(_object._offsetChildren));
     }
 
+    /// <summary>
+    /// Draws the OVRScenePlane inspector with read-only dimensions/offset and editable scale/offset child properties.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         serializedObject.Update();

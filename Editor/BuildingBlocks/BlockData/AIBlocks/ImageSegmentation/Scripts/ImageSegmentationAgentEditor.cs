@@ -23,9 +23,15 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the ImageSegmentationAgent component.
+    /// </summary>
     [CustomEditor(typeof(ImageSegmentationAgent))]
     public class ImageSegmentationAgentEditor : UnityEditor.Editor
     {
+        /// <summary>
+        /// Draws the custom inspector GUI for the image segmentation agent.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

@@ -31,9 +31,19 @@ using Oculus.VR.Editor;
 #if USING_XR_SDK_OPENXR
 using UnityEngine.XR.OpenXR;
 using Meta.XR;
+#endif
+#if USING_XR_SDK_OCULUS
+using Unity.XR.Oculus;
+#endif
+#if USING_XR_SDK_OPENXR || USING_XR_SDK_OCULUS
 using UnityEditor.XR.Management;
 #endif
 
+/// <summary>
+/// Editor window and utility class for generating, updating, and managing the AndroidManifest.xml for Meta Quest store compatibility.
+/// Accessed via the menu: Meta > Tools > Android Manifest Tool. Handles manifest tags for hand tracking, passthrough,
+/// body/face/eye tracking, anchors, scene, render models, and other Quest-specific features based on OVRProjectConfig settings.
+/// </summary>
 public class OVRManifestPreprocessor : EditorWindow
 {
     private static readonly string ManifestFileName = "AndroidManifest.xml";
@@ -64,6 +74,9 @@ public class OVRManifestPreprocessor : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Opens the Android Manifest Tool editor window.
+    /// </summary>
     [MenuItem("Meta/Tools/Android Manifest Tool", false, 100000)]
     public static void OpenAndroidManifestToolWindow()
     {
@@ -152,6 +165,9 @@ public class OVRManifestPreprocessor : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Generates a fresh store-compatible AndroidManifest.xml from the SDK template, replacing any existing manifest.
+    /// </summary>
     public static void GenerateManifestForSubmission()
     {
         GenerateManifestForSubmissionInternal(silentMode: false);
@@ -190,12 +206,20 @@ public class OVRManifestPreprocessor : EditorWindow
         ShowAndroidManifestInProject();
     }
 
+    /// <summary>
+    /// Returns true if a custom AndroidManifest.xml exists in Assets/Plugins/Android.
+    /// </summary>
+    /// <returns><c>true</c> if the manifest file exists at the expected path; otherwise <c>false</c>.</returns>
     public static bool DoesAndroidManifestExist()
     {
         // IO methods use absolute paths
         return File.Exists(BuildManifestFilePathAbsolute);
     }
 
+    /// <summary>
+    /// Generates a new manifest if none exists, or updates the existing one with current OVR project settings.
+    /// </summary>
+    /// <param name="silentMode">If <c>true</c>, suppresses user confirmation dialogs and error popups.</param>
     public static void GenerateOrUpdateAndroidManifest(bool silentMode)
     {
         if (DoesAndroidManifestExist())
@@ -208,11 +232,19 @@ public class OVRManifestPreprocessor : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Updates the existing AndroidManifest.xml with current OVR-specific tags while preserving custom entries.
+    /// </summary>
     public static void UpdateAndroidManifest()
     {
         UpdateAndroidManifestInternal(silentMode: false);
     }
 
+    /// <summary>
+    /// Checks whether the current AndroidManifest.xml differs from the store-compatible template. Returns true if outdated or missing, with a list of differences.
+    /// </summary>
+    /// <param name="differenceFromShip">Receives the list of human-readable difference descriptions, or <c>null</c> if the manifest does not exist.</param>
+    /// <returns><c>true</c> if the manifest is missing or differs from the store-compatible template; otherwise <c>false</c>.</returns>
     public static bool IsManifestOutdated(out List<string> differenceFromShip)
     {
         if (!DoesAndroidManifestExist())
@@ -249,6 +281,10 @@ public class OVRManifestPreprocessor : EditorWindow
         ShowAndroidManifestInProject();
     }
 
+    /// <summary>
+    /// Permanently deletes the custom AndroidManifest.xml from Assets/Plugins/Android, with optional user confirmation.
+    /// </summary>
+    /// <param name="silentMode">If <c>true</c>, skips the user confirmation dialog and deletes immediately.</param>
     public static void RemoveAndroidManifest(bool silentMode = false)
     {
         if (!silentMode && !EditorUtility.DisplayDialog("Remove AndroidManifest.xml",
@@ -408,6 +444,10 @@ public class OVRManifestPreprocessor : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Loads and returns the custom AndroidManifest.xml as an XmlDocument, or null if it doesn't exist or fails to load.
+    /// </summary>
+    /// <returns>The parsed <see cref="XmlDocument"/>, or <c>null</c> if the manifest does not exist or cannot be loaded.</returns>
     public static XmlDocument GetAndroidManifestXmlDocument()
     {
         if (!DoesAndroidManifestExist())
@@ -513,6 +553,14 @@ public class OVRManifestPreprocessor : EditorWindow
         return doc;
     }
 
+    /// <summary>
+    /// Patches an AndroidManifest.xml file with all Quest-specific tags based on current OVRProjectConfig settings.
+    /// Can optionally skip existing attributes to preserve user customizations.
+    /// </summary>
+    /// <param name="sourceFile">Absolute path to the source AndroidManifest.xml to read and patch.</param>
+    /// <param name="destinationFile">Absolute path to write the patched manifest. If <c>null</c>, the source file is overwritten in place.</param>
+    /// <param name="skipExistingAttributes">If <c>true</c>, preserves existing attribute values and only adds missing ones. If <c>false</c>, overwrites all attributes.</param>
+    /// <param name="enableSecurity">If <c>true</c>, adds the network security config XML reference to the manifest.</param>
     public static void PatchAndroidManifest(string sourceFile, string destinationFile = null,
         bool skipExistingAttributes = true, bool enableSecurity = false)
     {
@@ -1253,7 +1301,17 @@ public class OVRManifestPreprocessor : EditorWindow
         }
     }
 
-    private static bool IsOpenXRLoaderActive()
+    /// <summary>
+    /// Returns true if the OpenXR loader is the active XR loader for the
+    /// currently selected build target.
+    /// </summary>
+    /// <remarks>
+    /// Reads from <see cref="XRGeneralSettingsPerBuildTarget"/> for the active
+    /// build target group. Returns false if the OpenXR package is not
+    /// installed (i.e. <c>USING_XR_SDK_OPENXR</c> is undefined), or if no
+    /// loader is configured for the active build target.
+    /// </remarks>
+    public static bool IsOpenXRLoaderActive()
     {
 #if USING_XR_SDK_OPENXR
         var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget));
@@ -1261,6 +1319,29 @@ public class OVRManifestPreprocessor : EditorWindow
         {
             var openXRLoader = settings.Manager.activeLoaders[0] as OpenXRLoader;
             return openXRLoader != null;
+        }
+#endif
+        return false;
+    }
+
+    /// <summary>
+    /// Returns true if the Oculus XR loader is the active XR loader for the
+    /// currently selected build target.
+    /// </summary>
+    /// <remarks>
+    /// Reads from <see cref="XRGeneralSettingsPerBuildTarget"/> for the active
+    /// build target group. Returns false if the Oculus XR package is not
+    /// installed (i.e. <c>USING_XR_SDK_OCULUS</c> is undefined), or if no
+    /// loader is configured for the active build target.
+    /// </remarks>
+    public static bool IsOculusLoaderActive()
+    {
+#if USING_XR_SDK_OCULUS
+        var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget));
+        if (settings?.Manager?.activeLoaders != null && settings.Manager.activeLoaders.Count > 0)
+        {
+            var oculusLoader = settings.Manager.activeLoaders[0] as OculusLoader;
+            return oculusLoader != null;
         }
 #endif
         return false;

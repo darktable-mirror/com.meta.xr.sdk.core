@@ -76,11 +76,7 @@ namespace MCPServices.Tools
                 var obj = foundObjects[i];
                 var components = obj.GetComponents<Component>();
                 sb.AppendLine($"{i + 1}. {obj.name}");
-#if UNITY_6000_5_OR_NEWER
-                sb.AppendLine($"   ID: {obj.GetEntityId()} <- Use this ID in other tools");
-#else
-                sb.AppendLine($"   ID: {obj.GetInstanceID()} <- Use this ID in other tools");
-#endif
+                sb.AppendLine($"   ID: {UnityObjectId.From(obj)} <- Use this ID in other tools");
                 sb.AppendLine($"   Path: {GetGameObjectPath(obj)}");
                 sb.AppendLine($"   Active: {obj.activeSelf} (Scene: {obj.scene.name})");
                 sb.AppendLine($"   Components: {components.Length} ({string.Join(", ", components.Take(3).Select(c => c?.GetType().Name ?? "Missing"))}{(components.Length > 3 ? ", ..." : "")})");
@@ -119,11 +115,7 @@ namespace MCPServices.Tools
             sb.AppendLine($"SUCCESS: Found {foundObjects.Count} GameObject(s):");
             foreach (var obj in foundObjects)
             {
-#if UNITY_6000_5_OR_NEWER
-                sb.AppendLine($"TARGET: {obj.name} (ID: {obj.GetEntityId()})");
-#else
-                sb.AppendLine($"TARGET: {obj.name} (ID: {obj.GetInstanceID()})");
-#endif
+                sb.AppendLine($"TARGET: {obj.name} (ID: {UnityObjectId.From(obj)})");
                 sb.AppendLine($"  Path: {GetGameObjectPath(obj)}");
                 sb.AppendLine($"  Active: {obj.activeSelf}");
                 sb.AppendLine();
@@ -133,7 +125,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Get information about a GameObject using its instance ID.",
             Returns = "GameObject info including name, active status, position, rotation, scale, and components.")]
-        internal string InspectGameObject(int instanceId)
+        internal string InspectGameObject(ulong instanceId)
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null)
@@ -186,7 +178,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Get component member details (properties, fields) with values and settability.",
             Returns = "Component members with names, values, types, and whether they can be modified.")]
-        internal string InspectComponentMembers(int instanceId, string componentName, string memberFilter = "")
+        internal string InspectComponentMembers(ulong instanceId, string componentName, string memberFilter = "")
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null)
@@ -204,7 +196,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Set a property or field value on a component. Pass value as string: int/float/double/bool as literals, Vector3 as \"(x,y,z)\", Vector2 as \"(x,y)\", Color as \"(r,g,b,a)\" with floats 0-1. Parentheses optional.",
             Returns = "Success confirmation with old and new values, or error with troubleshooting tips.")]
-        internal string SetComponentValue(int instanceId, string componentName, string memberName, string value)
+        internal string SetComponentValue(ulong instanceId, string componentName, string memberName, string value)
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null)
@@ -244,7 +236,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Get current value of a property or field on a component.",
             Returns = "Current value with type information.")]
-        internal string GetComponentValue(int instanceId, string componentName, string memberName)
+        internal string GetComponentValue(ulong instanceId, string componentName, string memberName)
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null) return $"ERROR: GameObject with instance ID {instanceId} not found.";
@@ -269,7 +261,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Set the active state of a GameObject.",
             Returns = "Success confirmation with new active state.")]
-        internal string SetGameObjectActive(int instanceId, bool active)
+        internal string SetGameObjectActive(ulong instanceId, bool active)
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null) return $"ERROR: GameObject with instance ID {instanceId} not found.";
@@ -288,7 +280,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Invoke a method on a component. Optional args as comma-separated strings.",
             Returns = "Success confirmation (with return value if non-void) or error with available methods.")]
-        internal string InvokeComponentMethod(int instanceId, string componentName, string methodName, string methodArgs = "")
+        internal string InvokeComponentMethod(ulong instanceId, string componentName, string methodName, string methodArgs = "")
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null) return $"ERROR: GameObject with instance ID {instanceId} not found.";
@@ -358,7 +350,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Move a GameObject by a relative offset (dx, dy, dz) from its current position. Saves multiple round trips compared to reading position, computing, and writing back.",
             Returns = "Old and new positions after the move.")]
-        internal string MoveRelative(int instanceId, float dx, float dy, float dz)
+        internal string MoveRelative(ulong instanceId, float dx, float dy, float dz)
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null)
@@ -378,7 +370,7 @@ namespace MCPServices.Tools
 
         [Tool(Description = "Rotate a GameObject by relative Euler angles (dx, dy, dz) from its current rotation. Saves multiple round trips compared to reading rotation, computing, and writing back.",
             Returns = "Old and new rotations after the rotation.")]
-        internal string RotateRelative(int instanceId, float dx, float dy, float dz)
+        internal string RotateRelative(ulong instanceId, float dx, float dy, float dz)
         {
             GameObject obj = FindGameObjectById(instanceId);
             if (obj == null)
@@ -500,16 +492,12 @@ namespace MCPServices.Tools
         private void GetHierarchyRecursive(GameObject obj, int depth, StringBuilder sb)
         {
             string indent = new string(' ', depth * 2);
-#if UNITY_6000_5_OR_NEWER
-            sb.AppendLine($"{indent}- {obj.name} (ID: {obj.GetEntityId()})");
-#else
-            sb.AppendLine($"{indent}- {obj.name} (ID: {obj.GetInstanceID()})");
-#endif
+            sb.AppendLine($"{indent}- {obj.name} (ID: {UnityObjectId.From(obj)})");
             foreach (Transform child in obj.transform)
                 GetHierarchyRecursive(child.gameObject, depth + 1, sb);
         }
 
-        private GameObject FindGameObjectById(int instanceId)
+        private GameObject FindGameObjectById(ulong instanceId)
         {
             for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
             {
@@ -524,13 +512,9 @@ namespace MCPServices.Tools
             return null;
         }
 
-        private GameObject FindGameObjectByIdRecursive(GameObject obj, int instanceId)
+        private GameObject FindGameObjectByIdRecursive(GameObject obj, ulong instanceId)
         {
-#if UNITY_6000_5_OR_NEWER
-            if (obj.GetEntityId() == instanceId) return obj;
-#else
-            if (obj.GetInstanceID() == instanceId) return obj;
-#endif
+            if (UnityObjectId.Matches(obj, instanceId)) return obj;
             foreach (Transform child in obj.transform)
             {
                 var result = FindGameObjectByIdRecursive(child.gameObject, instanceId);

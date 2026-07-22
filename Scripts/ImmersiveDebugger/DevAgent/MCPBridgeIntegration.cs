@@ -37,6 +37,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
     internal class MCPBridgeIntegration : MonoBehaviour
     {
         private ToolProviderClient _client;
+        private bool _clientInjected;
 
         /// <summary>
         /// Event fired when the connection state changes.
@@ -79,6 +80,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
             UnsubscribeFromClientEvents();
             _client?.Dispose();
             _client = client;
+            _clientInjected = true;
             SubscribeToClientEvents();
         }
 
@@ -102,6 +104,17 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         private async void Start()
         {
+            // Only attempt auto-connection when the AI Assistant is enabled in settings.
+            // Skip check when client was injected (e.g., for testing).
+            if (!_clientInjected)
+            {
+                var settings = RuntimeSettings.Instance;
+                if (settings == null || !settings.Enabled)
+                {
+                    return;
+                }
+            }
+
             if (_client == null)
             {
                 Debug.LogWarning("[MCPBridgeIntegration] Client not initialized. Call Initialize() first.");

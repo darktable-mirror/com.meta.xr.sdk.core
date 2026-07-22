@@ -23,6 +23,9 @@ using UnityEditor;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Registers project setup rules that ensure correct camera background settings when the passthrough building block is used.
+    /// </summary>
     [InitializeOnLoad]
     public class PassthroughBuildingBlockRules
     {

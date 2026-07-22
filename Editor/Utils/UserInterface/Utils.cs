@@ -46,7 +46,9 @@ namespace Meta.XR.Editor.UserInterface
         private static string _assetPath;
 
         public static bool ShouldRenderEditorUI()
-            => !Application.isBatchMode && IsMainEditorProcess();
+            => (!Application.isBatchMode || IsUIVerificationMode()) && IsMainEditorProcess();
+
+        internal static bool IsUIVerificationMode() => false;
 
         public static bool IsMainEditorProcess()
         {
@@ -294,6 +296,7 @@ namespace Meta.XR.Editor.UserInterface
             positionProxy.center = GetEditorMainWindowPosition().center;
             window.position = positionProxy;
         }
+
 
         internal static Rect Contract(this Rect rect, int offset)
         {

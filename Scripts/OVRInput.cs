@@ -1270,8 +1270,27 @@ public static class OVRInput
     /// <summary>
     /// Gets the angular velocity of the given Controller local to its tracking space in radians per second around each axis.
     /// Only supported for Oculus LTouch and RTouch controllers. Non-tracked controllers will return Vector3.zero.
+    /// Obsolete: Returns an inverted result on some devices; use GetLocalControllerAngularVelocityCw for consistent results across devices
     /// </summary>
+    [System.Obsolete("Deprecated due to returning an inverted result on some devices; use angularVelocityCw for consistent results across devices", false)]
     public static Vector3 GetLocalControllerAngularVelocity(OVRInput.Controller controllerType)
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return GetLocalControllerAngularVelocityInternal(controllerType, NodeStatePropertyType.AngularVelocity);
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    /// <summary>
+    /// Gets the angular velocity of the given Controller local to its tracking space in radians per second around each axis.
+    /// Angles are represented in clockwise direction around the axis (left-handed coordinate system).
+    /// Only supported for Oculus LTouch and RTouch controllers. Non-tracked controllers will return Vector3.zero.
+    /// </summary>
+    public static Vector3 GetLocalControllerAngularVelocityCw(OVRInput.Controller controllerType)
+    {
+        return GetLocalControllerAngularVelocityInternal(controllerType, NodeStatePropertyType.AngularVelocityCw);
+    }
+
+    private static Vector3 GetLocalControllerAngularVelocityInternal(OVRInput.Controller controllerType, NodeStatePropertyType propertyType)
     {
         Vector3 velocity = Vector3.zero;
         return controllerType switch
@@ -1283,20 +1302,20 @@ public static class OVRInput
             Controller.RHand => GetXrHandsAngularVel(Controller.RHand),
 #else
             Controller.LTouch => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
-                NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.ControllerLeft, stepType, out velocity))
+                propertyType, OVRPlugin.Node.ControllerLeft, stepType, out velocity))
                 ? velocity
                 : Vector3.zero,
             Controller.LHand => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.LeftHand,
-                NodeStatePropertyType.AngularVelocity,
+                propertyType,
                 OVRPlugin.Node.HandLeft, stepType, out velocity))
                 ? velocity
                 : Vector3.zero,
             Controller.RTouch => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
-                NodeStatePropertyType.AngularVelocity, OVRPlugin.Node.ControllerRight, stepType, out velocity))
+                propertyType, OVRPlugin.Node.ControllerRight, stepType, out velocity))
                 ? velocity
                 : Vector3.zero,
             Controller.RHand => (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.RightHand,
-                NodeStatePropertyType.AngularVelocity,
+                propertyType,
                 OVRPlugin.Node.HandRight, stepType, out velocity))
                 ? velocity
                 : Vector3.zero,
@@ -2341,7 +2360,6 @@ public static class OVRInput
             {
                 return controller.GetControllerParametricProperties();
             }
-            Debug.LogError("Invalid controller mask for controller " + controller.controllerType);
         }
 
         return new HapticsParametricProperties();
@@ -3398,8 +3416,15 @@ public static class OVRInput
             if (OVRPlugin.IsMultimodalHandsControllersSupported())
             {
 #if USING_XR_SDK_OPENXR
-                if ((controllerType == Controller.LTouch && MetaXRFeature.GetInteractionProfile("/user/detached_controller_meta/left") != 0) ||
-                                        (controllerType == Controller.RTouch && MetaXRFeature.GetInteractionProfile("/user/detached_controller_meta/right") != 0))
+                if (OVRManager.IsOpenXRLoaderActive())
+                {
+                    if ((controllerType == Controller.LTouch && MetaXRFeature.GetInteractionProfile("/user/detached_controller_meta/left") != 0) ||
+                        (controllerType == Controller.RTouch && MetaXRFeature.GetInteractionProfile("/user/detached_controller_meta/right") != 0))
+                    {
+                        isInHand = false;
+                    }
+                }
+                else
 #endif
                 {
                     isInHand = false;

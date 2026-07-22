@@ -29,6 +29,11 @@ using Meta.XR.Telemetry;
 using UnityEngine;
 using UnityEditor;
 
+/// <summary>
+/// Editor window for the OVR Scene Quick Preview feature (Menu: Meta > Tools > OVR Build > OVR Scene Quick Preview).
+/// Provides a UI to build/deploy a transition APK and hot-reload individual scene bundles on a connected Quest device,
+/// reducing iteration time during development.
+/// </summary>
 public class OVRBundleTool : EditorWindow
 {
     private static List<EditorSceneInfo> buildableScenes;
@@ -61,6 +66,9 @@ public class OVRBundleTool : EditorWindow
         DEVICE_NOT_CONNECTED,
     };
 
+    /// <summary>
+    /// Represents the build/deploy status of a scene bundle in the Quick Preview workflow.
+    /// </summary>
     public enum SceneBundleStatus
     {
         [Description("")]
@@ -82,6 +90,9 @@ public class OVRBundleTool : EditorWindow
         DEPLOYED,
     };
 
+    /// <summary>
+    /// Holds metadata about a scene in the Build Settings, including its path, name, current bundle status, and whether it should be deployed.
+    /// </summary>
     public class EditorSceneInfo
     {
         public string scenePath;
@@ -89,6 +100,11 @@ public class OVRBundleTool : EditorWindow
         public SceneBundleStatus buildStatus;
         public bool shouldDeploy;
 
+        /// <summary>
+        /// Creates a new EditorSceneInfo with the given path and name, defaulting to UNKNOWN status and deploy enabled.
+        /// </summary>
+        /// <param name="path">The asset path to the scene file.</param>
+        /// <param name="name">The display name of the scene (typically the filename without extension).</param>
         public EditorSceneInfo(string path, string name)
         {
             scenePath = path;
@@ -134,11 +150,17 @@ public class OVRBundleTool : EditorWindow
         evt.Send();
     }
 
+    /// <summary>
+    /// Called when the editor window is enabled. Initializes the panel and scene list.
+    /// </summary>
     public void OnEnable()
     {
         InitializePanel();
     }
 
+    /// <summary>
+    /// Initializes the Quick Preview panel state, loads scenes from Build Settings, and subscribes to scene list changes.
+    /// </summary>
     public static void InitializePanel()
     {
         panelInitialized = true;
@@ -489,6 +511,11 @@ public class OVRBundleTool : EditorWindow
         EditorWindow.GetWindow(System.Type.GetType("UnityEditor.BuildPlayerWindow,UnityEditor"));
     }
 
+    /// <summary>
+    /// Updates the build/deploy status for a specific scene by index, or all scenes if index is -1.
+    /// </summary>
+    /// <param name="status">The new status to assign.</param>
+    /// <param name="index">The zero-based index of the scene to update, or -1 to update all scenes.</param>
     public static void UpdateSceneBuildStatus(SceneBundleStatus status, int index = -1)
     {
         if (buildableScenes == null)
@@ -623,6 +650,11 @@ public class OVRBundleTool : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Appends a message to the Quick Preview tool log, or clears and replaces it if clear is true.
+    /// </summary>
+    /// <param name="message">The message text to append or set.</param>
+    /// <param name="clear">If <c>true</c>, replaces the entire log with <paramref name="message"/> instead of appending.</param>
     public static void PrintLog(string message, bool clear = false)
     {
         if (clear)
@@ -643,6 +675,10 @@ public class OVRBundleTool : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Appends a red error message to the Quick Preview tool log.
+    /// </summary>
+    /// <param name="error">The error details to display. If empty, a generic failure message is shown.</param>
     public static void PrintError(string error = "")
     {
         if (!string.IsNullOrEmpty(error))
@@ -655,16 +691,28 @@ public class OVRBundleTool : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Appends a yellow warning message to the Quick Preview tool log.
+    /// </summary>
+    /// <param name="warning">The warning text to display.</param>
     public static void PrintWarning(string warning)
     {
         toolLog += "<color=yellow>Warning!\n" + warning + "</color>\n";
     }
 
+    /// <summary>
+    /// Appends a green "Success!" message to the Quick Preview tool log.
+    /// </summary>
     public static void PrintSuccess()
     {
         toolLog += "<color=green>Success!</color>\n";
     }
 
+    /// <summary>
+    /// Returns the Description attribute value of an enum member, or its ToString() if no Description attribute is present.
+    /// </summary>
+    /// <param name="eEnum">The enum value to retrieve the description for.</param>
+    /// <returns>The <see cref="System.ComponentModel.DescriptionAttribute"/> text, or the enum's <c>ToString()</c> if no attribute is found.</returns>
     public static string GetEnumDescription(Enum eEnum)
     {
         Type enumType = eEnum.GetType();
@@ -681,6 +729,10 @@ public class OVRBundleTool : EditorWindow
         return eEnum.ToString();
     }
 
+    /// <summary>
+    /// Returns whether the optional transition APK package name suffix is enabled, allowing both full and transition APKs to coexist on device.
+    /// </summary>
+    /// <returns><c>true</c> if the optional ".transition" package name suffix is enabled; otherwise <c>false</c>.</returns>
     public static bool GetUseOptionalTransitionApkPackage()
     {
         return useOptionalTransitionApkPackage;

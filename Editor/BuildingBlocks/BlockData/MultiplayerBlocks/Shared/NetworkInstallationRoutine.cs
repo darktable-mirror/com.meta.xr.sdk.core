@@ -25,6 +25,9 @@ using UnityEngine;
 
 namespace Meta.XR.MultiplayerBlocks.Shared.Editor
 {
+    /// <summary>
+    /// Base installation routine for multiplayer building blocks that supports both NGO and Photon Fusion network implementations.
+    /// </summary>
     public class NetworkInstallationRoutine : InstallationRoutine
     {
         internal enum NetworkImplementation

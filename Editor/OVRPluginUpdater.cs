@@ -22,6 +22,10 @@
 
 using Oculus.VR.Editor;
 
+/// <summary>
+/// Legacy plugin updater stub retained for Asset Store compatibility. Delegates to OVRPluginInfoOpenXR.BatchmodeCheckHasPluginChanged.
+/// Only compiled when OVR_UNITY_ASSET_STORE is defined.
+/// </summary>
 public class OVRPluginUpdater
 {
     // Use OVRPluginInfoOpenXR.BatchmodeCheckHasPluginChanged instead

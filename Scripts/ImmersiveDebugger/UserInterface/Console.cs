@@ -72,6 +72,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         private bool _lerpCompleted = true;
         private Background _logDetailPaneBackground;
         private ImageStyle _logDetailPaneBackgroundImageStyle;
+        private LogEntry _selectedLogEntry;
 
         internal bool LogCollapseMode { get; private set; }
         internal int MaximumNumberOfLogEntries { get; private set; }
@@ -225,6 +226,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private void RebuildLogDisplay()
         {
+            HideLogDetailsPanel();
             _proxyFlex.Clear();
             _collapsedLogs.Clear();
             _entries.Clear();
@@ -333,6 +335,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                         }
                         _entries.Remove(collapsedEntry);
                         _collapsedLogs.Remove(oldestHash);
+                        if (_selectedLogEntry == collapsedEntry)
+                        {
+                            HideLogDetailsPanel();
+                        }
                         OVRObjectPool.Return(collapsedEntry);
                     }
                     else if (collapsedEntry.Line != null && collapsedEntry.Line.Target != null)
@@ -353,6 +359,10 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                     }
                     _entries.RemoveAt(0);
                     oldestSeverity.Count--;
+                    if (_selectedLogEntry == oldestEntry)
+                    {
+                        HideLogDetailsPanel();
+                    }
                     OVRObjectPool.Return(oldestEntry);
                 }
             }
@@ -422,6 +432,11 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
                     }
                 }
             }
+
+            if (_selectedLogEntry != null && !_selectedLogEntry.Severity.ShouldShow)
+            {
+                HideLogDetailsPanel();
+            }
         }
 
         private void AppendToProxyFlex(LogEntry entry)
@@ -436,6 +451,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
 
         private void OnConsoleLineClicked(LogEntry entry)
         {
+            _selectedLogEntry = entry;
             ShowLogDetailsPanel();
 
             _logDetailLabel.Content = $"{entry.Label}\n{entry.Callstack}";
@@ -460,6 +476,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
         {
             if (!_scrollViewLogDetails.Visibility) return;
 
+            _selectedLogEntry = null;
             _scrollViewLogDetails.Hide();
             _logDetailPaneCloseBtn.Hide();
             _logDetailPaneBackground.Hide();

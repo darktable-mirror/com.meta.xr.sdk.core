@@ -24,6 +24,9 @@ using Meta.XR.Guides.Editor;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Custom inspector editor for the SharedSpatialAnchorCoreBuildingBlock that displays Meta account setup guidance.
+    /// </summary>
     [CustomEditor(typeof(SharedSpatialAnchorCoreBuildingBlock))]
     public class SharedSpatialAnchorBuildingBlockEditor : BuildingBlockEditor
     {

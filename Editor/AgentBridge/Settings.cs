@@ -55,6 +55,14 @@ namespace Meta.XR.AI.AgentBridge
         internal static event Action? Activated;
 
         /// <summary>
+        /// Raised when the user toggles the <see cref="Enabled"/> setting from on to off.
+        /// Symmetric counterpart to <see cref="Activated"/>; consumers that render
+        /// AgentBridge-dependent UI can subscribe to both to refresh their display
+        /// in lockstep with the master toggle.
+        /// </summary>
+        internal static event Action? Deactivated;
+
+        /// <summary>
         /// Global toggle for AI Agent Bridge. When disabled (the default), no HTTP servers are started,
         /// no assembly scanning occurs, and no background services run. All code remains compiled
         /// and present, but expensive operations stay dormant until the user explicitly opts in.
@@ -68,6 +76,15 @@ namespace Meta.XR.AI.AgentBridge
             Tooltip = "Enable AI Agent Bridge features. When off, no servers or background services run.",
             SendTelemetry = true
         };
+
+        /// <summary>
+        /// Convenience accessor returning the current value of the <see cref="Enabled"/>
+        /// UserBool. Exists because `UserBool` is defined in <c>Meta.XR.Editor.Settings</c>,
+        /// which does not grant InternalsVisibleTo to every consumer of Settings. Callers
+        /// in assemblies that only have InternalsVisibleTo from AgentBridge (e.g.
+        /// `Meta.XR.HandReadinessTool.Editor`) can read the effective state via this bool.
+        /// </summary>
+        internal static bool IsEnabled => Enabled.Value;
 
         /// <summary>
         /// The currently selected AI service ID (string-based for extensibility).
@@ -104,6 +121,7 @@ namespace Meta.XR.AI.AgentBridge
         // Track Advanced foldout state
         private static bool _advancedFoldoutExpanded = false;
 
+        internal static bool EmbeddedMode { get; set; }
 
         /// <summary>
         /// Render settings UI in Edit > Preferences > Meta XR / Agent Bridge.
@@ -129,13 +147,10 @@ namespace Meta.XR.AI.AgentBridge
                     GUIStyles.DialogTextStyle, GUILayout.Height(GUIStyles.DialogIconStyle.fixedWidth));
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space();
             }
 
-            // Grey out all settings below when disabled, so the structure is visible
-            // but clearly non-interactive (same pattern as ImmersiveDebugger).
             EditorGUI.BeginDisabledGroup(!Enabled.Value);
-
-            EditorGUILayout.Space();
 
             var currentServiceId = SelectedServiceId.Value;
 
@@ -154,83 +169,92 @@ namespace Meta.XR.AI.AgentBridge
 
             EditorGUILayout.Space();
 
-            // Ensure service is initialized so we can show its settings.
-            // Skip when disabled: services are not initialized until the user opts in.
+            // Sync the active service to the selected setting before showing its settings.
+            // EnsureServiceInitialized() re-syncs whenever SelectedServiceId changed by any means —
+            // including the AI Tools Setup panel, which updates the setting without going through the
+            // dropdown above (so serviceTypeChanged is false). Without this, the configuration
+            // section keeps rendering the previously selected service. It is idempotent (no-op when
+            // already in sync). Skip when disabled: services are not initialized until opt-in.
             IAIService? service = null;
             if (Enabled.Value)
             {
+                AgentBridgeManager.EnsureServiceInitialized();
                 service = AgentBridgeManager.GetCurrentService();
-                if (service == null)
-                {
-                    AgentBridgeManager.EnsureServiceInitialized();
-                    service = AgentBridgeManager.GetCurrentService();
-                }
             }
 
-            // Draw validation section (between service selection and specialized settings)
             DrawValidationSection(service, serviceTypeChanged);
-
             EditorGUILayout.Space();
 
-            // Advanced settings foldout
-            _advancedFoldoutExpanded = EditorGUILayout.Foldout(_advancedFoldoutExpanded, "Advanced", true);
-            if (_advancedFoldoutExpanded)
+            if (EmbeddedMode)
             {
-                EditorGUI.indentLevel++;
-
-                // Draw service-specific settings (polymorphic)
-                // Check for full IServiceSettingsUI first, then fallback to IServiceSettingsUISimple for 3P services
-                if (service is IServiceSettingsUI serviceUI)
+                DrawAdvancedContent(origin, service);
+            }
+            else
+            {
+                _advancedFoldoutExpanded = EditorGUILayout.Foldout(_advancedFoldoutExpanded, "Advanced", true);
+                if (_advancedFoldoutExpanded)
                 {
-                    serviceUI.DrawSettingsUI(origin, Utils.ToolDescriptor);
+                    EditorGUI.indentLevel++;
+                    DrawAdvancedContent(origin, service);
+                    DrawResetButton(service);
+                    EditorGUI.indentLevel--;
                 }
-                else if (service is IServiceSettingsUISimple simpleUI)
-                {
-                    simpleUI.DrawSettingsUI();
-                }
-
-                EditorGUILayout.Space();
-
-                // Logging header
-                EditorGUILayout.LabelField("Logging", EditorStyles.boldLabel);
-                VerboseLogging.DrawForGUI(origin, Utils.ToolDescriptor,
-                    () => Log.VerboseLogging = VerboseLogging.Value);
-
-                EditorGUILayout.Space();
-
-                // Remote Server section
-                RemoteAgentSettings.DrawSettingsUI(origin, Utils.ToolDescriptor);
-
-                EditorGUILayout.Space();
-
-                // Reset button
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Reset to Defaults"))
-                {
-                    SelectedServiceId.Reset();
-                    VerboseLogging.Reset();
-                    RemoteAgentSettings.ResetToDefaults();
-
-                    // Reset service settings - check for both interfaces
-                    if (service is IServiceSettingsUI resetService)
-                    {
-                        resetService.ResetSettingsToDefaults();
-                    }
-                    else if (service is IServiceSettingsUISimple simpleResetService)
-                    {
-                        simpleResetService.ResetSettingsToDefaults();
-                    }
-
-                    // Re-validate after reset
-                    _hasValidatedOnOpen = false;
-                }
-                EditorGUILayout.EndHorizontal();
-
-                EditorGUI.indentLevel--;
             }
 
             EditorGUI.EndDisabledGroup();
+        }
+
+        private static void DrawAdvancedContent(Origins origin, IAIService? service)
+        {
+            if (service is IServiceSettingsUI serviceUI)
+            {
+                serviceUI.DrawSettingsUI(origin, Utils.ToolDescriptor);
+            }
+            else if (service is IServiceSettingsUISimple simpleUI)
+            {
+                simpleUI.DrawSettingsUI();
+            }
+
+            EditorGUILayout.Space();
+
+            EditorGUILayout.LabelField("Logging", EditorStyles.boldLabel);
+            VerboseLogging.DrawForGUI(origin, Utils.ToolDescriptor,
+                () => Log.VerboseLogging = VerboseLogging.Value);
+
+            EditorGUILayout.Space();
+
+            RemoteAgentSettings.DrawSettingsUI(origin, Utils.ToolDescriptor);
+        }
+
+        internal static void ResetToDefaults()
+        {
+            SelectedServiceId.Reset();
+            VerboseLogging.Reset();
+            RemoteAgentSettings.ResetToDefaults();
+
+            var service = Enabled.Value ? AgentBridgeManager.GetCurrentService() : null;
+            if (service is IServiceSettingsUI resetService)
+            {
+                resetService.ResetSettingsToDefaults();
+            }
+            else if (service is IServiceSettingsUISimple simpleResetService)
+            {
+                simpleResetService.ResetSettingsToDefaults();
+            }
+
+            _hasValidatedOnOpen = false;
+        }
+
+        private static void DrawResetButton(IAIService? service)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Reset to Defaults"))
+            {
+                ResetToDefaults();
+            }
+            EditorGUILayout.EndHorizontal();
         }
 
         /// <summary>
@@ -242,13 +266,46 @@ namespace Meta.XR.AI.AgentBridge
             if (Enabled.Value)
             {
                 Log.Info($"{Utils.PublicName} enabled by user. Initializing services...");
-                InitializeAllServices();
-                Activated?.Invoke();
+                ActivateServices();
             }
             else
             {
                 Log.Info($"{Utils.PublicName} disabled by user.");
+                Deactivated?.Invoke();
             }
+
+            // Repaint open windows so views reflecting AgentBridge state update immediately on
+            // toggle; IMGUI only repaints on input, so otherwise they stay stale until the user
+            // hovers. Mirrors the repaint scheduled after validation.
+            EditorApplication.delayCall += UnityEditorInternal.InternalEditorUtility.RepaintAllViews;
+        }
+
+        /// <summary>
+        /// Enable AI Agent Bridge programmatically and run the full post-enable activation — used by the
+        /// AI Tools Setup "Install" step, which sets <see cref="Enabled"/> directly and so would otherwise
+        /// bypass <see cref="OnEnabledChanged"/> (leaving the servers stopped and auto-start off).
+        /// </summary>
+        public static void EnableAndInitialize()
+        {
+            if (!Enabled.Value)
+            {
+                Enabled.SetValue(true, Origins.Menu, Owner);
+            }
+            ActivateServices();
+            EditorApplication.delayCall += UnityEditorInternal.InternalEditorUtility.RepaintAllViews;
+        }
+
+        /// <summary>
+        /// Shared post-enable activation for both the settings toggle and the AI Tools Setup install:
+        /// turn on Remote Agent auto-start (so the server starts now and on later sessions — only when the
+        /// user has explicitly enabled the bridge, never by default), start the gated services, and notify
+        /// dependents such as MCPBridge via <see cref="Activated"/> so the MCP server comes up too.
+        /// </summary>
+        private static void ActivateServices()
+        {
+            RemoteAgentSettings.EnableAutoStart();
+            InitializeAllServices();
+            Activated?.Invoke();
         }
 
         /// <summary>
@@ -260,7 +317,6 @@ namespace Meta.XR.AI.AgentBridge
             AIServiceRegistry.Initialize();
             AgentBridgeManager.InitializeIfEnabled();
             MainThreadDispatcher.EnsureStarted();
-            ToolbarItem.EnsureRegistered();
         }
 
         /// <summary>
@@ -289,11 +345,10 @@ namespace Meta.XR.AI.AgentBridge
             // Create display names array
             var displayNames = availableServices.Select(s => s.DisplayName).ToArray();
 
-            // Draw popup
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PrefixLabel(new GUIContent(SelectedServiceId.Label, SelectedServiceId.Tooltip));
-            var newIndex = EditorGUILayout.Popup(currentIndex, displayNames);
-            EditorGUILayout.EndHorizontal();
+            var newIndex = EditorGUILayout.Popup(
+                new GUIContent(SelectedServiceId.Label, SelectedServiceId.Tooltip),
+                currentIndex,
+                displayNames);
 
             // Update selection if changed
             if (newIndex != currentIndex && newIndex >= 0 && newIndex < availableServices.Length)
@@ -377,12 +432,7 @@ namespace Meta.XR.AI.AgentBridge
             try
             {
                 await validationService.ValidateConfigurationAsync();
-                // Force repaint to show updated status
-                EditorApplication.delayCall += () =>
-                {
-                    // Request repaint of the settings window
-                    EditorApplication.QueuePlayerLoopUpdate();
-                };
+                EditorApplication.delayCall += UnityEditorInternal.InternalEditorUtility.RepaintAllViews;
             }
             catch (Exception ex)
             {

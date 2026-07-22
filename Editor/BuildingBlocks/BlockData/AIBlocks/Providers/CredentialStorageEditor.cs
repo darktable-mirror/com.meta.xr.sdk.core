@@ -27,6 +27,9 @@ using UnityEngine.Networking;
 
 namespace Meta.XR.BuildingBlocks.AIBlocks
 {
+    /// <summary>
+    /// Custom inspector editor for the CredentialStorage asset that displays registered providers, their API keys, and connection test results.
+    /// </summary>
     [CustomEditor(typeof(CredentialStorage))]
     public class CredentialStorageEditor : UnityEditor.Editor
     {
@@ -58,6 +61,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             _hasTriedAutoPopulate = false;
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the credential storage asset.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             if (!_hasTriedAutoPopulate)

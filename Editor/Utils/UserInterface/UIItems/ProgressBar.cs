@@ -85,15 +85,15 @@ namespace Meta.XR.Editor.UserInterface
         public VisualElement Build()
         {
             var container = new VisualElement();
-            container.AddToClassList(Props.ProgressBar.Container);
+            container.AddToClassList(RLDSConstants.ProgressBar.Container);
 
             _bar = new VisualElement();
-            _bar.AddToClassList(Props.ProgressBar.Bar);
+            _bar.AddToClassList(RLDSConstants.ProgressBar.Bar);
 
             // Add error class if needed
             if (_error)
             {
-                _bar.AddToClassList(Props.ProgressBar.Error);
+                _bar.AddToClassList(RLDSConstants.ProgressBar.Error);
             }
 
             // Set width based on progress

@@ -39,6 +39,9 @@ using UnityEngine;
 
 namespace Oculus.VR.Editor
 {
+    /// <summary>
+    /// Identifies the target platform and OpenXR backend variant for an OVRPlugin native library.
+    /// </summary>
     public enum PluginPlatform
     {
         Android,
@@ -50,11 +53,19 @@ namespace Oculus.VR.Editor
         Win64OpenXR,
     }
 
+    /// <summary>
+    /// Contains the native library filename and subfolder name for a specific OVRPlugin platform variant.
+    /// </summary>
     public struct PluginPlatformInfo
     {
         public string pluginName;
         public string folderName;
 
+        /// <summary>
+        /// Creates a new PluginPlatformInfo with the specified library and folder names.
+        /// </summary>
+        /// <param name="pluginName">The native plugin filename (e.g., "OVRPlugin.dll" or "OVRPlugin.aar").</param>
+        /// <param name="folderName">The subfolder name under the plugin root (e.g., "Win64OpenXR" or "AndroidOpenXR").</param>
         public PluginPlatformInfo(string pluginName, string folderName)
         {
             this.pluginName = pluginName;
@@ -62,6 +73,11 @@ namespace Oculus.VR.Editor
         }
     }
 
+    /// <summary>
+    /// OpenXR-based implementation of IOVRPluginInfoSupplier. Detects OVRPlugin native library changes on editor startup,
+    /// configures platform-specific plugin importers, and prompts for editor restart when plugin updates are detected.
+    /// Also handles Oculus XR Plugin deprecation warnings in Unity 6+.
+    /// </summary>
     [InitializeOnLoad]
     public class OVRPluginInfoOpenXR : IOVRPluginInfoSupplier
     {
@@ -76,8 +92,10 @@ namespace Oculus.VR.Editor
                 {PluginPlatform.Win64OpenXR, new PluginPlatformInfo("OVRPlugin.dll", "Win64OpenXR") },
             };
 
+        /// <inheritdoc/>
         public bool IsOVRPluginOpenXRActivated() => true;
 
+        /// <inheritdoc/>
         public bool IsOVRPluginUnityProvidedActivated() => false;
 
         static OVRPluginInfoOpenXR()
@@ -205,6 +223,9 @@ namespace Oculus.VR.Editor
             }
         }
 
+        /// <summary>
+        /// Forces a check for OVRPlugin native library changes and reconfigures plugin importers. Can be called from batch mode or the menu.
+        /// </summary>
         public static void BatchmodeCheckHasPluginChanged()
         {
             CheckHasPluginChanged(true);

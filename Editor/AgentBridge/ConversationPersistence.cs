@@ -69,6 +69,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Get or create a conversation state for a specific caller.
         /// </summary>
+        /// <param name="callerId">The caller identifier string.</param>
+        /// <returns>The conversation state for the specified caller.</returns>
         public ConversationState GetStateForCaller(string callerId)
         {
             // Empty or null callerId uses the default state (for backward compatibility)
@@ -90,6 +92,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Clear the state for a specific caller.
         /// </summary>
+        /// <param name="callerId">The caller identifier string.</param>
         public void ClearStateForCaller(string callerId)
         {
             // Empty or null callerId uses the default state (for backward compatibility)
@@ -118,6 +121,7 @@ namespace Meta.XR.AI.AgentBridge
             Save(true);
         }
 
+        /// <summary>Saves the conversation state asset to disk.</summary>
         public void SaveState()
         {
             Save(true);
@@ -149,6 +153,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Gets the default conversation state.
         /// </summary>
+        /// <returns>The default conversation state.</returns>
         public static ConversationState GetState()
         {
             return GetStateForCaller(DefaultCallerId);
@@ -159,6 +164,7 @@ namespace Meta.XR.AI.AgentBridge
         /// Creates a new state if one doesn't exist.
         /// </summary>
         /// <param name="callerId">The caller identifier. Empty/null returns the default state.</param>
+        /// <returns>The conversation state for the specified caller.</returns>
         public static ConversationState GetStateForCaller(string? callerId)
         {
             // Normalize null/empty to DefaultCallerId for consistent caching
@@ -185,6 +191,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Updates the default conversation state and saves it.
         /// </summary>
+        /// <param name="state">The new conversation state to set.</param>
         public static void SetState(ConversationState state)
         {
             SetStateForCaller(DefaultCallerId, state);
@@ -193,6 +200,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Updates the conversation state for a specific caller and saves it.
         /// </summary>
+        /// <param name="callerId">The caller identifier, or null for the default state.</param>
+        /// <param name="state">The new conversation state to set.</param>
         public static void SetStateForCaller(string? callerId, ConversationState state)
         {
             // Normalize null/empty to DefaultCallerId for consistent behavior
@@ -243,6 +252,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Adds a message to the default conversation state in a thread-safe manner.
         /// </summary>
+        /// <param name="message">The message to add.</param>
         public static void AddMessage(ConversationMessage message)
         {
             AddMessageForCaller(DefaultCallerId, message);
@@ -251,6 +261,8 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Adds a message to a specific caller's conversation state in a thread-safe manner.
         /// </summary>
+        /// <param name="callerId">The caller identifier, or null for the default state.</param>
+        /// <param name="message">The message to add.</param>
         public static void AddMessageForCaller(string? callerId, ConversationMessage message)
         {
             // Normalize null/empty to DefaultCallerId for consistent behavior
@@ -275,6 +287,7 @@ namespace Meta.XR.AI.AgentBridge
         /// <summary>
         /// Clears the conversation state for a specific caller.
         /// </summary>
+        /// <param name="callerId">The caller identifier, or null for the default state.</param>
         public static void ClearForCaller(string? callerId)
         {
             // Normalize null/empty to DefaultCallerId for consistent behavior

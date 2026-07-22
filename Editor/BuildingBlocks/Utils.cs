@@ -21,12 +21,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Meta.XR.Editor.Callbacks;
 using Meta.XR.Editor.Id;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.Tags;
 using Meta.XR.Editor.ToolingSupport;
+using Meta.XR.Util;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.Utils;
 using UnityEditor;
@@ -206,16 +208,19 @@ namespace Meta.XR.BuildingBlocks.Editor
         internal static readonly ToolDescriptor ToolDescriptor = new()
         {
             Name = BlocksPublicName,
-            MenuDescription = "Explore XR Features",
+            MenuDescription = "Build XR apps faster with Building Blocks",
             MqdhCategoryId = "509819301803627",
             Color = Styles.Colors.AccentColor,
             Icon = StatusIcon,
             InfoTextDelegate = ComputeInfoText,
+            // Render the new-blocks count as the trailing upper-right Info badge.
+            ShowInfoTextAsBadge = true,
             PillIcon = GetPillIcon,
             OnClickDelegate = OnStatusMenuClick,
             BuildOptionsMenuDelegate = BuildingBlocksWindow.BuildSettingsMenu,
             Order = 1,
             AddToStatusMenu = true,
+            MenuCategory = MenuCategory.Resources,
             Description = BuildingBlocksWindow.Description.text,
             OnUserSettingsGUI = BuildingBlocksWindow.OnUserSettingsGUI,
             Documentation = new List<Documentation>()
@@ -252,7 +257,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             if (numberOfNewBlocks > 0)
             {
                 return (
-                    $"{numberOfNewBlocks} new {OVREditorUtils.ChoosePlural(numberOfNewBlocks, "block", "blocks")} available",
+                    $"{numberOfNewBlocks} new {OVREditorUtils.ChoosePlural(numberOfNewBlocks, "block", "blocks")}",
                     NewColor);
             }
 

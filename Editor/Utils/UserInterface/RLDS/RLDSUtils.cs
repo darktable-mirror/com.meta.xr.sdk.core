@@ -25,8 +25,17 @@ namespace Meta.XR.Editor.UserInterface.RLDS
 {
     internal static class RLDSUtils
     {
-        private const string StyleSheetLightPath = "Assets/Oculus/VR/Editor/Utils/UserInterface/RLDS/StyleSheet-Light.uss";
-        private const string StyleSheetDarkPath = "Assets/Oculus/VR/Editor/Utils/UserInterface/RLDS/StyleSheet-Dark.uss";
+        private const string PackageName = "com.meta.xr.sdk.core";
+        private const string StyleSheetLightRelativePath = "Editor/Utils/UserInterface/RLDS/StyleSheet-Light.uss";
+        private const string StyleSheetDarkRelativePath = "Editor/Utils/UserInterface/RLDS/StyleSheet-Dark.uss";
+
+        private static string StyleSheetLightPath => Utils.IsInsidePackageDistribution()
+            ? $"Packages/{PackageName}/{StyleSheetLightRelativePath}"
+            : $"Assets/Oculus/VR/{StyleSheetLightRelativePath}";
+
+        private static string StyleSheetDarkPath => Utils.IsInsidePackageDistribution()
+            ? $"Packages/{PackageName}/{StyleSheetDarkRelativePath}"
+            : $"Assets/Oculus/VR/{StyleSheetDarkRelativePath}";
 
         public static StyleSheet LoadStyleSheet(bool isLightMode)
         {
@@ -39,33 +48,33 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         /// </summary>
         /// <param name="variant">The button variant (Primary, Secondary, Tertiary, OnMedia)</param>
         /// <param name="size">The button size (Large, Small, XSmall)</param>
-        /// <returns>The RLDS CSS class name using Props.Button constants</returns>
-        public static string GetButtonStyleClass(Props.ButtonVariant variant, Props.ButtonSize size)
+        /// <returns>The RLDS CSS class name using RLDSConstants.Button constants</returns>
+        public static string GetButtonStyleClass(RLDSConstants.ButtonVariant variant, RLDSConstants.ButtonSize size)
         {
             return (variant, size) switch
             {
                 // Primary buttons
-                (Props.ButtonVariant.Primary, Props.ButtonSize.Large) => Props.Button.Primary,
-                (Props.ButtonVariant.Primary, Props.ButtonSize.Small) => Props.Button.PrimarySmall,
-                (Props.ButtonVariant.Primary, Props.ButtonSize.XSmall) => Props.Button.PrimaryXSmall,
+                (RLDSConstants.ButtonVariant.Primary, RLDSConstants.ButtonSize.Large) => RLDSConstants.Button.Primary,
+                (RLDSConstants.ButtonVariant.Primary, RLDSConstants.ButtonSize.Small) => RLDSConstants.Button.PrimarySmall,
+                (RLDSConstants.ButtonVariant.Primary, RLDSConstants.ButtonSize.XSmall) => RLDSConstants.Button.PrimaryXSmall,
 
                 // Secondary buttons
-                (Props.ButtonVariant.Secondary, Props.ButtonSize.Large) => Props.Button.Secondary,
-                (Props.ButtonVariant.Secondary, Props.ButtonSize.Small) => Props.Button.SecondarySmall,
-                (Props.ButtonVariant.Secondary, Props.ButtonSize.XSmall) => Props.Button.SecondaryXSmall,
+                (RLDSConstants.ButtonVariant.Secondary, RLDSConstants.ButtonSize.Large) => RLDSConstants.Button.Secondary,
+                (RLDSConstants.ButtonVariant.Secondary, RLDSConstants.ButtonSize.Small) => RLDSConstants.Button.SecondarySmall,
+                (RLDSConstants.ButtonVariant.Secondary, RLDSConstants.ButtonSize.XSmall) => RLDSConstants.Button.SecondaryXSmall,
 
                 // Tertiary buttons
-                (Props.ButtonVariant.Tertiary, Props.ButtonSize.Large) => Props.Button.Tertiary,
-                (Props.ButtonVariant.Tertiary, Props.ButtonSize.Small) => Props.Button.TertiarySmall,
-                (Props.ButtonVariant.Tertiary, Props.ButtonSize.XSmall) => Props.Button.TertiaryXSmall,
+                (RLDSConstants.ButtonVariant.Tertiary, RLDSConstants.ButtonSize.Large) => RLDSConstants.Button.Tertiary,
+                (RLDSConstants.ButtonVariant.Tertiary, RLDSConstants.ButtonSize.Small) => RLDSConstants.Button.TertiarySmall,
+                (RLDSConstants.ButtonVariant.Tertiary, RLDSConstants.ButtonSize.XSmall) => RLDSConstants.Button.TertiaryXSmall,
 
                 // OnMedia buttons
-                (Props.ButtonVariant.OnMedia, Props.ButtonSize.Large) => Props.Button.OnMedia,
-                (Props.ButtonVariant.OnMedia, Props.ButtonSize.Small) => Props.Button.OnMediaSmall,
-                (Props.ButtonVariant.OnMedia, Props.ButtonSize.XSmall) => Props.Button.OnMediaXSmall,
+                (RLDSConstants.ButtonVariant.OnMedia, RLDSConstants.ButtonSize.Large) => RLDSConstants.Button.OnMedia,
+                (RLDSConstants.ButtonVariant.OnMedia, RLDSConstants.ButtonSize.Small) => RLDSConstants.Button.OnMediaSmall,
+                (RLDSConstants.ButtonVariant.OnMedia, RLDSConstants.ButtonSize.XSmall) => RLDSConstants.Button.OnMediaXSmall,
 
                 // Default fallback
-                _ => Props.Button.Primary
+                _ => RLDSConstants.Button.Primary
             };
         }
     }

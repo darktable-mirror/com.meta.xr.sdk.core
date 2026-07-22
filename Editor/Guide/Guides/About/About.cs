@@ -19,10 +19,13 @@
  */
 
 using Meta.XR.Editor.Id;
+using Meta.XR.Editor.RemoteContent;
 using Meta.XR.Editor.Settings;
 using Meta.XR.Editor.ToolingSupport;
 using Meta.XR.Editor.UserInterface;
 using Meta.XR.Editor.Utils;
+using Meta.XR.Guides.Editor.Nux;
+using Meta.XR.Guides.Editor.Welcome;
 using UnityEditor;
 using UnityEngine;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
@@ -58,11 +61,12 @@ namespace Meta.XR.Guides.Editor.About
             Icon = MetaWhiteIcon,
             Name = "Welcome to Meta XR SDK",
             MenuDescription = "Get Started",
-            AddToStatusMenu = true,
+            AddToStatusMenu = false,
             AddToMenu = false,
             OnClickDelegate = (origin) => ShowGuide(origin, true),
             InfoTextDelegate = ComputeInfoText,
             PillIcon = ComputePillIcon,
+            AvailableVersionDelegate = () => LatestVersion,
             IsStatusMenuItemDarker = true
         };
 
@@ -71,6 +75,17 @@ namespace Meta.XR.Guides.Editor.About
             Uid = "ShowAbout",
             Owner = ToolDescriptor,
             SendTelemetry = false
+        };
+
+        private static UserInt _lastSeenVersion;
+
+        private static UserInt LastSeenVersion => _lastSeenVersion ??= new UserInt()
+        {
+            Default = 0,
+            Label = "LastSeenVersion",
+            Uid = "AboutLastSeenVersion",
+            SendTelemetry = true,
+            Owner = null
         };
 
         static About()
@@ -82,22 +97,86 @@ namespace Meta.XR.Guides.Editor.About
         {
             _ = enabled; // ignored, preferring to trust HasUnifiedConsentValue instead
 
-            // delayCall so that the window waits for the full editor to be loaded before popping up
-            EditorApplication.delayCall += () =>
-            {
-                if (!OVREditorUtils.IsMainEditor()
-                 || !OVRTelemetryConsent.HasUnifiedConsentValue
-                 || !_shouldShow.Value
-                 || Application.isBatchMode)
-                    return;
-
-                ShowGuide(Origins.Self);
-            };
+            // delayCall so that the window waits for the full editor to be loaded before popping up.
+            // ScheduleShowOnLaunch re-arms its poll on every domain reload (OnConsentSet re-fires
+            // from OVREditorStart each reload), which is what makes the show survive the reloads
+            // that are common during editor startup.
+            EditorApplication.delayCall += ScheduleShowOnLaunch;
         }
+
+        // Seconds to wait for the remote ramp-up keys to load before showing anyway.
+        private const double ShowOnLaunchKeysTimeoutSeconds = 10.0;
+        private static bool _showOnLaunchPolling;
+        private static double _showOnLaunchDeadline;
+
+        private static void ScheduleShowOnLaunch()
+        {
+            if (!OVREditorUtils.IsMainEditor()
+             || !OVRTelemetryConsent.HasUnifiedConsentValue
+             || Application.isBatchMode
+             || _showOnLaunchPolling)
+            {
+                return;
+            }
+
+            // Poll on EditorApplication.update instead of awaiting the ramp-up key fetch. An awaited
+            // async continuation is destroyed by the domain reloads (script compilation / asset
+            // import) that are common during editor startup, which left the welcome/NUX window never
+            // appearing. We still wait for the keys so nux_flow routes correctly instead of reading
+            // its cold-cache default (false); the _shouldShow one-shot token is consumed only at the
+            // actual show in PollShowOnLaunch, so an interrupted poll never burns it.
+            _showOnLaunchPolling = true;
+            _showOnLaunchDeadline = EditorApplication.timeSinceStartup + ShowOnLaunchKeysTimeoutSeconds;
+            EditorApplication.update += PollShowOnLaunch;
+        }
+
+        private static void PollShowOnLaunch()
+        {
+            if (!FeatureRampUpManager.AreKeysReady
+             && EditorApplication.timeSinceStartup < _showOnLaunchDeadline)
+            {
+                return;
+            }
+
+            EditorApplication.update -= PollShowOnLaunch;
+            _showOnLaunchPolling = false;
+
+            if (!OVREditorUtils.IsMainEditor() || !_shouldShow.Value)
+            {
+                return;
+            }
+
+            var versionChanged = Version.HasValue && Version.Value != LastSeenVersion.Value;
+            if (versionChanged)
+            {
+                LastSeenVersion.SetValue(Version.Value);
+            }
+
+            ShowGuide(Origins.Self, forceShow: versionChanged);
+        }
+
+        private const string NuxRampUpKey = "nux_flow";
 
         private static void ShowGuide(Origins origin, bool forceShow = false)
         {
-            Onboarding.ShowWindow(origin, forceShow);
+            if (FeatureRampUpManager.GetRemoteKeysResult(NuxRampUpKey))
+            {
+                if (NuxFlow.IsNuxCompleted)
+                {
+                    if (forceShow || WelcomeWindow.ShouldShowOnLaunch)
+                    {
+                        WelcomeWindow.Show(origin);
+                    }
+                }
+                else
+                {
+                    NuxFlow.Instance.ShowNux(origin, forceShow);
+                }
+            }
+            else
+            {
+                Onboarding.ShowWindow(origin, forceShow);
+            }
         }
 
         private static (string, Color?) ComputeInfoText()

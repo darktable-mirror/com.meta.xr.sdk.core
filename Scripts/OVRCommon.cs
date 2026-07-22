@@ -466,6 +466,26 @@ public static partial class OVRExtensions
     }
 
     /// <summary>
+    /// Converts a 3d vector representing angular velocity between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html), specifically when the fields
+    /// contain angular velocity vector. Since the vector contains angles, the direction must be flipped to convert
+    /// from right-handed to left-handed angle representations (counter-clockwise to clockwise).
+    ///
+    /// This method negates the X and Y components of <paramref name="v"/> (i.e., flips Z then negates the vector).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as an <see cref="OVRPlugin.Vector3f"/>.</param>
+    /// <returns><paramref name="v"/> as a UnityEngine `Vector3`.</returns>
+    public static Vector3 FromCounterClockwiseAngularVector3f(this OVRPlugin.Vector3f v)
+    {
+        return new Vector3() { x = -v.x, y = -v.y, z = v.z };
+    }
+
+    /// <summary>
     /// Converts a 3d vector between the native plugin and Unity format.
     /// </summary>
     /// <remarks>
@@ -518,6 +538,27 @@ public static partial class OVRExtensions
     public static OVRPlugin.Vector3f ToFlippedZVector3f(this Vector3 v)
     {
         return new OVRPlugin.Vector3f() { x = v.x, y = v.y, z = -v.z };
+    }
+
+    /// <summary>
+    /// Converts a 3d vector representing angular velocity between the native plugin and Unity format.
+    /// </summary>
+    /// <remarks>
+    /// This method is used to convert a 3d vector between the native <see cref="OVRPlugin.Vector3f"/> format and a
+    /// UnityEngine [Vector3](https://docs.unity3d.com/ScriptReference/Vector3.html), specifically when the fields
+    /// contain angular velocity vector. Since the vector contains angles, the direction must be flipped to convert
+    /// from left-handed to right-handed angle representations (clockwise to counter-clockwise).
+    ///
+    /// This method negates the X and Y components of <paramref name="v"/> (i.e., flips Z then negates the vector).
+    ///
+    /// This method is for advanced usage and is not typically used by application code.
+    /// </remarks>
+    /// <param name="v">A 3d vector as UnityEngine `Vector3`.</param>
+    /// <returns><paramref name="v"/> as an <see cref="OVRPlugin.Vector3f"/>.</returns>
+    /// <seealso cref="FromCounterClockwiseAngularVector3f"/>
+    public static OVRPlugin.Vector3f ToCounterClockwiseAngularVector3f(this Vector3 v)
+    {
+        return new OVRPlugin.Vector3f() { x = -v.x, y = -v.y, z = v.z };
     }
 
     /// <summary>
@@ -798,9 +839,12 @@ public enum NodeStatePropertyType
     [System.Obsolete("Deprecated. Acceleration is not supported in OpenXR", false)]
     AngularAcceleration,
     Velocity,
+    [System.Obsolete("Deprecated due to returning an inverted result on some devices; use angularVelocityCw for consistent results across devices", false)]
     AngularVelocity,
     Position,
-    Orientation
+    Orientation,
+    // Returns angular velocity using left-handed coordinate conventions (angle defined clockwise)
+    AngularVelocityCw,
 }
 
 public static class OVRNodeStateProperties
@@ -868,6 +912,7 @@ public static class OVRNodeStateProperties
                     return true;
                 break;
 
+#pragma warning disable CS0618 // Type or member is obsolete
             case NodeStatePropertyType.AngularVelocity:
                 if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
                 {
@@ -876,6 +921,26 @@ public static class OVRNodeStateProperties
                 }
 
                 if (GetUnityXRNodeStateVector3(nodeType, NodeStatePropertyType.AngularVelocity, out retVec))
+                    return true;
+                break;
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            case NodeStatePropertyType.AngularVelocityCw:
+                if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus)
+                {
+                    // Convert angular velocity to Unity's left-handed clockwise convention.
+                    // - OpenXR and VrApi return counterclockwise values (right-handed), needing
+                    //   FromCounterClockwiseAngularVector3f conversion.
+                    // - CAPI negates values internally, so they need FromFlippedZVector3f instead.
+                    var angularVelocity = OVRPlugin.GetNodeAngularVelocity(ovrpNodeType, stepType);
+                    retVec = OVRPlugin.nativeXrApi == OVRPlugin.XrApi.CAPI
+                        ? angularVelocity.FromFlippedZVector3f()
+                        : angularVelocity.FromCounterClockwiseAngularVector3f();
+                    return true;
+                }
+
+                // No need to convert from right-handed to left-handed here, as Unity's NodeState should already be converted by the XR Provider.
+                if (GetUnityXRNodeStateVector3(nodeType, NodeStatePropertyType.AngularVelocityCw, out retVec))
                     return true;
                 break;
 
@@ -971,13 +1036,15 @@ public static class OVRNodeStateProperties
                 return true;
             }
         }
-        else if (propertyType == NodeStatePropertyType.AngularVelocity)
+#pragma warning disable CS0618 // Type or member is obsolete
+        else if (propertyType is NodeStatePropertyType.AngularVelocity or NodeStatePropertyType.AngularVelocityCw)
         {
             if (requestedNodeState.TryGetAngularVelocity(out retVec))
             {
                 return true;
             }
         }
+#pragma warning restore CS0618 // Type or member is obsolete
         else if (propertyType == NodeStatePropertyType.Position)
         {
             if (requestedNodeState.TryGetPosition(out retVec))

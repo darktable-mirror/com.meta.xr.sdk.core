@@ -19,25 +19,24 @@
  */
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Schemas
 {
     internal class ResponseSchema : BaseSchema
     {
-        [JsonProperty("result", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("result", NullHandling = McpJsonNullHandling.Ignore)]
         internal ResultSchema Result { get; set; }
 
-        [JsonProperty("error", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("error", NullHandling = McpJsonNullHandling.Ignore)]
         internal ErrorSchema Error { get; set; }
     }
 
     internal class ErrorSchema : ISchema
     {
-        [JsonProperty("code")] internal int Code { get; set; }
+        [McpJsonProperty("code")] internal int Code { get; set; }
 
-        [JsonProperty("message")] internal string Message { get; set; }
+        [McpJsonProperty("message")] internal string Message { get; set; }
     }
 
     internal class ResultSchema : ISchema
@@ -49,7 +48,7 @@ namespace Meta.MCPBridge.Schemas
         /// as the base ResultSchema. Without this, the "content" field is silently dropped
         /// and the MCP client receives an empty {}.
         /// </summary>
-        [JsonExtensionData]
-        internal IDictionary<string, JToken> AdditionalData { get; set; }
+        [McpJsonExtensionData]
+        internal IDictionary<string, JsonNode> AdditionalData { get; set; }
     }
 }

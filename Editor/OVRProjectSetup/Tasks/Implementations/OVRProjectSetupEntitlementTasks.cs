@@ -21,6 +21,9 @@
 using UnityEditor;
 using System.Collections.Generic;
 
+/// <summary>
+/// Enumerates the Data Use Checkup (DUC) feature categories required by Meta platform policies.
+/// </summary>
 public enum DUCFeature
 {
     UserID,

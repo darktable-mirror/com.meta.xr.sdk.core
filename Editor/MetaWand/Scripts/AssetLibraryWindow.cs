@@ -61,9 +61,6 @@ namespace Meta.XR.MetaWand.Editor
         private FeedbackState _feedbackState = FeedbackState.None;
         private bool _showEmptySearchWarning;
 
-        private const string FeedbackToastMessage = "Thanks for your feedback!";
-        private const float FeedbackToastDuration = 2.0f;
-
         private enum FeedbackState
         {
             None,
@@ -77,9 +74,7 @@ namespace Meta.XR.MetaWand.Editor
         private Button LoginButton => _loginButton ??=
             new Button(new ActionLinkDescription
             {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                Action = () => OpenLogin(),
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                Action = () => OpenLogin().FireAndForget(nameof(OpenLogin)),
                 OriginData = Window,
                 Content = new GUIContent("Log into existing Meta account"),
                 BackgroundColor = BrightBlue,
@@ -209,7 +204,7 @@ namespace Meta.XR.MetaWand.Editor
 
         public void AddItemsToMenu(GenericMenu menu)
         {
-            menu.AddItem(new GUIContent("Logout"), false, () => _ = Logout());
+            menu.AddItem(new GUIContent("Logout"), false, () => Logout().FireAndForget(nameof(Logout)));
             menu.AddItem(new GUIContent("Clear cache"), false, () =>
             {
                 Utils.ClearCache();
@@ -393,7 +388,7 @@ namespace Meta.XR.MetaWand.Editor
             }
 
             _feedbackState = FeedbackState.ThumbsUp;
-            Utils.ShowToast(FeedbackToastMessage, FeedbackToastDuration);
+            Utils.ShowToast(Constants.FeedbackToastMessage, Constants.FeedbackToastDuration);
             await AssetLibrarySession.SearchFeedback(MetaWandApiManager.AssetResultFeedback.Like);
         }
 
@@ -404,7 +399,7 @@ namespace Meta.XR.MetaWand.Editor
                 return;
             }
             _feedbackState = FeedbackState.ThumbsDown;
-            Utils.ShowToast(FeedbackToastMessage, FeedbackToastDuration);
+            Utils.ShowToast(Constants.FeedbackToastMessage, Constants.FeedbackToastDuration);
             await AssetLibrarySession.SearchFeedback(MetaWandApiManager.AssetResultFeedback.Dislike);
         }
 
@@ -417,7 +412,7 @@ namespace Meta.XR.MetaWand.Editor
             Utils.DrawRoundedBackground(rect, Radius.RadiusXS, Colors.SurfaceSecondaryBackground.ToTexture());
 
             var e = Event.current;
-            const string controlName = "SearchTextField";
+            const string controlName = Constants.SearchTextFieldControlName;
             GUI.SetNextControlName(controlName);
 
             EditorGUI.BeginChangeCheck();
@@ -583,10 +578,10 @@ namespace Meta.XR.MetaWand.Editor
             var authTask = MetaWandAuth.Authenticate();
 
             // Wait until auth process start. Then show status window.
-            var timeout = 200; // 2sec
+            var timeout = Constants.AuthTimeoutMs; // 2sec
             while (!MetaWandAuth.IsAuthenticating)
             {
-                var delta = 10;
+                var delta = Constants.AuthPollIntervalMs;
                 await Task.Delay(delta);
                 timeout -= delta;
                 if (timeout > 0) continue;

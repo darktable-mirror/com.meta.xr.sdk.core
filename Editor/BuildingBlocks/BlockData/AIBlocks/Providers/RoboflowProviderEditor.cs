@@ -30,8 +30,15 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
     /// </summary>
     public class RoboflowBuildValidator : IPreprocessBuildWithReport
     {
+        /// <summary>
+        /// Gets the execution order for this build preprocessor callback.
+        /// </summary>
         public int callbackOrder => 0;
 
+        /// <summary>
+        /// Validates that HTTP security settings are correctly configured when building with local Roboflow inference providers.
+        /// </summary>
+        /// <param name="report">The build report containing platform and configuration information.</param>
         public void OnPreprocessBuild(BuildReport report)
         {
             if (report.summary.platform != BuildTarget.Android)
@@ -93,6 +100,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
         }
     }
 
+    /// <summary>
+    /// Custom inspector editor for the RoboflowProvider asset that displays inference mode, endpoint, and detection settings.
+    /// </summary>
     [CustomEditor(typeof(RoboflowProvider))]
     public class RoboflowProviderEditor : AIProviderEditorBase
     {
@@ -143,6 +153,9 @@ namespace Meta.XR.BuildingBlocks.AIBlocks
             }
         }
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the Roboflow provider asset.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

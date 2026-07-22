@@ -31,9 +31,14 @@ namespace Meta.XR.Simulator.Editor
         public const string AppId = "9961418137219995";
         public const string ReleaseNotesUrl = "https://developers.meta.com/horizon/downloads/package/meta-xr-simulator-mac-arm";
         public const string UnityXRPackage = "com.unity.xr.openxr@>=1.13.0";
-#else
+#elif UNITY_EDITOR_WIN
         public const string AppId = "28549923061320041";
         public const string ReleaseNotesUrl = "https://developers.meta.com/horizon/downloads/package/meta-xr-simulator-windows";
+        public const string UnityXRPackage = "com.unity.xr.openxr";
+#else
+        // Linux / unsupported platform - Meta XR Simulator is not supported, but provide defaults so the package compiles.
+        public const string AppId = "";
+        public const string ReleaseNotesUrl = "";
         public const string UnityXRPackage = "com.unity.xr.openxr";
 #endif
         public static string DownloadURL = $"https://www.facebook.com/horizon_devcenter_download?app_id={AppId}&sdk_version={ToolUsage.GetSdkVersion()}";

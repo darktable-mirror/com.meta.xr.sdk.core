@@ -90,8 +90,9 @@ internal abstract class OVRConfigurationTaskProcessor
             task.InvalidateCache(_buildTargetGroup);
             return task;
         });
-        // Only take the valid ones
-        tasks = tasks.Where(task => task.Valid.GetValue(_buildTargetGroup));
+        // Only take the valid ones, excluding Hidden tasks
+        tasks = tasks.Where(task => task.Valid.GetValue(_buildTargetGroup)
+            && task.Level.GetValue(_buildTargetGroup) != OVRProjectSetup.TaskLevel.Hidden);
         // Apply the caller-provided filter
         _tasks = _filter != null ? _filter(tasks) : tasks.ToList();
         // When not forced, apply the OpenTaskFilter as well

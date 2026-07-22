@@ -52,6 +52,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         protected readonly List<IDebugManager> SubDebugManagers = new();
 
         internal bool ShouldRetrieveInstances;
+        private bool _forceRetrieveAfterSceneChange;
         private const float RetrievalIntervalInSec = 1.0f;
         private float _lastRetrievedTime;
         private readonly OVRSampledEventSender _frameUpdateRecorder = new(
@@ -74,6 +75,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             InstanceCache.OnCacheChangedForTypeEvent += ProcessLoadedTypeBySubManagers;
             InstanceCache.OnInstanceRemoved += UnregisterInspector;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
         private void Start()
@@ -113,11 +115,22 @@ namespace Meta.XR.ImmersiveDebugger.Manager
         {
             AssemblyParser.Unregister(InstanceCache.RegisterClassTypes);
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
         }
 
         private void OnSceneUnloaded(Scene scene)
         {
             ShouldRetrieveInstances = true;
+            _forceRetrieveAfterSceneChange = true;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            // Re-register types from InspectedData assets after scene load
+            // to ensure component titles and display names are properly restored
+            RegisterTypesFromInspectedData();
+            ShouldRetrieveInstances = true;
+            _forceRetrieveAfterSceneChange = true;
         }
 
         private void Update()
@@ -135,7 +148,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 ShouldRetrieveInstances = true;
             }
 
-            if (ShouldRetrieveInstances && CustomShouldRetrieveInstanceCondition != null)
+            if (ShouldRetrieveInstances && !_forceRetrieveAfterSceneChange && CustomShouldRetrieveInstanceCondition != null)
             {
                 ShouldRetrieveInstances = CustomShouldRetrieveInstanceCondition.Invoke();
             }
@@ -150,6 +163,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             InstanceCache.RetrieveInstances();
             _lastRetrievedTime = Time.time;
             ShouldRetrieveInstances = false;
+            _forceRetrieveAfterSceneChange = false;
         }
 
         protected virtual void InitSubManagers()

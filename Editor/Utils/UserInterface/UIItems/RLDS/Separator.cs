@@ -61,7 +61,7 @@ namespace Meta.XR.Editor.UserInterface.RLDS
         public VisualElement Build()
         {
             var divider = new VisualElement();
-            divider.AddToClassList(Props.Divider.Base);
+            divider.AddToClassList(RLDSConstants.Divider.Base);
             divider.style.marginTop = Styles.Spacing.SpaceMD;
             divider.style.marginBottom = Styles.Spacing.SpaceMD;
             return divider;

@@ -107,12 +107,15 @@ internal static class OVRProjectSetupUpdater
             return;
         }
 
-        var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
         var logOption = (OVRProjectSetup.AllowLogs.Value || ShowLogsOnlyOnce.Value)
             ? OVRProjectSetup.LogMessages.Summary
             : OVRProjectSetup.LogMessages.Disabled;
-        OVRProjectSetup.UpdateTasks(buildTargetGroup, logMessages: logOption, blocking: false,
-            onCompleted: OnUpdateCompleted);
+
+        foreach (var buildTargetGroup in OVRProjectSetup.SupportedPlatforms)
+        {
+            OVRProjectSetup.UpdateTasks(buildTargetGroup, logMessages: logOption, blocking: false,
+                onCompleted: OnUpdateCompleted);
+        }
     }
 
     private static void OnUpdateCompleted(OVRConfigurationTaskProcessor processor)

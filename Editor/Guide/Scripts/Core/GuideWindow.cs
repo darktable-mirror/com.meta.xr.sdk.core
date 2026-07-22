@@ -91,7 +91,7 @@ namespace Meta.XR.Guides.Editor
             Origin = Origins.GuidedSetup,
             OriginData = this,
             Id = "CloseButton"
-        }, Props.ButtonVariant.Primary, Props.ButtonSize.XSmall);
+        }, RLDSConstants.ButtonVariant.Primary, RLDSConstants.ButtonSize.XSmall);
 
         [SerializeField] private GuideOptions _guideOptions;
         [SerializeField] private string _populatorId;
@@ -170,7 +170,7 @@ namespace Meta.XR.Guides.Editor
 
         internal void Show(Origins origin, bool ignoreDontShowAgainFlag = false)
         {
-            if (Application.isBatchMode || hasFocus) return;
+            if ((Application.isBatchMode && !IsUIVerificationMode()) || hasFocus) return;
 
             if (ignoreDontShowAgainFlag || !DontShowAgain.Value)
             {
@@ -258,17 +258,21 @@ namespace Meta.XR.Guides.Editor
             {
                 root.styleSheets.Add(styleSheet);
             }
-            root.AddToClassList(Props.Surface.Primary);
+            root.AddToClassList(RLDSConstants.Surface.Primary);
 
             // At this point Unity.EditorStyles is not initialized yet, hence delay execution.
-            root.schedule.Execute(() =>
+            // EditorApplication.delayCall is used instead of root.schedule.Execute because
+            // the UIToolkit scheduler does not pump in batchmode.
+            EditorApplication.delayCall += () =>
             {
+                if (this == null) return;
                 InitGuideItems();
+                if (Items == null) return;
 
                 DrawBefore?.Invoke();
 
                 var scrollview = new ScrollView(ScrollViewMode.Vertical);
-                scrollview.AddToClassList(Props.Utilities.NoMargin);
+                scrollview.AddToClassList(RLDSConstants.Utilities.NoMargin);
 
                 if (DrawHeader == DrawDefaultHeader)
                 {
@@ -281,9 +285,9 @@ namespace Meta.XR.Guides.Editor
 
                 root.Add(scrollview);
                 ItemContainer = new VisualElement();
-                ItemContainer.AddToClassList(Props.Flexbox.Grow1);
-                ItemContainer.AddToClassList(Props.Utilities.MarginTopXS);
-                ItemContainer.AddToClassList(Props.Utilities.Padding2xMD);
+                ItemContainer.AddToClassList(RLDSConstants.Flexbox.Grow1);
+                ItemContainer.AddToClassList(RLDSConstants.Utilities.MarginTopXS);
+                ItemContainer.AddToClassList(RLDSConstants.Utilities.Padding2xMD);
                 scrollview.Add(ItemContainer);
 
                 foreach (var item in Items)
@@ -295,13 +299,13 @@ namespace Meta.XR.Guides.Editor
                 // Footer
                 root.Add(new AddSpace(true).Build());
                 var footerContainer = new VisualElement();
-                footerContainer.AddToClassList(Props.Utilities.MarginTopXS);
-                footerContainer.AddToClassList(Props.Utilities.Padding2xMD);
+                footerContainer.AddToClassList(RLDSConstants.Utilities.MarginTopXS);
+                footerContainer.AddToClassList(RLDSConstants.Utilities.Padding2xMD);
                 footerContainer.Add(DrawFootersVisualElement());
                 root.Add(footerContainer);
 
                 DrawAfter?.Invoke();
-            });
+            };
 
         }
 
@@ -532,9 +536,9 @@ namespace Meta.XR.Guides.Editor
         private VisualElement DrawFootersVisualElement()
         {
             var container = new VisualElement();
-            container.AddToClassList(Props.Utilities.MarginTopXS);
-            container.AddToClassList(Props.Flexbox.Row);
-            container.AddToClassList(Props.Flexbox.AlignCenter);
+            container.AddToClassList(RLDSConstants.Utilities.MarginTopXS);
+            container.AddToClassList(RLDSConstants.Flexbox.Row);
+            container.AddToClassList(RLDSConstants.Flexbox.AlignCenter);
 
             if (_guideOptions.ShowDontShowAgainOption)
             {

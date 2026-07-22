@@ -34,6 +34,10 @@ using static Meta.XR.Editor.UserInterface.Utils;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Base inspector editor class for displaying and editing building block data assets.
+    /// </summary>
+    /// <typeparam name="T">The ScriptableObject type this editor targets.</typeparam>
     public abstract class DataEditor<T> : UnityEditor.Editor
         where T : ScriptableObject
     {
@@ -54,6 +58,9 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
 
 
+        /// <summary>
+        /// Draws the custom inspector GUI for the data asset.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             _sectionIndex = 0;

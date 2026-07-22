@@ -19,23 +19,23 @@
  */
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using Meta.XR.Json;
 
 namespace Meta.MCPBridge.Schemas
 {
     internal class ToolSchema : ISchema
     {
-        [JsonProperty("name")] internal string Name { get; set; }
+        [McpJsonProperty("name")] internal string Name { get; set; }
 
-        [JsonProperty("description")] internal string Description { get; set; }
+        [McpJsonProperty("description")] internal string Description { get; set; }
 
-        [JsonProperty("remarks", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("remarks", NullHandling = McpJsonNullHandling.Ignore)]
         internal string[] Remarks { get; set; }
 
-        [JsonProperty("inputSchema")] internal ToolInputSchema InputSchema { get; set; }
+        [McpJsonProperty("inputSchema")] internal ToolInputSchema InputSchema { get; set; }
 
         // Extension field: Per-method detailed schemas for AI discoverability
-        [JsonProperty("x-methods", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("x-methods", NullHandling = McpJsonNullHandling.Ignore)]
         internal Dictionary<string, MethodDetailSchema> Methods { get; set; }
     }
 
@@ -46,19 +46,19 @@ namespace Meta.MCPBridge.Schemas
     /// </summary>
     internal class MethodDetailSchema : ISchema
     {
-        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("description", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Description { get; set; }
 
-        [JsonProperty("returns", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("returns", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Returns { get; set; }
 
-        [JsonProperty("returnType", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("returnType", NullHandling = McpJsonNullHandling.Ignore)]
         internal string ReturnType { get; set; }
 
-        [JsonProperty("remarks", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("remarks", NullHandling = McpJsonNullHandling.Ignore)]
         internal string[] Remarks { get; set; }
 
-        [JsonProperty("parameters", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("parameters", NullHandling = McpJsonNullHandling.Ignore)]
         internal Dictionary<string, ParameterDetailSchema> Parameters { get; set; }
     }
 
@@ -67,96 +67,96 @@ namespace Meta.MCPBridge.Schemas
     /// </summary>
     internal class ParameterDetailSchema : ISchema
     {
-        [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("type", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Type { get; set; }
 
-        [JsonProperty("csharpType", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("csharpType", NullHandling = McpJsonNullHandling.Ignore)]
         internal string CSharpType { get; set; }
 
-        [JsonProperty("required", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("required", NullHandling = McpJsonNullHandling.Ignore)]
         internal bool? Required { get; set; }
 
-        [JsonProperty("default", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("default", NullHandling = McpJsonNullHandling.Ignore)]
         internal object Default { get; set; }
 
-        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("description", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Description { get; set; }
     }
 
     internal class ToolInputSchema : ISchema
     {
-        [JsonProperty("type")] internal string Type { get; set; } = "object";
+        [McpJsonProperty("type")] internal string Type { get; set; } = "object";
 
-        [JsonProperty("properties")] internal Dictionary<string, ToolPropertySchema> Properties { get; set; }
+        [McpJsonProperty("properties")] internal Dictionary<string, ToolPropertySchema> Properties { get; set; }
 
-        [JsonProperty("required")] internal string[] Required { get; set; }
+        [McpJsonProperty("required")] internal string[] Required { get; set; }
     }
 
     internal class ToolPropertySchema : ISchema
     {
-        [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("type", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Type { get; set; }
 
-        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("description", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Description { get; set; }
 
-        [JsonProperty("enum", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("enum", NullHandling = McpJsonNullHandling.Ignore)]
         internal string[] Enum { get; set; }
 
-        [JsonProperty("oneOf", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("oneOf", NullHandling = McpJsonNullHandling.Ignore)]
         internal EnumValueSchema[] OneOf { get; set; }
 
         // Extension fields for AI discoverability (x- prefix follows JSON Schema vendor extension convention)
-        [JsonProperty("x-csharp-type", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("x-csharp-type", NullHandling = McpJsonNullHandling.Ignore)]
         internal string CSharpType { get; set; }
 
-        [JsonProperty("x-remark", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("x-remark", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Remark { get; set; }
 
-        [JsonProperty("x-used-by", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("x-used-by", NullHandling = McpJsonNullHandling.Ignore)]
         internal string[] UsedBy { get; set; }
     }
 
     internal class EnumValueSchema : ISchema
     {
-        [JsonProperty("const")]
+        [McpJsonProperty("const")]
         internal string Const { get; set; }
 
-        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("description", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Description { get; set; }
 
-        [JsonProperty("title", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("title", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Title { get; set; }
     }
 
     internal class MethodSchema : ISchema
     {
-        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("description", NullHandling = McpJsonNullHandling.Ignore)]
         internal string Description { get; set; }
 
-        [JsonProperty("x-return-type", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("x-return-type", NullHandling = McpJsonNullHandling.Ignore)]
         internal string ReturnType { get; set; }
 
-        [JsonProperty("x-return-type-description", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("x-return-type-description", NullHandling = McpJsonNullHandling.Ignore)]
         internal string ReturnTypeDescription { get; set; }
 
-        [JsonProperty("x-remarks", NullValueHandling = NullValueHandling.Ignore)]
+        [McpJsonProperty("x-remarks", NullHandling = McpJsonNullHandling.Ignore)]
         internal string[] Remarks { get; set; }
     }
 
     internal class ToolListResultSchema : ResultSchema
     {
-        [JsonProperty("tools")] internal IEnumerable<ToolSchema> Tools { get; set; }
+        [McpJsonProperty("tools")] internal IEnumerable<ToolSchema> Tools { get; set; }
     }
 
     internal class ToolCallResultSchema : ResultSchema
     {
-        [JsonProperty("content")] internal IEnumerable<ToolCallDataSchema> Content { get; set; }
+        [McpJsonProperty("content")] internal IEnumerable<ToolCallDataSchema> Content { get; set; }
     }
 
     internal class ToolCallDataSchema : ISchema
     {
-        [JsonProperty("type")] internal string Type => "text";
-        [JsonProperty("text")] internal string Text { get; set; }
+        [McpJsonProperty("type")] internal string Type => "text";
+        [McpJsonProperty("text")] internal string Text { get; set; }
     }
 }

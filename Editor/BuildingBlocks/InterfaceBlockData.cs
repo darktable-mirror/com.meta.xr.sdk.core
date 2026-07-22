@@ -26,6 +26,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Represents a building block that uses pluggable installation routines to support multiple implementation variants.
+    /// </summary>
     public class InterfaceBlockData : BlockData
     {
         // Stateful singleton of the current VariantsSelection

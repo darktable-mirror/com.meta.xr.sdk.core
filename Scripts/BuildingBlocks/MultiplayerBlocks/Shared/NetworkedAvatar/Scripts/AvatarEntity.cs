@@ -165,7 +165,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 SetBodyTracking(entityInputManager);
 #endif
 
-                var lipSyncInput = FindObjectOfType<OvrAvatarLipSyncContext>();
+                var lipSyncInput = FindFirstObjectByType<OvrAvatarLipSyncContext>();
                 SetLipSync(lipSyncInput);
             }
             else

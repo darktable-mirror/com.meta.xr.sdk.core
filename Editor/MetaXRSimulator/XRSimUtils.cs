@@ -63,8 +63,19 @@ namespace Meta.XR.Simulator.Editor
                 unifiedEvent.Send();
                 return;
             }
+#elif UNITY_EDITOR_LINUX
+            {
+                Utils.LogUtils.DisplayDialogOrError("Meta XR Simulator Not Supported",
+                                "Meta XR Simulator is not currently supported on Linux. Windows or macOS (Apple Silicon) is required.",
+                                forceHideDialog);
+                unifiedEvent.SetMetadata(XRSimTelemetryConstants.AnnotationType.ErrorMessage, "Linux is not supported");
+                unifiedEvent.result = UnifiedEventResult.FAIL;
+                unifiedEvent.Send();
+                return;
+            }
 #endif
 
+#if !UNITY_EDITOR_LINUX
             bool isInstalled = XRSimInstallationDetector.IsXRSim2Installed();
 
             if (!isInstalled)
@@ -151,6 +162,7 @@ namespace Meta.XR.Simulator.Editor
 
             unifiedEvent.result = UnifiedEventResult.SUCCESS;
             unifiedEvent.Send();
+#endif // !UNITY_EDITOR_LINUX
         }
 
         public virtual void DeactivateSimulator(bool forceHideDialog, Origin origin)

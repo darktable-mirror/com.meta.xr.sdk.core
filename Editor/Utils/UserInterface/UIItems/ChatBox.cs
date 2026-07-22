@@ -99,7 +99,7 @@ namespace Meta.XR.Editor.UserInterface
                 return _scrollView;
 
             _scrollView = new UnityEngine.UIElements.ScrollView(ScrollViewMode.Vertical);
-            _scrollView.AddToClassList(Props.Flexbox.Column);
+            _scrollView.AddToClassList(RLDSConstants.Flexbox.Column);
 
             _scrollView.style.paddingBottom = RLDS.Styles.Spacing.SpaceMD;
             _scrollView.style.paddingLeft = RLDS.Styles.Spacing.SpaceMD;
@@ -107,7 +107,7 @@ namespace Meta.XR.Editor.UserInterface
             _scrollView.style.paddingTop = RLDS.Styles.Spacing.SpaceMD;
 
             var contentContainer = new VisualElement();
-            contentContainer.AddToClassList(Props.Flexbox.Column);
+            contentContainer.AddToClassList(RLDSConstants.Flexbox.Column);
             contentContainer.style.flexGrow = 1;
 
             foreach (var chatItem in _chatItems)
@@ -138,7 +138,7 @@ namespace Meta.XR.Editor.UserInterface
             _scrollView.Clear();
 
             var contentContainer = new VisualElement();
-            contentContainer.AddToClassList(Props.Flexbox.Column);
+            contentContainer.AddToClassList(RLDSConstants.Flexbox.Column);
             contentContainer.style.flexGrow = 1;
 
             foreach (var chatItem in _chatItems)

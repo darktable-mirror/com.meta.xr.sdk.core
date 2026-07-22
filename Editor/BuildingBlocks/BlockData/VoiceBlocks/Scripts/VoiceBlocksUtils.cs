@@ -33,8 +33,15 @@ using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// Utility class for Voice SDK building blocks that provides Wit.ai configuration setup and validation.
+    /// </summary>
     public class VoiceBlocksUtils
     {
+        /// <summary>
+        /// Ensures a valid Wit.ai configuration exists by opening the setup window if no client access token is found.
+        /// </summary>
+        /// <returns>A task that completes when the Wit.ai configuration is available.</returns>
         public static async Task GetWitConfig()
         {
             if (HasClientAccessToken())
@@ -60,6 +67,10 @@ namespace Meta.XR.BuildingBlocks.Editor
                 "Timed out while waiting for WitConfiguration to be created.");
         }
 
+        /// <summary>
+        /// Checks whether a default Wit.ai configuration with a valid client access token exists in the project.
+        /// </summary>
+        /// <returns>True if a valid client access token is found; otherwise, false.</returns>
         public static bool HasClientAccessToken() {
             return WitDataCreation.FindDefaultWitConfig()?.GetClientAccessToken() != null;
         }

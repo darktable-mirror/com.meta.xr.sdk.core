@@ -25,6 +25,9 @@ using UnityEngine;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
+    /// <summary>
+    /// BlockData that handles installing left and right hand tracking building blocks into the scene.
+    /// </summary>
     public class HandTrackingBlockData : BlockData
     {
         internal override IReadOnlyCollection<InstallationStepInfo> InstallationSteps

@@ -33,6 +33,12 @@ namespace Meta.XR.Editor.ToolingSupport
 
         public static IEnumerable<ToolDescriptor> Registry => _registry;
 
+        public static void Unregister(string name)
+        {
+            _registry.RemoveAll(d => d.Name == name);
+            ToInitialize.RemoveAll(d => d.Name == name);
+        }
+
         public static void Register(ToolDescriptor descriptor)
         {
             if (_registry.Any(d => d.Name == descriptor.Name))

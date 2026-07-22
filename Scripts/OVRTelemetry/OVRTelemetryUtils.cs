@@ -20,6 +20,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using Meta.XR.Telemetry;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -89,4 +91,42 @@ internal static partial class OVRTelemetry
     }
 
     public static string GetTelemetrySettingString(bool value) => value ? "enabled" : "disabled";
+
+    private static string _cachedProjectNameHash;
+    private static string _cachedProjectNameHashSource;
+
+    /// <summary>
+    /// Returns the SHA-256 hash of the given source string, caching the result for repeated calls
+    /// with the same input. Returns null if the source is empty or hashing fails.
+    /// </summary>
+    internal static string GetProjectNameHash(string source)
+    {
+        if (string.IsNullOrEmpty(source))
+            return null;
+
+        if (_cachedProjectNameHash != null && _cachedProjectNameHashSource == source)
+            return _cachedProjectNameHash;
+
+        try
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(source));
+                var sb = new StringBuilder(bytes.Length * 2);
+                foreach (var b in bytes)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+                _cachedProjectNameHash = sb.ToString();
+                _cachedProjectNameHashSource = source;
+                return _cachedProjectNameHash;
+            }
+        }
+        catch (Exception)
+        {
+            // SHA256.Create() can throw under FIPS policy or platform restrictions.
+            // Degrade gracefully by skipping project_name_hash rather than aborting event construction.
+            return null;
+        }
+    }
 }

@@ -30,6 +30,9 @@ using Meta.XR.BuildingBlocks.Editor;
 
 namespace Meta.XR.MultiplayerBlocks.Fusion.Editor
 {
+    /// <summary>
+    /// Registers project setup rules for the Photon Fusion auto matchmaking building block.
+    /// </summary>
     [InitializeOnLoad]
     public static class AutoMatchmakingFusionSetupRules
     {

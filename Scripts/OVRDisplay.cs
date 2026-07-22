@@ -253,7 +253,9 @@ public class OVRDisplay
 
     /// <summary>
     /// Gets the current angular velocity of the head in radians per second about each axis.
+    /// Obsolete: Returns an inverted result on some devices; use angularVelocityCw for consistent results across devices
     /// </summary>
+    [Obsolete("Deprecated due to returning an inverted result on some devices; use angularVelocityCw for consistent results across devices", false)]
     public Vector3 angularVelocity
     {
         get
@@ -263,6 +265,25 @@ public class OVRDisplay
 
             Vector3 retVec = Vector3.zero;
             if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.Head, NodeStatePropertyType.AngularVelocity,
+                    OVRPlugin.Node.Head, OVRPlugin.Step.Render, out retVec))
+                return -retVec;
+            return Vector3.zero;
+        }
+    }
+
+    /// <summary>
+    /// Gets the current angular velocity of the head in radians per second about each axis.
+    /// Angle are represented in ClockWise direction around the axis.
+    /// </summary>
+    public Vector3 angularVelocityCw
+    {
+        get
+        {
+            if (!OVRManager.isHmdPresent)
+                return Vector3.zero;
+
+            Vector3 retVec = Vector3.zero;
+            if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.Head, NodeStatePropertyType.AngularVelocityCw,
                     OVRPlugin.Node.Head, OVRPlugin.Step.Render, out retVec))
                 return retVec;
             return Vector3.zero;

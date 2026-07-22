@@ -31,7 +31,6 @@ Please contact [Matt Pare](https://www.internalfb.com/profile/view/1190816847)
 with questions or support for this module.
 """
 
-import importlib.resources
 import os
 import pathlib
 import platform

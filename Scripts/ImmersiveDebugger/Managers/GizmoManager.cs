@@ -45,12 +45,17 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
         public void ProcessType(Type type)
         {
-            // sequence matters here, remove gizmos before remove the dict
-            RemoveGizmosForType(type);
-            GizmosDict.Remove(type);
+            Dictionary<MemberInfo, GizmoRendererManager> existingManagers = null;
+            if (GizmosDict.TryGetValue(type, out var existingGizmos))
+            {
+                existingManagers = new Dictionary<MemberInfo, GizmoRendererManager>();
+                foreach (var (member, manager) in existingGizmos)
+                {
+                    existingManagers[member] = manager;
+                }
+            }
 
             var gizmosList = new List<(MemberInfo, GizmoRendererManager)>();
-            // tmp cache for convenience of building inspector
             var membersList = new List<(MemberInfo, DebugMember)>();
             var memberToGizmoRendererManagerDict = new Dictionary<MemberInfo, GizmoRendererManager>();
 
@@ -60,7 +65,13 @@ namespace Meta.XR.ImmersiveDebugger.Manager
                 var gizmoAttribute = member.GetCustomAttribute<DebugMember>();
                 if (gizmoAttribute != null && gizmoAttribute.GizmoType != DebugGizmoType.None)
                 {
-                    if (AddGizmo(type, member, gizmoAttribute, _instanceCache, out var gizmoRendererManager))
+                    if (existingManagers != null && existingManagers.Remove(member, out var reusedManager))
+                    {
+                        gizmosList.Add((member, reusedManager));
+                        membersList.Add((member, gizmoAttribute));
+                        memberToGizmoRendererManagerDict[member] = reusedManager;
+                    }
+                    else if (AddGizmo(type, member, gizmoAttribute, _instanceCache, out var gizmoRendererManager))
                     {
                         gizmosList.Add((member, gizmoRendererManager));
                         membersList.Add((member, gizmoAttribute));
@@ -71,14 +82,28 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
             InspectedDataRegistry.GetMembersForType<MemberInfo>(type, (info, attribute) =>
             {
-                // process and add the lists instead of directly returning the list, always return false
                 if (attribute.GizmoType == DebugGizmoType.None) return false;
+                if (existingManagers != null && existingManagers.Remove(info, out var reusedManager))
+                {
+                    gizmosList.Add((info, reusedManager));
+                    membersList.Add((info, attribute));
+                    memberToGizmoRendererManagerDict[info] = reusedManager;
+                    return false;
+                }
                 if (!AddGizmo(type, info, attribute, _instanceCache, out var gizmoRendererManager)) return false;
                 gizmosList.Add((info, gizmoRendererManager));
                 membersList.Add((info, attribute));
                 memberToGizmoRendererManagerDict[info] = gizmoRendererManager;
                 return false;
             });
+
+            if (existingManagers != null)
+            {
+                foreach (var (_, manager) in existingManagers)
+                {
+                    Object.Destroy(manager.gameObject);
+                }
+            }
 
             GizmosDict[type] = gizmosList;
             ManagerUtils.RebuildInspectorForType(_uiPanel, _instanceCache, type, membersList, (memberController, member, attribute, instance) =>

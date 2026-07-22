@@ -27,6 +27,9 @@ using UnityEngine;
 
 namespace Meta.XR.MultiplayerBlocks.Shared.Editor
 {
+    /// <summary>
+    /// Installation routine for the colocation building block that supports both ColocationSession and SharedSpatialAnchor-based colocation.
+    /// </summary>
     public class ColocationInstallationRoutine : NetworkInstallationRoutine
     {
         [SerializeField]
@@ -66,6 +69,12 @@ namespace Meta.XR.MultiplayerBlocks.Shared.Editor
         }
 
 #if META_MR_UTILITY_KIT_DEFINED
+        /// <summary>
+        /// Installs the colocation building block and configures alignment anchors for shared spatial experiences.
+        /// </summary>
+        /// <param name="block">The block data asset being installed.</param>
+        /// <param name="selectedGameObject">The optional GameObject to install the block onto.</param>
+        /// <returns>A task containing the list of GameObjects created during installation.</returns>
         public override async Task<List<GameObject>> InstallAsync(BlockData block, GameObject selectedGameObject)
         {
             var objs = await base.InstallAsync(block, selectedGameObject);

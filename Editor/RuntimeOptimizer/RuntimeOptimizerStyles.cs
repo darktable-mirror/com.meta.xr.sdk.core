@@ -26,6 +26,7 @@ using UnityEngine;
 
 namespace Meta.XR.RuntimeOptimizer.Editor
 {
+    /// <summary>Defines GUI styles, layout constants, and color palettes used by the Runtime Optimizer editor window.</summary>
     public partial class RuntimeOptimizerWindow
     {
         internal static Color HexToColor(string hex)
@@ -80,6 +81,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             public const int FoldoutMargin = 14;
         }
 
+        /// <summary>Provides predefined color constants used throughout the Runtime Optimizer UI.</summary>
         public static class Colors
         {
             public static readonly Color ExperimentalColor = HexToColor("#eba333");
@@ -115,6 +117,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             public static readonly Color DisabledColor = HexToColor("#808080");
             public static readonly Color InsightToolNote = HexToColor("#7D67AD");
             public static readonly Color GSDToolNote = HexToColor("#4C546F");
+            public static readonly Color SelectedCaptureHighlight = HexToColor("#1977f360");
 
         }
 
@@ -204,6 +207,18 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                 normal =
                 {
                     background = CreateTextureFromColor(Colors.DarkGraySemiTransparent)
+                }
+            };
+
+            public static readonly GUIStyle SelectedCaptureBox = new GUIStyle()
+            {
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(Constants.Margin, Constants.Margin, Constants.Margin, Constants.Margin),
+                fixedWidth = kSnapshotWidth + Constants.Margin * 2,
+                stretchHeight = false,
+                normal =
+                {
+                    background = CreateTextureFromColor(Colors.SelectedCaptureHighlight)
                 }
             };
 

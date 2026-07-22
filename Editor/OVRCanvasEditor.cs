@@ -26,10 +26,17 @@ using Meta.XR.Editor.UserInterface;
 using static OVROverlayEditorHelper;
 
 #if UNITY_TEXTMESHPRO
+/// <summary>
+/// Custom inspector for TextMeshPro components that adds an OVROverlayCanvas upgrade prompt.
+/// Displays a dialog offering to convert world-space TMP text to use OVROverlayCanvas for improved visual clarity on Quest.
+/// </summary>
 [CustomEditor(typeof(TMPro.TextMeshPro))]
 [CanEditMultipleObjects]
 public class OVRTextEditor : TMPro.EditorUtilities.TMP_EditorPanel
 {
+    /// <summary>
+    /// Draws the TMP inspector with an OVROverlayCanvas upgrade dialog prepended for world-space text.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         var upgradeableCanvases = targets.OfType<TMPro.TextMeshPro>().ToArray();
@@ -43,6 +50,10 @@ public class OVRTextEditor : TMPro.EditorUtilities.TMP_EditorPanel
 }
 #endif
 
+/// <summary>
+/// Custom inspector for Canvas components that adds an OVROverlayCanvas upgrade prompt for world-space canvases.
+/// Offers preset options for animated UI or static text when upgrading to OVROverlayCanvas for improved VR rendering clarity.
+/// </summary>
 [CustomEditor(typeof(Canvas))]
 [CanEditMultipleObjects]
 public class OVRCanvasEditor : Editor
@@ -61,6 +72,9 @@ public class OVRCanvasEditor : Editor
         };
     }
 
+    /// <summary>
+    /// Draws the Canvas inspector with an OVROverlayCanvas upgrade dialog prepended for world-space canvases.
+    /// </summary>
     public override void OnInspectorGUI()
     {
         var upgradeableCanvases = targets.OfType<Canvas>().

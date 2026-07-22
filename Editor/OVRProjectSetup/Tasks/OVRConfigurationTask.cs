@@ -298,7 +298,8 @@ internal class OVRConfigurationTask : IIdentified
             FixAction(buildTargetGroup);
             if (Tags.HasFlag(OVRProjectSetup.TaskTags.RegenerateAndroidManifest))
             {
-                OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(silentMode: Application.isBatchMode);
+                OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(
+                    silentMode: OVRSilentMode.IsEnabled);
             }
         }
         catch (Exception exception)
@@ -357,7 +358,8 @@ internal class OVRConfigurationTask : IIdentified
             await AsyncFixAction(buildTargetGroup);
             if (Tags.HasFlag(OVRProjectSetup.TaskTags.RegenerateAndroidManifest))
             {
-                OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(silentMode: Application.isBatchMode);
+                OVRManifestPreprocessor.GenerateOrUpdateAndroidManifest(
+                    silentMode: OVRSilentMode.IsEnabled);
             }
         }
         catch (Exception exception)
@@ -444,6 +446,7 @@ internal class OVRConfigurationTask : IIdentified
 
         switch (Level.GetValue(buildTargetGroup))
         {
+            case OVRProjectSetup.TaskLevel.Hidden:
             case OVRProjectSetup.TaskLevel.Optional:
                 break;
             case OVRProjectSetup.TaskLevel.Recommended:

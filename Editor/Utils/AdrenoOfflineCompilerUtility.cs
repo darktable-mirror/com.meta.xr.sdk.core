@@ -31,9 +31,11 @@ using Debug = UnityEngine.Debug;
 using System.Security.Policy;
 using System.Text;
 
+/// <summary>Provides an editor window for analyzing shader performance using the Adreno Offline Compiler.</summary>
 public class AdrenoOfflineCompilerUtility : EditorWindow
 {
 
+    /// <summary>Enumerates the types of shader statistics reported by the Adreno Offline Compiler.</summary>
     public enum ShaderStat
     {
         TotalInstructionCount,
@@ -61,6 +63,7 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         Count
     }
 
+    /// <summary>Defines threshold configuration for a single shader statistic type.</summary>
     public struct ShaderStatConfig
     {
         public readonly string inputKey;
@@ -71,6 +74,14 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         public readonly int fragmentPreambleGreen;
         public readonly int fragmentPreambleRed;
 
+        /// <summary>Initializes a new instance of the <see cref="ShaderStatConfig"/> struct with the specified thresholds.</summary>
+        /// <param name="inputKey">The key string used to identify this statistic in compiler output.</param>
+        /// <param name="vertexGreen">The green threshold value for vertex shader statistics.</param>
+        /// <param name="vertexRed">The red threshold value for vertex shader statistics.</param>
+        /// <param name="fragmentMainGreen">The green threshold value for fragment main shader statistics.</param>
+        /// <param name="fragmentMainRed">The red threshold value for fragment main shader statistics.</param>
+        /// <param name="fragmentPreambleGreen">The green threshold value for fragment preamble shader statistics.</param>
+        /// <param name="fragmentPreambleRed">The red threshold value for fragment preamble shader statistics.</param>
         public ShaderStatConfig(string inputKey, int vertexGreen, int vertexRed, int fragmentMainGreen, int fragmentMainRed, int fragmentPreambleGreen, int fragmentPreambleRed)
         {
             this.inputKey = inputKey;
@@ -83,6 +94,7 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         }
     }
 
+    /// <summary>Contains per-pass shader statistics and metadata returned by the Adreno Offline Compiler.</summary>
     public class ShaderStatInfo
     {
         public int subShader;
@@ -102,6 +114,8 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         public int[] vertexStats;
         public int[] binningVertexStats;
 
+        /// <summary>Returns a formatted display name combining sub-shader index, pass index, and tag metadata.</summary>
+        /// <returns>A formatted string describing this shader pass.</returns>
         public string GetName()
         {
             string lightModeString = string.IsNullOrEmpty(lightMode) ? string.Empty : $", LightMode: {lightMode}";
@@ -182,6 +196,7 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
     private Vector2 _scrollPosition;
     private int _selectedDeviceIndex;
 
+    /// <summary>Opens the Adreno Offline Compiler Utility editor window.</summary>
     [MenuItem("Window/Analysis/Adreno Offline Compiler Utility")]
     public static void ShowWindow()
     {
@@ -282,6 +297,8 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         }
     }
 
+    /// <summary>Draws the UI for configuring the path to the Adreno Offline Compiler executable.</summary>
+    /// <param name="disabled">Whether the path text field should be disabled.</param>
     public static void ShowAOCPathUI(bool disabled)
     {
         EditorGUILayout.LabelField("Path To Adreno Offline Compiler Executable");
@@ -301,6 +318,9 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         }
     }
 
+    /// <summary>Initializes the Adreno Offline Compiler executable path from editor preferences or the default location.</summary>
+    /// <param name="disabled">Set to true if the default path was found and should not be editable.</param>
+    /// <returns>True if a valid AOC executable path was found, false otherwise.</returns>
     public static bool InitAOCPath(out bool disabled)
     {
         {
@@ -539,11 +559,27 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         return shaderStat <= ShaderStat.MiscellaneousInstructionCount;
     }
 
+    /// <summary>Compiles and returns shader statistics for all sub-shaders and passes of the given shader.</summary>
+    /// <param name="s">The shader to analyze.</param>
+    /// <param name="keywords">The shader keywords to enable during compilation.</param>
+    /// <param name="shaderPlatform">The target shader compiler platform.</param>
+    /// <param name="arch">The target GPU architecture identifier.</param>
+    /// <returns>A list of shader statistics for each sub-shader pass.</returns>
     public static List<ShaderStatInfo> GetShaderStats(Shader s, string[] keywords, ShaderCompilerPlatform shaderPlatform, string arch = "")
     {
         return GetShaderStats2(s, s.name, -1, -1, keywords, shaderPlatform, arch);
     }
 
+    /// <summary>Compiles and returns shader statistics with fine-grained control over sub-shader and pass iteration.</summary>
+    /// <param name="s">The shader to analyze.</param>
+    /// <param name="name">The display name for the shader.</param>
+    /// <param name="maxSubShader">Maximum sub-shader index to iterate, or -1 for all.</param>
+    /// <param name="maxPass">Maximum pass index to iterate per sub-shader, or -1 for all.</param>
+    /// <param name="keywords">The shader keywords to enable during compilation.</param>
+    /// <param name="shaderPlatform">The target shader compiler platform.</param>
+    /// <param name="arch">The target GPU architecture identifier.</param>
+    /// <param name="statsCache">Optional cache to avoid recompiling previously analyzed shader variants.</param>
+    /// <returns>A list of shader statistics for each sub-shader pass.</returns>
     public static List<ShaderStatInfo> GetShaderStats2(Shader s, string name, int maxSubShader, int maxPass, string[] keywords, ShaderCompilerPlatform shaderPlatform, string arch, Dictionary<string, ShaderStatInfo> statsCache = null)
     {
         List<ShaderStatInfo> statsList = new List<ShaderStatInfo>();
@@ -726,6 +762,11 @@ public class AdrenoOfflineCompilerUtility : EditorWindow
         return statsList;
     }
 
+    /// <summary>Returns an interpolated color between red, yellow, and green based on the stat value relative to thresholds.</summary>
+    /// <param name="stat">The statistic value to evaluate.</param>
+    /// <param name="red">The red threshold value.</param>
+    /// <param name="green">The green threshold value.</param>
+    /// <returns>A color interpolated from red through yellow to green.</returns>
     public static Color GetStatColor(int stat, int red, int green)
     {
         float t = Mathf.InverseLerp(red, green, stat);
