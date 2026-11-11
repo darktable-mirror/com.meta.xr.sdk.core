@@ -170,11 +170,11 @@ namespace Meta.HandReadinessTool.Editor
             {
                 promptBuilder.AppendLine("---");
                 promptBuilder.AppendLine();
-                promptBuilder.AppendLine("# Required Device FoV Validation Recommendation");
+                promptBuilder.AppendLine("# Required VR Glasses FoV Validation Recommendation");
                 promptBuilder.AppendLine();
                 promptBuilder.AppendLine("Always include the following validation task as one Low-priority recommendation on an initial scan, even when the static analysis finds no FoV issue:");
                 promptBuilder.AppendLine("- Use the stable `taskUid` `hrt-ai:validate-device-fov-simulation`.");
-                promptBuilder.AppendLine("- Ask the developer to play through the app on Quest at least once with device field of view simulation enabled and verify that important content remains visible.");
+                promptBuilder.AppendLine("- Ask the developer to play through the app on Quest at least once with VR glasses field of view simulation enabled and verify that important content remains visible.");
                 promptBuilder.AppendLine("- Set both priority and complexity to `Low`.");
                 promptBuilder.AppendLine("- Present it as validation, not as evidence that the project has a defect.");
                 promptBuilder.AppendLine();

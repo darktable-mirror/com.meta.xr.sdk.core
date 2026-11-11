@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using Meta.XR.Compat;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -33,7 +34,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         protected override bool IsBlockPresentInScene()
         {
             var blocksInScene =
-                FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None)
+                OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>()
                     .Where(block => block.BlockId == Id)
                     .Select(block => block.GetComponent<OVRControllerHelper>())
                     .Where(controller => controller != null)

@@ -54,3 +54,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Meta.XR.Editor.BuildingBlocks.AIBlocks")]
 [assembly: InternalsVisibleTo("Meta.XR.HandReadinessTool.Editor")]
 [assembly: InternalsVisibleTo("Meta.XR.FovSimulator")]
+[assembly: InternalsVisibleTo("Meta.XR.MultiplayerBlocks.Shared")]
+[assembly: InternalsVisibleTo("Meta.XR.RuntimeOptimizer")]
+

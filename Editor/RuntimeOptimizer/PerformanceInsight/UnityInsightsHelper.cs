@@ -42,7 +42,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
         public int drawcallCount = 0;
         public uint totalVertexCount = 0;
         public uint totalTriangleCount = 0;
-        public int MSAALevel = 0;
+        public const int MSAAUnavailable = -1;
+
+        /// <summary>MSAA level of the app's colour passes, or <c>MSAAUnavailable</c> when the capture carried no GPU render-stage data.</summary>
+        public int MSAALevel = MSAAUnavailable;
 
         public List<(GameObject, int)> meshVertArray = new List<(GameObject, int)>();
         public List<(Mesh, MeshRuntimeData)> meshAssetVertArray = new List<(Mesh, MeshRuntimeData)>();
@@ -146,6 +149,20 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
                 RO.Util.DebugLog("Failed to get " + key + " from perf metrics");
             }
             return val;
+        }
+
+        /// <summary>
+        /// True when a MetricAPI stats node was built from at least one sample.
+        /// </summary>
+        /// <remarks>
+        /// MetricAPI emits <c>{"entries": 0, "mean": 0.0, ...}</c> for a metric it
+        /// could not measure, so a plain <c>mean</c> read cannot tell "the GPU did
+        /// no work" apart from "we captured nothing" (T275121743). Gate any display
+        /// of <c>mean</c> on this.
+        /// </remarks>
+        public static bool HasSamples(JSONObject statsNode)
+        {
+            return statsNode != null && statsNode["entries"] != null && statsNode["entries"].AsInt > 0;
         }
 
         public static float GetFloatVal(JSONObject jsonNode, string key)
@@ -637,7 +654,9 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
         {
             float kASWMultipiler = aswOn ? 0.5f : 1.0f;
             const float kProfilerCostReduciton = 0.95f;
-            float appGpuRenderTime = GetFloatVal(GetNodeVal(metrics, "app_gpu_time"), "mean");
+            JSONObject appGpuNode = GetNodeVal(metrics, "app_gpu_time");
+            bool hasGpuData = HasSamples(appGpuNode);
+            float appGpuRenderTime = GetFloatVal(appGpuNode, "mean");
             float appFrameTime = GetFloatVal(GetNodeVal(metrics, "render_thread_frame_time"), "mean");
             float mainThreadFrameTime = GetFloatVal(GetNodeVal(metrics, "main_thread_frame_time"), "mean");
             bool mainThreadCpuTimeKnown;
@@ -647,7 +666,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 
             float mainThreadCpuReported = mainThreadCpuTime * kProfilerCostReduciton;
 
-            bool gpuMaxExceeded = (appGpuRenderTime * kASWMultipiler) > kGPUTimeMax;
+            bool gpuMaxExceeded = hasGpuData && (appGpuRenderTime * kASWMultipiler) > kGPUTimeMax;
 
             bool cpuMaxExceeded = mainThreadCpuTimeKnown
                 ? (mainThreadCpuReported * kASWMultipiler) > kCPUTimeMax
@@ -675,13 +694,14 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
             insights.Add(mainThreadCpuTimeKnown
                 ? string.Format("CPU: {0:0.00}ms", mainThreadCpuReported)
                 : string.Format("CPU: {0:0.00}ms (frame interval)", mainThreadCpuReported));
-            insights.Add(string.Format("GPU: {0:0.00}ms", appGpuRenderTime));
+            insights.Add(hasGpuData
+                ? string.Format("GPU: {0:0.00}ms", appGpuRenderTime)
+                : "GPU: no data");
 
             if (displayTimingInfo)
             {
-                insights.Add(string.Format(
-                    "main thread frame interval: {0:0.00} {1}", mainThreadFrameTime, " ms"));
-                if (appGpuRenderTime > 0.0f)
+                insights.Add(string.Format("main thread time: {0:0.00} {1}", mainThreadFrameTime, " ms"));
+                if (hasGpuData && appGpuRenderTime > 0.0f)
                 {
                     insights.Add(string.Format("gpu time: {0:0.00} {1}", appGpuRenderTime, " ms"));
                 }
@@ -925,7 +945,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 
             insights.drawcallCount = runtimeSnapshot["totalDrawcount"].AsInt;
             insights.totalTriangleCount = (uint)runtimeSnapshot["totalTriangleCount"].AsInt;
-            insights.MSAALevel = (int)GetFloatVal(GetNodeVal(runtimeMetrics, "MSAA"), "mean");
+            JSONObject msaaNode = GetNodeVal(runtimeMetrics, "MSAA");
+            insights.MSAALevel = HasSamples(msaaNode)
+                ? (int)GetFloatVal(msaaNode, "mean")
+                : InsightData.MSAAUnavailable;
 
             List<InsightTrigger> tiggers = GenerateTriggerts(insights.insightTriggersMap, runtimeMetrics, runtimeSnapshot);
             foreach (var trigger in tiggers)

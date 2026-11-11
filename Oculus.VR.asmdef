@@ -133,6 +133,11 @@
             "define": "USING_XR_HANDS"
         },
         {
+            "name": "com.unity.xr.hands",
+            "expression": "1.9.0-pre.1",
+            "define": "USING_XR_HANDS_1_9_0_OR_NEWER"
+        },
+        {
             "name": "com.unity.profiling.core",
             "expression": "",
             "define": "UNITY_PROFILING"
@@ -151,6 +156,11 @@
             "name": "com.unity.xr.openxr",
             "expression": "1.17.0-pre.2",
             "define": "UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.18.0-pre.1",
+            "define": "UNITY_OPENXR_PLUGIN_1_18_0_OR_NEWER"
         },
         {
             "define": "OVR_UNITY_PACKAGE_MANAGER",

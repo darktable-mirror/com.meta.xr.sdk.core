@@ -48,7 +48,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         static CustomHierarchyIcon()
         {
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
             EditorApplication.hierarchyWindowItemByEntityIdOnGUI -= HierarchyItemOnGuiEntityID;
             EditorApplication.hierarchyWindowItemByEntityIdOnGUI += HierarchyItemOnGuiEntityID;
 #else
@@ -57,7 +57,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 #endif
         }
 
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
         private static void HierarchyItemOnGuiEntityID(EntityId entityId, Rect selectionRect)
         {
             var gameObject = EditorUtility.EntityIdToObject(entityId) as GameObject;

@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using Meta.XR.Compat;
 #if USING_XR_SDK_OPENXR
 
 using System.Text;
@@ -134,7 +135,7 @@ namespace Meta.XR
                 null,
                 _ =>
                 {
-                    var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                    var canvases = OVRUnityObjectCompat.FindObjectsByType<Canvas>(FindObjectsInactive.Include);
                     var result = new JSONObject();
                     var arr = new JSONArray();
                     for (int i = 0; i < canvases.Length; i++)
@@ -519,7 +520,7 @@ namespace Meta.XR
         private static System.Collections.Generic.List<GameObject> FindAllByHierarchyPath(string path)
         {
             var results = new System.Collections.Generic.List<GameObject>();
-            var allTransforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var allTransforms = OVRUnityObjectCompat.FindObjectsByType<Transform>(FindObjectsInactive.Exclude);
             for (int i = 0; i < allTransforms.Length; i++)
             {
                 var t = allTransforms[i];

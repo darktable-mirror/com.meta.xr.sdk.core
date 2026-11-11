@@ -23,6 +23,7 @@ using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEditor.SceneManagement;
+using Meta.XR.Compat;
 
 [InitializeOnLoad]
 internal static class OVRProjectSetupOverlayTasks
@@ -35,7 +36,7 @@ internal static class OVRProjectSetupOverlayTasks
         {
             return stage.scene.GetRootGameObjects().SelectMany(o => o.GetComponentsInChildren<T>(true));
         }
-        return Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        return OVRUnityObjectCompat.FindObjectsByType<T>(FindObjectsInactive.Include);
     }
 
     private static IEnumerable<Canvas> PotentialCanvasUpgrades =>

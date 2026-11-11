@@ -32,6 +32,10 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
         public bool isAlignmentAnchor;
         public ulong ownerOculusId;
         public uint colocationGroupId;
+        // Still transported: NGO memcpys NetcodeGameObjectsAnchor, which embeds this struct by value,
+        // and Fusion mirrors this field into a NetworkString<_64>. [NonSerialized] excludes it from
+        // Unity serialization, which never supported Guid anyway.
+        [NonSerialized]
         public Guid automaticAnchorUuid;
 
         public Anchor(

@@ -21,6 +21,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Meta.XR.Compat;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -40,7 +41,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             if (_buildingBlocksCacheDirty || _cachedBuildingBlocksInScene == null)
             {
-                _cachedBuildingBlocksInScene = Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None);
+                _cachedBuildingBlocksInScene = OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>();
                 _buildingBlocksCacheDirty = false;
             }
             return _cachedBuildingBlocksInScene;

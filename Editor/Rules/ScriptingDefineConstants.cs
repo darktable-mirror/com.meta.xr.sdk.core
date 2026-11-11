@@ -26,10 +26,6 @@ namespace Meta.XR
     public class ScriptingDefineConstants
     {
         /// <summary>
-        /// Scripting define symbol indicating that the Unity Input System package is installed.
-        /// </summary>
-        public const string InputSystemScriptDefine = "USING_INPUT_SYSTEM_PACKAGE";
-        /// <summary>
         /// Scripting define symbol used to disable hand pinch-to-button input mapping in OVRInput.
         /// </summary>
         public const string InputMappingScriptDefine = "OVR_DISABLE_HAND_PINCH_BUTTON_MAPPING";

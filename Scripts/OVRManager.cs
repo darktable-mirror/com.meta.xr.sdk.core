@@ -644,6 +644,8 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         {
             _enableDynamicResolution = value;
 
+            ApplyDynamicResolutionCameraSettings(value);
+
 #if USING_XR_SDK_OPENXR && UNITY_ANDROID
             if (IsOpenXRLoaderActive())
             {
@@ -651,6 +653,48 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             }
 #endif
         }
+    }
+
+    /// <summary>
+    /// Enables Dynamic Resolution at runtime, optionally reallocating the eye texture to the configured max scale.
+    /// </summary>
+    /// <remarks>
+    /// By design the SDK does not reallocate the eye texture behind the developer's back -- Dynamic Resolution
+    /// normally scales via the render viewport, not by resizing the render target -- so the render-scale sync is
+    /// opt-in. Startup-time enabling (Dynamic Resolution set in the OVRManager inspector) is handled by
+    /// <see cref="InitOVRManager"/> and is unchanged. See T168543705.
+    /// </remarks>
+    /// <param name="reallocateToMaxRes">
+    /// When <c>true</c>, also raises <c>XRSettings.eyeTextureResolutionScale</c> (and, under URP,
+    /// <c>UniversalRenderPipelineAsset.renderScale</c>) to <see cref="maxDynamicResolutionScale"/>. Without it,
+    /// URP's renderScale caps <c>XRSettings.renderViewportScale</c> and the render scale can never rise to the
+    /// configured max.
+    /// </param>
+    public void EnableDynamicResolution(bool reallocateToMaxRes = false)
+    {
+        enableDynamicResolution = true;
+        if (reallocateToMaxRes)
+        {
+            ApplyDynamicResolutionRenderScale();
+        }
+    }
+
+    // Pushes maxDynamicResolutionScale onto the active eye texture and, under URP,
+    // onto UniversalRenderPipelineAsset.renderScale. URP's renderScale otherwise
+    // caps XRSettings.renderViewportScale. Runs at init (when dynres is set in the
+    // inspector) and on the explicit EnableDynamicResolution(reallocateToMaxRes: true)
+    // opt-in -- never from the property setter alone. (T168543705)
+    private void ApplyDynamicResolutionRenderScale()
+    {
+#if USING_XR_SDK && UNITY_ANDROID
+#if (USING_XR_SDK_OCULUS || (USING_XR_SDK_OPENXR && UNITY_Y_FLIP_FIX))
+        XRSettings.eyeTextureResolutionScale = maxDynamicResolutionScale;
+#if USING_URP
+        if (GraphicsSettings.currentRenderPipeline is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urpPipelineAsset)
+            urpPipelineAsset.renderScale = maxDynamicResolutionScale;
+#endif
+#endif
+#endif
     }
 
     public float minDynamicResolutionScale = 1.0f;
@@ -1272,6 +1316,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
     [SerializeField]
     internal bool requestPassthroughCameraAccessPermissionOnStartup;
+
     #endregion
 
 
@@ -1817,17 +1862,43 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     [SerializeField]
     private OVRManager.TrackingOrigin _trackingOriginType = OVRManager.TrackingOrigin.FloorLevel;
 
+    // Last-written values for the per-frame tracking writes in Update(), so we can skip
+    // redundant native calls when nothing changed. The uninitialized flag forces one
+    // initial write.
+    private bool _cachedPositionTrackingEnabled = false;
+    private bool _cachedRotationTrackingEnabled = false;
+    private bool _cachedUseIPDInPositionTracking = false;
+    private bool _trackingWritesInitialized = false;
+
+    // Set once the serialized origin has actually reached the runtime. The setter silently
+    // no-ops while the HMD or the XR input subsystem is unavailable, so the apply is retried
+    // each frame until it lands.
+    private bool _trackingOriginApplied = false;
+
+#if !UNITY_OPENXR_1_9_0
+    // Set once the OpenXR floor->stage fallback warning has been logged, so the retry that
+    // re-enters that branch each frame does not re-log every frame. Guarded by the same
+    // directive as its only use below so it is not a declared-but-unused field (CS0414) in
+    // configs where that fallback compiles out.
+    private bool _floorLevelFallbackWarned = false;
+#endif
+
     /// <summary>
     /// Defines the current tracking origin type.
     /// </summary>
+    /// <remarks>
+    /// The getter returns the last origin applied through this setter (cached), not a live
+    /// runtime read, so origin changes made elsewhere (system recentering, other plugins, OS
+    /// preferences) are not reflected here.
+    /// </remarks>
     public OVRManager.TrackingOrigin trackingOriginType
     {
         get
         {
-            if (!isHmdPresent)
-                return _trackingOriginType;
-
-            return (OVRManager.TrackingOrigin)OVRPlugin.GetTrackingOriginType();
+            // Return the cached value. A live GetTrackingOriginType() read here can
+            // transiently report a stale origin over PC Link while the runtime settles, which
+            // used to re-invoke the heavy setter every frame; the setter keeps this in sync.
+            return _trackingOriginType;
         }
 
         set
@@ -1902,6 +1973,61 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             }
         }
     }
+
+    // Push the scene's serialized tracking origin to the runtime. Nothing else applies it, so
+    // without this the runtime keeps the Unity OpenXR plugin default (Floor) while the cached
+    // property still reports the serialized value. Success is confirmed against the live
+    // runtime rather than the cache, because the setter advances the cache even on the paths
+    // where it applies nothing.
+    private void ApplyInitialTrackingOrigin()
+    {
+        if (_trackingOriginApplied || !isHmdPresent)
+        {
+            return;
+        }
+
+        OVRManager.TrackingOrigin desired = _trackingOriginType;
+
+#if USING_XR_SDK_OPENXR
+        if (OVRPlugin.UnityOpenXR.Enabled)
+        {
+            var inputSubsystem = GetCurrentInputSubsystem();
+            if (inputSubsystem == null)
+            {
+                return;
+            }
+
+            TrackingOriginModeFlags expectedMode = OpenXRTrackingOriginMode(desired);
+            if (expectedMode != TrackingOriginModeFlags.Unknown)
+            {
+                trackingOriginType = desired;
+                _trackingOriginApplied = inputSubsystem.GetTrackingOriginMode() == expectedMode;
+                return;
+            }
+        }
+#endif
+
+        trackingOriginType = desired;
+        _trackingOriginApplied = OVRPlugin.GetTrackingOriginType() == (OVRPlugin.TrackingOrigin)desired;
+    }
+
+#if USING_XR_SDK_OPENXR
+    // Mirrors the mapping in trackingOriginType.set. Unknown means the origin has no Unity
+    // input-subsystem equivalent and is applied through OVRPlugin instead.
+    private static TrackingOriginModeFlags OpenXRTrackingOriginMode(OVRManager.TrackingOrigin origin)
+    {
+        switch (origin)
+        {
+            case OVRManager.TrackingOrigin.EyeLevel:
+                return TrackingOriginModeFlags.Device;
+            case OVRManager.TrackingOrigin.FloorLevel:
+            case OVRManager.TrackingOrigin.Stage:
+                return TrackingOriginModeFlags.Floor;
+            default:
+                return TrackingOriginModeFlags.Unknown;
+        }
+    }
+#endif
 
     /// <summary>
     /// If true, head tracking will affect the position of each OVRCameraRig's cameras.
@@ -2366,18 +2492,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
 
         UpdateDynamicResolutionVersion();
 
-        switch (systemHeadsetType)
-        {
-            case SystemHeadsetType.Oculus_Quest_2:
-            case SystemHeadsetType.Meta_Quest_Pro:
-                minDynamicResolutionScale = quest2MinDynamicResolutionScale;
-                maxDynamicResolutionScale = quest2MaxDynamicResolutionScale;
-                break;
-            default:
-                minDynamicResolutionScale = quest3MinDynamicResolutionScale;
-                maxDynamicResolutionScale = quest3MaxDynamicResolutionScale;
-                break;
-        }
+        InitDynamicResolutionScaleRange();
 
 #if USING_XR_SDK && UNITY_ANDROID
 // Dynamic resolution in the Unity OpenXR plugin is only supported on package versions 3.4.1 on Unity 2021 and 4.3.1 on Unity 2022 and up.
@@ -2391,11 +2506,11 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             }
 #endif
 
-            XRSettings.eyeTextureResolutionScale = maxDynamicResolutionScale;
-#if USING_URP
-            if (GraphicsSettings.currentRenderPipeline is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urpPipelineAsset)
-                urpPipelineAsset.renderScale = maxDynamicResolutionScale;
-#endif
+            // The property setter is bypassed when the value comes from serialization, so scenes that
+            // ship with dynamic resolution enabled configure the camera here.
+            ApplyDynamicResolutionCameraSettings(true);
+
+            ApplyDynamicResolutionRenderScale();
         }
 #endif
 #endif
@@ -2505,6 +2620,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         {
             permissions.Add(OVRPermissionsRequester.Permission.PassthroughCameraAccess);
         }
+
 
         OVRPermissionsRequester.Request(permissions);
     }
@@ -2750,21 +2866,55 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
             OVRManager.display.RecenterPose();
         }
 
+        // The getter is cache-backed, so a getter-vs-cache dirty-check here would compare the
+        // field against itself. The serialized origin is applied by this one-shot instead.
+        ApplyInitialTrackingOrigin();
+
 #if !UNITY_OPENXR_1_9_0
         if (OVRPlugin.UnityOpenXR.Enabled && _trackingOriginType == OVRManager.TrackingOrigin.FloorLevel)
         {
-            Debug.LogWarning("Floor Level tracking origin is unsupported on this OpenXR Plugin version. Falling back to Stage tracking origin. Please update the OpenXR Plugin to use Floor tracking origin.");
-            _trackingOriginType = OVRManager.TrackingOrigin.Stage;
+            // Warn once, not every frame. Routing the fallback through the setter means this
+            // branch keeps re-firing until the apply succeeds (the self-healing retry), but the
+            // warning only needs to surface a single time; gating it avoids flooding the console
+            // when the apply keeps failing.
+            if (!_floorLevelFallbackWarned)
+            {
+                Debug.LogWarning("Floor Level tracking origin is unsupported on this OpenXR Plugin version. Falling back to Stage tracking origin. Please update the OpenXR Plugin to use Floor tracking origin.");
+                _floorLevelFallbackWarned = true;
+            }
+            // Route the fallback through the setter, which only advances the cache on a
+            // successful apply; if it fails, the cache stays FloorLevel and this re-fires next
+            // frame (the self-healing retry the old dirty-check provided).
+            trackingOriginType = OVRManager.TrackingOrigin.Stage;
         }
 #endif
-        if (trackingOriginType != _trackingOriginType)
-            trackingOriginType = _trackingOriginType;
 
-        tracker.isEnabled = usePositionTracking;
+        // Push these to the runtime only when they change: tracker.isEnabled,
+        // OVRPlugin.rotation and OVRPlugin.useIPDInPositionTracking each P/Invoke
+        // unconditionally, so writing them every frame costs a native call for nothing. Compare
+        // against last-written cached bools rather than re-reading the native getters.
+        if (!_trackingWritesInitialized
+            || _cachedPositionTrackingEnabled != usePositionTracking)
+        {
+            tracker.isEnabled = usePositionTracking;
+            _cachedPositionTrackingEnabled = usePositionTracking;
+        }
 
-        OVRPlugin.rotation = useRotationTracking;
+        if (!_trackingWritesInitialized
+            || _cachedRotationTrackingEnabled != useRotationTracking)
+        {
+            OVRPlugin.rotation = useRotationTracking;
+            _cachedRotationTrackingEnabled = useRotationTracking;
+        }
 
-        OVRPlugin.useIPDInPositionTracking = useIPDInPositionTracking;
+        if (!_trackingWritesInitialized
+            || _cachedUseIPDInPositionTracking != useIPDInPositionTracking)
+        {
+            OVRPlugin.useIPDInPositionTracking = useIPDInPositionTracking;
+            _cachedUseIPDInPositionTracking = useIPDInPositionTracking;
+        }
+
+        _trackingWritesInitialized = true;
 
         // Dispatch HMD events.
         if (monoscopic != _monoscopic)
@@ -3325,6 +3475,55 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
         dynamicResolutionVersion = MaxDynamicResolutionVersion;
     }
 
+    /// <summary>
+    /// Opts the rendering camera into Unity's dynamic resolution path.
+    /// </summary>
+    /// <remarks>
+    /// Dynamic resolution is applied through <c>XRSettings.renderViewportScale</c>, which renders into a
+    /// sub-rect of the full-size eye texture. Unity only folds that applied scale into the
+    /// <c>_ScaledScreenParams</c> / <c>_ScreenSize</c> shader constants when the camera has
+    /// <c>allowDynamicResolution</c> set. URP's Forward+ clustered lighting derives its tile lookup from
+    /// those constants, so leaving the flag off keeps the light tile grid at full resolution while
+    /// rendering is scaled down, producing misaligned, blocky additional lighting.
+    ///
+    /// Scenes that ship with dynamic resolution already enabled are handled at edit time by the
+    /// corresponding OVRProjectSetup task, which serializes the flag onto the rig cameras. This covers
+    /// the runtime paths: enabling dynamic resolution from script, and scenes that never ran the setup
+    /// task.
+    ///
+    /// Only a flag that this class turned on is turned back off again. A camera that already allowed
+    /// dynamic resolution is left untouched, because that setting belongs to the application - it may be
+    /// serialized by the setup task or set deliberately by the developer. Restoring what we enabled
+    /// matters because <c>allowDynamicResolution</c> also disables temporal anti-aliasing and temporal
+    /// upscalers for that camera.
+    /// </remarks>
+    private static void ApplyDynamicResolutionCameraSettings(bool dynamicResolutionEnabled)
+    {
+        // The rig owns the eye cameras, so it applies the change. A rig loaded later configures itself
+        // from its own Awake, which is what keeps this working across scene changes.
+        var cameraRig = OVRCameraRig.Instance;
+        if (cameraRig != null)
+        {
+            cameraRig.SetCamerasAllowDynamicResolution(dynamicResolutionEnabled);
+        }
+    }
+
+    private void InitDynamicResolutionScaleRange()
+    {
+        switch (systemHeadsetType)
+        {
+            case SystemHeadsetType.Oculus_Quest_2:
+            case SystemHeadsetType.Meta_Quest_Pro:
+                minDynamicResolutionScale = quest2MinDynamicResolutionScale;
+                maxDynamicResolutionScale = quest2MaxDynamicResolutionScale;
+                break;
+            default:
+                minDynamicResolutionScale = quest3MinDynamicResolutionScale;
+                maxDynamicResolutionScale = quest3MaxDynamicResolutionScale;
+                break;
+        }
+    }
+
 
     private static bool multipleMainCameraWarningPresented = false;
     private static bool suppressUnableToFindMainCameraMessage = false;
@@ -3825,6 +4024,7 @@ public partial class OVRManager : MonoBehaviour, OVRMixedRealityCaptureConfigura
     {
         return OVRPlugin.IsInsightPassthroughSupported();
     }
+
 
     /// <summary>
     /// This class is used by <see cref="OVRManager.GetPassthroughCapabilities()"/> to report on Passthrough

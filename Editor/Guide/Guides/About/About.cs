@@ -70,23 +70,18 @@ namespace Meta.XR.Guides.Editor.About
             IsStatusMenuItemDarker = true
         };
 
-        private static readonly OnlyOncePerSessionBool _shouldShow = new()
-        {
-            Uid = "ShowAbout",
-            Owner = ToolDescriptor,
-            SendTelemetry = false
-        };
+        // Per project (EditorUserSettings), so projects on different SDK versions don't
+        // re-trigger each other. Lowered on a downgrade, so the next upgrade still counts.
+        private const string LastSeenVersionKey = "About.LastSeenVersion";
 
-        private static UserInt _lastSeenVersion;
-
-        private static UserInt LastSeenVersion => _lastSeenVersion ??= new UserInt()
+        private static int LastSeenVersion
         {
-            Default = 0,
-            Label = "LastSeenVersion",
-            Uid = "AboutLastSeenVersion",
-            SendTelemetry = true,
-            Owner = null
-        };
+            get => int.TryParse(EditorUserSettings.GetConfigValue(LastSeenVersionKey), out var version) ? version : 0;
+            set => EditorUserSettings.SetConfigValue(LastSeenVersionKey, value.ToString());
+        }
+
+        // Set by the removed "Show this window on launch" toggle.
+        private const string LegacyShowOnLaunchKey = "Welcome.ShowOnLaunch";
 
         static About()
         {
@@ -100,7 +95,7 @@ namespace Meta.XR.Guides.Editor.About
             // delayCall so that the window waits for the full editor to be loaded before popping up.
             // ScheduleShowOnLaunch re-arms its poll on every domain reload (OnConsentSet re-fires
             // from OVREditorStart each reload), which is what makes the show survive the reloads
-            // that are common during editor startup.
+            // that are common during editor startup, and what catches an SDK upgrade done mid-session.
             EditorApplication.delayCall += ScheduleShowOnLaunch;
         }
 
@@ -108,6 +103,7 @@ namespace Meta.XR.Guides.Editor.About
         private const double ShowOnLaunchKeysTimeoutSeconds = 10.0;
         private static bool _showOnLaunchPolling;
         private static double _showOnLaunchDeadline;
+        private static int _showOnLaunchVersion;
 
         private static void ScheduleShowOnLaunch()
         {
@@ -119,13 +115,32 @@ namespace Meta.XR.Guides.Editor.About
                 return;
             }
 
+            var installedVersion = ToolUsage.GetSdkVersion();
+            if (!installedVersion.HasValue)
+            {
+                return;
+            }
+
+            MigrateLegacyShowOnLaunch(installedVersion.Value);
+
+            if (installedVersion.Value < LastSeenVersion)
+            {
+                LastSeenVersion = installedVersion.Value;
+            }
+
+            if (installedVersion.Value <= LastSeenVersion)
+            {
+                return;
+            }
+
             // Poll on EditorApplication.update instead of awaiting the ramp-up key fetch. An awaited
             // async continuation is destroyed by the domain reloads (script compilation / asset
             // import) that are common during editor startup, which left the welcome/NUX window never
             // appearing. We still wait for the keys so nux_flow routes correctly instead of reading
-            // its cold-cache default (false); the _shouldShow one-shot token is consumed only at the
-            // actual show in PollShowOnLaunch, so an interrupted poll never burns it.
+            // its cold-cache default (false); LastSeenVersion is written only when PollShowOnLaunch
+            // dispatches the show, so an interrupted poll never burns the upgrade.
             _showOnLaunchPolling = true;
+            _showOnLaunchVersion = installedVersion.Value;
             _showOnLaunchDeadline = EditorApplication.timeSinceStartup + ShowOnLaunchKeysTimeoutSeconds;
             EditorApplication.update += PollShowOnLaunch;
         }
@@ -141,18 +156,31 @@ namespace Meta.XR.Guides.Editor.About
             EditorApplication.update -= PollShowOnLaunch;
             _showOnLaunchPolling = false;
 
-            if (!OVREditorUtils.IsMainEditor() || !_shouldShow.Value)
+            if (!OVREditorUtils.IsMainEditor())
             {
                 return;
             }
 
-            var versionChanged = Version.HasValue && Version.Value != LastSeenVersion.Value;
-            if (versionChanged)
+            LastSeenVersion = _showOnLaunchVersion;
+            ShowGuide(Origins.Self, forceShow: true);
+        }
+
+        // A project that turned the toggle off starts at the installed version, so the first launch
+        // with the new gating doesn't show it the window it opted out of.
+        private static void MigrateLegacyShowOnLaunch(int installedVersion)
+        {
+            var legacyValue = EditorUserSettings.GetConfigValue(LegacyShowOnLaunchKey);
+            if (legacyValue == null)
             {
-                LastSeenVersion.SetValue(Version.Value);
+                return;
             }
 
-            ShowGuide(Origins.Self, forceShow: versionChanged);
+            if (legacyValue == "false" && EditorUserSettings.GetConfigValue(LastSeenVersionKey) == null)
+            {
+                LastSeenVersion = installedVersion;
+            }
+
+            EditorUserSettings.SetConfigValue(LegacyShowOnLaunchKey, null);
         }
 
         private const string NuxRampUpKey = "nux_flow";
@@ -167,10 +195,7 @@ namespace Meta.XR.Guides.Editor.About
             {
                 if (NuxFlow.IsNuxCompleted || FeatureRampUpManager.GetRemoteKeysResult(NuxSkipOnboardingRampUpKey))
                 {
-                    if (forceShow || WelcomeWindow.ShouldShowOnLaunch)
-                    {
-                        WelcomeWindow.Show(origin);
-                    }
+                    WelcomeWindow.Show(origin);
                 }
                 else
                 {

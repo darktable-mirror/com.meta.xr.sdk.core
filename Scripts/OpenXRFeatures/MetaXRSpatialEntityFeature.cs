@@ -66,6 +66,4 @@ namespace Meta.XR
 #endif // USING_XR_SDK_OPENXR
 
     public enum XrSpaceUserIdFB : ulong { }
-
-    public enum XrSpaceUserFB : ulong { }
 }

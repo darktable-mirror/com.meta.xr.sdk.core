@@ -538,6 +538,50 @@ internal static class OVRProjectSetupRenderingTasks
             },
             message: "Using the camera stack may significantly impact performance. It is not recommended to use the camera stack feature."
         );
+
+#if URP_17_3_OR_NEWER
+        // [Recommended] Enable On-Tile Post Processing (URP 17.3+, Unity 6.3+)
+        OVRProjectSetup.AddTask(
+            level: OVRProjectSetup.TaskLevel.Recommended,
+            platform: BuildTargetGroup.Android,
+            group: targetGroup,
+            isDone: _ =>
+                ForEachRendererData(rd =>
+                    rd.rendererFeatures.Any(feature => feature is OnTilePostProcessFeature)
+                    && rd.postProcessData == null
+#if URP_17_5_OR_NEWER
+                    && rd.tileOnlyMode
+#endif
+                ),
+            fix: _ =>
+                ForEachRendererData(rd =>
+                {
+                    if (!rd.rendererFeatures.Any(feature => feature is OnTilePostProcessFeature))
+                    {
+                        var onTilePostProcessFeature = ScriptableObject.CreateInstance<OnTilePostProcessFeature>();
+                        onTilePostProcessFeature.Create(); // Required so the on-tile post-process data is created
+                        onTilePostProcessFeature.name = "OnTilePostProcessFeature";
+                        rd.rendererFeatures.Add(onTilePostProcessFeature);
+                        AssetDatabase.AddObjectToAsset(onTilePostProcessFeature, rd);
+                    }
+                    rd.postProcessData = null;
+#if URP_17_5_OR_NEWER
+                    rd.tileOnlyMode = true;
+#endif
+                    EditorUtility.SetDirty(rd);
+                    AssetDatabase.SaveAssetIfDirty(rd);
+                    rd.SetDirty();
+                    return true;
+                }),
+#if URP_17_5_OR_NEWER
+            fixMessage: "Added the On-Tile Post Process renderer feature, disabled built-in post-processing, and enabled Tile-Only Mode on the URP renderer(s)",
+            message: "On-tile post-processing keeps post-processing in tile memory, reducing memory bandwidth on Quest. When upgrading to Unity 6.3 or newer, it is recommended to add the On-Tile Post Process renderer feature and enable Tile-Only Mode on your URP renderer instead of relying on the default PostFX path."
+#else
+            fixMessage: "Added the On-Tile Post Process renderer feature and disabled built-in post-processing on the URP renderer(s)",
+            message: "On-tile post-processing keeps post-processing in tile memory, reducing memory bandwidth on Quest. When upgrading to Unity 6.3 or newer, it is recommended to add the On-Tile Post Process renderer feature to your URP renderer instead of relying on the default PostFX path."
+#endif
+        );
+#endif
 #endif
 
 #if USING_URP

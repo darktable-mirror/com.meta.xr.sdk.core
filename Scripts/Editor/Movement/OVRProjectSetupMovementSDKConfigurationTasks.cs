@@ -52,23 +52,22 @@ internal static class OVRProjectSetupMovementSDKConfigurationTasks
             fixMessage: "Create OVRBody components where they are required"
         );
 
-
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Required,
             group: Group,
             isDone: _ =>
             {
-                var manager = Object.FindFirstObjectByType<OVRManager>();
+                var manager = Object.FindAnyObjectByType<OVRManager>();
 
                 return manager == null ||
                        manager.SimultaneousHandsAndControllersEnabled == false ||
                        (manager.wideMotionModeHandPosesEnabled == false &&
-                        Object.FindFirstObjectByType<OVRBody>() == null);
+                        Object.FindAnyObjectByType<OVRBody>() == null);
             },
             message: "Body API is not compatible with simultaneous hands and controllers",
             fix: _ =>
             {
-                var manager = Object.FindFirstObjectByType<OVRManager>();
+                var manager = Object.FindAnyObjectByType<OVRManager>();
                 if (manager == null || !manager.SimultaneousHandsAndControllersEnabled)
                 {
                     return;

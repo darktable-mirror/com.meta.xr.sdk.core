@@ -107,9 +107,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
         private void Awake()
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            _customMatchmaking = FindObjectOfType<CustomMatchmaking>();
-#pragma warning restore CS0618 // Type or member is obsolete
+            _customMatchmaking = FindAnyObjectByType<CustomMatchmaking>();
 
             if (_customMatchmaking == null)
             {

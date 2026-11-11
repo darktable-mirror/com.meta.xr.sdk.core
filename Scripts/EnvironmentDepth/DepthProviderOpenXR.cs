@@ -48,7 +48,17 @@ namespace Meta.XR.EnvironmentDepth
             _occlusionSubsystem = loader.GetLoadedSubsystem<XROcclusionSubsystem>() as MetaOpenXROcclusionSubsystem;
             if (_occlusionSubsystem == null)
             {
-                Debug.LogError("Please enable 'Meta Quest: Occlusion' feature in 'Project Settings / XR Plug-in Management / OpenXR / OpenXR Feature Groups / Meta Quest'.");
+                var occlusionFeature = OpenXRSettings.Instance != null
+                    ? OpenXRSettings.Instance.GetFeature<AROcclusionFeature>()
+                    : null;
+                if (occlusionFeature == null || !occlusionFeature.enabled)
+                {
+                    Debug.LogError("Please enable 'Meta Quest: Occlusion' feature in 'Project Settings / XR Plug-in Management / OpenXR / OpenXR Feature Groups / Meta Quest'.");
+                }
+                else
+                {
+                    Debug.LogError("Failed to load the occlusion subsystem.");
+                }
             }
         }
 

@@ -1088,8 +1088,11 @@ namespace Meta.XR.Editor
                 foreach (var skillDir in Directory.GetDirectories(sourceDir))
                 {
                     if (!HasSkillEntryFile(skillDir)) continue;
-                    var target = Path.Combine(destDir, Path.GetFileName(skillDir));
+                    var skillName = Path.GetFileName(skillDir);
+                    var target = Path.Combine(destDir, skillName);
+
                     InstallSingleSkill(skillDir, target);
+                    RemovePreRenameCopy(destDir, skillName);
                     count++;
                 }
 
@@ -1131,6 +1134,48 @@ namespace Meta.XR.Editor
         {
             return File.Exists(Path.Combine(skillDir, "SKILL.md"))
                 || File.Exists(Path.Combine(skillDir, "skill.md"));
+        }
+
+        // The pre-rename directory names migrated to the `hz-` prefix in this change. Only these
+        // are cleaned up, so the installer never removes a folder that was not a renamed SDK skill.
+        private static readonly HashSet<string> PreRenameSkillDirs = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "meta-xr-operator",
+            "meta-xr-operator-coordinates",
+            "meta-xr-operator-grabbed-objects",
+            "meta-xr-operator-hand-tracking",
+            "meta-xr-operator-interaction-grab",
+            "meta-xr-operator-interaction-poke",
+            "meta-xr-operator-unity-cli-workflow",
+            "meta-xr-operator-unity-meta-quest",
+            "meta-xr-operator-unity-test-mechanics",
+        };
+
+        // After installing hz-<base>, remove the pre-rename copy at <base> for the skills this
+        // change renamed. Best-effort so a leftover can never fail the install.
+        internal static void RemovePreRenameCopy(string destDir, string skillName)
+        {
+            if (!skillName.StartsWith("hz-", StringComparison.OrdinalIgnoreCase))
+                return;
+            var legacyName = skillName.Substring(3);
+            if (!PreRenameSkillDirs.Contains(legacyName))
+                return;
+            TryDeleteDirectory(Path.Combine(destDir, legacyName));
+        }
+
+        // Best-effort recursive delete; swallows IO errors so cleanup of a stale or legacy skill
+        // copy never fails the install itself.
+        private static void TryDeleteDirectory(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                    Directory.Delete(path, recursive: true);
+            }
+            catch
+            {
+                // Leave the stale copy rather than aborting the install.
+            }
         }
 
         private static void CopySkillDirectory(string sourceDir, string destDir)

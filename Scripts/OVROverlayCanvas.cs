@@ -313,7 +313,6 @@ public class OVROverlayCanvas : OVRRayTransformer
     private static readonly Vector3[] _WorldCorners = new Vector3[4];
     private static readonly Vector3[] _LocalCorners = new Vector3[4];
 
-    private static readonly Matrix4x4 _TanAnglesProjectionMatrix = Matrix4x4.Perspective(90.0f, 1.0f, 0.05f, 5000f);
     private static readonly List<Transform> _CachedTransformList = new List<Transform>();
 
     private bool _nonUniformScaleWarningShown;
@@ -839,30 +838,36 @@ public class OVROverlayCanvas : OVRRayTransformer
             return null;
 
         rectTransform.GetWorldCorners(_WorldCorners);
-        // calculate a projection matrix that will give us tan angles
-        var worldToTanAngles = _TanAnglesProjectionMatrix * mainCamera.transform.worldToLocalMatrix;
+        return ComputeViewPriorityScore(_WorldCorners, mainCamera.transform.worldToLocalMatrix, _LocalCorners);
+    }
+
+    // Projects the four world-space corners into camera-local tan-angle space and scores the
+    // resulting quad by its area, weighted toward the center of view. Returns null if any corner
+    // is at or behind the camera plane (local z <= epsilon): behind the camera the perspective
+    // divide flips sign and the tan angles are meaningless, so such overlays must be culled.
+    // worldCorners and localCorners must both be length-4 buffers; localCorners is scratch output.
+    internal static float? ComputeViewPriorityScore(Vector3[] worldCorners, Matrix4x4 worldToLocal, Vector3[] localCorners)
+    {
         for (var i = 0; i < 4; ++i)
         {
-            _LocalCorners[i] = worldToTanAngles.MultiplyPoint(_WorldCorners[i]);
-            if (_LocalCorners[i].z <= 0)
+            var localPos = worldToLocal.MultiplyPoint3x4(worldCorners[i]);
+            if (localPos.z <= 0.0001f)
             {
-                // if any corner is behind the camera, immediately return null;
                 return null;
             }
-
-            _LocalCorners[i].z = 0.0f;
+            localCorners[i] = new Vector3(localPos.x / localPos.z, localPos.y / localPos.z, 0f);
         }
 
         const float kCenterOffsetWeight = 2.0f;
-        var midpoint = (_LocalCorners[0] + _LocalCorners[1] + _LocalCorners[2] + _LocalCorners[3]) * 0.25f;
+        var midpoint = (localCorners[0] + localCorners[1] + localCorners[2] + localCorners[3]) * 0.25f;
         // weight the score by how close the overlay is to the center of the view
         float centerOffsetWeight = 1.0f - kCenterOffsetWeight * midpoint.magnitude;
 
         // calculate the area of the overlay quad in tan angle space
-        var area = TriangleArea(_LocalCorners[0], _LocalCorners[1], _LocalCorners[2]) + TriangleArea(_LocalCorners[0], _LocalCorners[2], _LocalCorners[3]);
+        var area = TriangleArea(localCorners[0], localCorners[1], localCorners[2]) + TriangleArea(localCorners[0], localCorners[2], localCorners[3]);
         var score = area * centerOffsetWeight;
 
-        return float.IsNaN(area) ? null : score;
+        return float.IsNaN(score) ? null : score;
     }
 
     private float? GetViewDistanceImpl()

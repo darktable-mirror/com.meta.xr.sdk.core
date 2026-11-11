@@ -36,6 +36,8 @@ namespace Meta.XR.ImmersiveDebugger
     /// Attribute to add decorative text elements (headers, descriptions, separators) above debug members in the Inspector Panel.
     /// Can be applied multiple times to add multiple decorative elements before the main member.
     /// </summary>
+    // UAC1002: the base PreserveAttribute lacks [Serializable], but it declares no fields, so no data is dropped.
+#pragma warning disable UAC1002
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Enum, AllowMultiple = true)]
     [Serializable]
     public class DebugDecorativeText : PreserveAttribute
@@ -53,6 +55,7 @@ namespace Meta.XR.ImmersiveDebugger
         /// </summary>
         public string Style = "Content";
     }
+#pragma warning restore UAC1002
 
     /// <summary>
     /// Annotate field, property, functions with this will show in Immersive Debugger panel in runtime.
@@ -79,6 +82,9 @@ namespace Meta.XR.ImmersiveDebugger
     ///
     /// For more info about Immersive Debugger, check out the [official doc](https://developer.oculus.com/documentation/unity/immersivedebugger-overview)
     /// </summary>
+    // UAC1002: the base PreserveAttribute lacks [Serializable], but it declares no fields, so no data is dropped.
+    // Do not remove [Serializable] here — InspectedMember.attribute persists DebugMember as serialized data.
+#pragma warning disable UAC1002
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Enum)]
     [Serializable]
     public class DebugMember : PreserveAttribute
@@ -160,4 +166,5 @@ namespace Meta.XR.ImmersiveDebugger
             }
         }
     }
+#pragma warning restore UAC1002
 }

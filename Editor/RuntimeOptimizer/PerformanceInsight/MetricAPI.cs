@@ -29,22 +29,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 {
     static class MetricAPI
     {
-        static private string pythonPath = PythonUtil.GetPythonPath();
-
         public const int processTimeOutMS = 120000;
-        static public void RunPythonUtil()
-        {
-            string path = PythonUtil.GetScriptPath("PythonUtil.py");
-            if (path.Length > 0)
-            {
-                ProcessStartInfo start = new ProcessStartInfo(pythonPath);
-                start.Arguments = string.Format("{0}", path);
-                start.UseShellExecute = false;
-                start.RedirectStandardOutput = true;
-                Process process = Process.Start(start);
-                process.WaitForExit();
-            }
-        }
 
         static public void GetCaptureMetric(string traceFilePath, string saveToFilePath = null)
         {
@@ -64,105 +49,58 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 #else
             string pathEXE = "";
 #endif
-            if (pathEXE.Length > 0)
+            if (pathEXE.Length == 0)
             {
-#if UNITY_EDITOR_WIN
-                pathEXE = pathEXE.Replace('/', '\\');
-                traceFilePath = traceFilePath.Replace('/', '\\');
-#endif
-
-                ProcessStartInfo start = new ProcessStartInfo(pathEXE);
-
-                start.Arguments = string.Format("{0} \"{1}\" \"{2}\"", traceFilePath, shellBinPath, saveToFilePath);
-                start.UseShellExecute = true;
-                start.CreateNoWindow = true;
-                start.WindowStyle = ProcessWindowStyle.Hidden;
-                RO.Util.DebugLog("MetricAPIEXE: " + start.Arguments);
-                using (Process process = Process.Start(start))
-                {
-                    try
-                    {
-                        DateTime lastProcessed = DateTime.Now;
-                        bool exited = process.WaitForExit(processTimeOutMS);
-                        double timeSinceProcessed = (DateTime.Now - lastProcessed).TotalSeconds;
-
-                        if (!exited)
-                        {
-                            RO.Util.DebugLogError(string.Format("MetricAPI: {0} timed out after {1:F1}s — killing process", Path.GetFileName(saveToFilePath), timeSinceProcessed));
-                            try { process.Kill(); } catch { }
-                            return;
-                        }
-
-                        RO.Util.DebugLog(string.Format("MetricAPI: {0} {1} / ext: {2}", Path.GetFileName(saveToFilePath), timeSinceProcessed, process.ExitCode));
-
-                        string errorPath = saveToFilePath.Replace(".json", "_error.log");
-                        bool hasError = File.Exists(errorPath);
-                        if (process.ExitCode != 0 || hasError)
-                        {
-                            string error = File.Exists(errorPath) ? File.ReadAllText(errorPath) : "Unknown error";
-                            RO.Util.DebugLogError(string.Format("MetricAPI: {0} \n execode: {1} \n {2}", Path.GetFileName(saveToFilePath), process.ExitCode, error));
-                            File.Delete(errorPath);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        RO.Util.DebugLogError("MetricAPI: " + e.Message);
-                    }
-                }
-
+                RO.Util.DebugLogError("MetricAPI native executable was not found");
                 return;
             }
 
-
-            string path = PythonUtil.GetScriptPath("MetricAPI.py");
-            if (path.Length > 0)
-            {
 #if UNITY_EDITOR_WIN
-            path = path.Replace('/', '\\');
+            pathEXE = pathEXE.Replace('/', '\\');
             traceFilePath = traceFilePath.Replace('/', '\\');
 #endif
-                ProcessStartInfo start = new ProcessStartInfo(pythonPath);
-                start.Arguments = string.Format("\"{0}\" {1} \"{2}\" \"{3}\"", path, traceFilePath, shellBinPath, saveToFilePath);
-                start.UseShellExecute = true;
-                start.CreateNoWindow = true;
-                start.WindowStyle = ProcessWindowStyle.Hidden;
-                RO.Util.DebugLog("MetricAPI: " + start.Arguments);
-                using (Process process = Process.Start(start))
+
+            ProcessStartInfo start = new ProcessStartInfo(pathEXE);
+
+            start.Arguments = string.Format("\"{0}\" \"{1}\" \"{2}\"", traceFilePath, shellBinPath, saveToFilePath);
+            start.UseShellExecute = false;
+            start.RedirectStandardError = true;
+            start.CreateNoWindow = true;
+            start.WindowStyle = ProcessWindowStyle.Hidden;
+            RO.Util.DebugLog("MetricAPI: " + start.Arguments);
+            using (Process process = Process.Start(start))
+            {
+                try
                 {
-                    try
+                    DateTime lastProcessed = DateTime.Now;
+                    bool exited = process.WaitForExit(processTimeOutMS);
+                    double timeSinceProcessed = (DateTime.Now - lastProcessed).TotalSeconds;
+
+                    if (!exited)
                     {
-                        DateTime lastProcessed = DateTime.Now;
-                        bool exited = process.WaitForExit(processTimeOutMS);
-                        double timeSinceProcessed = (DateTime.Now - lastProcessed).TotalSeconds;
-
-                        if (!exited)
-                        {
-                            RO.Util.DebugLogError(string.Format("MetricAPI (Python): {0} timed out after {1:F1}s", Path.GetFileName(saveToFilePath), timeSinceProcessed));
-                            try { process.Kill(); } catch { }
-                            return;
-                        }
-
-                        RO.Util.DebugLog(string.Format("MetricAPI: {0} {1} / ext: {2}", Path.GetFileName(saveToFilePath), timeSinceProcessed, process.ExitCode));
-
-                        string errorPath = saveToFilePath.Replace(".json", "_error.log");
-                        bool hasError = File.Exists(errorPath);
-                        if (process.ExitCode != 0 || hasError)
-                        {
-                            string error = File.Exists(errorPath) ? File.ReadAllText(errorPath) : "Unknown error";
-                            RO.Util.DebugLogError(string.Format("MetricAPI: {0} \n execode: {1} \n {2}", Path.GetFileName(saveToFilePath), process.ExitCode, error));
-                            File.Delete(errorPath);
-                        }
+                        RO.Util.DebugLogError(string.Format("MetricAPI: {0} timed out after {1:F1}s - killing process", Path.GetFileName(saveToFilePath), timeSinceProcessed));
+                        try { process.Kill(); } catch { }
+                        return;
                     }
-                    catch (Exception e)
+
+                    string error = process.StandardError.ReadToEnd();
+                    RO.Util.DebugLog(string.Format("MetricAPI: {0} {1} / ext: {2}", Path.GetFileName(saveToFilePath), timeSinceProcessed, process.ExitCode));
+
+                    if (process.ExitCode != 0)
                     {
-                        RO.Util.DebugLogError("MetricAPI: " + e.Message);
+                        RO.Util.DebugLogError(string.Format("MetricAPI: {0} \n exit code: {1} \n {2}", Path.GetFileName(saveToFilePath), process.ExitCode, error));
                     }
+                }
+                catch (Exception e)
+                {
+                    RO.Util.DebugLogError("MetricAPI: " + e.Message);
                 }
             }
         }
 
         static public void OpenPerfettoTrace(string traceFilePath)
         {
+            string pythonPath = PythonUtil.GetPythonPath();
             string script_path = PythonUtil.GetScriptPath("open_trace_in_ui.py");
             string arguments = string.Format("\"{0}\" \"{1}\"", script_path, traceFilePath);
             RO.Util.DebugLog("OpenPerfettoTrace: " + arguments);

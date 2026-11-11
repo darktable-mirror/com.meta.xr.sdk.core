@@ -30,6 +30,10 @@ namespace Meta.XR.MultiplayerBlocks.Colocation
     {
         public ulong requestingPlayerId;
         public ulong requestingPlayerOculusId;
+        // Still transported: NGO memcpys NGOShareAndLocalizeParams, which embeds this struct by value,
+        // and Fusion mirrors this field into a NetworkString<_64>. [NonSerialized] excludes it from
+        // Unity serialization, which never supported Guid anyway.
+        [NonSerialized]
         public Guid anchorUUID;
         public bool anchorFlowSucceeded;
 

@@ -62,7 +62,7 @@ public class TargetSpawner : MonoBehaviour
 
     void Start()
     {
-        var rig = FindAnyObjectByType<OVRCameraRig>();
+        var rig = UnityEngine.Object.FindAnyObjectByType<OVRCameraRig>();
         if (rig != null)
             rigTransform = rig.transform;
 

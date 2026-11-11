@@ -272,6 +272,35 @@ namespace Meta.XR
             return value;
         }
 
+        /// <summary>
+        /// Logs a failing <see cref="XrResult"/> as an error unless it is the one failure the caller
+        /// already handles, and returns the same value.
+        /// </summary>
+        /// <remarks>
+        /// Some OpenXR calls have a documented failure that is a normal runtime state rather than a
+        /// defect, for example <see cref="XrResult.ErrorFormFactorUnavailable"/> from
+        /// <c>xrGetSystem</c> when no headset is connected. Reporting those as console errors trains
+        /// developers to ignore the console. Opt in per call site rather than suppressing the value
+        /// globally, so the same <see cref="XrResult"/> is still an error everywhere else.
+        /// This only changes logging: <paramref name="value"/> is returned untouched, so
+        /// <see cref="IsSuccess"/> and every branch based on it behave exactly as before.
+        /// </remarks>
+        /// <param name="value">The <see cref="XrResult"/> to log.</param>
+        /// <param name="format">A composite format string with a single placeholder for
+        /// <paramref name="value"/>.</param>
+        /// <param name="expected">The single failing <see cref="XrResult"/> this call site expects and
+        /// handles itself, which is therefore not logged.</param>
+        /// <returns>Returns <paramref name="value"/>.</returns>
+        public static XrResult OrLogFormatUnless(this XrResult value, string format, XrResult expected)
+        {
+            if (value < 0 && value != expected)
+            {
+                LogErrorFormat(format, value);
+            }
+
+            return value;
+        }
+
         public static bool IsSuccess(this XrResult value) => value >= 0;
 
         public static bool IsUnqualifiedSuccess(this XrResult value) => value == 0;

@@ -47,6 +47,9 @@ namespace Meta.XR
 #if UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER
             OculusTouchControllerProximityProfile.featureId,
 #endif
+#if USING_XR_HANDS_1_9_0_OR_NEWER && UNITY_OPENXR_PLUGIN_1_18_0_OR_NEWER
+            MetaHandTrackingDataSourceFeature.featureId,
+#endif
             },
         UiName = "Meta XR",
         Description = "Feature set for using Meta XR Features",
@@ -60,7 +63,10 @@ namespace Meta.XR
         {
             MetaXRFoveationFeature.featureId,
 #if UNITY_OPENXR_PLUGIN_1_17_0_OR_NEWER
-            OculusTouchControllerProximityProfile.featureId
+            OculusTouchControllerProximityProfile.featureId,
+#endif
+#if USING_XR_HANDS_1_9_0_OR_NEWER && UNITY_OPENXR_PLUGIN_1_18_0_OR_NEWER
+            MetaHandTrackingDataSourceFeature.featureId,
 #endif
         }
     )]

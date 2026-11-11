@@ -255,7 +255,7 @@ public class OVRSceneChangeListener
         {
             case ObjectChangeKind.CreateGameObjectHierarchy:
                 stream.GetCreateGameObjectHierarchyEvent(i, out var createGameObjectHierarchyEvent);
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
                 ProcessGameObject(
                     EditorUtility.EntityIdToObject(createGameObjectHierarchyEvent.entityId) as GameObject);
 #elif UNITY_6000_3_OR_NEWER
@@ -268,7 +268,7 @@ public class OVRSceneChangeListener
                 break;
             case ObjectChangeKind.ChangeGameObjectStructure:
                 stream.GetChangeGameObjectStructureEvent(i, out var changeGameObjectStructure);
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
                 ProcessGameObject(EditorUtility.EntityIdToObject(changeGameObjectStructure.entityId) as GameObject);
 #elif UNITY_6000_3_OR_NEWER
                 ProcessGameObject(EditorUtility.EntityIdToObject(changeGameObjectStructure.instanceId) as GameObject);

@@ -482,7 +482,14 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             // When XR Sim is active but no controller is tracked, the native layer may return
             // an uninitialized quaternion (all zeros), which causes "Quaternion To Matrix
             // conversion failed" in Matrix4x4.TRS(). Skip the frame and keep previous ray transform.
-            if (localRotation == default || !OVRInput.GetControllerOrientationValid(controller))
+            // NOTE: `localRotation == default` does NOT catch the all-zero quaternion — Unity's
+            // Quaternion == is a dot-product compare and dot({0,0,0,0},{0,0,0,0}) == 0, so it
+            // reports "not equal". Test the magnitude instead: a valid rotation is ~unit length,
+            // the uninitialized one is zero.
+            float rotationSqrMagnitude = localRotation.x * localRotation.x +
+                localRotation.y * localRotation.y + localRotation.z * localRotation.z +
+                localRotation.w * localRotation.w;
+            if (rotationSqrMagnitude < 1e-6f || !OVRInput.GetControllerOrientationValid(controller))
             {
                 return;
             }

@@ -61,7 +61,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
 
         private void Awake()
         {
-            _runnerPrefab = FindFirstObjectByType<NetworkRunner>();
+            _runnerPrefab = FindAnyObjectByType<NetworkRunner>();
             if (_runnerPrefab == null)
             {
                 throw new InvalidOperationException($"Fusion {nameof(NetworkRunner)} not found");

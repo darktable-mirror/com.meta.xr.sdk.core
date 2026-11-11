@@ -46,8 +46,8 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
             UnityAssert.IsNotNull(networkData, $"{nameof(networkData)} cannot be null.");
             UnityAssert.IsNotNull(networkMessenger, $"{nameof(networkMessenger)} cannot be null.");
 
-            _params.ovrCameraRig = FindObjectOfType<OVRCameraRig>();
-            _params.colocationController = FindObjectOfType<ColocationController>();
+            _params.ovrCameraRig = FindAnyObjectByType<OVRCameraRig>();
+            _params.colocationController = FindAnyObjectByType<ColocationController>();
             _params.setupColocationReadyEvents = () =>
             {
                 _params.colocationLauncher.ColocationReady += OnColocationReady;

@@ -39,10 +39,20 @@ namespace Meta.XR.FovSimulator
         private const float DefaultBottomFovDegrees = 41f;
         private const float DefaultInnerFovDegrees = 35f;
         private const float DefaultOuterFovDegrees = 35f;
-        private const float DefaultTopOuterFrameDegrees = 41.5f;
+        private const float DesignAreaTopFovDegrees = 19f;
+        private const float DesignAreaBottomFovDegrees = 35f;
+        private const float DesignAreaInnerFovDegrees = 29f;
+        private const float DesignAreaOuterFovDegrees = 29f;
         private const float DefaultBottomOuterFrameDegrees = 44.55f;
-        private const float DefaultInnerOuterFrameDegrees = 48.9f;
-        private const float DefaultOuterOuterFrameDegrees = 51.7f;
+        private static readonly float DefaultOuterFrameTangentThickness =
+            Mathf.Tan(DefaultBottomOuterFrameDegrees * Mathf.Deg2Rad) -
+            Mathf.Tan(DefaultBottomFovDegrees * Mathf.Deg2Rad);
+        private static readonly float DefaultTopOuterFrameDegrees =
+            AddDefaultOuterFrameThickness(DefaultTopFovDegrees);
+        private static readonly float DefaultInnerOuterFrameDegrees =
+            AddDefaultOuterFrameThickness(DefaultInnerFovDegrees);
+        private static readonly float DefaultOuterOuterFrameDegrees =
+            AddDefaultOuterFrameThickness(DefaultOuterFovDegrees);
         private const float DefaultIpdMillimeters = 62.5f;
         private const float MinIpdMillimeters = 50f;
         private const float MaxIpdMillimeters = 75f;
@@ -62,6 +72,7 @@ namespace Meta.XR.FovSimulator
         private float _outerOuterFrameDegrees = DefaultOuterOuterFrameDegrees;
         private float _alpha = 1f;
         private float _cornerRadius = DefaultCornerRadius;
+        private bool _drawDesignAreaGuideline = true;
         private bool _outerFrameEnabled;
         private bool _autoIpd = true;
         private float _manualIpdMillimeters = DefaultIpdMillimeters;
@@ -79,10 +90,13 @@ namespace Meta.XR.FovSimulator
         private float _lastAppliedIpdMeters = float.NaN;
         private int _nextAutoIpdRefreshFrame;
 
+
         private static readonly int InnerBoundsId = Shader.PropertyToID("_InnerBounds");
         private static readonly int OuterBoundsId = Shader.PropertyToID("_OuterBounds");
+        private static readonly int DesignAreaBoundsId = Shader.PropertyToID("_DesignAreaBounds");
         private static readonly int AlphaId = Shader.PropertyToID("_Alpha");
         private static readonly int IsRightId = Shader.PropertyToID("_IsRight");
+        private static readonly int DrawDesignAreaGuidelineId = Shader.PropertyToID("_DrawDesignAreaGuideline");
         private static readonly int EnableOuterFrameId = Shader.PropertyToID("_EnableOuterFrame");
         private static readonly int EyeOffsetXId = Shader.PropertyToID("_EyeOffsetX");
         private static readonly int UvScaleId = Shader.PropertyToID("_UvScale");
@@ -175,6 +189,12 @@ namespace Meta.XR.FovSimulator
             set { _outerFrameEnabled = value; RefreshMask(); }
         }
 
+        internal bool DrawDesignAreaGuideline
+        {
+            get => _drawDesignAreaGuideline;
+            set { _drawDesignAreaGuideline = value; RefreshMask(); }
+        }
+
         internal float TopOuterFrameDegrees
         {
             get => _topOuterFrameDegrees;
@@ -224,10 +244,12 @@ namespace Meta.XR.FovSimulator
             _outerOuterFrameDegrees = DefaultOuterOuterFrameDegrees;
             _alpha = 1f;
             _cornerRadius = DefaultCornerRadius;
+            _drawDesignAreaGuideline = true;
             _outerFrameEnabled = false;
             _autoIpd = true;
             _manualIpdMillimeters = DefaultIpdMillimeters;
             CompositionDepth = DefaultCompositionDepth;
+            OverlayActive = true;
             RefreshMask();
         }
 
@@ -281,6 +303,7 @@ namespace Meta.XR.FovSimulator
             }
             _cachedMainCamera = camera;
             _nextMainCameraLookupFrame = Time.frameCount + MainCameraLookupIntervalFrames;
+
 
             Shader shader = Resources.Load<Shader>(OverlayShaderResource);
             if (shader == null)
@@ -354,7 +377,7 @@ namespace Meta.XR.FovSimulator
             }
             if (_overlayObject != null)
             {
-                Destroy(_overlayObject);
+                DestroyInCurrentMode(_overlayObject);
             }
             ReleaseRenderTexture(ref _leftRenderTexture);
             ReleaseRenderTexture(ref _rightRenderTexture);
@@ -381,7 +404,7 @@ namespace Meta.XR.FovSimulator
             };
             if (!texture.Create() || !texture.IsCreated())
             {
-                Destroy(texture);
+                DestroyInCurrentMode(texture);
                 throw new System.InvalidOperationException(
                     $"Failed to create render texture '{textureName}'.");
             }
@@ -395,7 +418,7 @@ namespace Meta.XR.FovSimulator
                 return;
             }
             texture.Release();
-            Destroy(texture);
+            DestroyInCurrentMode(texture);
             texture = null;
         }
 
@@ -403,8 +426,20 @@ namespace Meta.XR.FovSimulator
         {
             if (value != null)
             {
-                Destroy(value);
+                DestroyInCurrentMode(value);
                 value = null;
+            }
+        }
+
+        private static void DestroyInCurrentMode(Object value)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(value);
+            }
+            else
+            {
+                DestroyImmediate(value);
             }
         }
 
@@ -554,8 +589,14 @@ namespace Meta.XR.FovSimulator
                 _innerOuterFrameDegrees,
                 _bottomOuterFrameDegrees,
                 _topOuterFrameDegrees));
+            material.SetVector(DesignAreaBoundsId, CreateBounds(
+                DesignAreaOuterFovDegrees,
+                DesignAreaInnerFovDegrees,
+                DesignAreaBottomFovDegrees,
+                DesignAreaTopFovDegrees));
             material.SetFloat(AlphaId, _alpha);
             material.SetFloat(CornerRadiusId, _cornerRadius);
+            material.SetFloat(DrawDesignAreaGuidelineId, _drawDesignAreaGuideline ? 1f : 0f);
             material.SetFloat(EnableOuterFrameId, _outerFrameEnabled ? 1f : 0f);
 
             float eyeOffset = ipdMeters * 0.5f * (PlaneZ / QuadDistance);
@@ -574,6 +615,11 @@ namespace Meta.XR.FovSimulator
                 -PlaneZ * Mathf.Tan(bottomDegrees * Mathf.Deg2Rad),
                 PlaneZ * Mathf.Tan(topDegrees * Mathf.Deg2Rad));
         }
+
+        private static float AddDefaultOuterFrameThickness(float innerDegrees) =>
+            Mathf.Atan(
+                Mathf.Tan(innerDegrees * Mathf.Deg2Rad) +
+                DefaultOuterFrameTangentThickness) * Mathf.Rad2Deg;
 
         private static float ClampHalfAngle(float value, string parameterName)
         {

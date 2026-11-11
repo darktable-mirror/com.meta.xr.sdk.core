@@ -264,6 +264,14 @@ namespace Meta.XR.ImmersiveDebugger
             set => inspectedDataEnabled = value;
         }
 
+#if UNITY_EDITOR
+        internal void SetInspectedDataEnabled(int index, bool enabled)
+        {
+            inspectedDataEnabled[index] = enabled;
+            EditorUtility.SetDirty(this);
+        }
+#endif
+
         [SerializeField] private List<InspectedData> inspectedDataAssets = new();
         internal List<InspectedData> InspectedDataAssets
         {

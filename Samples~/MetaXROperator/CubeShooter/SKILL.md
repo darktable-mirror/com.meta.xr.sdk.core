@@ -23,6 +23,10 @@ Discover everything else yourself with `get_scene_root_objects` / `get_children`
 
 ## Interacting
 
+This scene supports **controllers and hands**. To test with **hands**, the following need to be set: **Hand Tracking Support** = *Controllers and
+Hands* on the **`OVRCameraRig`**, and enable the **Hand Interaction
+Profile** (+ **Hand Tracking**) in *Project Settings → XR Plug-in Management → OpenXR*.
+
 The gun is a **custom proximity grab** (not an ISDK interactable): it latches when a controller/hand comes within the `grabRadius` (**~0.3 m**, serialized on the `LaserGun` component) of `LaserGun` and reparents to that anchor, then tracks it. So:
 
 - **Grab** — put the controller grip (or hand wrist) on the gun and press **grip** (controller) or make a **fist/curl** (hand). The gun's root path disappearing (reparented under the anchor) confirms the grab. Release with grip-up / opening the hand.

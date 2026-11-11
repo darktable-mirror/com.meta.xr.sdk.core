@@ -25,6 +25,7 @@ using System.Linq;
 using Meta.XR.ImmersiveDebugger.UserInterface;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using Meta.XR.Compat;
 
 namespace Meta.XR.ImmersiveDebugger.Utils
 {
@@ -59,7 +60,7 @@ namespace Meta.XR.ImmersiveDebugger.Utils
                 return new List<InstanceHandle>();
             }
 
-            var objects = Object.FindObjectsByType(classType, FindObjectsSortMode.None);
+            var objects = OVRUnityObjectCompat.FindObjectsByType(classType);
             var objectHandles = objects.Select(obj => new InstanceHandle(classType, obj)).ToList();
             return objectHandles;
         }

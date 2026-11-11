@@ -538,7 +538,7 @@ namespace Meta.XR.Guides.Editor.SdkUpgrader
 
         #endregion
 
-        #region Debug overrides (driven by SdkUpgraderDebugMenu under OVR_INTERNAL_CODE)
+        #region Debug overrides (driven by the internal-only SdkUpgraderDebugMenu)
 
         private const string SimKey = "MetaXR.SdkUpgrader.SimVersionsBehind";
         private const string AiKey = "MetaXR.SdkUpgrader.AiBridgeOverride"; // -1 unset, 0 false, 1 true

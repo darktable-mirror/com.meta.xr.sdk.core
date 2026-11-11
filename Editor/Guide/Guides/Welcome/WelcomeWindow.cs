@@ -39,7 +39,6 @@ using UnityEngine.UIElements;
 using RLDSButton = Meta.XR.Editor.UserInterface.RLDS.Button;
 using Label = UnityEngine.UIElements.Label;
 using ScrollView = UnityEngine.UIElements.ScrollView;
-using Toggle = Meta.XR.Editor.UserInterface.Toggle;
 
 namespace Meta.XR.Guides.Editor.Welcome
 {
@@ -76,16 +75,6 @@ namespace Meta.XR.Guides.Editor.Welcome
         {
             EditorUserSettings.SetConfigValue(AlertBannerDismissedKey, value ? "true" : "false");
         }
-
-        private const string ShowOnLaunchKey = "Welcome.ShowOnLaunch";
-
-        private static bool ShowOnLaunchValue
-        {
-            get => EditorUserSettings.GetConfigValue(ShowOnLaunchKey) != "false";
-            set => EditorUserSettings.SetConfigValue(ShowOnLaunchKey, value ? "true" : "false");
-        }
-
-        internal static bool ShouldShowOnLaunch => ShowOnLaunchValue;
 
         internal static void Show(Origins origin)
         {
@@ -808,26 +797,13 @@ namespace Meta.XR.Guides.Editor.Welcome
             var footer = new VisualElement();
             footer.AddToClassList(RLDSConstants.Flexbox.Row);
             footer.AddToClassList(RLDSConstants.Flexbox.AlignCenter);
+            footer.AddToClassList(RLDSConstants.Flexbox.JustifyEnd);
             footer.AddToClassList(RLDSConstants.Utilities.Padding2xMD);
             footer.style.paddingTop = RLDSConstants.Spacing.SizeMD;
             footer.style.paddingBottom = RLDSConstants.Spacing.SizeMD;
             footer.style.paddingLeft = RLDSConstants.Spacing.Size3XL;
             footer.style.paddingRight = RLDSConstants.Spacing.Size3XL;
             footer.AddToClassList("rlds-welcome-footer");
-
-            var leftActions = new VisualElement();
-            leftActions.AddToClassList(RLDSConstants.Flexbox.Row);
-            leftActions.AddToClassList(RLDSConstants.Flexbox.AlignCenter);
-            leftActions.AddToClassList(RLDSConstants.Flexbox.Grow1);
-
-            var toggle = new Toggle(
-                WelcomeSettings.Labels.ShowOnLaunchToggle,
-                ShowOnLaunchValue,
-                RLDSConstants.Typography.Body2SmallLabel,
-                value => ShowOnLaunchValue = value);
-            leftActions.Add(toggle.Build());
-
-            footer.Add(leftActions);
 
             var closeBtn = new RLDSButton(
                 new ActionLinkDescription

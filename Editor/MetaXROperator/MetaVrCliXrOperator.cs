@@ -507,7 +507,7 @@ namespace Meta.XR.Editor
         /// card uses, so the two entry points cannot disagree.
         /// </summary>
         /// <remarks>
-        /// Deliberately does NOT mirror the Welcome card's <c>OVR_INTERNAL_CODE</c> widening of
+        /// Deliberately does NOT mirror the Welcome card's internal-only widening of
         /// <c>supportsDirectInstall</c> via <c>SdkUpgraderData.MetaVrCliStateOverride</c>: that
         /// override exists so internal developers can preview the card's CTA text, and honoring it
         /// here would surface a functional Install button on a platform where

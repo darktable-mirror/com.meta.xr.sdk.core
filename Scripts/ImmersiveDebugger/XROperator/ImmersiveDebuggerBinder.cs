@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using Meta.XR.Compat;
 #if USING_XR_SDK_OPENXR
 
 using System;
@@ -1283,7 +1284,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
 
             try
             {
-                var debugInterface = UnityEngine.Object.FindFirstObjectByType<
+                var debugInterface = UnityEngine.Object.FindAnyObjectByType<
                     ImmersiveDebugger.UserInterface.DebugInterface>(FindObjectsInactive.Include);
                 if (debugInterface == null)
                     return "Error: Immersive Debugger interface not found.\n" +
@@ -1332,7 +1333,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
             var sb = new StringBuilder();
             sb.AppendLine("Immersive Debugger Status:");
 
-            var debugInterface = UnityEngine.Object.FindFirstObjectByType<
+            var debugInterface = UnityEngine.Object.FindAnyObjectByType<
                 ImmersiveDebugger.UserInterface.DebugInterface>(FindObjectsInactive.Include);
             if (debugInterface == null)
             {
@@ -1344,7 +1345,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
             sb.AppendLine($"  Opacity: {(debugInterface.OpacityOverride ? "Opaque" : "Transparent")}");
 
             // Console is public; report its status if present.
-            var console = UnityEngine.Object.FindFirstObjectByType<
+            var console = UnityEngine.Object.FindAnyObjectByType<
                 ImmersiveDebugger.UserInterface.Console>(FindObjectsInactive.Include);
             sb.AppendLine($"  Console Panel: {(console != null ? (console.Visibility ? "Visible" : "Hidden") : "Not Found")}");
 
@@ -1384,7 +1385,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
             try { p = JsonUtility.FromJson<DebuggerOpacityParams>(parameters); }
             catch { return "Error: Invalid parameters. Expected: {\"opaque\": true}\nTip: Set opaque=true for full opacity, opaque=false for transparent panels."; }
 
-            var debugInterface = UnityEngine.Object.FindFirstObjectByType<
+            var debugInterface = UnityEngine.Object.FindAnyObjectByType<
                 ImmersiveDebugger.UserInterface.DebugInterface>(FindObjectsInactive.Include);
             if (debugInterface == null)
                 return "Error: Immersive Debugger interface not found.\n" +
@@ -2408,8 +2409,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
 
             // Scan all MonoBehaviours in the scene (including inactive, since developers
             // often disable prefab roots while keeping [DebugMember] annotations)
-            var allBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var allBehaviours = OVRUnityObjectCompat.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include);
 
             foreach (var behaviour in allBehaviours)
             {
@@ -2876,7 +2876,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
 
         private static ImmersiveDebugger.UserInterface.DebugInterface FindDebugInterface()
         {
-            return UnityEngine.Object.FindFirstObjectByType<
+            return UnityEngine.Object.FindAnyObjectByType<
                 ImmersiveDebugger.UserInterface.DebugInterface>(FindObjectsInactive.Include);
         }
 
@@ -2919,9 +2919,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
 
         private static ImmersiveDebugger.UserInterface.DebugPanel FindDebugPanel(string objectName, string title)
         {
-            var panels = UnityEngine.Object.FindObjectsByType<ImmersiveDebugger.UserInterface.DebugPanel>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+            var panels = OVRUnityObjectCompat.FindObjectsByType<ImmersiveDebugger.UserInterface.DebugPanel>(FindObjectsInactive.Include);
 
             return panels.FirstOrDefault(panel =>
                 string.Equals(panel.name, objectName, StringComparison.OrdinalIgnoreCase) ||
@@ -2976,7 +2974,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
 
             if (panel == "inspector")
             {
-                var inspector = UnityEngine.Object.FindFirstObjectByType<
+                var inspector = UnityEngine.Object.FindAnyObjectByType<
                     ImmersiveDebugger.UserInterface.InspectorPanel>(FindObjectsInactive.Include);
                 if (inspector == null)
                     return "Error: Inspector panel not found.";
@@ -2987,7 +2985,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
 
             if (panel == "console")
             {
-                var console = UnityEngine.Object.FindFirstObjectByType<
+                var console = UnityEngine.Object.FindAnyObjectByType<
                     ImmersiveDebugger.UserInterface.Console>(FindObjectsInactive.Include);
                 if (console == null)
                     return "Error: Console panel not found.";
@@ -3054,7 +3052,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
             if (mode != "hierarchy" && mode != "category")
                 return $"Error: Unknown mode '{p.mode}'. Use 'hierarchy' or 'category'.";
 
-            var inspector = UnityEngine.Object.FindFirstObjectByType<
+            var inspector = UnityEngine.Object.FindAnyObjectByType<
                 ImmersiveDebugger.UserInterface.InspectorPanel>(FindObjectsInactive.Include);
             if (inspector == null)
                 return "Error: Inspector panel not found.\n" +
@@ -3354,7 +3352,7 @@ namespace Meta.XR.ImmersiveDebugger.XROperator
                 var clone = UnityEngine.Object.Instantiate(obj, obj.transform.parent, false);
                 var sb = new StringBuilder();
                 sb.AppendLine($"Success: Duplicated '{obj.name}' (ID: {p.game_object_id}) → '{clone.name}' (ID: {SceneQueryHelper.GetObjectId(clone)}).");
-                sb.AppendLine($"Tip: Use unity_inspect_game_object with ID {SceneQueryHelper.GetObjectId(clone)} to work with the copy.");
+                // sb.AppendLine($"Tip: Use unity_inspect_game_object with ID {SceneQueryHelper.GetObjectId(clone)} to work with the copy.");
                 AppendInactiveWarning(sb, clone);
                 return sb.ToString();
             }

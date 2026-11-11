@@ -37,6 +37,7 @@ using UnityEngine.SceneManagement;
 using static Meta.XR.Editor.UserInterface.Styles.Colors;
 using static Meta.XR.Editor.UserInterface.Styles.Contents;
 using Object = UnityEngine.Object;
+using Meta.XR.Compat;
 
 
 namespace Meta.XR.BuildingBlocks.Editor
@@ -285,7 +286,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static BuildingBlock GetBlock(this BlockData data)
         {
-            return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None)
+            return OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>()
                 .FirstOrDefault(x => x.BlockId == data.Id);
         }
 
@@ -302,7 +303,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static List<BuildingBlock> GetBlocks(this BlockData data)
         {
-            return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None)
+            return OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>()
                 .Where(x => x.BlockId == data.Id)
                 .ToList();
         }
@@ -314,7 +315,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static List<T> GetBlocksWithType<T>() where T : Component
         {
-            return Object.FindObjectsByType<T>(FindObjectsSortMode.None)
+            return OVRUnityObjectCompat.FindObjectsByType<T>()
                 .Where(controller => controller.GetComponent<BuildingBlock>() != null)
                 .ToList();
         }
@@ -340,7 +341,11 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static List<BuildingBlock> GetBlocksInScene()
         {
-            return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.InstanceID).ToList();
+#if UNITY_6000_4_OR_NEWER
+            return OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>().OrderBy(x => x.GetEntityId()).ToList();
+#else
+            return OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>().OrderBy(x => x.GetInstanceID()).ToList();
+#endif
         }
 
         public static IEnumerable<BuildingBlock> GetInterfaceBlocksInScene(string blockId, string installationRoutineId) =>
@@ -352,7 +357,7 @@ namespace Meta.XR.BuildingBlocks.Editor
                 );
         public static List<BuildingBlock> GetUsingBlocksInScene(this BlockData requiredData)
         {
-            return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None).Where(x =>
+            return OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>().Where(x =>
             {
                 var data = x.GetBlockData();
                 return requiredData != data && requiredData.IsRequiredBy(data);
@@ -403,7 +408,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         public static int ComputeNumberOfBlocksInScene(this BlockData blockData)
         {
-            return Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None)
+            return OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>()
                 .Count(x => x.BlockId == blockData.Id);
         }
 

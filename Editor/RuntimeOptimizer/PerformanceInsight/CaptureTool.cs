@@ -54,6 +54,10 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
         private const int kGpuServiceReadyPollMs = 250;
         static private int unprofiledAppPid = -1;
 
+        // Avoid overlapping or redundant render-stage sessions for the same app and service.
+        static private int renderStagePrimedAppPid = -1;
+        static private string renderStagePrimedServicePid = "";
+
         /// <summary>Bound for the <c>adb pull</c> transfers.</summary>
         /// <remarks>
         /// Unlike the other commands these scale with file size and link speed -- a trace can be tens
@@ -86,7 +90,6 @@ namespace Meta.XR.RuntimeOptimizer.Editor.PerformanceInsight
 buffers {
   size_kb: 4096
   fill_policy: DISCARD
-}
 }
 buffers {
   size_kb: 43008
@@ -703,8 +706,6 @@ duration_ms: 1000
             Thread.Sleep(2000);
         }
 
-        /// <summary>Builds the adb shell command that arms GPU profiling for a package.</summary>
-        /// <remarks>Split out from <see cref="ArmGpuProfiler"/> so the exact command is testable.</remarks>
         private static string BuildGpuProfilerArmCommand(string packageName)
         {
             string armTarget = string.IsNullOrEmpty(packageName) ? "" : $" {packageName}";
@@ -777,8 +778,6 @@ duration_ms: 1000
             return true;
         }
 
-        /// <summary>True only when getprop reported exactly "running", not "restarting".</summary>
-        /// <remarks>Split out from the poll loop so the state matching is testable.</remarks>
         private static bool ServiceStateIsRunning(string getpropOutput)
         {
             if (string.IsNullOrEmpty(getpropOutput))
@@ -936,6 +935,7 @@ duration_ms: 1000
 
             // -t=N is the duration form. A bare "-t N" is not: it parses as the flag with no
             // argument, silently runs the 0.1s default and leaves the N as a stray token.
+            string servicePidBefore = GpuServicePid();
             int code = adbTool.RunCommand(
                 new string[] { "-s", connectedDevices[0], "shell ovrgpuprofiler -t=" + kRenderStagePrimeSeconds },
                 PerfettoCapture, out outputString, out errorString, null, kGpuProfilerCommandTimeoutMs);
@@ -945,6 +945,9 @@ duration_ms: 1000
             string combinedOutput = (outputString ?? string.Empty) + "\n" +
                 (errorString ?? string.Empty);
             bool reportedStartFailure = combinedOutput.Contains("Failed to start render stage tracing");
+            string servicePidAfter = GpuServicePid();
+            bool serviceRestarted = !string.IsNullOrEmpty(servicePidBefore) &&
+                !string.IsNullOrEmpty(servicePidAfter) && servicePidBefore != servicePidAfter;
 
             // The tool reports both of these and still exits 0, so neither is worth swallowing.
             if (code != 0 ||
@@ -959,6 +962,12 @@ duration_ms: 1000
                     "Could not run the render stage trace What If analysis needs (exit " + code + "); " +
                     "What If may return no results until the app is relaunched. " + outputString + " " +
                     errorString);
+            }
+
+            if (code == 0 && !reportedStartFailure && !serviceRestarted && lastKnownPID != -1)
+            {
+                renderStagePrimedAppPid = lastKnownPID;
+                renderStagePrimedServicePid = servicePidAfter;
             }
         }
 
@@ -1035,6 +1044,13 @@ duration_ms: 1000
             {
                 WaitForGpuProfilingService();
                 ReportIfAppPredatesGpuProfiler();
+                string servicePid = GpuServicePid();
+                if (lastKnownPID != renderStagePrimedAppPid ||
+                    string.IsNullOrEmpty(servicePid) ||
+                    servicePid != renderStagePrimedServicePid)
+                {
+                    PrimeRenderStageStream();
+                }
             }
 
             lock (renderStagePrimeLock)

@@ -210,6 +210,7 @@ namespace Meta.XR
             public OpenXRNativeFuncs.xrRequestSceneCaptureFB xrRequestSceneCaptureFB;
             public OpenXRNativeFuncs.xrAgenticRegisterExternalToolMETAX1 xrAgenticRegisterExternalToolMETAX1;
             public OpenXRNativeFuncs.xrSetColorSpaceFB xrSetColorSpaceFB;
+            public OpenXRNativeFuncs.xrSetHandTrackingFrequencyHintMETA xrSetHandTrackingFrequencyHintMETA;
         }
 
         /// <summary>
@@ -231,6 +232,11 @@ namespace Meta.XR
 
         // Matches the logging style we use in OVRPlugin
         private const string LogPrefix = "[" + nameof(MetaXRFeature) + "]: {0} ";
+
+        private const string NoHeadMountedDisplayWarning =
+            "[" + nameof(MetaXRFeature) + "]: No XR device is available (xrGetSystem returned "
+            + nameof(XrResult.ErrorFormFactorUnavailable) + "). Running without VR. If a headset is "
+            + "connected, check that it is awake, worn, and that Link or Air Link is connected.";
 
         /// <summary>
         /// For detecting when the user has mounted or unmounted the headset.
@@ -254,6 +260,7 @@ namespace Meta.XR
         private bool _agenticExternalToolEnabled = false;
         private bool _displayRefreshRateEnabled = false;
         private bool _colorSpaceEnabled = false;
+        private bool _handTrackingFrequencyHintEnabled = false;
 
         // Supported booleans that hold information about if a feature is supported after calling xrGetSystemProperties.
         private bool _parametricHapticsSupported = false;
@@ -414,19 +421,31 @@ namespace Meta.XR
 #endif
             _displayRefreshRateEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_display_refresh_rate");
             _colorSpaceEnabled = OpenXRRuntime.IsExtensionEnabled("XR_FB_color_space");
+            _handTrackingFrequencyHintEnabled = OpenXRRuntime.IsExtensionEnabled("XR_META_hand_tracking_frequency_hint");
 
             unsafe
             {
                 if (GetInstanceDelegate<OpenXRNativeFuncs.xrGetSystem>(nameof(OpenXRNativeFuncs.xrGetSystem), out var xrGetSystem).IsSuccess() &&
                     GetInstanceDelegate<OpenXRNativeFuncs.xrGetSystemProperties>(nameof(OpenXRNativeFuncs.xrGetSystemProperties), out var xrGetSystemProperties).IsSuccess())
                 {
-                    if (xrGetSystem(Instance, new XrSystemGetInfo
+                    // XR_ERROR_FORM_FACTOR_UNAVAILABLE is the spec-correct result when the runtime is
+                    // present but no head-mounted display is connected, which is the normal state for
+                    // an Editor play session with no headset. Report it as a warning instead of an
+                    // error: it still signals an unhealthy Link or runtime when one is attached, but
+                    // a no-VR run is not a failure and must not dirty the console.
+                    var getSystemResult = xrGetSystem(Instance, new XrSystemGetInfo
                     {
                         Type = XrSystemGetInfo.StructureType,
                         FormFactor = XrFormFactor.HeadMountedDisplay,
                     }, out var systemId)
-                        .OrLogFormat(LogPrefix + nameof(xrGetSystem))
-                        .IsSuccess())
+                        .OrLogFormatUnless(LogPrefix + nameof(xrGetSystem), XrResult.ErrorFormFactorUnavailable);
+
+                    if (getSystemResult == XrResult.ErrorFormFactorUnavailable)
+                    {
+                        Debug.LogWarning(NoHeadMountedDisplayWarning);
+                    }
+
+                    if (getSystemResult.IsSuccess())
                     {
                         var systemProperties = new XrSystemProperties
                         {
@@ -465,6 +484,7 @@ namespace Meta.XR
                             Unsafe.InsertFirst(&systemProperties, &colorSpaceProperties);
                         }
 
+
                         if (xrGetSystemProperties(Instance, systemId, ref systemProperties)
                             .OrLogFormat(LogPrefix + nameof(xrGetSystemProperties))
                             .IsSuccess())
@@ -498,6 +518,7 @@ namespace Meta.XR
             GetInstanceDelegate(nameof(_command.xrGetDisplayRefreshRateFB), out _command.xrGetDisplayRefreshRateFB);
             GetInstanceDelegate(nameof(_command.xrRequestDisplayRefreshRateFB), out _command.xrRequestDisplayRefreshRateFB);
             GetInstanceDelegate(nameof(_command.xrSetColorSpaceFB), out _command.xrSetColorSpaceFB);
+            GetInstanceDelegate(nameof(_command.xrSetHandTrackingFrequencyHintMETA), out _command.xrSetHandTrackingFrequencyHintMETA);
             BindSpatialEntityFunctionPointers();
         }
 

@@ -28,10 +28,50 @@ using UnityEngine;
 namespace Meta.XR.MetaWand.Editor
 {
     [Serializable]
-    internal class MetaAssetRegistryData
+    internal class MetaAssetRegistryData : ISerializationCallbackReceiver
     {
-        [SerializeField]
+        [NonSerialized]
         public Dictionary<string, MetaAssetInfo> RegisteredAssets = new();
+
+        // JsonUtility cannot serialize Dictionary<,>; persist a flat list and rebuild the map.
+        [SerializeField]
+        private List<MetaAssetInfo> _serializedAssets = new();
+
+        public void OnBeforeSerialize()
+        {
+            _serializedAssets ??= new List<MetaAssetInfo>();
+            // The same instance is re-serialized on every save, so stale entries must be dropped first.
+            _serializedAssets.Clear();
+            if (RegisteredAssets == null)
+            {
+                return;
+            }
+
+            foreach (var info in RegisteredAssets.Values)
+            {
+                _serializedAssets.Add(info);
+            }
+        }
+
+        public void OnAfterDeserialize()
+        {
+            var serialized = _serializedAssets;
+            RegisteredAssets = new Dictionary<string, MetaAssetInfo>(serialized?.Count ?? 0);
+            if (serialized == null)
+            {
+                return;
+            }
+
+            foreach (var info in serialized)
+            {
+                if (info == null || string.IsNullOrEmpty(info.AssetGuid))
+                {
+                    continue;
+                }
+
+                RegisteredAssets[info.AssetGuid] = info;
+            }
+        }
     }
 
     [Serializable]
@@ -77,22 +117,29 @@ namespace Meta.XR.MetaWand.Editor
         {
             lock (LockObject)
             {
+                // Built in a local and published once at the end: the Registry getter reads
+                // _registry outside the lock, so a partially initialized instance must never escape.
+                MetaAssetRegistryData loaded = null;
                 if (File.Exists(RegistryPath))
                 {
                     try
                     {
                         var json = File.ReadAllText(RegistryPath);
-                        _registry = JsonUtility.FromJson<MetaAssetRegistryData>(json);
+                        // FromJson returns null for empty content and throws on malformed content, so
+                        // both the pre-check and the catch below are load-bearing.
+                        if (!string.IsNullOrWhiteSpace(json))
+                        {
+                            loaded = JsonUtility.FromJson<MetaAssetRegistryData>(json);
+                        }
                     }
                     catch (Exception)
                     {
-                        _registry = new MetaAssetRegistryData();
                     }
                 }
-                else
-                {
-                    _registry = new MetaAssetRegistryData();
-                }
+
+                loaded ??= new MetaAssetRegistryData();
+                loaded.RegisteredAssets ??= new Dictionary<string, MetaAssetInfo>();
+                _registry = loaded;
             }
         }
 

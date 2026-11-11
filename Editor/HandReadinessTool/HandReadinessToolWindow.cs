@@ -1660,7 +1660,7 @@ namespace Meta.HandReadinessTool.Editor
         }
 
         private static OVRManager FindOvrManagerInScene() =>
-            UnityEngine.Object.FindFirstObjectByType<OVRManager>(FindObjectsInactive.Include);
+            UnityEngine.Object.FindAnyObjectByType<OVRManager>(FindObjectsInactive.Include);
 
         private void OnHierarchyChanged()
         {

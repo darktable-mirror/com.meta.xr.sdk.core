@@ -637,7 +637,7 @@ namespace Meta.XR.ImmersiveDebugger.DevAgent
 
         private void SetupPushToTalk()
         {
-            _pushToTalkController = FindFirstObjectByType<PushToTalkController>();
+            _pushToTalkController = FindAnyObjectByType<PushToTalkController>();
             if (_pushToTalkController == null)
             {
                 _pushToTalkController = gameObject.AddComponent<PushToTalkController>();

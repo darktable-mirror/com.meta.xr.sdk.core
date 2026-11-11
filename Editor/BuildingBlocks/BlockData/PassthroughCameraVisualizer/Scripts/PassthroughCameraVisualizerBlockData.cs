@@ -23,6 +23,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Meta.XR.Telemetry;
 using UnityEngine;
+using Meta.XR.Compat;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -83,7 +84,7 @@ namespace Meta.XR.BuildingBlocks.Editor
             }
 
             var sourceTexture = sourceMaterial.mainTexture;
-            var allCameraAccesses = FindObjectsByType<PassthroughCameraAccess>(FindObjectsSortMode.None);
+            var allCameraAccesses = OVRUnityObjectCompat.FindObjectsByType<PassthroughCameraAccess>();
             var allBlocks = Utils.UnfilteredRegistry.ToList();
             var visualizerBlocks = allBlocks.OfType<PassthroughCameraVisualizerBlockData>().ToList();
             var visualizerGameObjects = visualizerBlocks

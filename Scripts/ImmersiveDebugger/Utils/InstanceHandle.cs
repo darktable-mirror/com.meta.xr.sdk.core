@@ -30,13 +30,13 @@ namespace Meta.XR.ImmersiveDebugger.Utils
     {
         public Object Instance { get; }
         public Type Type { get; }
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
         public EntityId InstanceId { get; }
 #else
         public int InstanceId { get; }
 #endif
 
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
         public bool IsStatic => InstanceId == EntityId.None;
 #else
         public bool IsStatic => InstanceId == 0;
@@ -47,7 +47,7 @@ namespace Meta.XR.ImmersiveDebugger.Utils
         {
             Type = type;
             Instance = instance;
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
             InstanceId = instance != null ? instance.GetEntityId() : EntityId.None;
 #else
             InstanceId = instance != null ? instance.GetInstanceID() : 0;
@@ -58,7 +58,7 @@ namespace Meta.XR.ImmersiveDebugger.Utils
         {
             Type = typeof(Scene);
             Instance = null;
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
             InstanceId = EntityId.FromULong(scene.handle.GetRawData());
 #else
             InstanceId = scene.handle;

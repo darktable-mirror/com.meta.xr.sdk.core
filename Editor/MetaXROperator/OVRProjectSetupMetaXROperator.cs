@@ -43,10 +43,7 @@ namespace Meta.XR.Editor
     {
         private const string MetaXROperatorLayerName = "XR_APILAYER_METAX_operator";
 
-        // TODO(T274404258): Point this at the dedicated public "Meta XR Operator Getting Started"
-        // page once it is published. Until then, reuse the already-public learn-more URL so
-        // the rule keeps a working external link.
-        private const string WikiUrl = AIToolsSetupStrings.Links.MetaXROperatorLearnMoreUrl;
+        private const string GettingStartedUrl = AIToolsSetupStrings.Links.QuickStartUrl;
 
         static OVRProjectSetupMetaXROperator()
         {
@@ -105,7 +102,7 @@ namespace Meta.XR.Editor
                     MetaXROperatorActivator.Activate(MetaXROperatorTelemetryConstants.Source.Pst);
                 },
                 fixMessage: "Activate Meta XR Operator",
-                url: WikiUrl
+                url: GettingStartedUrl
             );
         }
 

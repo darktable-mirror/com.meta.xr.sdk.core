@@ -861,19 +861,6 @@ public class OVRGradleGeneration
         packageVersionsEvt.Send();
 
 #if USING_XR_SDK_OPENXR
-        NamedBuildTarget buildTarget = NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
-        bool containsInputBuildDefine = PlayerSettings.GetScriptingDefineSymbols(buildTarget).Contains(ScriptingDefineConstants.InputSystemScriptDefine);
-        if (containsInputBuildDefine)
-        {
-            var unifiedEventInputCompat =
-                new UnifiedEventData(OVRTelemetryConstants.ProjectSettings.FalcoEventName.InputCompatibility)
-                {
-                    isEssential = true,
-                    productType = TelemetryProductType.Editor
-                };
-            unifiedEventInputCompat.Send();
-        }
-
         bool actionMapFound = false;
         var guids = AssetDatabase.FindAssets("t:InputActionAsset");
         foreach (var guid in guids)

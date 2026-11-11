@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "GUID:2bafac87e7f4b9b418d9448d219b01ab",
-        "GUID:8f72caa3fea91164f824c4424a992b19"
+        "GUID:8f72caa3fea91164f824c4424a992b19",
+        "Oculus.VR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

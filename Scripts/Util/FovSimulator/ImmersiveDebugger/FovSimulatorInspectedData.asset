@@ -36,6 +36,34 @@ MonoBehaviour:
       Color: {r: 0, g: 0, b: 0, a: 0}
       Tweakable: 1
       Min: 0
+      Max: 1
+      Category: FoV Simulator
+      Description: Draws the 58 by 54 degree area for critical content.
+      DisplayName: Draw Design Area Guideline
+    memberName: DrawDesignAreaGuideline
+    _editorSelectedGizmoIndex: 0
+  - enabled: 1
+    typeName: Meta.XR.FovSimulator.FovSimulator, Meta.XR.FovSimulator
+    attribute:
+      GizmoType: 0
+      ShowGizmoByDefault: 0
+      Color: {r: 0, g: 0, b: 0, a: 0}
+      Tweakable: 1
+      Min: 0
+      Max: 1
+      Category: FoV Simulator
+      Description:
+      DisplayName: Mask Alpha
+    memberName: Alpha
+    _editorSelectedGizmoIndex: 0
+  - enabled: 1
+    typeName: Meta.XR.FovSimulator.FovSimulator, Meta.XR.FovSimulator
+    attribute:
+      GizmoType: 0
+      ShowGizmoByDefault: 0
+      Color: {r: 0, g: 0, b: 0, a: 0}
+      Tweakable: 1
+      Min: 0
       Max: 65
       Category: FoV Simulator
       Description:
@@ -111,20 +139,6 @@ MonoBehaviour:
       Description:
       DisplayName: IPD (mm)
     memberName: Ipd
-    _editorSelectedGizmoIndex: 0
-  - enabled: 1
-    typeName: Meta.XR.FovSimulator.FovSimulator, Meta.XR.FovSimulator
-    attribute:
-      GizmoType: 0
-      ShowGizmoByDefault: 0
-      Color: {r: 0, g: 0, b: 0, a: 0}
-      Tweakable: 1
-      Min: 0
-      Max: 1
-      Category: FoV Simulator
-      Description:
-      DisplayName: Mask Alpha
-    memberName: Alpha
     _editorSelectedGizmoIndex: 0
   - enabled: 1
     typeName: Meta.XR.FovSimulator.FovSimulator, Meta.XR.FovSimulator

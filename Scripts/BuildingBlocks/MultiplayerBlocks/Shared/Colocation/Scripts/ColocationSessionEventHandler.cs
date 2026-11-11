@@ -68,10 +68,8 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
         private void Awake()
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            _colocationController = FindObjectOfType<ColocationController>();
-            _cameraRig = FindObjectOfType<OVRCameraRig>();
-#pragma warning restore CS0618 // Type or member is obsolete
+            _colocationController = FindAnyObjectByType<ColocationController>();
+            _cameraRig = FindAnyObjectByType<OVRCameraRig>();
 #if META_MR_UTILITY_KIT_DEFINED
             if (basis == Basis.RoomAnchors)
             {
@@ -85,9 +83,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
             switch (basis)
             {
                 case Basis.SharedSpatialAnchor:
-#pragma warning disable CS0618 // Type or member is obsolete
-                    var ssaCore = FindObjectOfType<SharedSpatialAnchorCore>();
-#pragma warning restore CS0618 // Type or member is obsolete
+                    var ssaCore = FindAnyObjectByType<SharedSpatialAnchorCore>();
                     if (ssaCore == null)
                     {
                         throw new InvalidOperationException($"{nameof(SharedSpatialAnchorCore)} component is missing " +

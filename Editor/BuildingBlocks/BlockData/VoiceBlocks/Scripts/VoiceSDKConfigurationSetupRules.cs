@@ -18,7 +18,6 @@
  * limitations under the License.
  */
 
-
 #if USING_META_XR_VOICE_SDK
 
 using UnityEditor;
@@ -56,8 +55,8 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
 
         static bool UsesVoiceSDKComponents() {
-            return Object.FindFirstObjectByType<AppDictationExperience>() != null
-                || Object.FindFirstObjectByType<TTSService>() != null;
+            return Object.FindAnyObjectByType<AppDictationExperience>() != null
+                || Object.FindAnyObjectByType<TTSService>() != null;
         }
     }
 }

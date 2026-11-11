@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using Meta.XR.Compat;
 using Meta.XR.Telemetry;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -112,7 +113,7 @@ namespace Meta.XR.BuildingBlocks
 
         private bool HasDuplicateInstanceId()
         {
-            foreach (var block in FindObjectsByType<BuildingBlock>(FindObjectsSortMode.InstanceID))
+            foreach (var block in OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>())  // Shouldn't need sorting
             {
                 if (block != this && block.InstanceId == InstanceId)
                 {

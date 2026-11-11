@@ -47,7 +47,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         }
         protected override List<GameObject> InstallRoutine(GameObject selectedGameObject)
         {
-            var cameraRig = FindFirstObjectByType<OVRCameraRig>();
+            var cameraRig = FindAnyObjectByType<OVRCameraRig>();
             if (cameraRig == null)
             {
                 // Instantiate Prefab (will be automatically unpacked)

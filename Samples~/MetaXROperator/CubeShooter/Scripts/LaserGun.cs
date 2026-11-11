@@ -103,7 +103,11 @@ public class LaserGun : MonoBehaviour
 
         if (_leftHand == null || _rightHand == null)
         {
+#if UNITY_6000_4_OR_NEWER
+            var hands = FindObjectsByType<OVRHand>();
+#else
             var hands = FindObjectsByType<OVRHand>(FindObjectsSortMode.None);
+#endif
             for (int i = 0; i < hands.Length; i++)
             {
                 OVRPlugin.Hand side = hands[i].GetHand();
@@ -114,7 +118,11 @@ public class LaserGun : MonoBehaviour
 
         if (_leftSkeleton == null || _rightSkeleton == null)
         {
+#if UNITY_6000_4_OR_NEWER
+            var skeletons = FindObjectsByType<OVRSkeleton>();
+#else
             var skeletons = FindObjectsByType<OVRSkeleton>(FindObjectsSortMode.None);
+#endif
             for (int i = 0; i < skeletons.Length; i++)
             {
                 switch (skeletons[i].GetSkeletonType())

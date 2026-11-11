@@ -27,6 +27,7 @@ namespace Meta.XR.FovSimulator
     internal sealed class FovSimulationEditorSettings : ScriptableSingleton<FovSimulationEditorSettings>
     {
         [SerializeField] private bool fovSimulationEnabled;
+        [SerializeField] private bool drawDesignAreaGuideline = true;
 
         internal bool FovSimulationEnabled
         {
@@ -38,6 +39,20 @@ namespace Meta.XR.FovSimulator
                     return;
                 }
                 fovSimulationEnabled = value;
+                Save(saveAsText: true);
+            }
+        }
+
+        internal bool DrawDesignAreaGuideline
+        {
+            get => drawDesignAreaGuideline;
+            set
+            {
+                if (drawDesignAreaGuideline == value)
+                {
+                    return;
+                }
+                drawDesignAreaGuideline = value;
                 Save(saveAsText: true);
             }
         }
@@ -63,6 +78,8 @@ namespace Meta.XR.FovSimulator
         }
 
         internal static bool Enabled => FovSimulationEditorSettings.instance.FovSimulationEnabled;
+        internal static bool DrawDesignAreaGuideline =>
+            FovSimulationEditorSettings.instance.DrawDesignAreaGuideline;
 
         internal static void SetEnabled(bool enabled, string source)
         {
@@ -84,6 +101,23 @@ namespace Meta.XR.FovSimulator
                     CancelScheduledApply();
                     FovSimulatorLoader.Apply(false, OVRFovSimulationTelemetry.EditorEnvironment);
                 }
+            }
+        }
+
+        internal static void SetDrawDesignAreaGuideline(bool drawDesignAreaGuideline)
+        {
+            if (DrawDesignAreaGuideline == drawDesignAreaGuideline)
+            {
+                return;
+            }
+
+            FovSimulationEditorSettings.instance.DrawDesignAreaGuideline = drawDesignAreaGuideline;
+            if (EditorApplication.isPlaying && Enabled)
+            {
+                FovSimulatorLoader.Apply(
+                    true,
+                    OVRFovSimulationTelemetry.EditorEnvironment,
+                    drawDesignAreaGuideline);
             }
         }
 
@@ -118,7 +152,10 @@ namespace Meta.XR.FovSimulator
         {
             if (EditorApplication.isPlaying)
             {
-                FovSimulatorLoader.Apply(Enabled, OVRFovSimulationTelemetry.EditorEnvironment);
+                FovSimulatorLoader.Apply(
+                    Enabled,
+                    OVRFovSimulationTelemetry.EditorEnvironment,
+                    DrawDesignAreaGuideline);
             }
         }
 
@@ -142,7 +179,10 @@ namespace Meta.XR.FovSimulator
             }
 
             CancelScheduledApply();
-            FovSimulatorLoader.Apply(true, OVRFovSimulationTelemetry.EditorEnvironment);
+            FovSimulatorLoader.Apply(
+                true,
+                OVRFovSimulationTelemetry.EditorEnvironment,
+                DrawDesignAreaGuideline);
         }
 
         private static void CancelScheduledApply()

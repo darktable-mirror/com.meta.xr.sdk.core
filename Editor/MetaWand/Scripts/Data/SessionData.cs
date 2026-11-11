@@ -38,7 +38,11 @@ namespace Meta.XR.MetaWand.Editor
         public int ModelSize;
         public bool SearchInAssetDatabase;
         public int AudioLength;
+        // Persisted via BinaryFormatter (Utils.WriteToCache), not Unity serialization,
+        // so UAC1009's IReadOnlyCollection concern does not apply.
+#pragma warning disable UAC1009
         public IReadOnlyCollection<Asset> Assets;
+#pragma warning restore UAC1009
     }
 
     [Serializable]

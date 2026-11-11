@@ -72,7 +72,8 @@ public static class OVRPermissionsRequester
         /// <summary>
         /// Represents the Passthrough Camera Access permission.
         /// </summary>
-        PassthroughCameraAccess
+        PassthroughCameraAccess,
+
     }
 
     /// <summary>
@@ -104,6 +105,7 @@ public static class OVRPermissionsRequester
     /// Android permission string for Passthrough Camera Access.
     /// </summary>
     public const string PassthroughCameraAccessPermission = "horizonos.permission.HEADSET_CAMERA";
+
 
     /// <summary>
     /// Returns the permission ID of the given <see cref="Permission"/> to be requested from the user.

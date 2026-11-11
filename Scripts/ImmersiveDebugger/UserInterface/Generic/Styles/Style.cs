@@ -18,9 +18,9 @@
  * limitations under the License.
  */
 
-
 using System.Collections;
 using UnityEngine;
+using Meta.XR.Compat;
 
 namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 {
@@ -74,7 +74,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
         {
             if (Application.isPlaying)
             {
-                var controllers = GameObject.FindObjectsByType<Controller>(FindObjectsSortMode.None);
+                var controllers = OVRUnityObjectCompat.FindObjectsByType<Controller>();
                 foreach (var controller in controllers)
                 {
                     if (controller.LayoutStyle == this)
@@ -93,4 +93,3 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface.Generic
 #endif
     }
 }
-

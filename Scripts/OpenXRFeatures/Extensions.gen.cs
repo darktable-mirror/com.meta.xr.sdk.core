@@ -73,6 +73,9 @@ namespace Meta.XR
         /// </summary>
         TriangleMesh = 1000269000,
 
+        /// <summary>
+        /// Room mesh component.
+        /// </summary>
         RoomMesh = 1000553000,
     }
 
@@ -440,6 +443,8 @@ namespace Meta.XR
 #endregion
 
 #region XR_FB_spatial_entity_user
+    public enum XrSpaceUserFB : ulong { }
+
     public partial struct XrSpaceUserCreateInfoFB
     {
         public const XrStructureType StructureType = (XrStructureType)1000241001;
@@ -897,6 +902,13 @@ namespace Meta.XR
 #endregion
 
 #region XR_META_spatial_entity_room_mesh
+    public partial struct XrRoomMeshFaceMETA
+    {
+        public Guid Uuid;
+        public Guid ParentUuid;
+        public XrSemanticLabelMETA SemanticLabel;
+    }
+
     public partial struct XrRoomMeshFaceIndicesMETA
     {
         public const XrStructureType StructureType = (XrStructureType)1000553000;
@@ -907,11 +919,13 @@ namespace Meta.XR
         public unsafe uint* Indices;
     }
 
-    public partial struct XrRoomMeshFaceMETA
+    public partial struct XrSpaceRoomMeshGetInfoMETA
     {
-        public Guid Uuid;
-        public Guid ParentUuid;
-        public XrSemanticLabelMETA SemanticLabel;
+        public const XrStructureType StructureType = (XrStructureType)1000553001;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public uint RecognizedSemanticLabelCount;
+        public unsafe XrSemanticLabelMETA* RecognizedSemanticLabels;
     }
 
     public partial struct XrRoomMeshMETA
@@ -927,26 +941,17 @@ namespace Meta.XR
         public unsafe XrRoomMeshFaceMETA* Faces;
     }
 
-    public partial struct XrSpaceRoomMeshGetInfoMETA
-    {
-        public const XrStructureType StructureType = (XrStructureType)1000553001;
-        public XrStructureType Type;
-        public unsafe void* Next;
-        public uint RecognizedSemanticLabelCount;
-        public unsafe XrSemanticLabelMETA* RecognizedSemanticLabels;
-    }
-
     partial class OpenXRNativeFuncs
     {
-        public delegate XrResult xrGetSpaceRoomMeshFaceIndicesMETA(
-            XrSpace space,
-            in Guid faceUuid,
-            ref XrRoomMeshFaceIndicesMETA roomMeshFaceIndicesOutput);
-
         public delegate XrResult xrGetSpaceRoomMeshMETA(
             XrSpace space,
             in XrSpaceRoomMeshGetInfoMETA getInfo,
             ref XrRoomMeshMETA roomMeshOutput);
+
+        public delegate XrResult xrGetSpaceRoomMeshFaceIndicesMETA(
+            XrSpace space,
+            in Guid faceUuid,
+            ref XrRoomMeshFaceIndicesMETA roomMeshFaceIndicesOutput);
     }
 #endregion
 
@@ -993,20 +998,6 @@ namespace Meta.XR
 #endregion
 
 #region XR_EXT_haptic_parametric
-    public enum XrHapticParametricStreamFrameTypeEXT
-    {
-        None = 0,
-        FirstFrame = 1,
-        IntermediateFrame = 2,
-        LastFrame = 3,
-    }
-
-    public partial struct XrHapticParametricPointEXT
-    {
-        public XrDuration Time;
-        public float Value;
-    }
-
     public partial struct XrHapticParametricPropertiesEXT
     {
         public const XrStructureType StructureType = (XrStructureType)1000775001;
@@ -1016,6 +1007,12 @@ namespace Meta.XR
         public XrDuration MinimumFirstFrameDuration;
         public float MinFrequencyHz;
         public float MaxFrequencyHz;
+    }
+
+    public partial struct XrHapticParametricPointEXT
+    {
+        public XrDuration Time;
+        public float Value;
     }
 
     public partial struct XrHapticParametricTransientEXT
@@ -1039,6 +1036,14 @@ namespace Meta.XR
         public float MinFrequencyHz;
         public float MaxFrequencyHz;
         public XrHapticParametricStreamFrameTypeEXT StreamFrameType;
+    }
+
+    public enum XrHapticParametricStreamFrameTypeEXT
+    {
+        None = 0,
+        FirstFrame = 1,
+        IntermediateFrame = 2,
+        LastFrame = 3,
     }
 
     public partial struct XrSystemHapticParametricPropertiesEXT
@@ -1090,6 +1095,79 @@ namespace Meta.XR
         public delegate XrResult xrPauseSimultaneousHandsAndControllersTrackingMETA(
             XrSession session,
             in XrSimultaneousHandsAndControllersTrackingPauseInfoMETA pauseInfo);
+    }
+#endregion
+
+#region XR_EXT_hand_tracking_data_source
+    public enum XrHandTrackingDataSourceEXT
+    {
+        /// <summary>
+        /// This data source value indicates individual fingers and joints are tracked from unobstructed data source such as optical hand tracking, data gloves, or motion capture devices.
+        /// </summary>
+        Unobstructed = 1,
+
+        /// <summary>
+        /// This data source value indicates hand joints are inferred based on motion controller state.
+        /// </summary>
+        Controller = 2,
+
+        /// <summary>
+        /// This data source value indicates that the hand tracking system should use wide motion mode inference to provide hand poses when the hands are not directly visible to the tracking cameras
+        /// </summary>
+        UnobstructedWideMotion = 1000695000,
+    }
+
+    public partial struct XrHandTrackingDataSourceInfoEXT
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000428000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public uint RequestedDataSourceCount;
+        public unsafe XrHandTrackingDataSourceEXT* RequestedDataSources;
+    }
+
+    public partial struct XrHandTrackingDataSourceStateEXT
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000428001;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public XrBool32 IsActive;
+        public XrHandTrackingDataSourceEXT DataSource;
+    }
+#endregion
+
+#region XR_EXT_hand_joints_motion_range
+    public enum XrHandJointsMotionRangeEXT
+    {
+        Unobstructed = 1,
+        ConformingToController = 2,
+    }
+
+    public partial struct XrHandJointsMotionRangeInfoEXT
+    {
+        public const XrStructureType StructureType = (XrStructureType)1000080000;
+        public XrStructureType Type;
+        public unsafe void* Next;
+        public XrHandJointsMotionRangeEXT HandJointsMotionRange;
+    }
+#endregion
+
+#region XR_META_hand_tracking_wide_motion_mode2
+
+#endregion
+
+#region XR_META_hand_tracking_frequency_hint
+    public enum XrHandTrackingFrequencyHintMETA
+    {
+        Default = 1,
+        High = 2,
+    }
+
+    partial class OpenXRNativeFuncs
+    {
+        public delegate XrResult xrSetHandTrackingFrequencyHintMETA(
+            XrSession session,
+            XrHandTrackingFrequencyHintMETA frequencyHint);
     }
 #endregion
 
@@ -1277,6 +1355,7 @@ namespace Meta.XR
             in XrAgenticExternalToolRegisterInfoMETAX1 registerInfo);
     }
 #endregion
+
 
 #region XR_FB_color_space
     public enum XrColorSpaceFB

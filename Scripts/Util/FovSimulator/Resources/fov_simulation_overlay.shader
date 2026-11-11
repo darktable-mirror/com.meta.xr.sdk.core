@@ -27,8 +27,10 @@ Shader "qxr/fov_simulation_overlay"
 
             float4 _InnerBounds;
             float4 _OuterBounds;
+            float4 _DesignAreaBounds;
             float _Alpha;
             float _IsRight;
+            float _DrawDesignAreaGuideline;
             float _EnableOuterFrame;
             float _EyeOffsetX;
             float _UvScale;
@@ -82,11 +84,27 @@ Shader "qxr/fov_simulation_overlay"
                 float insideOuter = step(
                     RoundedRectangleDistance(position, _OuterBounds, _CornerRadius),
                     0.0);
+                float designAreaSignedDistance = RoundedRectangleDistance(
+                    position,
+                    _DesignAreaBounds,
+                    _CornerRadius);
+                float designAreaDistance = abs(designAreaSignedDistance);
+                float designAreaPixelWidth = max(
+                    fwidth(designAreaSignedDistance),
+                    0.000001);
+                float designAreaGuideline = _DrawDesignAreaGuideline * insideInner *
+                    (1.0 - smoothstep(
+                        designAreaPixelWidth * 0.5,
+                        designAreaPixelWidth * 1.5,
+                        designAreaDistance));
                 float visible = _EnableOuterFrame > 0.5
                     ? max(insideInner, 1.0 - insideOuter)
                     : insideInner;
-                float alpha = (1.0 - visible) * saturate(_Alpha);
-                return fixed4(0.0, 0.0, 0.0, alpha);
+                float maskAlpha = (1.0 - visible) * saturate(_Alpha);
+                float guidelineAlpha = designAreaGuideline * 0.75;
+                float alpha = max(maskAlpha, guidelineAlpha);
+                float color = step(maskAlpha, guidelineAlpha);
+                return fixed4(color, color, color, alpha);
             }
             ENDCG
         }

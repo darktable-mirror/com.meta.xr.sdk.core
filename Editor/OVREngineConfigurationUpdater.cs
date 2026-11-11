@@ -31,6 +31,7 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using System;
 using System.IO;
+using Meta.XR.Compat;
 
 [InitializeOnLoad]
 class OVREngineConfigurationUpdater
@@ -64,7 +65,6 @@ class OVREngineConfigurationUpdater
 
         set { PlayerPrefs.SetInt(dashSupportEnableConfirmedKey, value ? 1 : 0); }
     }
-
 
     static OVREngineConfigurationUpdater()
     {
@@ -143,7 +143,7 @@ class OVREngineConfigurationUpdater
 #pragma warning restore 618
             return;
 
-        var mgrs = GameObject.FindObjectsByType<OVRManager>(FindObjectsSortMode.None);
+        var mgrs = OVRUnityObjectCompat.FindObjectsByType<OVRManager>();
         for (int i = 0; i < mgrs.Length; ++i)
         {
             if (mgrs[i].isActiveAndEnabled)

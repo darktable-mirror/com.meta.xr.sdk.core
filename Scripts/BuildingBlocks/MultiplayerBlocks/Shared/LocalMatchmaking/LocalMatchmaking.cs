@@ -91,9 +91,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
         #region Lifecyle Events
         private void Awake()
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            _customMatchmaking = FindObjectOfType<CustomMatchmaking>();
-#pragma warning restore CS0618 // Type or member is obsolete
+            _customMatchmaking = FindAnyObjectByType<CustomMatchmaking>();
             if (_customMatchmaking == null)
             {
                 throw new InvalidOperationException($"{nameof(LocalMatchmaking)}] No {nameof(CustomMatchmaking)} component was found in the scene");

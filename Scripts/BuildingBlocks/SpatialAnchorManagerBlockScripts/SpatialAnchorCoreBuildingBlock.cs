@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
+using Meta.XR.Compat;
 
 namespace Meta.XR.BuildingBlocks
 {
@@ -287,7 +288,7 @@ namespace Meta.XR.BuildingBlocks
 
         internal static SpatialAnchorCoreBuildingBlock GetFirstInstance()
         {
-            var objects = FindObjectsByType<SpatialAnchorCoreBuildingBlock>(FindObjectsSortMode.None);
+            var objects = OVRUnityObjectCompat.FindObjectsByType<SpatialAnchorCoreBuildingBlock>();
 
             foreach (var obj in objects)
             {

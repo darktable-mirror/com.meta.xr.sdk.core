@@ -137,7 +137,10 @@ partial class OculusBuildApp : EditorWindow
     static void InitAndRun()
     {
         var window = EditorWindow.GetWindow<OculusBuildApp>(false, "OVR Build APK", true);
-        isRunOnDevice = true; // make sure the "And Run" part of the menu name is true
+        // Only enable run on device if a device is actually connected; otherwise force build-only mode.
+        string deviceCheck;
+        bool hasDevice = CheckADBDevices(out deviceCheck) && !string.IsNullOrEmpty(deviceCheck);
+        isRunOnDevice = hasDevice; // make sure the "And Run" part of the menu name is true only when device present
         window.StartBuild();
     }
 
@@ -156,6 +159,10 @@ partial class OculusBuildApp : EditorWindow
         outputApkPath = EditorPrefs.GetString("OVRBuild_BuiltAPKPath", "");
 
         CheckADBDevices(out currConnectedDevice);
+        if (string.IsNullOrEmpty(currConnectedDevice))
+        {
+            isRunOnDevice = false;
+        }
     }
 
     private void OnDisable()
@@ -245,6 +252,10 @@ partial class OculusBuildApp : EditorWindow
             EditorGUILayout.Space(15f);
 
             EditorGUILayout.BeginHorizontal();
+            if (string.IsNullOrEmpty(currConnectedDevice))
+            {
+                isRunOnDevice = false;
+            }
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(currConnectedDevice)))
             {
                 isRunOnDevice = EditorGUILayout.Toggle("Install & Run on Device?", isRunOnDevice);
@@ -255,7 +266,13 @@ partial class OculusBuildApp : EditorWindow
             }
 
             if (GUILayout.Button("Refresh", GUILayout.Width(80)))
+            {
                 CheckADBDevices(out currConnectedDevice);
+                if (string.IsNullOrEmpty(currConnectedDevice))
+                {
+                    isRunOnDevice = false;
+                }
+            }
             EditorGUILayout.EndHorizontal();
 
             EditorUserBuildSettings.development = EditorGUILayout.Toggle(new GUIContent("Development Build?",

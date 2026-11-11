@@ -28,7 +28,6 @@ public class MeshAndScaleController : MonoBehaviour
     public TMP_Dropdown meshDropdown;
     public Slider scaleSlider;
     public Toggle textureToggle;
-    public Material targetMaterial;
     public float minScale = 0.1f;
     public float maxScale = 1.0f;
 
@@ -76,8 +75,11 @@ public class MeshAndScaleController : MonoBehaviour
 
     private void OnTextureToggled(bool isOn)
     {
-        if (targetMaterial == null) return;
-        targetMaterial.SetTexture("_BaseMap", isOn ? meshTexture : null);
+        if (targetObject == null) return;
+        var renderer = targetObject.GetComponent<Renderer>();
+        if (renderer == null) return;
+        // Use the per-renderer instance material so toggling does not write through to the shared .mat asset.
+        renderer.material.SetTexture("_BaseMap", isOn ? meshTexture : null);
     }
 
     private void OnScaleChanged(float value)

@@ -468,6 +468,48 @@ public class OVRManifestPreprocessor : EditorWindow
         }
     }
 
+    /// <summary>
+    /// Checks whether the AndroidManifest.xml contains a specific uses-permission entry.
+    /// </summary>
+    /// <param name="permissionName">The full permission name (e.g., "com.oculus.permission.FACE_TRACKING").</param>
+    /// <returns>True if the manifest exists and contains the specified permission; false otherwise.</returns>
+    internal static bool HasManifestPermission(string permissionName)
+    {
+        var doc = GetAndroidManifestXmlDocument();
+        if (doc == null)
+        {
+            return false;
+        }
+
+        var manifestElement = (XmlElement)doc.SelectSingleNode("/manifest");
+        if (manifestElement == null)
+        {
+            return false;
+        }
+
+        var androidNamespaceURI = manifestElement.GetAttribute("xmlns:android");
+        if (string.IsNullOrEmpty(androidNamespaceURI))
+        {
+            return false;
+        }
+
+        var permissionNodes = doc.SelectNodes("/manifest/uses-permission");
+        if (permissionNodes == null)
+        {
+            return false;
+        }
+
+        foreach (XmlNode node in permissionNodes)
+        {
+            if (node is XmlElement e && e.GetAttribute("name", androidNamespaceURI) == permissionName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static XmlDocument LoadDocument(string sourceFile, bool skipAllModifications, bool modifyIfFound, bool enableSecurity, out string androidNamespaceURI)
     {
         // Load android manifest file
@@ -753,6 +795,21 @@ public class OVRManifestPreprocessor : EditorWindow
             modifyIfFound,
             prefix: "",
             "required", "true");
+
+        //============================================================================
+        // Forward Head Pose
+        // The deprecated Oculus XR Plugin mishandles the forward head pose: head yaw is applied as
+        // view pitch. Never emit the tag while its loader is active, even if the setting is on.
+        AddOrRemoveTag(doc,
+            androidNamespaceURI,
+            "/manifest/application",
+            "meta-data",
+            "com.oculus.useForwardHeadPose",
+            projectConfig.useForwardHeadPose && !IsOculusLoaderActive(),
+            modifyIfFound,
+            prefix: "",
+            "value",
+            "true");
 
         //============================================================================
         // Anchor
@@ -1094,6 +1151,7 @@ public class OVRManifestPreprocessor : EditorWindow
             OVRPermissionsRequester.PassthroughCameraAccessPermission,
             projectConfig.isPassthroughCameraAccessEnabled && projectConfig.insightPassthroughSupport != OVRProjectConfig.FeatureSupport.None,
             modifyIfFound);
+
     }
 
 
@@ -1164,12 +1222,10 @@ public class OVRManifestPreprocessor : EditorWindow
             }
             if (OVRDeviceSelector.isTargetDeviceVRGlasses)
             {
-                // "stanley" is the compatibility key the OS matches on, defined in
-                // VrRuntimeCompatHelper.cpp. It is not the retail name and must not be renamed.
                 if (string.IsNullOrEmpty(targetDeviceValue))
-                    targetDeviceValue = "stanley";
+                    targetDeviceValue = "vrglasses";
                 else
-                    targetDeviceValue += "|stanley";
+                    targetDeviceValue += "|vrglasses";
             }
             if (string.IsNullOrEmpty(targetDeviceValue))
             {

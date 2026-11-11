@@ -113,7 +113,7 @@ namespace Meta.HandReadinessTool.Editor.UI
 
             var title = new Label(HandReadinessScreenContentProvider.Get(
                 "confirmation.fov.title",
-                "Validate the device field of view"));
+                "Validate the VR glasses field of view"));
             title.AddToClassList(RLDSConstants.Typography.Body1Label);
             title.style.marginBottom = RLDSConstants.Spacing.SizeXS;
             textColumn.Add(title);
@@ -121,11 +121,11 @@ namespace Meta.HandReadinessTool.Editor.UI
             var description = new Label(hasOvrManager
                 ? HandReadinessScreenContentProvider.Get(
                     "confirmation.fov.body",
-                    "Run your app on Quest once with device field of view simulation enabled. " +
+                    "Run your app on Quest once with VR glasses field of view simulation enabled. " +
                     "Configure it in OVRManager > Quest > Experimental > Device Simulation.")
                 : HandReadinessScreenContentProvider.Get(
                     "confirmation.fov.bodyNoManager",
-                    "This scene has no OVRManager. Enable device field of view simulation in the " +
+                    "This scene has no OVRManager. Enable VR glasses field of view simulation in the " +
                     "Oculus Runtime Settings asset, or control the mask with Immersive Debugger at runtime."));
             description.name = FovSimulationDescriptionName;
             description.AddToClassList(RLDSConstants.Typography.Body2SupportingText);

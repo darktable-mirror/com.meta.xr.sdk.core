@@ -174,6 +174,28 @@ namespace Meta.XR.Editor.Rules
                fixMessage: "Add Oculus to the XR Plugin Win/Mac/Linux active loaders for XR Simulator to work"
            );
 #endif
+
+#if USING_XR_MANAGEMENT
+            // [Required] Forward head pose is not supported by the deprecated Oculus XR Plugin
+            OVRProjectSetup.AddTask(
+                level: OVRProjectSetup.TaskLevel.Required,
+                group: OVRProjectSetup.TaskGroup.Compatibility,
+                platform: BuildTargetGroup.Android,
+                conditionalValidity: OVRProjectSetupXRTasks.IsActiveLoader<OculusLoader>,
+                isDone: _ => !OVRProjectConfig.CachedProjectConfig.useForwardHeadPose,
+                message: "Use Forward Head Pose is not compatible with the deprecated Oculus XR Plugin "
+                         + "(com.unity.xr.oculus): turning the head left and right tilts the view up and down. "
+                         + "Either disable Use Forward Head Pose in the project config, or migrate the project to "
+                         + "the OpenXR Plugin (com.unity.xr.openxr), which is the recommended provider.",
+                fix: _ =>
+                {
+                    var projectConfig = OVRProjectConfig.CachedProjectConfig;
+                    projectConfig.useForwardHeadPose = false;
+                    OVRProjectConfig.CommitProjectConfig(projectConfig);
+                },
+                fixMessage: "Disable Use Forward Head Pose in the project config"
+            );
+#endif
         }
 
         private static Unity.XR.Oculus.OculusSettings Settings

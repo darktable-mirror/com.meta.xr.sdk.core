@@ -22,6 +22,7 @@ using System;
 using System.Collections;
 using Meta.XR.BuildingBlocks;
 using UnityEngine;
+using Meta.XR.Compat;
 
 #if META_AVATAR_SDK_DEFINED
 using Oculus.Avatar2;
@@ -127,7 +128,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
 
         private OvrAvatarInputManagerBehavior FindAvatarInputManagerBehavior()
         {
-            foreach (var b in FindObjectsByType<OvrAvatarInputManagerBehavior>(FindObjectsSortMode.None))
+            foreach (var b in OVRUnityObjectCompat.FindObjectsByType<OvrAvatarInputManagerBehavior>())
             {
                 if (b.isActiveAndEnabled)
                 {
@@ -165,7 +166,7 @@ namespace Meta.XR.MultiplayerBlocks.Shared
                 SetBodyTracking(entityInputManager);
 #endif
 
-                var lipSyncInput = FindFirstObjectByType<OvrAvatarLipSyncContext>();
+                var lipSyncInput = FindAnyObjectByType<OvrAvatarLipSyncContext>();
                 SetLipSync(lipSyncInput);
             }
             else

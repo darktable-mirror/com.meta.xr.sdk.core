@@ -70,11 +70,7 @@ namespace Meta.XR.ImmersiveDebugger.Manager
             var type = memberInfo.GetDataType();
             if (!Types.TryGetValue(type, out var createdType))
             {
-#if !UNITY_2022_1_OR_NEWER
-                createdType = typeof(WatchShared);
-#else
                 createdType = Register(type);
-#endif
             }
 
             return Activator.CreateInstance(createdType, memberInfo, instanceHandle, attribute) as Watch;
@@ -118,28 +114,6 @@ namespace Meta.XR.ImmersiveDebugger.Manager
 
         protected Watch(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute) { }
     }
-
-#if !UNITY_2022_1_OR_NEWER
-    // Before Unity 2022.1 there's no IL2CPP Full Generic Sharing feature so Watch<> would require "Faster(smaller) Build"
-    // in IL2CPP Code Generation Build Settings to avoid IL2CPP Ahead Of Time (AOT) codegen error in runtime.
-    // Separate class are created here for other non-registered types so in runtime Watch<> is not accessed by types without codegen.
-    internal class WatchShared : Watch
-    {
-        private static string[] _buffer = new string[1];
-        public override int NumberOfValues => 1;
-        private string[] ToDisplayStrings()
-        {
-            var value = _memberInfo.GetValue(_instance);
-            _buffer[0] = value != null ? value.ToString() : "";
-            return _buffer;
-        }
-
-        public override string[] Values => ToDisplayStrings();
-        public override string Value => Values[0];
-
-        public WatchShared(MemberInfo memberInfo, InstanceHandle instanceHandle, DebugMember attribute) : base(memberInfo, instanceHandle, attribute) { }
-    }
-#endif
 
     internal class Watch<T> : Watch
     {

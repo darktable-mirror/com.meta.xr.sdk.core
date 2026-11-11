@@ -242,12 +242,81 @@ public class OVRCameraRig : MonoBehaviour
 
         _skipUpdate = true;
         EnsureGameObjectIntegrity();
+
+        // Configure the eye cameras from the rig that owns them, so a rig loaded in a later scene sets
+        // itself up without OVRManager having to search for a camera. When OVRManager has not awoken
+        // yet, it applies this itself once it initializes.
+        if (OVRManager.instance != null && OVRManager.instance.enableDynamicResolution)
+        {
+            SetCamerasAllowDynamicResolution(true);
+        }
+    }
+
+    // Eye cameras this rig turned Camera.allowDynamicResolution on for, so that turning dynamic
+    // resolution off reverts only the rig's own change. A camera the application already opted in is
+    // left untouched, which matters because the flag also disables temporal anti-aliasing and
+    // temporal upscalers.
+    private readonly List<Camera> _camerasWithAppliedDynamicResolution = new List<Camera>();
+
+    /// <summary>
+    /// Opts the rig's eye cameras into Unity's dynamic resolution path, or reverts them.
+    /// </summary>
+    /// <remarks>
+    /// Dynamic resolution renders into a sub-rect of the full-size eye texture. Unity folds that
+    /// applied scale into the <c>_ScaledScreenParams</c> and <c>_ScreenSize</c> shader constants only
+    /// when the camera has <c>allowDynamicResolution</c> set. URP's Forward+ clustered lighting derives
+    /// its light tile lookup from those constants, so without it the tile grid stays at full resolution
+    /// while the image is scaled down, producing misaligned, blocky additional lighting.
+    /// </remarks>
+    internal void SetCamerasAllowDynamicResolution(bool allow)
+    {
+        if (allow)
+        {
+            ApplyDynamicResolutionTo(_centerEyeCamera);
+            ApplyDynamicResolutionTo(_leftEyeCamera);
+            ApplyDynamicResolutionTo(_rightEyeCamera);
+            return;
+        }
+
+        foreach (var camera in _camerasWithAppliedDynamicResolution)
+        {
+            if (camera != null)
+            {
+                camera.allowDynamicResolution = false;
+            }
+        }
+
+        _camerasWithAppliedDynamicResolution.Clear();
+    }
+
+    private void ApplyDynamicResolutionTo(Camera camera)
+    {
+        if (camera == null || camera.allowDynamicResolution)
+        {
+            return;
+        }
+
+        camera.allowDynamicResolution = true;
+        _camerasWithAppliedDynamicResolution.Add(camera);
+    }
+
+    // Application.onBeforeRender is a static event, so its subscriber list survives entering play
+    // mode when "Enter Play Mode Settings" skips the domain reload. Pairing the subscription with
+    // OnEnable/OnDisable keeps it balanced no matter how many times the rig's lifecycle runs on the
+    // same instance, which is what stops a delegate bound to a destroyed rig from being left behind.
+    protected virtual void OnEnable()
+    {
+        Application.onBeforeRender += OnBeforeRenderCallback;
+    }
+
+    protected virtual void OnDisable()
+    {
+        Application.onBeforeRender -= OnBeforeRenderCallback;
     }
 
     protected virtual void Start()
     {
         UpdateAnchors(true, true);
-        Application.onBeforeRender += OnBeforeRenderCallback;
     }
 
     protected virtual void FixedUpdate()
@@ -321,10 +390,10 @@ public class OVRCameraRig : MonoBehaviour
                 Quaternion centerEyeRotation = Quaternion.identity;
 
                 if (OVRNodeStateProperties.GetNodeStatePropertyVector3(Node.CenterEye, NodeStatePropertyType.Position,
-                        OVRPlugin.Node.EyeCenter, OVRPlugin.Step.Render, out centerEyePosition))
+                        OVRPlugin.Node.Head, OVRPlugin.Step.Render, out centerEyePosition))
                     centerEyeAnchor.localPosition = centerEyePosition;
                 if (OVRNodeStateProperties.GetNodeStatePropertyQuaternion(Node.CenterEye,
-                        NodeStatePropertyType.Orientation, OVRPlugin.Node.EyeCenter, OVRPlugin.Step.Render,
+                        NodeStatePropertyType.Orientation, OVRPlugin.Node.Head, OVRPlugin.Step.Render,
                         out centerEyeRotation))
                     centerEyeAnchor.localRotation = centerEyeRotation;
             }
@@ -496,6 +565,15 @@ public class OVRCameraRig : MonoBehaviour
 
     protected virtual void OnBeforeRenderCallback()
     {
+        // A rig destroyed while still registered would throw out of Component.transform further
+        // down, and UnityEngine.BeforeRenderHelper.Invoke walks its subscribers in a single loop, so
+        // that throw also drops the callbacks registered after this one, including the live rig's
+        // pose update. Do not unsubscribe from here: that would mutate the list Unity is iterating.
+        if (this == null)
+        {
+            return;
+        }
+
         if (OVRManager.loadedXRDevice == OVRManager.XRDevice.Oculus) //Restrict late-update to only Oculus devices
         {
             bool controllersNeedUpdate = OVRManager.instance.LateControllerUpdate;

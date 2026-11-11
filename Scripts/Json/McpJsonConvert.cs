@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Meta.XR.Json
 {
@@ -82,6 +83,22 @@ namespace Meta.XR.Json
         private const BindingFlags MemberFlags =
             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
+        /// <summary>
+        /// Maximum object-graph depth the serializer descends before emitting
+        /// <see cref="MaxDepthMarker"/> instead of recursing further.
+        /// </summary>
+        /// <remarks>
+        /// A <see cref="StackOverflowException"/> cannot be caught in .NET, so the walk has to be
+        /// bounded before it exhausts the stack rather than recovered from afterwards. Measured
+        /// stack exhaustion on a thread-pool worker occurs around 40,000 nested levels, so 64
+        /// leaves a very large margin (including on Mono's smaller worker stacks) while still
+        /// comfortably exceeding the depth of any legitimate MCP payload.
+        /// </remarks>
+        internal const int MaxSerializationDepth = 64;
+
+        internal const string MaxDepthMarker = "<max depth exceeded>";
+        internal const string CircularReferenceMarker = "<circular reference>";
+
         #region Serialize
 
         public static string Serialize(object obj, McpJsonSettings settings = null)
@@ -94,10 +111,10 @@ namespace Meta.XR.Json
         {
             if (obj == null) return JsonValue.Null;
             settings ??= McpJsonSettings.Default;
-            return SerializeObject(obj, settings);
+            return SerializeObject(obj, settings, new SerializationScope());
         }
 
-        private static JsonNode SerializeObject(object obj, McpJsonSettings settings)
+        private static JsonNode SerializeObject(object obj, McpJsonSettings settings, SerializationScope scope)
         {
             if (obj == null) return JsonValue.Null;
 
@@ -115,32 +132,46 @@ namespace Meta.XR.Json
             // Enums
             if (type.IsEnum) return new JsonValue(obj.ToString());
 
-            // Arrays and collections
-            if (obj is IEnumerable enumerable && !(obj is string) && !(obj is IDictionary))
-            {
-                var arr = new JsonArray();
-                foreach (var item in enumerable)
-                    arr.Add(SerializeObject(item, settings));
-                return arr;
-            }
+            // Reflection objects
+            if (TryReflectionToNode(obj, out var reflectionNode)) return reflectionNode;
 
-            // Dictionaries
-            if (obj is IDictionary dict)
+            if (scope.Depth >= MaxSerializationDepth) return new JsonValue(MaxDepthMarker);
+            if (!scope.TryEnter(obj)) return new JsonValue(CircularReferenceMarker);
+
+            try
             {
-                var jobj = new JsonObject();
-                foreach (DictionaryEntry entry in dict)
+                // Arrays and collections
+                if (obj is IEnumerable enumerable && !(obj is string) && !(obj is IDictionary))
                 {
-                    var key = entry.Key?.ToString() ?? "null";
-                    jobj[key] = SerializeObject(entry.Value, settings);
+                    var arr = new JsonArray();
+                    foreach (var item in enumerable)
+                        arr.Add(SerializeObject(item, settings, scope));
+                    return arr;
                 }
-                return jobj;
-            }
 
-            // Complex objects with McpJsonProperty attributes
-            return SerializeComplexObject(obj, type, settings);
+                // Dictionaries
+                if (obj is IDictionary dict)
+                {
+                    var jobj = new JsonObject();
+                    foreach (DictionaryEntry entry in dict)
+                    {
+                        var key = entry.Key?.ToString() ?? "null";
+                        jobj[key] = SerializeObject(entry.Value, settings, scope);
+                    }
+                    return jobj;
+                }
+
+                // Complex objects with McpJsonProperty attributes
+                return SerializeComplexObject(obj, type, settings, scope);
+            }
+            finally
+            {
+                scope.Exit(obj);
+            }
         }
 
-        private static JsonObject SerializeComplexObject(object obj, Type type, McpJsonSettings settings)
+        private static JsonObject SerializeComplexObject(
+            object obj, Type type, McpJsonSettings settings, SerializationScope scope)
         {
             var result = new JsonObject();
             var members = GetAnnotatedMembers(type);
@@ -166,7 +197,7 @@ namespace Meta.XR.Json
                     if (value == null && skipNull)
                         continue;
 
-                    result[attr.Name] = SerializeObject(value, settings);
+                    result[attr.Name] = SerializeObject(value, settings, scope);
                 }
             }
 
@@ -181,9 +212,12 @@ namespace Meta.XR.Json
                         var value = prop.GetValue(obj);
                         bool skipNull = settings.NullHandling == McpJsonNullHandling.Ignore;
                         if (value == null && skipNull) continue;
-                        result[prop.Name] = SerializeObject(value, settings);
+                        result[prop.Name] = SerializeObject(value, settings, scope);
                     }
-                    catch { /* skip unreadable properties */ }
+                    catch (Exception ex)
+                    {
+                        result[prop.Name] = new JsonValue(UnreadableMemberMarker(ex));
+                    }
                 }
                 foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
                 {
@@ -192,9 +226,12 @@ namespace Meta.XR.Json
                         var value = field.GetValue(obj);
                         bool skipNull = settings.NullHandling == McpJsonNullHandling.Ignore;
                         if (value == null && skipNull) continue;
-                        result[field.Name] = SerializeObject(value, settings);
+                        result[field.Name] = SerializeObject(value, settings, scope);
                     }
-                    catch { /* skip unreadable fields */ }
+                    catch (Exception ex)
+                    {
+                        result[field.Name] = new JsonValue(UnreadableMemberMarker(ex));
+                    }
                 }
             }
 
@@ -213,7 +250,7 @@ namespace Meta.XR.Json
                     {
                         var key = entry.Key?.ToString();
                         if (key != null)
-                            result[key] = SerializeObject(entry.Value, settings);
+                            result[key] = SerializeObject(entry.Value, settings, scope);
                     }
                 }
             }
@@ -470,6 +507,11 @@ namespace Meta.XR.Json
 
         public static JsonNode ObjectToNode(object value)
         {
+            return ObjectToNode(value, new SerializationScope());
+        }
+
+        private static JsonNode ObjectToNode(object value, SerializationScope scope)
+        {
             if (value == null) return JsonValue.Null;
             if (value is JsonNode node) return node;
 
@@ -480,30 +522,124 @@ namespace Meta.XR.Json
             if (type.IsEnum) return new JsonValue(value.ToString());
             if (value is DateTime dt) return new JsonValue(dt);
             if (value is Guid g) return new JsonValue(g.ToString());
+            if (TryReflectionToNode(value, out var reflectionNode)) return reflectionNode;
 
-            if (value is IDictionary dict)
+            if (value is IDictionary || value is IEnumerable)
             {
-                var obj = new JsonObject();
-                foreach (DictionaryEntry entry in dict)
-                    obj[entry.Key?.ToString() ?? "null"] = ObjectToNode(entry.Value);
-                return obj;
-            }
+                if (scope.Depth >= MaxSerializationDepth) return new JsonValue(MaxDepthMarker);
+                if (!scope.TryEnter(value)) return new JsonValue(CircularReferenceMarker);
 
-            if (value is IEnumerable enumerable)
-            {
-                var arr = new JsonArray();
-                foreach (var item in enumerable)
-                    arr.Add(ObjectToNode(item));
-                return arr;
+                try
+                {
+                    if (value is IDictionary dict)
+                    {
+                        var obj = new JsonObject();
+                        foreach (DictionaryEntry entry in dict)
+                            obj[entry.Key?.ToString() ?? "null"] = ObjectToNode(entry.Value, scope);
+                        return obj;
+                    }
+
+                    var arr = new JsonArray();
+                    foreach (var item in (IEnumerable)value)
+                        arr.Add(ObjectToNode(item, scope));
+                    return arr;
+                }
+                finally
+                {
+                    scope.Exit(value);
+                }
             }
 
             // Complex object - serialize using attributes
-            return SerializeToNode(value);
+            return SerializeObject(value, McpJsonSettings.Default, scope);
         }
 
         #endregion
 
         #region Helpers
+
+        /// <summary>
+        /// Tracks how deep the serializer has descended and which objects are on the current path,
+        /// so cyclic and pathologically deep graphs are truncated instead of exhausting the stack.
+        /// </summary>
+        private sealed class SerializationScope
+        {
+            private readonly HashSet<object> _onPath = new(ReferenceComparer.Instance);
+
+            internal int Depth { get; private set; }
+
+            /// <summary>
+            /// Marks <paramref name="obj"/> as being serialized, or returns false if it already is.
+            /// </summary>
+            internal bool TryEnter(object obj)
+            {
+                if (!_onPath.Add(obj)) return false;
+                Depth++;
+                return true;
+            }
+
+            internal void Exit(object obj)
+            {
+                Depth--;
+                _onPath.Remove(obj);
+            }
+        }
+
+        /// <summary>
+        /// Identity comparer used to detect reference cycles.
+        /// </summary>
+        /// <remarks>
+        /// The serializer walks arbitrary objects, so it must not call their <c>Equals</c> or
+        /// <c>GetHashCode</c> overrides: those can throw, recurse, or report two distinct nodes as
+        /// the same one and truncate output that is not actually cyclic.
+        /// </remarks>
+        private sealed class ReferenceComparer : IEqualityComparer<object>
+        {
+            internal static readonly ReferenceComparer Instance = new();
+
+            public new bool Equals(object x, object y) => ReferenceEquals(x, y);
+
+            public int GetHashCode(object obj) => RuntimeHelpers.GetHashCode(obj);
+        }
+
+        /// <summary>
+        /// Reduces a reflection object to its name, or returns false if it is not one.
+        /// </summary>
+        /// <remarks>
+        /// The reflection graph is densely cyclic — <c>Type.StructLayoutAttribute</c> reaches a
+        /// <c>StructLayoutAttribute</c> whose <c>TypeId</c> is that attribute's own
+        /// <c>Type</c>, and so on without branching — and reflecting over it yields nothing a
+        /// caller can use. Mirrors what <c>ReturnValueConverter</c> does for the same types.
+        /// </remarks>
+        private static bool TryReflectionToNode(object value, out JsonNode node)
+        {
+            switch (value)
+            {
+                case Type type:
+                    node = new JsonValue(type.FullName ?? type.Name);
+                    return true;
+                case MemberInfo member:
+                    node = new JsonValue(member.Name);
+                    return true;
+                case ParameterInfo parameter:
+                    node = new JsonValue(parameter.Name);
+                    return true;
+                case Assembly assembly:
+                    node = new JsonValue(assembly.FullName);
+                    return true;
+                case Module module:
+                    node = new JsonValue(module.Name);
+                    return true;
+                default:
+                    node = null;
+                    return false;
+            }
+        }
+
+        // Reflection wraps whatever the member's getter threw in a TargetInvocationException, so the
+        // useful message is on the inner exception.
+        private static string UnreadableMemberMarker(Exception ex) =>
+            $"<unreadable: {ex.GetBaseException().Message}>";
 
         private static bool IsPrimitive(Type type)
         {

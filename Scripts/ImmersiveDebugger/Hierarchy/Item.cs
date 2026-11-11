@@ -36,7 +36,7 @@ namespace Meta.XR.ImmersiveDebugger.Hierarchy
         public Item Parent => _parent;
         public int Depth => _depth;
         public InstanceHandle Handle => _handle;
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
         public EntityId Id => Handle.InstanceId;
 #else
         public int Id => Handle.InstanceId;

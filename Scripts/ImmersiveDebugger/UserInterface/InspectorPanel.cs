@@ -84,11 +84,7 @@ namespace Meta.XR.ImmersiveDebugger.UserInterface
             _debugInterface = owner as DebugInterface;
             if (_debugInterface == null)
             {
-#if UNITY_2022_1_OR_NEWER
-                _debugInterface = FindFirstObjectByType<DebugInterface>(FindObjectsInactive.Include);
-#else
-                _debugInterface = FindObjectOfType<DebugInterface>(true);
-#endif
+                _debugInterface = FindAnyObjectByType<DebugInterface>(FindObjectsInactive.Include);
             }
 
             var div = Append<Flex>("div");

@@ -484,9 +484,11 @@ public class OVRManagerEditor : Editor
             return;
         }
 
-        var trackingOriginType = manager.trackingOriginType;
+        // Read the tracking origin once into a local (the getter is now cache-backed).
+        var currentTrackingOriginType = manager.trackingOriginType;
+        var trackingOriginType = currentTrackingOriginType;
         OVREditorUtil.SetupEnumField(target, new GUIContent("Tracking Origin Type", "Defines the origin position of the player relative to their tracking space"), ref trackingOriginType, ref modified);
-        if (manager.trackingOriginType != trackingOriginType)
+        if (currentTrackingOriginType != trackingOriginType)
         {
             manager.trackingOriginType = trackingOriginType;
         }
@@ -766,9 +768,7 @@ public class OVRManagerEditor : Editor
 
         // Also warn about Body API when simultaneous hands and controllers is enabled
         bool bodyEnabled =
-#pragma warning disable CS0618 // Type or member is obsolete
-            (GameObject.FindObjectOfType<OVRBody>() != null || manager.wideMotionModeHandPosesEnabled == true);
-#pragma warning restore CS0618 // Type or member is obsolete
+            (GameObject.FindAnyObjectByType<OVRBody>() != null || manager.wideMotionModeHandPosesEnabled == true);
         if (bodyEnabled && manager.SimultaneousHandsAndControllersEnabled)
         {
             EditorGUILayout.HelpBox(
@@ -893,6 +893,7 @@ public class OVRManagerEditor : Editor
             EditorUtility.SetDirty(projectConfig);
         }
 
+
         if (_activeTargetPlatform == TargetPlatform.Quest)
         {
             EditorGUI.EndDisabledGroup();
@@ -928,7 +929,6 @@ public class OVRManagerEditor : Editor
 
         EndExpandSection();
     }
-
 
     private void DrawDynamicResolutionSection(OVRManager manager, ref bool modified)
     {

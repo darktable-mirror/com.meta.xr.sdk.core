@@ -11,9 +11,8 @@ allowed-tools:
 ## Goal
 
 Showcase Meta XR Operator driving **world-space Unity UI**. Uses the **Core-SDK OVR**
-interaction stack (`OVRRaycaster` and `OVRInputModule` and `OVRHand`/`OVRControllerHelper`
-and `OVRGazePinchInputSource`), Two
-world-space canvases:
+interaction stack (`OVRRaycaster`, `OVRInputModule`, `OVRHand`/`OVRControllerHelper`,
+`OVRGazePinchInputSource`). Two world-space canvases:
 
 - **Left — `ButtonCanvas/Panel/Button` … `Button (3)`** = Red, Blue, Yellow, Green —
   recolor `Environment/Cube`.
@@ -37,6 +36,10 @@ The scene switches **live** between controllers and hands: a Touch controller th
 pause/resume needed. (Enabled by `OVRManager.controllerDrivenHandPosesType =
 ConformingToController`; if you build a new rig, replicate that.)
 
+This scene supports **hands and eye tracking**. To use them, enable them on the **`OVRCameraRig`** (`OVRManager` inspector → **Quest
+Features**): **Hand Tracking Support** = *Controllers and Hands* and **Eye Tracking
+Support** = *Supported*.
+
 Each modality needs its OpenXR interaction-profile feature enabled in **Project
 Settings → XR Plug-in Management → OpenXR (Android)**: **Eye Gaze Interaction** for
 gaze+pinch, **Hand Interaction Profile** (+ **Hand Tracking**) for the hand ray, and the
@@ -44,21 +47,20 @@ gaze+pinch, **Hand Interaction Profile** (+ **Hand Tracking**) for the hand ray,
 profile is off (e.g. remove Eye Gaze Interaction and gaze+pinch stops; the hand ray then
 becomes the hand driver).
 
-- **Gaze + pinch** (primary hand driver when eye gaze is available). Gaze aims the
+- **Gaze + pinch** (if available, takes precedence over hand-ray aiming). Gaze aims the
   pointer; a hand pinch selects. Use `openxr_gaze_and_pinch` — **pass `gaze_position`
   in the SAME `base_space` you specify** (mixing `local` with the default
   `local_floor` misses). To **drag** (e.g. the Scale slider): gaze the handle, pinch,
   then move your **hand** — after pinch the pointer follows the hand, not the eyes, so
   gaze may look away. `gaze_and_pinch` activates gaze+hands mode (suppresses a held
   controller), so it also works while controllers are held.
-- **Controllers** — `OVRRaycaster` rides the controller **grip pose, NOT the OpenXR
-  aim pose**; the ray is the controller model's pointer, a **fixed 60° BELOW**
-  grip-forward. Orient the **grip** by tilting the grip→target direction **up 60°**
-  (`math_build_quat`), then pull `Trigger`. Validate deterministically before clicking:
-  read `OVRCameraRig/…/RightControllerAnchor/OVRControllerPrefab`'s world pose (its
-  forward **is** the ray) and intersect it with the panel plane; for tightly-spaced
-  targets recompute using that read-back prefab position as the origin. Full recipe in
-  **hz-meta-xr-operator-coordinates**.
+- **Controllers** — the ray rides the **grip pose, NOT the OpenXR aim pose**. Here it's
+  the `OVRControllerPrefab` transform's forward
+  (`OVRCameraRig/…/RightControllerAnchor/OVRControllerPrefab`, ~60° below grip-forward;
+  reticle `…/OVRControllerPrefab/OVRRayHelper/Cursor`, which deactivates off-surface). Aim it with the generic
+  measure-and-correct grip method — **"Aiming a Controller Ray at UI Elements" in
+  hz-meta-xr-operator-coordinates** (read the ray-origin forward → rotate the grip →
+  validate the reticle) — then pull `Trigger`.
 - **Hand ray** — fallback far-pointer only when no controller is in hand **and** eye
   gaze is unavailable (`HandRayFallbackController`). Uses the hand's pointer pose (FB
   aim, no grip offset): `openxr_hand_gesture(aim, target)` then `openxr_hand_gesture(pinch)`.
@@ -70,7 +72,8 @@ becomes the hand driver).
 - **Slider (Scale)** needs a **drag**, not a tap (see the gaze+pinch drag above; with a
   controller, hold `Trigger` and sweep).
 - **Dropdown (Shape)**: click to open, then click an option; confirm
-  `Environment/MeshObject` changes shape.
+  `Environment/MeshObject` changes shape. When open, target the runtime-created option
+  list, not the disabled `Template`.
 
 ## Intentional seeded bugs (detect & fix)
 
@@ -79,8 +82,5 @@ the **right** (a dropdown option that doesn't change the shape).
 
 ## Setup
 
-These interactions need Meta XR Operator running (the `openxr_*` MCP tools). If they're
-unavailable: install the **Meta XR Core SDK** + **Meta XR Simulator**, complete setup via
-the **Meta Project Setup Tool** / **Meta XR Settings** window, and check status in the Unity
-toolbar under **Meta**. The full agent skill set (**hz-meta-xr-operator** and friends) ships
-in the Core SDK at `Editor/MetaXROperator/Skills`.
+Needs Meta XR Operator running (the `openxr_*` MCP tools). If unavailable, see Setup in
+**hz-meta-xr-operator**.

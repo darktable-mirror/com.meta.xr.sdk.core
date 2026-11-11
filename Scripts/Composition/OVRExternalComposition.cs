@@ -27,6 +27,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine.Rendering;
+using Meta.XR.Compat;
 using Object = UnityEngine.Object;
 
 #if USING_URP
@@ -274,7 +275,7 @@ public class OVRExternalComposition : OVRComposition
             // fourth, search for all AudioListeners (very expensive)
             if (tmpAudioListener == null || !tmpAudioListener.enabled)
             {
-                Object[] allListeners = Object.FindObjectsByType<AudioListener>(FindObjectsSortMode.None);
+                Object[] allListeners = OVRUnityObjectCompat.FindObjectsByType<AudioListener>();
                 foreach (var l in allListeners)
                 {
                     AudioListener al = l as AudioListener;
@@ -368,7 +369,6 @@ public class OVRExternalComposition : OVRComposition
         }
     }
 #endif
-
 
     public override void Update(GameObject gameObject, Camera mainCamera,
         OVRMixedRealityCaptureConfiguration configuration, OVRManager.TrackingOrigin trackingOrigin)

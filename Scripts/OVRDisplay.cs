@@ -144,8 +144,17 @@ public class OVRDisplay
             recenterRequestedFrameCount = int.MaxValue;
         }
 
-        if (OVRPlugin.GetSystemHeadsetType() >= OVRPlugin.SystemHeadset.Oculus_Quest &&
-            OVRPlugin.GetSystemHeadsetType() < OVRPlugin.SystemHeadset.Rift_DK1) // all Oculus Standalone headsets
+        // Fire RecenteredPose for system-initiated recenters (e.g. via the universal menu)
+        // by polling the runtime's recenter count. This path covers Oculus standalone headsets
+        // as well as Quest headsets running over Link/Air Link on PC. It previously gated on
+        // standalone-only (< Rift_DK1), which silently dropped the event on Link because every
+        // Link headset enum value is >= Rift_DK1 (see T158683967). The legacy Rift DK1..Rift_S
+        // headsets predate GetLocalTrackingSpaceRecenterCount and stay excluded.
+        OVRPlugin.SystemHeadset headsetType = OVRPlugin.GetSystemHeadsetType();
+        bool isStandaloneHeadset = headsetType >= OVRPlugin.SystemHeadset.Oculus_Quest &&
+            headsetType < OVRPlugin.SystemHeadset.Rift_DK1;
+        bool isLinkHeadset = headsetType >= OVRPlugin.SystemHeadset.Oculus_Link_Quest;
+        if (isStandaloneHeadset || isLinkHeadset)
         {
             int recenterCount = OVRPlugin.GetLocalTrackingSpaceRecenterCount();
             if (localTrackingSpaceRecenterCount != recenterCount)

@@ -21,6 +21,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using Meta.XR.Compat;
 using Meta.XR.Telemetry;
 using Meta.XR.Util;
 using Unity.Collections;
@@ -29,9 +31,6 @@ using UnityEngine.Events;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 using Permission = UnityEngine.Android.Permission;
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-using System.Linq;
-#endif
 
 /// <summary>
 /// A manager for <see cref="OVRSceneAnchor"/>s created using the Room Setup feature.
@@ -363,6 +362,7 @@ public class OVRSceneManager : MonoBehaviour
     /// <summary>
     /// Describes the room layout of a room in the scene model.
     /// </summary>
+    [NonSerialized]
     [Obsolete(
         "RoomLayout is obsoleted. For each room's layout information (floor, ceiling, walls) see " +
         nameof(OVRSceneRoom) +
@@ -429,7 +429,7 @@ public class OVRSceneManager : MonoBehaviour
     void Awake()
     {
         // Only allow one instance at runtime.
-        if (FindObjectsByType<OVRSceneManager>(FindObjectsSortMode.None).Length > 1)
+        if (OVRUnityObjectCompat.FindObjectsByType<OVRSceneManager>().Length > 1)
         {
             new LogForwarder().LogError(nameof(OVRSceneManager),
                 $"Found multiple {nameof(OVRSceneManager)}s. Destroying '{name}'.");

@@ -449,10 +449,17 @@ partial class OVRPlugin
 
         public static Result ovrp_SetSimultaneousHandsAndControllersEnabled(OVRPlugin.Bool enabled)
         {
-#if USING_XR_SDK_OPENXR && USING_INPUT_SYSTEM_PACKAGE
+#if USING_XR_SDK_OPENXR
             if (MetaXRFeature.TryGet(out var feature))
             {
-                return feature.ovrp_SetSimultaneousHandsAndControllersEnabled(enabled);
+                var result = feature.ovrp_SetSimultaneousHandsAndControllersEnabled(enabled);
+                if (result == Result.Success)
+                {
+                    // Unfortunately in order to keep OVRPlugin internal state in sync so that OVRInput still works
+                    // we need to call this OVRPlugin function.
+                    OVRP_1_86_0.ovrp_SetMultimodalHandsControllersSupported(enabled);
+                }
+                return result;
             }
 #endif
             return OVRP_1_88_0.ovrp_SetSimultaneousHandsAndControllersEnabled(enabled);
@@ -460,7 +467,7 @@ partial class OVRPlugin
 
         public static Result ovrp_IsMultimodalHandsControllersSupported(ref OVRPlugin.Bool enabled)
         {
-#if USING_XR_SDK_OPENXR && USING_INPUT_SYSTEM_PACKAGE
+#if USING_XR_SDK_OPENXR
             if (MetaXRFeature.TryGet(out var feature))
             {
                 return feature.ovrp_IsMultimodalHandsControllersSupported(ref enabled);
@@ -524,6 +531,53 @@ partial class OVRPlugin
             }
 #endif
             return OVRP_1_49_0.ovrp_GetHmdColorDesc(ref colorSpace);
+        }
+
+        public static Result ovrp_SetControllerDrivenHandPoses(Bool controllerDrivenHandPoses)
+        {
+            var result = OVRP_1_86_0.ovrp_SetControllerDrivenHandPoses(controllerDrivenHandPoses);
+#if USING_XR_HANDS_1_9_0_OR_NEWER && UNITY_OPENXR_PLUGIN_1_18_0_OR_NEWER
+            if (MetaHandTrackingDataSourceFeature.TryGet(out var feature))
+            {
+                feature.SetControllerDrivenHandPoses(controllerDrivenHandPoses == Bool.True);
+            }
+#endif
+            return result;
+        }
+
+        public static Result ovrp_SetControllerDrivenHandPosesAreNatural(Bool controllerDrivenHandPosesAreNatural)
+        {
+            var result = OVRP_1_87_0.ovrp_SetControllerDrivenHandPosesAreNatural(controllerDrivenHandPosesAreNatural);
+#if USING_XR_HANDS_1_9_0_OR_NEWER && UNITY_OPENXR_PLUGIN_1_18_0_OR_NEWER
+            if (MetaHandTrackingDataSourceFeature.TryGet(out var feature))
+            {
+                feature.SetControllerDrivenHandPosesAreNatural(controllerDrivenHandPosesAreNatural == Bool.True);
+            }
+#endif
+            return result;
+        }
+
+        public static Result ovrp_SetWideMotionMode2HandPosesEnabled(Bool enabled)
+        {
+            var result = OVRP_1_116_0.ovrp_SetWideMotionMode2HandPosesEnabled(enabled);
+#if USING_XR_HANDS_1_9_0_OR_NEWER && UNITY_OPENXR_PLUGIN_1_18_0_OR_NEWER
+            if (MetaHandTrackingDataSourceFeature.TryGet(out var feature))
+            {
+                feature.SetWideMotionModeHandPoses(enabled == Bool.True);
+            }
+#endif
+            return result;
+        }
+
+        public static Result ovrp_RequestFastMotionMode(bool request)
+        {
+#if USING_XR_SDK_OPENXR
+            if (MetaXRFeature.TryGet(out var feature))
+            {
+                return feature.ovrp_RequestFastMotionMode(request);
+            }
+#endif
+            return OVRP_1_114_0.ovrp_RequestFastMotionMode(request);
         }
     }
 #endif // !OVRPLUGIN_UNSUPPORTED_PLATFORM

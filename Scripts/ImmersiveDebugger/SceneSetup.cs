@@ -106,7 +106,7 @@ namespace Meta.XR.ImmersiveDebugger
                     }
 
                     FovSimulatorLoader.ApplyConfiguredSetting();
-                    if (Object.FindAnyObjectByType<FovSimulatorComponent>(FindObjectsInactive.Include) == null)
+                    if (UnityEngine.Object.FindAnyObjectByType<FovSimulatorComponent>(FindObjectsInactive.Include) == null)
                     {
                         FovSimulatorComponent simulator = owner.AddComponent<FovSimulatorComponent>();
                         simulator.enabled = false;

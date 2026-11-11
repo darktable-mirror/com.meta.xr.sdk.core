@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+using Meta.XR.Compat;
 #if ENABLE_RUNTIME_OPTIMIZER
 
 using UnityEngine;
@@ -41,7 +42,6 @@ using Meta.XR.RuntimeOptimizer.Core;
 // global-namespace type outranks a using-imported one, so an unqualified `OVRNetwork` binds to
 // the legacy class, which has no port discovery. Alias it so the binding cannot drift again.
 using CoreOVRNetwork = Meta.XR.RuntimeOptimizer.Core.OVRNetwork;
-
 
 
 namespace Meta.XR.RuntimeOptimizer.Scripts
@@ -389,7 +389,6 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
             }
         }
 
-
         private void OnMessageReceived(TcpClient client, int payloadType, byte[] payload, int offset, int length)
         {
             // Get the current synchronization context
@@ -527,7 +526,6 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
 #endif
             }
         }
-
 
         private void SendStateData()
         {
@@ -930,10 +928,8 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
             insightData.totalGMemAlloc = UnityEngine.Profiling.Profiler.GetAllocatedMemoryForGraphicsDriver();
             insightData.totalDrawcount = (uint)drawCallsRecorder.LastValue;
 
-
             return insightData;
         }
-
 
         private void AnalyzeGpuTimeTest()
         {
@@ -1164,13 +1160,13 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
                 string goName = string.IsNullOrEmpty(x.GameObjectParentName)
                     ? x.GameObjectName
                     : $"{x.GameObjectParentName}/{x.GameObjectName}";
-                
+
                 // For group mode individual GOs (null CpuMainThreadTime), only send name
                 if (!x.CpuMainThreadTime.HasValue)
                 {
                     return $"GameObjectName:{goName}";
                 }
-                
+
                 // For normal GOs or group result, send with timing data.
                 // Format with the invariant culture: the payload is comma-delimited, so a locale
                 // that uses ',' as the decimal separator would split one value into two fields.
@@ -1195,7 +1191,7 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
         private List<GameObject> FindAllRenderableObjects()
         {
             // Find all objects with Renderer component
-            Renderer[] renderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+            Renderer[] renderers = OVRUnityObjectCompat.FindObjectsByType<Renderer>();
             List<GameObject> renderableObjects = new List<GameObject>();
             foreach (Renderer renderer in renderers)
             {
@@ -1219,10 +1215,7 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
             }
 
             GameObject nameMatch = null;
-            GameObject[] allObjects = FindObjectsByType<GameObject>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None
-            );
+            GameObject[] allObjects = OVRUnityObjectCompat.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (GameObject candidate in allObjects)
             {
                 if (exclude.Contains(candidate))
@@ -1257,14 +1250,14 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
                 isFrozen = true;
                 Time.timeScale = 0.0f;
                 // Disable animators
-                previouslyDisabledAnimators = FindObjectsByType<Animator>(FindObjectsSortMode.None).ToList();
+                previouslyDisabledAnimators = OVRUnityObjectCompat.FindObjectsByType<Animator>().ToList();
                 foreach (Animator animator in previouslyDisabledAnimators)
                 {
                     animator.enabled = false;
                 }
 
                 // Pause audio sources
-                previouslyPlayingAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None)
+                previouslyPlayingAudioSources = OVRUnityObjectCompat.FindObjectsByType<AudioSource>()
                     .Where(audio => audio.isPlaying)
                     .ToList();
                 foreach (AudioSource audioSource in previouslyPlayingAudioSources)
@@ -1273,7 +1266,7 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
                 }
 
                 // Disable NavMeshAgents
-                previouslyEnabledNavMeshAgents = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None)
+                previouslyEnabledNavMeshAgents = OVRUnityObjectCompat.FindObjectsByType<NavMeshAgent>()
                     .Where(agent => agent.enabled)
                     .ToList();
                 foreach (NavMeshAgent agent in previouslyEnabledNavMeshAgents)
@@ -1282,7 +1275,7 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
                 }
 
                 // Pause particle systems
-                previouslyPlayingParticleSystems = FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None)
+                previouslyPlayingParticleSystems = OVRUnityObjectCompat.FindObjectsByType<ParticleSystem>()
                     .Where(ps => ps.isPlaying && !ps.isPaused)
                     .ToList();
                 foreach (ParticleSystem ps in previouslyPlayingParticleSystems)
@@ -1291,7 +1284,7 @@ namespace Meta.XR.RuntimeOptimizer.Scripts
                 }
 
                 // Pause timeline directors
-                previouslyPlayingDirectors = FindObjectsByType<PlayableDirector>(FindObjectsSortMode.None)
+                previouslyPlayingDirectors = OVRUnityObjectCompat.FindObjectsByType<PlayableDirector>()
                     .Where(pd => pd.state == PlayState.Playing)
                     .ToList();
                 foreach (PlayableDirector director in previouslyPlayingDirectors)

@@ -376,14 +376,15 @@ namespace Meta.XR.ImmersiveDebugger.Editor
             ToggleFollowTranslationButton.Draw(origin);
             ToggleFollowRotationButton.Draw(origin);
 
-            var dataAssets = RuntimeSettings.Instance.InspectedDataAssets;
+            RuntimeSettings runtimeSettings = RuntimeSettings.Instance;
+            var dataAssets = runtimeSettings.InspectedDataAssets;
             if (dataAssets.Count != 0)
             {
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField(
                     new GUIContent("Inspected Data Sets", "A list of prebuilt dataset of inspected members of InspectedData scriptable object"),
                     GUIStyles.BoldLabel);
-                var dataToggle = RuntimeSettings.Instance.InspectedDataEnabled;
+                var dataToggle = runtimeSettings.InspectedDataEnabled;
                 for (var i = 0; i < dataAssets.Count; i++)
                 {
                     EditorGUILayout.BeginHorizontal();
@@ -394,7 +395,7 @@ namespace Meta.XR.ImmersiveDebugger.Editor
                         Uid = dataAssets[i].DisplayName,
                         Owner = Utils.ToolDescriptor,
                         Get = () => dataToggle[index],
-                        Set = val => dataToggle[index] = val,
+                        Set = val => runtimeSettings.SetInspectedDataEnabled(index, val),
                         Label = dataAssets[i].DisplayName
                     }.DrawForGUI(origin, Utils.ToolDescriptor);
 

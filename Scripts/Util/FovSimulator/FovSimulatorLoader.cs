@@ -89,6 +89,8 @@ namespace Meta.XR.FovSimulator
     internal static class FovSimulatorLoader
     {
         private static FovSimulatorLoaderOwnedObject _ownedObject;
+        private static FovSimulator _canonicalSimulator;
+
 
         internal static void RegisterOwnedObject(FovSimulatorLoaderOwnedObject ownership)
         {
@@ -106,20 +108,19 @@ namespace Meta.XR.FovSimulator
             }
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneLoaded += OnSceneLoaded;
-            ApplyAndroidSetting();
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            ApplyAndroidSetting();
+            ApplyConfiguredSetting();
         }
 
+#if UNITY_ANDROID && !UNITY_EDITOR
         private static void ApplyAndroidSetting()
         {
             OVRRuntimeSettings runtimeSettings = OVRRuntimeSettings.Instance;
@@ -128,11 +129,26 @@ namespace Meta.XR.FovSimulator
                 return;
             }
 
-            Apply(
-                runtimeSettings.FovSimulationEnabled,
+            ApplyRuntimeSetting(
+                runtimeSettings,
                 OVRFovSimulationTelemetry.AndroidEnvironment);
         }
 #endif
+
+        internal static void ApplyRuntimeSetting(
+            OVRRuntimeSettings runtimeSettings,
+            string environment)
+        {
+            if (runtimeSettings == null)
+            {
+                return;
+            }
+
+            Apply(
+                runtimeSettings.FovSimulationEnabled,
+                environment,
+                runtimeSettings.FovSimulationDrawDesignAreaGuideline);
+        }
 
         internal static void ApplyConfiguredSetting()
         {
@@ -147,7 +163,10 @@ namespace Meta.XR.FovSimulator
         internal static System.Action EditorSettingApplier { get; set; }
 #endif
 
-        internal static void Apply(bool enabled, string environment)
+        internal static void Apply(
+            bool enabled,
+            string environment,
+            bool? drawDesignAreaGuideline = null)
         {
             if (!enabled)
             {
@@ -171,8 +190,13 @@ namespace Meta.XR.FovSimulator
                         createdGameObject = new GameObject(nameof(FovSimulator));
                         FovSimulatorLoaderOwnedObject ownership =
                             createdGameObject.AddComponent<FovSimulatorLoaderOwnedObject>();
+                        // AddComponent does not invoke Awake in every EditMode context.
+                        RegisterOwnedObject(ownership);
                         ownership.hideFlags = HideFlags.HideInInspector;
-                        Object.DontDestroyOnLoad(createdGameObject);
+                        if (Application.isPlaying)
+                        {
+                            Object.DontDestroyOnLoad(createdGameObject);
+                        }
                         owner = createdGameObject;
                     }
 
@@ -198,6 +222,11 @@ namespace Meta.XR.FovSimulator
                         environment);
                     return;
                 }
+            }
+            _canonicalSimulator = simulator;
+            if (drawDesignAreaGuideline.HasValue)
+            {
+                simulator.DrawDesignAreaGuideline = drawDesignAreaGuideline.Value;
             }
 
             if (simulator.OverlayActive)
@@ -254,6 +283,12 @@ namespace Meta.XR.FovSimulator
 
         private static FovSimulator FindCanonicalSimulator(string environment)
         {
+            if (_canonicalSimulator != null &&
+                _canonicalSimulator.gameObject.activeInHierarchy)
+            {
+                return _canonicalSimulator;
+            }
+
             OVRManager manager = OVRManager.instance;
             if (manager != null && manager.gameObject.activeInHierarchy)
             {
@@ -261,16 +296,20 @@ namespace Meta.XR.FovSimulator
                 if (managerSimulator != null)
                 {
                     DestroyLoaderOwnedObjects(environment);
-                    return managerSimulator;
+                    return _canonicalSimulator = managerSimulator;
                 }
             }
 
             FovSimulator loaderOwnedSimulator = FindLoaderOwnedSimulator(environment);
             if (loaderOwnedSimulator != null)
             {
-                return loaderOwnedSimulator;
+                return _canonicalSimulator = loaderOwnedSimulator;
             }
-            return null;
+
+            FovSimulator existingSimulator = Object.FindAnyObjectByType<FovSimulator>();
+            return existingSimulator != null && existingSimulator.gameObject.activeInHierarchy
+                ? _canonicalSimulator = existingSimulator
+                : null;
         }
 
         private static FovSimulator FindLoaderOwnedSimulator(string environment)
@@ -306,14 +345,22 @@ namespace Meta.XR.FovSimulator
             FovSimulator ownedSimulator = ownership != null
                 ? ownership.GetComponent<FovSimulator>()
                 : null;
-            if (ownedSimulator != managerSimulator)
+            if (ownedSimulator != managerSimulator &&
+                !DisableSimulator(ownedSimulator, environment, reportFailure: !failureReported))
+            {
+                failureReported = true;
+            }
+
+            if (_canonicalSimulator != managerSimulator &&
+                _canonicalSimulator != ownedSimulator)
             {
                 DisableSimulator(
-                    ownedSimulator,
+                    _canonicalSimulator,
                     environment,
                     reportFailure: !failureReported);
             }
             DestroyLoaderOwnedObjects(environment);
+            _canonicalSimulator = null;
         }
 
         private static bool DisableSimulator(

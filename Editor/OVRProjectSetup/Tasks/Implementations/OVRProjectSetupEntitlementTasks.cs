@@ -20,6 +20,7 @@
 
 using UnityEditor;
 using System.Collections.Generic;
+using Meta.XR.Editor.Utils;
 
 /// <summary>
 /// Enumerates the Data Use Checkup (DUC) feature categories required by Meta platform policies.
@@ -45,6 +46,11 @@ public enum DUCFeature
 internal static class OVRProjectSetupEntitlementTasks
 {
     private const OVRProjectSetup.TaskGroup Group = OVRProjectSetup.TaskGroup.Features;
+
+    private const string PlatformSdkPackageName = "com.meta.xr.sdk.platform";
+
+    private static bool IsPlatformSdkInstalled() =>
+        PackageList.PackageManagerListAvailable && PackageList.IsPackageInstalled(PlatformSdkPackageName);
 
     // Dictionary mapping for DUC features
     public static readonly Dictionary<string, HashSet<string>> EntitlementSettings = new Dictionary<string, HashSet<string>>
@@ -86,18 +92,18 @@ internal static class OVRProjectSetupEntitlementTasks
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Recommended,
             group: Group,
-            conditionalValidity: _ => true,
+            conditionalValidity: _ => IsPlatformSdkInstalled(),
             tags: OVRProjectSetup.TaskTags.ManuallyFixable,
-            message: "Complete a Data Use Checkup to meet DUC policy requirements. Please ignore if you are not using any Platform SDK APIs.",
+            message: "Complete a Data Use Checkup to meet DUC policy requirements.",
             manualSetup: new DataUseCheckupManualSetupInfo()
         );
 
         OVRProjectSetup.AddTask(
             level: OVRProjectSetup.TaskLevel.Recommended,
             group: Group,
-            conditionalValidity: _ => true,
+            conditionalValidity: _ => IsPlatformSdkInstalled(),
             tags: OVRProjectSetup.TaskTags.ManuallyFixable,
-            message: "Set up the application ID and the package name. Please ignore if you are not using any Platform SDK APIs.",
+            message: "Set up the application ID and the package name.",
             manualSetup: new AppIDMatchingPkgNameSetupInfo()
         );
     }

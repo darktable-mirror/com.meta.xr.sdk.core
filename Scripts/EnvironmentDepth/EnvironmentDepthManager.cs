@@ -32,6 +32,7 @@ using UnityEngine.XR;
 using UnityEngine.XR.Management;
 #endif
 using Debug = UnityEngine.Debug;
+using Meta.XR.Compat;
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("meta.xr.mrutilitykit")]
 
 namespace Meta.XR.EnvironmentDepth
@@ -233,7 +234,7 @@ namespace Meta.XR.EnvironmentDepth
 
         private void Awake()
         {
-            Assert.AreEqual(1, FindObjectsByType<EnvironmentDepthManager>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length,
+            Assert.AreEqual(1, OVRUnityObjectCompat.FindObjectsByType<EnvironmentDepthManager>(FindObjectsInactive.Include).Length,
                 $"Environment Depth: more than one {nameof(EnvironmentDepthManager)} component. Only one instance is allowed at a time. Current instance: {name}");
             if (!IsSupported)
             {

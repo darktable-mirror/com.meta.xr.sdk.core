@@ -113,7 +113,7 @@ public static partial class OVRPlugin
 #if OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM
     public static readonly System.Version wrapperVersion = _versionZero;
 #else
-    public static readonly System.Version wrapperVersion = OVRP_1_207_0.version;
+    public static readonly System.Version wrapperVersion = OVRP_1_209_0.version;
 #endif
 
 #if !(OVRPLUGIN_UNSUPPORTED_PLATFORM && OVRPLUGIN_QPL_UNSUPPORTED_PLATFORM)
@@ -5699,7 +5699,7 @@ public static partial class OVRPlugin
 #else
         if (version >= OVRP_1_86_0.version)
         {
-            Result result = OVRP_1_86_0.ovrp_SetControllerDrivenHandPoses(controllerDrivenHandPoses ? Bool.True : Bool.False);
+            Result result = Shim.ovrp_SetControllerDrivenHandPoses(controllerDrivenHandPoses ? Bool.True : Bool.False);
             return (result == Result.Success);
         }
 
@@ -5714,7 +5714,7 @@ public static partial class OVRPlugin
 #else
         if (version >= OVRP_1_87_0.version)
         {
-            Result result = OVRP_1_87_0.ovrp_SetControllerDrivenHandPosesAreNatural(controllerDrivenHandPosesAreNatural ? Bool.True : Bool.False);
+            Result result = Shim.ovrp_SetControllerDrivenHandPosesAreNatural(controllerDrivenHandPosesAreNatural ? Bool.True : Bool.False);
             return (result == Result.Success);
         }
 
@@ -5983,7 +5983,7 @@ public static partial class OVRPlugin
 #else
         if(version >= OVRP_1_116_0.version)
         {
-            Result result = OVRP_1_116_0.ovrp_SetWideMotionMode2HandPosesEnabled(enabled ? Bool.True : Bool.False);
+            Result result = Shim.ovrp_SetWideMotionMode2HandPosesEnabled(enabled ? Bool.True : Bool.False);
             return (result == Result.Success);
         }
         return false;
@@ -13044,10 +13044,14 @@ public static partial class OVRPlugin
 
     public static Result RequestFastMotionMode(bool request)
     {
+#if OVRPLUGIN_UNSUPPORTED_PLATFORM
+        return Result.Failure_Unsupported;
+#else
         if (version < OVRP_1_114_0.version)
             return Result.Failure_NotYetImplemented;
 
-        return OVRP_1_114_0.ovrp_RequestFastMotionMode(request);
+        return Shim.ovrp_RequestFastMotionMode(request);
+#endif
     }
 
     public static Result GetHandPoseSourceInferred(int frameIndex, Hand hand, out bool poseInferred)
@@ -13311,6 +13315,8 @@ public static partial class OVRPlugin
             if (version >= OVRP_1_71_0.version)
             {
                 OVRP_1_71_0.ovrp_UnityOpenXR_OnInstanceDestroy(xrInstance);
+                // The native plugin shut down and its new instance starts on the OVR skeleton again.
+                HandSkeletonVersion = OVRHandSkeletonVersion.OVR;
             }
 #endif
         }

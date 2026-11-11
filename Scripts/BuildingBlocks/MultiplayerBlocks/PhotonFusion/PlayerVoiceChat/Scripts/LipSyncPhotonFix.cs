@@ -45,7 +45,7 @@ namespace Meta.XR.MultiplayerBlocks.Fusion
 
         private void Awake()
         {
-            lipsync = FindObjectOfType<OvrAvatarLipSyncContext>();
+            lipsync = FindAnyObjectByType<OvrAvatarLipSyncContext>();
 
             if (lipsync != null)
             {

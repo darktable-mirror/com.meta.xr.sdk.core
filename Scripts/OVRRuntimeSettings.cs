@@ -154,11 +154,19 @@ public class OVRRuntimeSettings : OVRRuntimeAssetsBase
     public bool QuestVisibilityMeshOverriden = false;
 
     [SerializeField] private bool fovSimulationEnabled;
+    [Tooltip("Whether the 58 by 54 degree design area guideline is drawn in VR glasses field of view simulation.")]
+    [SerializeField] private bool fovSimulationDrawDesignAreaGuideline = true;
 
     internal bool FovSimulationEnabled
     {
         get => fovSimulationEnabled;
         set => fovSimulationEnabled = value;
+    }
+
+    internal bool FovSimulationDrawDesignAreaGuideline
+    {
+        get => fovSimulationDrawDesignAreaGuideline;
+        set => fovSimulationDrawDesignAreaGuideline = value;
     }
 
 
@@ -181,6 +189,19 @@ public class OVRRuntimeSettings : OVRRuntimeAssetsBase
         settings.FovSimulationEnabled = enabled;
         CommitRuntimeSettings(settings);
         OVRFovSimulationTelemetry.SendSettingChanged(source, enabled);
+    }
+
+    internal static void SetAndroidFovSimulationDrawDesignAreaGuideline(
+        OVRRuntimeSettings settings,
+        bool enabled)
+    {
+        if (settings == null || settings.FovSimulationDrawDesignAreaGuideline == enabled)
+        {
+            return;
+        }
+
+        settings.FovSimulationDrawDesignAreaGuideline = enabled;
+        CommitRuntimeSettings(settings);
     }
 
     /// <summary>

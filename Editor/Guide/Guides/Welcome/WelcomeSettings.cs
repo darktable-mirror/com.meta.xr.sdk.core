@@ -47,7 +47,6 @@ namespace Meta.XR.Guides.Editor.Welcome
             public const string CoverSubtitle = Meta.XR.Editor.StatusMenu.StatusMenuSettings.Labels.CoverSubtitle;
             public const string OpenSdkMenuButton = "Open SDK menu";
             public const string ReleaseNotesButton = "View release notes";
-            public const string ShowOnLaunchToggle = "Show this window on launch";
             public const string CloseButton = "Close";
             public const string ResourcesHeader = "Resources";
             public const string XrToolsHeader = "XR tools";

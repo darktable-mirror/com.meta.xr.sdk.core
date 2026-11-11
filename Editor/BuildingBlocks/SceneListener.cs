@@ -25,6 +25,7 @@ using UnityEngine.SceneManagement;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using Meta.XR.Compat;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -61,7 +62,7 @@ namespace Meta.XR.BuildingBlocks.Editor
         {
             EditorApplication.delayCall += () =>
             {
-                var sceneBlocks = UnityEngine.Object.FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None);
+                var sceneBlocks = OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>();
 
                 foreach (var block in sceneBlocks)
                 {

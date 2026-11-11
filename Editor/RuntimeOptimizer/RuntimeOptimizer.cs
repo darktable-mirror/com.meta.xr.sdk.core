@@ -233,10 +233,8 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         // New fields for enhanced capture monitoring (T240137389 + T240137791)
         // Used for Bottleneck, What If, and Quick Perf captures
         private DateTime captureStartTime = default(DateTime);
-        /// <summary>Capture budget outside of What If, which raises it for the length of its countdown.</summary>
         private const int kDefaultCaptureTimeoutSeconds = 60;
-
-        private int maxCaptureTimeoutSeconds = kDefaultCaptureTimeoutSeconds; // dynamically adjusted for What If
+        private int maxCaptureTimeoutSeconds = kDefaultCaptureTimeoutSeconds; // Maximum capture duration (dynamically adjusted for What If)
         private bool isActivelyCapturing = false;
 
         private bool isUpdatingScriptDefines = false;
@@ -280,23 +278,11 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         private const float kLaunchCooldownSeconds = 3.0f;
         private bool isLaunchInProgress = false;
 
-        // Connection state as of this frame's Layout pass. See DrawAppLaunchField: the pass has to
-        // agree with Repaint on how many buttons exist, and the live state can change between them.
+        // Keep Layout and Repaint on the same IMGUI control path.
         private AppConnectionState latchedAppConnectionState = AppConnectionState.NotRunning;
 
-        /// <summary>gpuprofserver's pid when the running app connected, or empty if unknown.</summary>
-        /// <remarks>
-        /// The app initialising GPU profiling can make the service restart. Detailed profiling is
-        /// injected into a process at Vulkan init and never afterwards, so an app that outlives the
-        /// instance it started under is un-instrumented for good: Bottleneck Analysis reports
-        /// 0.00ms and every What If fails with "StartGpuProfiling failed to start". Only a relaunch
-        /// recovers it. Comparing against this is how that is noticed at all -- the device still
-        /// reports detailed profiling as enabled, so `ovrgpuprofiler -i` and
-        /// `getprop debug.egl.profiler` both look healthy.
-        /// </remarks>
+        // A service restart leaves an already-running app uninstrumented until relaunch.
         private string gpuServicePidAtConnect = "";
-
-        /// <summary>Latched so the restart is reported once per launch, not every Update tick.</summary>
         private bool reportedGpuServiceRestart = false;
 
         private string currentSessionID = "";
@@ -475,8 +461,6 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             RO.Util.DebugLog("Runtime Optimizer: New Backstage Item ID: " + newBackstageItemID);
 
             lastSelectedInsight = InsightType.EMPTY_NO_CAPTURES;
-            // ensure python components are installed
-            MetricAPI.RunPythonUtil();
             bool exitCode = CaptureTool.ForwardPort(remoteListeningPort);
             CaptureTool.ValidateAdb();
             RO.Util.DebugLog("Runtime Optimizer: identifier:" + Application.identifier);
@@ -525,17 +509,20 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                 return;
             }
 
-            client.Disconnect();
+            PerformDisableCleanup(
+                runtimeIsFrozen,
+                client != null && client.Connected,
+                sendUnfreeze: () =>
+                {
+                    RO.Util.DebugLog("[RuntimeOptimizer] Sending unfreeze before window close to prevent app freeze state");
+                    SendToServer("unfreeze");
+                },
+                stopHeadlock: StopHeadlock,
+                disconnect: () => client?.Disconnect()
+            );
             CaptureTool.ReleasePort(remoteListeningPort);
             runtimeServicePID = -1;
             RuntimeOptimizerPlugin.SendEvent("window_disabled", InsightEventDataStr.ToJsonStr("true"));
-
-            // Disconnect when the window is closed
-            if (runtimeIsFrozen)
-            {
-                SendToServer("unfreeze");
-                StopHeadlock();
-            }
 
             // Close GameObjectSelectionWindow if it's open
             var selectionWindow = EditorWindow.GetWindow<GameObjectSelectionWindow>(false, "", false);
@@ -650,6 +637,26 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         }
 #endif
 
+        /// <summary>
+        /// Performs the disable cleanup sequence ensuring unfreeze is sent before disconnect.
+        /// Extracted for testability to verify correct operation ordering.
+        /// </summary>
+        internal static void PerformDisableCleanup(
+            bool isFrozen,
+            bool isClientConnected,
+            Action sendUnfreeze,
+            Action stopHeadlock,
+            Action disconnect)
+        {
+            if (isFrozen && isClientConnected)
+            {
+                sendUnfreeze?.Invoke();
+                stopHeadlock?.Invoke();
+            }
+
+            disconnect?.Invoke();
+        }
+
         void Update()
         {
             if (adbUnavailable)
@@ -691,15 +698,6 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                 CheckFreezeFrameCompletion();
 
                 needRepait = true;
-            }
-
-            // A capture in flight shows a card with a throbber, and the editor does not repaint
-            // while idle. Without this the card is not drawn until some unrelated event forces a
-            // redraw, measured at 5.5s after the click -- long after the button reads
-            // "Processing..." -- and the throbber then sits on a single frame.
-            if (!string.IsNullOrEmpty(IsCapturingBottlenecks))
-            {
-                Repaint();
             }
 
             if (isUpdatingScriptDefines)
@@ -843,17 +841,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                     }
                 }
 
-                // Skipped while the capture thread is running adb commands. OVRADBTool keeps its
-                // stdout and stderr StringBuilders in instance fields that every RunCommand
-                // reassigns and then nulls, so two threads sharing one tool read each other's
-                // output. This poll is the only adb call left unguarded during a capture, and the
-                // capture thread's GetDevices() is what it corrupts: that call then parses an empty
-                // buffer, clears the device list, and the very next Update cancels the capture as a
-                // headset_disconnection while the headset is plainly still attached.
-                // Noticed here rather than waited for in LaunchApp: the restart lands at no fixed
-                // delay -- measured from about 5s after the app starts to beyond 9s after the
-                // connect -- so any bounded wait either misses it or freezes the editor guessing.
-                // Update already polls on this cadence and costs nothing extra.
+                // OVRADBTool is not thread-safe, so poll only when no capture is using it.
                 if (!CaptureTool.IsCaptureThreadRunning()
                     && !reportedGpuServiceRestart
                     && playerConnected
@@ -886,9 +874,6 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                             runtimeServicePID = -1;
                             sleepNotificationShown = true;
                             needRepait = true;
-                            // Cancel any active capture operation when device sleeps (T241267036)
-                            // Check all capture states, not just isActivelyCapturing, to prevent
-                            // getting stuck in "Processing..." when power button is pressed mid-capture
                             if (isActivelyCapturing || IsCapturingBottlenecks != "" || isCapturingWhatIf || freezeFrameInProgress || capturingForStaging)
                             {
                                 CancelCurrentCapture("Device entered sleep mode during capture. Please wake the device and try again.", "device_sleep");
@@ -897,7 +882,6 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                     }
                     else
                     {
-                        // Device is awake - reset the notification flag so it can be shown again on next sleep
                         sleepNotificationShown = false;
                     }
                 }
@@ -1690,6 +1674,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
 
                 string eventJson = InsightEventDataStr.ToJsonStr(JsonUtility.ToJson(failureEventData));
                 RuntimeOptimizerPlugin.SendEvent($"capture_failed_{failureReason}", eventJson);
+                RO.Util.DebugLogError($"Capture failed - Reason: {failureReason}, Message: {errorMessage}");
             }
         }
 
@@ -3109,7 +3094,9 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             EditorGUILayout.Space(20);
 
             DrawRenderBreakDownLine("Drawcall Count (< 300 is optimal)", insight.drawcallCount.ToString());
-            DrawRenderBreakDownLine("MSAA", $"{insight.MSAALevel}");
+            DrawRenderBreakDownLine("MSAA", insight.MSAALevel == InsightData.MSAAUnavailable
+                ? "no data"
+                : $"{insight.MSAALevel}");
             DrawRenderBreakDownLine("Triangle Count", $"{insight.totalTriangleCount / 1000}k");
             DrawRenderBreakDownLine("Loaded Texures Memory", $"{insight.totalTextureMemory / (1024 * 1024)} mb");
 
@@ -3472,13 +3459,6 @@ namespace Meta.XR.RuntimeOptimizer.Editor
                 executablePath = newExecutablePath;
             }
 
-            // IMGUI matches controls between the Layout and Repaint passes by position, so both
-            // passes have to emit the same number of them. RunningDisconnected draws a second
-            // button that the other two states do not, and the state behind it moves outside
-            // OnGUI: Update() clears playerConnected, and the network thread changes the client's
-            // connection state. Reading it live lets it flip mid-frame, and the extra Button then
-            // throws "Getting control N's position in a group with only N controls", which aborts
-            // the whole window's repaint. Latch it on Layout and reuse that for the frame.
             if (Event.current.type == EventType.Layout)
             {
                 latchedAppConnectionState = GetAppConnectionState();
@@ -3773,12 +3753,6 @@ namespace Meta.XR.RuntimeOptimizer.Editor
             // ConnectToServer will set playerConnected to true on successful connection
             ConnectToServer(35, "launch");
 
-            // Remember which gpuprofserver instance this app started under. The app initialising
-            // GPU profiling can make the service restart, and a process whose Vulkan init happened
-            // under the previous instance is un-instrumented for the rest of its life. The restart
-            // arrives at no fixed delay -- measured anywhere from ~5s after the app starts to past
-            // 9s after the connect -- so it is watched for in Update rather than waited on here,
-            // which would block the editor for an interval that is guesswork anyway.
             gpuServicePidAtConnect = CaptureTool.GpuServicePid();
             reportedGpuServiceRestart = false;
 
@@ -3825,13 +3799,7 @@ namespace Meta.XR.RuntimeOptimizer.Editor
         {
             RO.Util.DebugLog("Attempting to reconnect to running app...");
 
-            // Reconnecting restores the TCP link and nothing else. Detailed profiling is injected
-            // into a process at Vulkan init, so once the service has restarted under a running app
-            // that app stays un-instrumented however many times the editor reconnects to it: the
-            // connection comes back, the UI looks healthy, and every capture still reports 0.00ms
-            // GPU with What If returning no rows. Only relaunching starts a process under the
-            // current service. Say so here, because Connect sitting next to Relaunch reads as the
-            // lighter-weight fix for the same problem, and it is not a fix at all.
+            // Reconnecting cannot instrument a process that outlived a service restart.
             if (reportedGpuServiceRestart)
             {
                 RO.Util.DebugLogWarning(

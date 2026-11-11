@@ -193,6 +193,21 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
     public bool requiresSystemKeyboard = false;
     public bool experimentalFeaturesEnabled = false;
 
+    /// <summary>
+    /// Specifies whether the compositor compensates for tilted screens by using the forward head pose.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, the <c>com.oculus.useForwardHeadPose</c> Android manifest tag improves pixel-density
+    /// balance on devices with canted screens, such as Quest 3, and allows the runtime to distinguish
+    /// head pose from eye pose. This option is enabled by default. It is not compatible with the deprecated
+    /// Oculus XR Plugin (<c>com.unity.xr.oculus</c>), where head yaw is applied as view pitch, so turning the
+    /// head left and right tilts the view up and down; the tag is therefore omitted from the manifest while
+    /// that provider is active. Screen tilt compensation shifts the rendered view slightly downward, but the
+    /// effect is minimal.
+    /// </remarks>
+    [Tooltip("Adds the com.oculus.useForwardHeadPose manifest tag so the compositor compensates for tilted screens on devices with canted screens, such as Quest 3, improving pixel-density balance and distinguishing head pose from eye pose. Enabled by default. Not compatible with the deprecated Oculus XR Plugin (com.unity.xr.oculus), where turning the head left and right tilts the view up and down; the tag is omitted while that provider is active. The rendered view shifts slightly downward, but the effect is minimal.")]
+    public bool useForwardHeadPose = true;
+
     [Obsolete("This value has no effect. Use " + nameof(insightPassthroughSupport) + " instead.")]
     public bool insightPassthroughEnabled;
 
@@ -207,6 +222,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
 
     [SerializeField]
     public bool isPassthroughCameraAccessEnabled;
+
 
     public ProcessorFavor processorFavor
     {
@@ -380,6 +396,7 @@ public class OVRProjectConfig : ScriptableObject, ISerializationCallbackReceiver
                 projectConfig.skipUnneededShaders = false;
                 projectConfig.requiresSystemKeyboard = false;
                 projectConfig.experimentalFeaturesEnabled = false;
+                projectConfig.useForwardHeadPose = true;
                 projectConfig.insightPassthroughSupport = FeatureSupport.None;
                 projectConfig.horizonOsSdkDisabled = false;
                 projectConfig.minHorizonOsSdkVersion = horizonOsSdkVersions[0];

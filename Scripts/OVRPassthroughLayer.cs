@@ -25,6 +25,7 @@ using Meta.XR.Util;
 using UnityEngine;
 using UnityEngine.Events;
 using ColorMapType = OVRPlugin.InsightPassthroughColorMapType;
+using Meta.XR.Compat;
 
 /// <summary>
 /// Represents a layer used for passthrough.
@@ -599,11 +600,7 @@ public class OVRPassthroughLayer : MonoBehaviour
     void Awake()
     {
         int layersInSameScene = 0;
-#if UNITY_6000_4_OR_NEWER
-        foreach (var layer in FindObjectsByType<OVRPassthroughLayer>())
-#else
-        foreach (var layer in FindObjectsByType<OVRPassthroughLayer>(FindObjectsSortMode.None))
-#endif
+        foreach (var layer in OVRUnityObjectCompat.FindObjectsByType<OVRPassthroughLayer>())
         {
             if (layer.gameObject.scene == gameObject.scene)
             {

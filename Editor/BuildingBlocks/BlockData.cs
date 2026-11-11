@@ -34,6 +34,7 @@ using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
+using Meta.XR.Compat;
 
 namespace Meta.XR.BuildingBlocks.Editor
 {
@@ -79,7 +80,6 @@ namespace Meta.XR.BuildingBlocks.Editor
                 };
             }
         }
-
 
         /// <summary>
         /// Gets the other blocks that must be installed before this block.
@@ -410,7 +410,7 @@ namespace Meta.XR.BuildingBlocks.Editor
 
         private static bool IsBlockPresentInScene(string blockId)
         {
-            return FindObjectsByType<BuildingBlock>(FindObjectsSortMode.None).Any(x => x.BlockId == blockId);
+            return OVRUnityObjectCompat.FindObjectsByType<BuildingBlock>().Any(x => x.BlockId == blockId);
         }
 
         protected virtual bool IsBlockPresentInScene()
@@ -469,7 +469,6 @@ namespace Meta.XR.BuildingBlocks.Editor
             var scenePath = SceneManager.GetActiveScene().path;
             return !string.IsNullOrEmpty(scenePath);
         }
-
 
         internal override bool OverridesInstallRoutine
         {

@@ -392,6 +392,10 @@ public class OVRProjectConfigEditor : Editor
                         "If checked, application can work in both 6DoF and 3DoF modes. It's highly recommended to keep it unchecked unless your project strongly needs the 3DoF head tracking."),
                     ref projectConfig.allowOptional3DofHeadTracking, ref hasModified);
 
+                OVREditorUtil.SetupBoolField(projectConfig, new GUIContent("Use Forward Head Pose",
+                        "Adds the com.oculus.useForwardHeadPose manifest tag so the compositor compensates for tilted screens on devices with canted screens, such as Quest 3, improving pixel-density balance and distinguishing head pose from eye pose. Enabled by default. Not compatible with the deprecated Oculus XR Plugin (com.unity.xr.oculus), where turning the head left and right tilts the view up and down; the tag is omitted while that provider is active. The rendered view shifts slightly downward, but the effect is minimal."),
+                    ref projectConfig.useForwardHeadPose, ref hasModified);
+
                 // Processor favor (cpu/gpu level trading)
                 OVREditorUtil.SetupEnumField(projectConfig, new GUIContent("Processor Favor",
                         "Quest 3 family only. If selected, will increase the frequency of one processor at the expense of decreasing the frequency of the other."),
@@ -517,8 +521,8 @@ public class OVRProjectConfigEditor : Editor
         {
             EditorGUI.BeginChangeCheck();
             fovSimulationEnabled = EditorGUILayout.Toggle(
-                new GUIContent("Simulate Device Field of View",
-                    "Masks the application view to approximate the target device field of view. " +
+                new GUIContent("Simulate VR Glasses Field of View",
+                    "Masks the application view to approximate the field of view of VR glasses. " +
                     "Quest requires Experimental Features Enabled. Android builds are marked experimental " +
                     "while enabled and cannot be submitted to the Meta Horizon Store."),
                 fovSimulationEnabled);
@@ -533,6 +537,16 @@ public class OVRProjectConfigEditor : Editor
                     OVRFovSimulationTelemetry.AndroidProjectConfigSource);
             }
         }
+
+        bool drawDesignAreaGuideline = DrawDesignAreaGuidelineToggle(
+            fovSimulationEnabled,
+            runtimeSettings.FovSimulationDrawDesignAreaGuideline);
+        if (drawDesignAreaGuideline != runtimeSettings.FovSimulationDrawDesignAreaGuideline)
+        {
+            SetAndroidFovSimulationDrawDesignAreaGuideline(
+                runtimeSettings,
+                drawDesignAreaGuideline);
+        }
     }
 
     internal static void DrawEditorFovSimulationInspector()
@@ -540,8 +554,9 @@ public class OVRProjectConfigEditor : Editor
         bool fovSimulationEnabled = FovSimulationEditorController.Enabled;
         EditorGUI.BeginChangeCheck();
         fovSimulationEnabled = EditorGUILayout.Toggle(
-            new GUIContent("Simulate Device Field of View",
-                "Masks the application view in Editor Play Mode, Link, and Meta XR Simulator. " +
+            new GUIContent("Simulate VR Glasses Field of View",
+                "Masks the application view to approximate the field of view of VR glasses in " +
+                "Editor Play Mode, Link, and Meta XR Simulator. " +
                 "This local preference does not affect Android builds or Store submission."),
             fovSimulationEnabled);
         if (EditorGUI.EndChangeCheck())
@@ -549,6 +564,31 @@ public class OVRProjectConfigEditor : Editor
             FovSimulationEditorController.SetEnabled(
                 fovSimulationEnabled,
                 OVRFovSimulationTelemetry.EditorLinkSource);
+        }
+
+        bool currentDrawDesignAreaGuideline = FovSimulationEditorController.DrawDesignAreaGuideline;
+        bool drawDesignAreaGuideline = DrawDesignAreaGuidelineToggle(
+            fovSimulationEnabled,
+            currentDrawDesignAreaGuideline);
+        if (drawDesignAreaGuideline != currentDrawDesignAreaGuideline)
+        {
+            FovSimulationEditorController.SetDrawDesignAreaGuideline(drawDesignAreaGuideline);
+        }
+    }
+
+    private static bool DrawDesignAreaGuidelineToggle(
+        bool fovSimulationEnabled,
+        bool drawDesignAreaGuideline)
+    {
+        using (new EditorGUI.DisabledScope(!fovSimulationEnabled))
+        using (new EditorGUI.IndentLevelScope())
+        {
+            return EditorGUILayout.Toggle(
+                new GUIContent("Draw Design Area Guideline",
+                    "Draws a 58 by 54 degree guideline inside the simulated VR glasses field of view. " +
+                    "Keep critical content inside this area and reserve the surrounding field of view " +
+                    "for peripheral, non-essential content."),
+                drawDesignAreaGuideline);
         }
     }
 
@@ -569,5 +609,21 @@ public class OVRProjectConfigEditor : Editor
 
         Undo.RecordObject(runtimeSettings, "Changed Android FoV Simulation");
         OVRRuntimeSettings.SetAndroidFovSimulationEnabled(runtimeSettings, enabled, source);
+    }
+
+    private static void SetAndroidFovSimulationDrawDesignAreaGuideline(
+        OVRRuntimeSettings runtimeSettings,
+        bool enabled)
+    {
+        if (runtimeSettings == null ||
+            runtimeSettings.FovSimulationDrawDesignAreaGuideline == enabled)
+        {
+            return;
+        }
+
+        Undo.RecordObject(runtimeSettings, "Changed VR Glasses Design Area Guideline");
+        OVRRuntimeSettings.SetAndroidFovSimulationDrawDesignAreaGuideline(
+            runtimeSettings,
+            enabled);
     }
 }
